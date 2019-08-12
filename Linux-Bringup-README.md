@@ -15,17 +15,21 @@ Location: /group/siv3/staff/acapd/default_images/
 TCL Example: /group/siv3/staff/acapd/default_images/bzip2.tcl
 
 Steps:
-Launch a command line console for the interaction with the target Linux
+ * Launch a command line console for the interaction with the target Linux
+```
 $ systest tenzing
 # Wait until you get a board
 # Setup tftpd directory to load images from u-boot
 Systest# tftpd "<your tftpd directory>"
 # Connect to console
 Systest# connect com0
-Launch another command linux console to use xsdb with systest:
+```
+ * Launch another command linux console to use xsdb with systest:
+```
 $ ssh <host_name of the systest machine you have got>
 > /opt/systest/common/bin/systest-client
-Systest# xsdb
+Systest
+# xsdb
 xsdb% connect
 xsdb% targets -set -filter {name =~ "Versal*"}
 xsdb% device program <PDI>
@@ -35,12 +39,17 @@ xsdb% dow -force -data <DTB> 0x1000
 xsdb% dow -force u-boot.elf
 xsdb% dow -force arm-trusted-firmware.elf
 xsdb% con
-On the other console, when you see u-boot boots, tftp boot the Linux images:
+```
+ * On the other console, when you see u-boot boots, tftp boot the Linux images:
+```
 # If Image doesn't include rootfs:
 Versal> dhcp; setenv serverip 10.10.70.101; tftpb 80000 Image; tftpb 10000000 rootfs.cpio.ub; tftpb 14000000 system.dtb; booti 80000 10000000 14000000
 # If Image includes rootfs:
 Versal> dhcp; setenv serverip 10.10.70.101; tftpb 80000 Image;tftpb 14000000 system.dtb; booti 80000 - 14000000
-Repackage Rootfs
+```
+
+# Repackage Rootfs
+```
 #Extract rootfs.cpio(do all operations with sudo access)
 mkdir tmprootfs
 cd tmprootfs
@@ -67,10 +76,7 @@ CONFIG_INITRAMFS_SOURCE="<CPIO_PATH>"
 CONFIG_FPGA=y
 CONFIG_FPGA_MGR_VERSAL_FPGA=y
 
-
+# Build Linux Image
 make ARCH=arm64 -j
-
-
 # Image will be in arch/arm64/boot/Image 
-
-
+```
