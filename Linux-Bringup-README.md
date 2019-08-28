@@ -4,6 +4,7 @@ Location: /group/siv3/staff/acapd/default_images/
 ```
 ├── arm-trusted-firmware.elf # ARM trusted firmware
 ├── bzip2-system-nopl.dtb # Linux bringup DTB
+├── system-bzip2-smmu.dtb # Linux bringup DTB for bzip2 with SMMU
 ├── bzip2.tcl # example TCL to bringup Linux
 ├── bzip_accel_eve_wrapper.pdi # Bzip2 hardware PDI
 ├── Image # Default Linux image
@@ -80,3 +81,8 @@ CONFIG_FPGA_MGR_VERSAL_FPGA=y
 make ARCH=arm64 -j
 # Image will be in arch/arm64/boot/Image 
 ```
+
+# Components Repo
+ * Linux kernel:
+   * repo: git@gitenterprise.xilinx.com:Madagascar/linux-xlnx.git
+   * branch: acapd/master-next-test
