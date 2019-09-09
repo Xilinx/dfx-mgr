@@ -1,3 +1,14 @@
+/*
+ * Copyright (c) 2019, Xilinx Inc. and Contributors. All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
+/*
+ * @file	accel.h
+ * @brief	accelerator definition.
+ */
+
 #ifndef _ACAPD_ACCEL_H
 #define _ACAPD_ACCEL_H
 

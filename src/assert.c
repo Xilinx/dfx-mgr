@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2019, Xilinx Inc. and Contributors. All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 #include <acapd/assert.h>
 
 void acapd_assert(unsigned int cond)

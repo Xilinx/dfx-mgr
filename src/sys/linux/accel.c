@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2019, Xilinx Inc. and Contributors. All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 #include <acapd/accel.h>
 #include <acapd/assert.h>
 #include <acapd/print.h>

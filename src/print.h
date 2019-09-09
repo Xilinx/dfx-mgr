@@ -1,3 +1,14 @@
+/*
+ * Copyright (c) 2019, Xilinx Inc. and Contributors. All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
+/*
+ * @file	print.h
+ * @brief	print definition
+ */
+
 #ifndef _ACAPD_PRINT_H
 #define _ACAPD_PRINT_H
 
