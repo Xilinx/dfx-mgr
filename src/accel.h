@@ -16,6 +16,9 @@
 extern "C" {
 #endif
 
+#include <stddef.h>
+#include <stdint.h>
+
 #define ACAPD_ACCEL_STATUS_UNLOADED	0U
 #define ACAPD_ACCEL_STATUS_LOADING	1U
 #define ACAPD_ACCEL_STATUS_INUSE	2U
@@ -32,35 +35,44 @@ extern "C" {
 
 #define ACAPD_ACCEL_INPROGRESS		1
 
+#define ACAPD_ACCEL_PKG_TYPE_NONE	0U
+#define ACAPD_ACCEL_PKG_TYPE_PDI	1U
+#define ACAPD_ACCEL_PKG_TYPE_LAST	2U
+
 #include <acapd/sys/@PROJECT_SYSTEM@/accel.h>
 
 /**
  * @brief accel package information structure
  */
 typedef struct {
-	const char *path; /**< path of package image */
-	const void *data; /**< pointer to package image data */
-} acapd_accel_pkg_t;
+	uint32_t type; /**< type of package element */
+	char name[128]; /**< name of the package element */
+	uint64_t size; /**< size of package element */
+	uint32_t is_end; /**< if it is the end of package */
+} acapd_accel_pkg_hd_t;
 
 /**
  * @brief accel structure
  */
 typedef struct {
-	acapd_accel_pkg_t pkg; /**< pointer to the package */
+	acapd_accel_pkg_hd_t *pkg; /**< pointer to the package */
 	acapd_accel_sys_t sys_info; /**< system specific accel information */
 	unsigned int type; /**< type of the accelarator */
 	unsigned int status; /**< status of the accelarator */
+	unsigned int is_cached; /**< if the accelerator is cached */
 	int load_failure; /**< load failure */
 } acapd_accel_t;
 
-/**
- *
+acapd_accel_pkg_hd_t *acapd_alloc_pkg(size_t size);
+
+/* User applicaiton will need to allocate large enough memory for the package.
+ * Library is not going to allocate the memory for it. This function is supposed
+ * to be replaced by a host tool.
  */
-void init_accel(acapd_accel_t *accel);
+int acapd_config_pkg(acapd_accel_pkg_hd_t *pkg, uint32_t type, char *name,
+		     size_t size, void *data, int is_end);
 
-void set_accel_pkg_img(acapd_accel_t *accel, const char *img);
-
-void set_accel_pkg_data(acapd_accel_t *accel, const void *data);
+void init_accel(acapd_accel_t *accel, acapd_accel_pkg_hd_t *pkg);
 
 int load_accel(acapd_accel_t *accel, unsigned int async);
 
