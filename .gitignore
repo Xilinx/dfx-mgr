@@ -9,7 +9,6 @@ build*/
 *.swp
 *.swo
 *.d
-*.cmake
 CMakeFiles/
 CMakeCache.txt
 
