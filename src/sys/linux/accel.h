@@ -17,6 +17,8 @@
  */
 typedef struct {
 	char dtbo_dir[128];
+	char tmp_dir[128];
+	int  fpga_cfg_id;
 } acapd_accel_sys_t;
 
 #endif /* _ACAPD_LINUX_ACCEL_H */

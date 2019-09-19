@@ -8,7 +8,10 @@
 #include <acapd/assert.h>
 #include <acapd/print.h>
 #include <errno.h>
+#include <dirent.h>
+#include <ftw.h>
 #include <fcntl.h>
+#include <libfpga.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,83 +22,130 @@
 
 #define DTBO_ROOT_DIR "/sys/kernel/config/device-tree/overlays"
 
+static int remove_directory(const char *path)
+{
+	DIR *d = opendir(path);
+	int r = -1;
+
+	if (d) {
+		struct dirent *p;
+		size_t path_len;
+
+		path_len = strlen(path);
+		r = 0;
+		while (!r && (p=readdir(d))) {
+			int r2 = -1;
+			char *buf;
+			size_t len;
+			struct stat statbuf;
+
+			/* Skip the names "." and ".." as we don't want
+			 * to recurse on them. */
+			if (!strcmp(p->d_name, ".") ||
+			    !strcmp(p->d_name, "..")) {
+				continue;
+			}
+			len = path_len + strlen(p->d_name) + 2;
+			buf = malloc(len);
+			if (buf == NULL) {
+				acapd_perror("Failed to allocate memory.\n");
+				return -1;
+			}
+
+			sprintf(buf, "%s/%s", path, p->d_name);
+			if (!stat(buf, &statbuf)) {
+				if (S_ISDIR(statbuf.st_mode)) {
+					r2 = remove_directory(buf);
+				} else {
+					r2 = unlink(buf);
+				}
+			}
+			r = r2;
+			free(buf);
+		}
+		closedir(d);
+		if (r == 0) {
+			r = rmdir(path);
+		}
+	}
+	return r;
+}
+
 int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 {
-	struct timeval tv;
-	char dtbo_path[256];
+	acapd_accel_pkg_hd_t *pkg;
+	char template[] = "/tmp/accel.XXXXXX";
+	char *tmp_dirname;
 	char cmd[512];
 	int ret;
-	int fd;
+	int fpga_cfg_id;
+	char *pkg_name;
 
 	/* TODO: only support synchronous mode for now */
 	(void)async;
-	acapd_assert(accel->pkg.path != NULL);
-
-	/* Use timestamp to name the DTBO directory */
-	gettimeofday(&tv, NULL);
-	sprintf(accel->sys_info.dtbo_dir, "accel.%ld.%ld",
-		tv.tv_sec, tv.tv_usec);
-	sprintf(dtbo_path, "%s/%s", DTBO_ROOT_DIR, accel->sys_info.dtbo_dir);
-	acapd_debug("Creating %s.\n", dtbo_path);
-	sprintf(cmd, "mkdir %s", dtbo_path);
+	/* Use timestamp to name the tmparary directory */
+	acapd_debug("Creating tmp dir for package.\n");
+	tmp_dirname = mkdtemp(template);
+	if (tmp_dirname == NULL) {
+		acapd_perror("Failed to create tmp dir for package:%s.\n",
+			     strerror(errno));
+		return ACAPD_ACCEL_FAILURE;
+	}
+	sprintf(accel->sys_info.tmp_dir, "%s/", tmp_dirname);
+	pkg = accel->pkg;
+	pkg_name = (char *)pkg;
+	/* TODO: Assuming the package is a tar.gz format */
+	sprintf(cmd, "tar -C %s -xzf %s", tmp_dirname, pkg_name);
 	ret = system(cmd);
 	if (ret != 0) {
-		acapd_perror("Failed to create %s: %s.\n",
-			     accel->sys_info.dtbo_dir, strerror(errno));
+		acapd_perror("Failed to extract package %s.\n", pkg_name);
 		return ACAPD_ACCEL_FAILURE;
 	}
-	sprintf(dtbo_path, "%s/%s/path", DTBO_ROOT_DIR,
-		accel->sys_info.dtbo_dir);
-	accel->status = ACAPD_ACCEL_STATUS_LOADING;
-	fd = open(dtbo_path, O_WRONLY);
-	if (fd < 0) {
-		acapd_perror("Failed to open %s: %s.\n", dtbo_path,
-			     strerror(errno));
-		accel->status = ACAPD_ACCEL_STATUS_UNLOADED;
-		accel->load_failure = ACAPD_ACCEL_INVALID;
-		return ACAPD_ACCEL_FAILURE;
-	}
-	ret = write(fd, accel->pkg.path, strlen(accel->pkg.path) + 1);
+	ret = fpga_cfg_init(accel->sys_info.tmp_dir, 0, 0);
 	if (ret < 0) {
-		acapd_perror("Failed to apply device tree overlay, %s\n",
-			     strerror(errno));
-		accel->status = ACAPD_ACCEL_STATUS_UNLOADED;
-		accel->load_failure = ACAPD_ACCEL_INVALID;
+		acapd_perror("Failed to initialize fpga config, %d.\n", ret);
 		return ACAPD_ACCEL_FAILURE;
 	}
-	/* We only apply device tree overlay for now.
-	 * TODO: Launch container, call post accel configure callback?
-	 * post accel configure callback is required, as user will need
-	 * to define what to pass to the container.
-	 */
-	accel->status = ACAPD_ACCEL_STATUS_INUSE;
-	return ACAPD_ACCEL_SUCCESS;
+	fpga_cfg_id = ret;
+	accel->sys_info.fpga_cfg_id = fpga_cfg_id;
+	acapd_print("loading %d.\n",  fpga_cfg_id);
+	ret = fpga_cfg_load(fpga_cfg_id);
+	if (ret < 0) {
+		acapd_perror("Failed to load fpga config: %d\n",
+			     fpga_cfg_id);
+		return ACAPD_ACCEL_FAILURE;
+	} else {
+		return ACAPD_ACCEL_SUCCESS;
+	}
 }
 
 int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
 {
-	char dtbo_path[256];
-	struct stat s;
-	int ret;
+	int ret, fpga_cfg_id;
 
 	/* TODO: for now, only synchronous mode is supported */
 	(void)async;
-	acapd_assert(accel != NULL);
-	/* Unload dtbo for now.
-	 * TODO: remove container service.
-	 */
-	sprintf(dtbo_path, "%s/%s", DTBO_ROOT_DIR, accel->sys_info.dtbo_dir);
-	/* Unload dtbo.
-	 * TODO: will clear bitstream when FPGA util is ready.
-	 */
-	rmdir(dtbo_path);
-	ret = stat(dtbo_path, &s);
-	if (ret < 0) {
-		if (errno == ENOENT) {
-			accel->status = ACAPD_ACCEL_STATUS_UNLOADED;
-			return ACAPD_ACCEL_SUCCESS;
+	fpga_cfg_id = accel->sys_info.fpga_cfg_id;
+	if (accel->sys_info.tmp_dir != NULL) {
+		ret = remove_directory(accel->sys_info.tmp_dir);
+		if (ret != 0) {
+			acapd_perror("Failed to remove %s, %s\n",
+				     accel->sys_info.tmp_dir, strerror(errno));
 		}
 	}
-	acapd_perror("Failed to unload accel, not able to remove dtbo.\n");
-	return ACAPD_ACCEL_FAILURE;
+	if (fpga_cfg_id <= 0) {
+		acapd_perror("Invalid fpga cfg id: %d.\n", fpga_cfg_id);
+		return ACAPD_ACCEL_FAILURE;
+	};
+	ret = fpga_cfg_remove(fpga_cfg_id);
+	if (ret != 0) {
+		acapd_perror("Failed to remove accel: %d.\n", ret);
+		return ACAPD_ACCEL_FAILURE;
+	}
+	ret = fpga_cfg_destroy(fpga_cfg_id);
+	if (ret != 0) {
+		acapd_perror("Failed to destroy accel: %d.\n", ret);
+		return ACAPD_ACCEL_FAILURE;
+	}
+	return ACAPD_ACCEL_SUCCESS;
 }
