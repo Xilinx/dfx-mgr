@@ -49,15 +49,14 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 #if 0
 	ret = XFpga_PL_BitStream_Load(&XFpgaInst, (UINTPTR)((char *)pkg + sizeof(*pkg)), 0, 1);
 #else
-	xil_printf("pkg addr: 0x%x\n", (UINTPTR)((char *)pkg));
-	ret = XFpga_PL_BitStream_Load(&XFpgaInst, (UINTPTR)((char *)pkg), 0,
-				      accel->is_cached);
+	ret = XFpga_PL_BitStream_Load(&XFpgaInst, (UINTPTR)((char *)pkg), 0, 0);
 #endif
 	if (ret == XFPGA_SUCCESS) {
-		acapd_print("PL Configuration done successfully");
 		return ACAPD_ACCEL_FAILURE;
 	} else {
-		acapd_print("PL configuration failed\n\r");
+		/* TODO: FIXME: hardcoded to release isolation */
+		Xil_Out32(0x90010000, 0x1);
+		Xil_Out32(0x90000000, 0x1);
 		return ACAPD_ACCEL_SUCCESS;
 	}
 }
