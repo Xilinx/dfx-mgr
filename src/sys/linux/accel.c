@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -115,6 +116,40 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 			     fpga_cfg_id);
 		return ACAPD_ACCEL_FAILURE;
 	} else {
+		/* TODO: FIXME: hardcoded to release isolation */
+		int fd;
+		unsigned int page_addr, page_offset;
+		unsigned int page_size=sysconf(_SC_PAGESIZE);
+		uint32_t paddr;
+		void *ptr;
+
+		fd = open("/dev/mem", O_RDWR);
+		if (fd < 1) {
+			acapd_perror("Failed to open devmem.\r\n");
+			return -EINVAL;
+		}
+
+		paddr = 0x90010000;
+		page_addr = (paddr & ~(page_size - 1));
+		page_offset = (unsigned int)paddr - page_addr;
+		ptr = mmap(NULL, page_size, PROT_READ|PROT_WRITE, MAP_SHARED,
+			   fd, page_addr);
+		if (ptr == NULL) {
+			acapd_perror("Failed to mmap clock isolation addr.\r\n");
+			return -EINVAL;
+		}
+		*((volatile uint32_t *)((char *)ptr + page_offset)) = 0x1;
+
+		paddr = 0x90000000;
+		page_addr = (paddr & ~(page_size - 1));
+		page_offset = (unsigned int)paddr - page_addr;
+		ptr = mmap(NULL, page_size, PROT_READ|PROT_WRITE, MAP_SHARED,
+			   fd, page_addr);
+		if (ptr == NULL) {
+			acapd_perror("Failed to mmap clock isolation addr.\r\n");
+			return -EINVAL;
+		}
+		*((volatile uint32_t *)((char *)ptr + page_offset)) = 0x1;
 		return ACAPD_ACCEL_SUCCESS;
 	}
 }
