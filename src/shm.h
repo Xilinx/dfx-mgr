@@ -12,16 +12,13 @@
 #ifndef _ACAPD_SHM_H
 #define _ACAPD_SHM_H
 
-#define SHM_DIR_DEV_R 1U
-#define SHM_DIR_DEV_W 2U
-#define SHM_DIR_DEV_RW 3U
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #include <metal/io.h>
 #include <acapd/helper.h>
+#include <acapd/dma.h>
 
 /** Shared memory provider data structure. */
 typedef struct acapd_shm_allocator {
@@ -44,13 +41,6 @@ struct acapd_shm {
 	struct acapd_shm_allocator *allocator; /**< allocator where this shared memory is from */
 	acapd_list_t refs; /**< attached acapd channels references list */
 } acapd_shm_t;
-
-typedef struct acapd_chnl {
-    char *name;
-    char *logical_id;
-    int hw_id;
-    uint32_t data_conn_type;
-}acapd_chnl_t;
 
 typedef struct acapd_accel {
 	char *name;
