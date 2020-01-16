@@ -33,7 +33,7 @@ typedef struct acapd_shm_allocator {
 struct acapd_shm {
 	char name[64]; /**< shared memory name */
 	struct metal_io_region io; /**< shared memory io region */
-	void *va; /**< shared memory virtual address */
+	char *va; /**< shared memory virtual address */
 	size_t size; /**< shared memory size */
 	unsigned int flags; /**< shared memory flag, cacheable, or noncacheable */
 	int id; /**< shared memory id */
@@ -41,12 +41,6 @@ struct acapd_shm {
 	struct acapd_shm_allocator *allocator; /**< allocator where this shared memory is from */
 	acapd_list_t refs; /**< attached acapd channels references list */
 } acapd_shm_t;
-
-typedef struct acapd_accel {
-	char *name;
-    int num_channles;
-    acapd_chnl_t *chnls;
-}acapd_accel_t;
 
 int acapd_alloc_shm(char *shm_allocator_name, acapd_shm_t *shm, size_t size, uint32_t attr);
 
@@ -66,9 +60,9 @@ int acapd_sync_shm_device(acapd_shm_t *shm, acapd_chnl_t *chnl);
 int acapd_accel_alloc_shm(acapd_accel_t *accel, size_t size, acapd_shm_t *shm);
 
 int acapd_accel_transfer_data(acapd_accel_t *accel, acapd_shm_t *tx_shm,
-                size_t tx_offset, acapd_shm_t *rx_shm, size_t rx_offset);
+			      acapd_shm_t *rx_shm);
 
-int acapd_accel_wait_for_complete(acapd_accel_t *accel, uint8_t direction);
+int acapd_accel_wait_for_data_ready(acapd_accel_t *accel);
 
 #ifdef __cplusplus
 }
