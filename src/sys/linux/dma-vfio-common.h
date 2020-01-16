@@ -15,6 +15,21 @@
 extern "C" {
 #endif
 
+#define ACAPD_VFIO_MAX_REGIONS	8U /**< max IO regions of a vfio device */
+
+typedef struct acapd_vfio_io {
+	void *addr;
+	size_t size;
+} acapd_vfio_io_t;
+
+typedef struct acapd_vfio_chnl {
+	acapd_chnl_t *chnl;
+	int container;
+	int group;
+	int device;
+	acapd_vfio_io ios[ACAPD_VFIO_MAX_REGIONS];
+} acapd_vfio_chnl_t;
+
 void *vfio_dma_mmap(void *buff_id, size_t start_off, size_t size, acapd_c    hnl_t *chnl);
 void *vfio_dma_munmap(void *buff_id, size_t start_off, size_t size, acapd_c    hnl_t *chnl);
 

@@ -26,12 +26,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-struct acapd_vfio_chnl {
-	acapd_chnl_t *chnl;
-	int container;
-	int group;
-};
-
 void *vfio_dma_mmap(void *vaddr, size_t start_off, size_t size, acapd_chnl_t *chnl){
 	int fd;
 	struct acapd_vfio_chnl *vfio_chnl;
