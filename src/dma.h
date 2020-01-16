@@ -74,12 +74,13 @@ typedef struct acapd_dma_ops {
 struct acapd_chnl {
 	char name[128]; /**< DMA channel name/or path */
 	char *id; /**< DMA channel logical id */
-	int iommu_group /**< iommu group if the channel is behind IOMMU */
+	int iommu_group; /**< iommu group if the channel is behind IOMMU */
 	int chnl_id; /**< hardware channel id of a data mover controller */
 	acapd_dir_t dir; /**< DMA channel direction */
 	uint32_t conn_type; /**< type of data connection with this channel */
 	void *sys_info; /**< System private data for the channel */
 	acapd_dma_ops_t *ops;
+	acapd_list_t node;
 } acapd_chnl_t;
 
 /**
