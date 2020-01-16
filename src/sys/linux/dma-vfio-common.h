@@ -22,12 +22,19 @@ typedef struct acapd_vfio_io {
 	size_t size;
 } acapd_vfio_io_t;
 
+typedef struct acapd_vfio_mmap {
+	void *addr;
+	uint64_t da;
+	size_t size;
+} acapd_vfio_mmap_t;
+
 typedef struct acapd_vfio_chnl {
-	acapd_chnl_t *chnl;
-	int container;
-	int group;
-	int device;
-	acapd_vfio_io ios[ACAPD_VFIO_MAX_REGIONS];
+	acapd_chnl_t *chnl; /**< pointer to acapd channel */
+	int container; /**< vfio container fd */
+	int group; /**< vfio group id */
+	int device; /**< vfio device fd */
+	acapd_vfio_io ios[ACAPD_VFIO_MAX_REGIONS]; /**< io regions */
+	acapd_list_t mmaps; /**< memory maps list */
 } acapd_vfio_chnl_t;
 
 void *vfio_dma_mmap(void *buff_id, size_t start_off, size_t size, acapd_chnl_t *chnl);
