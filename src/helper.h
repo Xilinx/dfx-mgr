@@ -20,9 +20,10 @@ extern "C" {
 
 typedef struct metal_list acapd_list_t;
 
+#define offset_of(structure, member)    \
+    ((uintptr_t)&(((structure *)0)->member))
 
-#ifdef __cplusplus
-}
-#endif
+#define acapd_container_of(ptr, structure, member)  \
+    (void *)((uintptr_t)(ptr) - offset_of(structure, member))
 
 #endif /*  _ACAPD_HELPER_H */

@@ -60,9 +60,7 @@ int acapd_create_dma_channel(char *name, uint32_t type, int chnl_id, acapd_chnl_
 
 int acapd_destroy_dma_channel(acapd_chnl_t *chnl);
 
-int acapd_sync_shm_to_device(acapd_shm_t *shm, acapd_chnl_t *chnl);
-
-int acapd_syn_shm_from_device(acapd_shm_t *shm, acapd_chnl_t *chnl)
+int acapd_sync_shm_device(acapd_shm_t *shm, acapd_chnl_t *chnl);
 
 //High level api's
 int acapd_accel_alloc_shm(acapd_accel_t *accel, size_t size, acapd_shm_t *shm);
