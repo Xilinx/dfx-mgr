@@ -30,6 +30,6 @@ typedef struct acapd_vfio_chnl {
 	acapd_vfio_io ios[ACAPD_VFIO_MAX_REGIONS];
 } acapd_vfio_chnl_t;
 
-void *vfio_dma_mmap(void *buff_id, size_t start_off, size_t size, acapd_c    hnl_t *chnl);
-void *vfio_dma_munmap(void *buff_id, size_t start_off, size_t size, acapd_c    hnl_t *chnl);
-
+void *vfio_dma_mmap(void *buff_id, size_t start_off, size_t size, acapd_chnl_t *chnl);
+void *vfio_dma_munmap(void *buff_id, size_t start_off, size_t size, acapd_chnl_t *chnl);
+int vfio_open_channel(char *name, int iommu_group, acapd_chnl_conn_t conn_type, int chnl_id, acapd_dir_t dir, acapd_chnl_t *chnl);
