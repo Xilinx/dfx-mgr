@@ -16,6 +16,8 @@
 extern "C" {
 #endif
 
+#include <stdio.h>
+
 typedef struct acapd_list {
 	struct acapd_list *next, *prev;
 }acapd_list_t;
