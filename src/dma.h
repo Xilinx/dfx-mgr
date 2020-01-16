@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2016, Xilinx Inc. and Contributors. All rights reserved.
+ * Copyright (c) 2019, Xilinx Inc. and Contributors. All rights reserved.
  *
- * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-License-Identifier: MIT
  */
 
 /*
@@ -19,8 +19,9 @@ extern "C" {
 /** \defgroup dma DMA Interfaces
  *  @{ */
 
-#include <stdint.h>
 #include <acapd/shm.h>
+#include <acapd/sys/@PROJECT_SYSTEM@/dma.h>
+#include <stdint.h>
 
 /**
  * @brief ACAPD DMA transaction direction
@@ -42,14 +43,27 @@ typedef enum acapd_chnl_conn {
 
 #define ACAPD_MAX_DIMS	4U
 
+/**
+ * @brief DMA dimension structure
+ */
+typedef struct acapd_dim {
+	int number_of_dims; /**< Number of dimentions */
+	int strides[ACAPD_MAX_DIMS]; /**< stride of each dimention */
+} acapd_dim_t;
+
 /** DMA Channel Operations */
 typedef struct acapd_dma_ops {
 	const char name[128]; /**< name of the DMA operation */
-	void *(*mmap)(void *buff_id, size_t start_off, size_t size, acapd_chnl_t *chnl);
-	int (*munmap)(void *buff_id, size_t start_off, size_t size, acapd_chnl_t *chnl);
-	int (*config_dma)(acapd_dma_dim *dim, void *buff_id, void *va, size_t size, uint32_t auto_repeat, acapd_fence_t *fence, acapd_chnl_t *chnl);
-	int (*start_dma)(acapd_chnl_t *chnl, acapd_fence_t *fence);
-	int (*poll_dma)(acapd_chnl_t *chnl, uint32_t wait_for_complete);
+	void *(*mmap)(void *buff_id, size_t start_off, size_t size,
+		      acapd_chnl_t *chnl);
+	int (*munmap)(void *buff_id, size_t start_off, size_t size,
+		      acapd_chnl_t *chnl);
+	int (*config)(acapd_dim_t *dim, void *buff_id, void *va,
+		      size_t size, uint32_t auto_repeat, acapd_fence_t *fence,
+		      acapd_chnl_t *chnl);
+	int (*start)(acapd_chnl_t *chnl, acapd_fence_t *fence);
+	int (*stop)(acapd_chnl_t *chnl);
+	int (*poll)(acapd_chnl_t *chnl, uint32_t wait_for_complete);
 	int (*open_chnl)(acapd_chnl_t *chnl);
 	int (*close_chnl)(acapd_chnl_t *chnl);
 } acapd_dma_ops_t;
@@ -58,11 +72,13 @@ typedef struct acapd_dma_ops {
  * @brief ACAPD DMA channel data structure
  */
 struct acapd_chnl {
-	char *name; /**< DMA channel name/or path */
+	char name[128]; /**< DMA channel name/or path */
 	char *id; /**< DMA channel logical id */
+	int iommu_group /**< iommu group if the channel is behind IOMMU */
 	int chnl_id; /**< hardware channel id of a data mover controller */
 	acapd_dir_t dir; /**< DMA channel direction */
-	uint32_t data_conn_type; /**< type of data connection with this channel */
+	uint32_t conn_type; /**< type of data connection with this channel */
+	void *sys_info; /**< System private data for the channel */
 	acapd_dma_ops_t *ops;
 } acapd_chnl_t;
 
@@ -72,19 +88,14 @@ struct acapd_chnl {
  */
 typedef int acapd_fence_t;
 
-/**
- * @brief DMA dimension structure
- */
-typedef struct acapd_dim {
-	int number_of_dims; /**< Number of dimentions */
-	int strides[ACAPD_MAX_DIMS]; /**< stride of each dimention */
-} acapd_dim_t;
-
-int acapd_dma_config(acapd_shm_t *shm, acapd_chnl_t *chnl, acapd_dim_t *dim, uint32_t auto_repeat);
+int acapd_dma_config(acapd_shm_t *shm, acapd_chnl_t *chnl,
+		     acapd_dim_t *dim, uint32_t auto_repeat);
 int acapd_dma_start(acapd_chnl_t *chnl, acapd_fence_t *fence);
 int acapd_dma_stop(acapd_chnl_t *chnl);
 int acapd_dma_poll(acapd_chnl_t *chnl, uint32_t wait_for_complete);
-int acapd_create_dma_channel(char *name, int iommu_group, acapd_chnl_conn_t conn_type, int chnl_id, acapd_dir_t dir, acapd_chnl_t *chnl);
+int acapd_create_dma_channel(char *name, int iommu_group,
+			     acapd_chnl_conn_t conn_type, int chnl_id,
+			     acapd_dir_t dir, acapd_chnl_t *chnl);
 int acapd_destroy_dma_channel(acapd_chnl_t *chnl);
 
 /** @} */
