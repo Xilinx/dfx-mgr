@@ -16,15 +16,17 @@
 extern "C" {
 #endif
 
-#include <metal/io.h>
 #include <acapd/helper.h>
 #include <acapd/dma.h>
+
+typedef struct acapd_shm acapd_shm_t;
+typedef struct acapd_shm_allocator acapd_shm_allocator_t;
 
 /** Shared memory provider data structure. */
 typedef struct acapd_shm_allocator {
 	const char *name; /**< name of shmem provider */
 	void *priv; /**< private data */
-	void *(*alloc)(acapd_shm_allocator_t *allocator, acapd_shm_t *shm, uint3_t size,  uint32_t attribute); /**< shmem allocation function */
+	void *(*alloc)(acapd_shm_allocator_t *allocator, acapd_shm_t *shm, uint32_t size,  uint32_t attribute); /**< shmem allocation function */
 	void  (*free)(acapd_shm_allocator_t *allocator, acapd_shm_t *shm); /**< shmem free function */
 	struct acapd_list_t node; /**< node */
 } acapd_shm_allocator_t;
@@ -32,7 +34,6 @@ typedef struct acapd_shm_allocator {
 /** ACPAD shared memory data structure. */
 struct acapd_shm {
 	char name[64]; /**< shared memory name */
-	struct metal_io_region io; /**< shared memory io region */
 	char *va; /**< shared memory virtual address */
 	size_t size; /**< shared memory size */
 	unsigned int flags; /**< shared memory flag, cacheable, or noncacheable */
