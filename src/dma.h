@@ -19,10 +19,11 @@ extern "C" {
 /** \defgroup dma DMA Interfaces
  *  @{ */
 
-#include <acapd/shm.h>
 #include <acapd/sys/@PROJECT_SYSTEM@/dma.h>
 #include <stdint.h>
-
+#include <stdlib.h>
+#include <acapd/print.h>
+#include <acapd/helper.h>
 /**
  * @brief ACAPD DMA transaction direction
  */
@@ -50,6 +51,14 @@ typedef struct acapd_dim {
 	int number_of_dims; /**< Number of dimentions */
 	int strides[ACAPD_MAX_DIMS]; /**< stride of each dimention */
 } acapd_dim_t;
+
+typedef struct acapd_chnl acapd_chnl_t;
+
+/**
+ * @brief DMA fence data structure
+ * TODO
+ */
+typedef int acapd_fence_t;
 
 /** DMA Channel Operations */
 typedef struct acapd_dma_ops {
@@ -81,16 +90,11 @@ struct acapd_chnl {
 	void *sys_info; /**< System private data for the channel */
 	acapd_dma_ops_t *ops;
 	acapd_list_t node;
-} acapd_chnl_t;
+};
 
-/**
- * @brief DMA fence data structure
- * TODO
- */
-typedef int acapd_fence_t;
 
-int acapd_dma_config(acapd_shm_t *shm, acapd_chnl_t *chnl,
-		     acapd_dim_t *dim, uint32_t auto_repeat);
+int acapd_dma_config(acapd_dim_t *dim, void *buff_id, void *va, size_t size,
+	uint32_t auto_repeat, acapd_fence_t *fence, acapd_chnl_t *chnl);
 int acapd_dma_start(acapd_chnl_t *chnl, acapd_fence_t *fence);
 int acapd_dma_stop(acapd_chnl_t *chnl);
 int acapd_dma_poll(acapd_chnl_t *chnl, uint32_t wait_for_complete);

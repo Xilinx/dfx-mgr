@@ -10,8 +10,8 @@
 #include <stdio.h>
 #include <string.h>
 
-int acapd_dma_config(acapd_shm_t *shm, acapd_chnl_t *chnl, acapd_dim_t *dim,
-		     uint32_t auto_repeat)
+int acapd_dma_config(acapd_dim_t *dim, void *buff_id, void *va, size_t size,
+	uint32_t auto_repeat, acapd_fence_t *fence, acapd_chnl_t *chnl)
 {
 	if (chnl == NULL) {
 		acapd_perror("%s: channel pointer is NULL.\n", __func__);
@@ -25,7 +25,7 @@ int acapd_dma_config(acapd_shm_t *shm, acapd_chnl_t *chnl, acapd_dim_t *dim,
 		acapd_perror("%s: channel config dma op is NULL.\n", __func__);
 		return -EINVAL;
 	}
-	return chnl->ops->config(chnl);
+	return chnl->ops->config(dim, buff_id, va, size, auto_repeat, fence, chnl);
 }
 
 int acapd_dma_start(acapd_chnl_t *chnl, acapd_fence_t *fence)
@@ -94,7 +94,7 @@ int acapd_create_dma_channel(char *name, int iommu_group,
 	chnl->dir = dir;
 	chnl->conn_type = conn_type;
 	if (name != NULL) {
-		int len;
+		unsigned int len;
 
 		len = strlen(name);
 		if (len > sizeof(chnl->name) - 1) {
@@ -110,6 +110,7 @@ int acapd_create_dma_channel(char *name, int iommu_group,
 			     __func__);
 		return -EINVAL;
 	}
+	return ret;
 }
 
 int acapd_destroy_dma_channel(acapd_chnl_t *chnl)

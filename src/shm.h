@@ -18,18 +18,19 @@ extern "C" {
 
 #include <acapd/helper.h>
 #include <acapd/dma.h>
+#include <stdint.h>
 
 typedef struct acapd_shm acapd_shm_t;
 typedef struct acapd_shm_allocator acapd_shm_allocator_t;
 
 /** Shared memory provider data structure. */
-typedef struct acapd_shm_allocator {
+struct acapd_shm_allocator {
 	const char *name; /**< name of shmem provider */
 	void *priv; /**< private data */
 	void *(*alloc)(acapd_shm_allocator_t *allocator, acapd_shm_t *shm, uint32_t size,  uint32_t attribute); /**< shmem allocation function */
 	void  (*free)(acapd_shm_allocator_t *allocator, acapd_shm_t *shm); /**< shmem free function */
-	struct acapd_list_t node; /**< node */
-} acapd_shm_allocator_t;
+	acapd_list_t node; /**< node */
+};
 
 /** ACPAD shared memory data structure. */
 struct acapd_shm {
@@ -41,7 +42,7 @@ struct acapd_shm {
 	int refcount; /**< reference count */
 	struct acapd_shm_allocator *allocator; /**< allocator where this shared memory is from */
 	acapd_list_t refs; /**< attached acapd channels references list */
-} acapd_shm_t;
+};
 
 int acapd_alloc_shm(char *shm_allocator_name, acapd_shm_t *shm, size_t size, uint32_t attr);
 

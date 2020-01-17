@@ -4,10 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <acapd/dma.h>
-#include <acapd/assert.h>
-#include <errno.h>
-#include <string.h>
+#include "dma.h"
 
 int sys_acapd_create_dma_channel(char *name, int iommu_group,
 				 acapd_chnl_conn_t conn_type, int chnl_id,
