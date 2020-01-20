@@ -4,7 +4,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "dma.h"
+#include <acapd/dma.h>
+#include "dma-vfio-common.h"
 
 int sys_acapd_create_dma_channel(char *name, int iommu_group,
 				 acapd_chnl_conn_t conn_type, int chnl_id,
@@ -21,4 +22,5 @@ int sys_acapd_create_dma_channel(char *name, int iommu_group,
 			return -EINVAL;
 		}
 	}
+	return 0;
 }

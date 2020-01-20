@@ -7,6 +7,7 @@
 #include <acapd/dma.h>
 #include <acapd/assert.h>
 #include <acapd/print.h>
+#include <acapd/shm.h>
 #include <errno.h>
 #include <dirent.h>
 #include <ftw.h>
@@ -24,8 +25,8 @@
 /**
  * TODO
  */
-static int axidma_vfio_dma_config(acapd_dim_t *dim, void *buff_id, void *va,
-				  size_t size, acapd_chnl_t *chnl);
+static int axidma_vfio_dma_config(acapd_chnl_t *chnl, acapd_shm_t *shm,
+				  acapd_dim_t *dim, uint32_t auto_repeat)
 {
 	(void)dim;
 	(void)buff_id;
@@ -65,7 +66,7 @@ acapd_dma_ops_t axidma_vfio_dma_ops = {
 	.name = "axidma_vfio_dma";
 	.mmap = vfio_dma_mmap;
 	.munmap = vfio_dma_munmap;
-	.config =;
+	.config = axidma_vfio_dma_config;
 	.start = axidma_vfio_dma_start;
 	.stop = axidma_vfio_dma_stop;
 	.poll = axidma_vfio_dma_poll;

@@ -12,7 +12,6 @@
 #include <acapd/assert.h>
 #include <errno.h>
 #include <string.h>
-#include <acapd/dma.h>
 
 #ifndef _ACAPD_LINUX_DMA_H
 #define _ACAPD_LINUX_DMA_H

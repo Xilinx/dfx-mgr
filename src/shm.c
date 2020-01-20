@@ -4,16 +4,17 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <acapd/dma.h>
+#include <acapd/accel.h>
 #include <acapd/assert.h>
+#include <acapd/dma.h>
+#include <acapd/shm.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
 
 int acapd_accel_alloc_shm(acapd_accel_t *accel, size_t size, acapd_shm_t *shm)
 {
-	int ret;
-
+	(void)accel;
 	if (shm == NULL) {
 		acapd_perror("%s: failed due to shm is NULL\n", __func__);
 		return -EINVAL;
@@ -36,7 +37,7 @@ int acapd_accel_transfer_data(acapd_accel_t *accel, acapd_shm_t *tx_shm,
 		return -EINVAL;
 	}
 	/* Assuming only two channels, tx and rx in the list */
-	acapd_list_for_each(accel->chnls, node) {
+	acapd_list_for_each(&accel->chnls, node) {
 		acapd_chnl_t *chnl;
 
 		chnl = (acapd_chnl_t *)acapd_container_of(node, acapd_chnl_t,
@@ -78,7 +79,7 @@ int acapd_accel_transfer_data(acapd_accel_t *accel, acapd_shm_t *tx_shm,
 				acapd_perror("%s: tx_chnl errors\n", __func__);
 				return -EINVAL;
 			}
-			ret = acapd_dma_config(&ltx_shm, tx_chnl, &dim, 0);
+			ret = acapd_dma_config(tx_chnl, &ltx_shm, &dim, 0);
 			if (ret != 0) {
 				acapd_perror("%s: failed to config tx chnl\n",
 					     __func__);
@@ -100,7 +101,7 @@ int acapd_accel_transfer_data(acapd_accel_t *accel, acapd_shm_t *tx_shm,
 			/* Check if it is ok to transfer data */
 			if (tx_remain != 0) {
 				ret = acapd_dma_poll(rx_chnl, 0);
-				if (ret == DMA_INPROGRESS) {
+				if (ret == (int)ACAPD_CHNL_INPROGRESS) {
 					continue;
 				}
 			} else {
@@ -110,7 +111,7 @@ int acapd_accel_transfer_data(acapd_accel_t *accel, acapd_shm_t *tx_shm,
 				acapd_perror("%s: rx_chnl errors\n", __func__);
 				return -EINVAL;
 			}
-			ret = acapd_dma_config(&lrx_shm, rx_chnl, &dim, 0);
+			ret = acapd_dma_config(rx_chnl, &lrx_shm, &dim, 0);
 			if (ret != 0) {
 				acapd_perror("%s: failed to config rx chnl\n",
 					     __func__);
@@ -146,4 +147,5 @@ int acapd_accel_transfer_data(acapd_accel_t *accel, acapd_shm_t *tx_shm,
 			return -EINVAL;
 		}
 	}
+	return 0;
 }

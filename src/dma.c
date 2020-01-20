@@ -6,12 +6,13 @@
 
 #include <acapd/dma.h>
 #include <acapd/assert.h>
+#include <acapd/shm.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
 
-int acapd_dma_config(acapd_dim_t *dim, void *buff_id, void *va, size_t size,
-	uint32_t auto_repeat, acapd_fence_t *fence, acapd_chnl_t *chnl)
+int acapd_dma_config(acapd_chnl_t *chnl, acapd_shm_t *shm, acapd_dim_t *dim,
+		     uint32_t auto_repeat)
 {
 	if (chnl == NULL) {
 		acapd_perror("%s: channel pointer is NULL.\n", __func__);
@@ -25,7 +26,7 @@ int acapd_dma_config(acapd_dim_t *dim, void *buff_id, void *va, size_t size,
 		acapd_perror("%s: channel config dma op is NULL.\n", __func__);
 		return -EINVAL;
 	}
-	return chnl->ops->config(dim, buff_id, va, size, auto_repeat, fence, chnl);
+	return chnl->ops->config(chnl, shm, dim, auto_repeat);
 }
 
 int acapd_dma_start(acapd_chnl_t *chnl, acapd_fence_t *fence)

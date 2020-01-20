@@ -9,8 +9,8 @@
  * @brief	DMA primitives for libmetal.
  */
 
-#ifndef __METAL_DMA__H__
-#define __METAL_DMA__H__
+#ifndef _ACAPD_DMA_H
+#define _ACAPD_DMA_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,7 +19,6 @@ extern "C" {
 /** \defgroup dma DMA Interfaces
  *  @{ */
 
-#include <acapd/sys/@PROJECT_SYSTEM@/dma.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <acapd/print.h>
@@ -42,6 +41,15 @@ typedef enum acapd_chnl_conn {
 	ACAPD_CHNL_VADDR	= 0x4U, /**< Connection is not cache coherent */
 } acapd_chnl_conn_t;
 
+/**
+ * @brief ACAPD channel status
+ */
+typedef enum acpad_chnl_status {
+	ACAPD_CHNL_IDLE		= 0U, /**< Channel is idle */
+	ACAPD_CHNL_INPROGRESS	= 1U, /**< Channel is in progress */
+	ACAPD_CHNL_STALLED	= 2U, /**< Channel is stalled */
+} acapd_chnl_status_t;
+
 #define ACAPD_MAX_DIMS	4U
 
 /**
@@ -53,6 +61,7 @@ typedef struct acapd_dim {
 } acapd_dim_t;
 
 typedef struct acapd_chnl acapd_chnl_t;
+typedef struct acapd_shm acapd_shm_t;
 
 /**
  * @brief DMA fence data structure
@@ -67,9 +76,8 @@ typedef struct acapd_dma_ops {
 		      acapd_chnl_t *chnl);
 	int (*munmap)(void *buff_id, size_t start_off, size_t size,
 		      acapd_chnl_t *chnl);
-	int (*config)(acapd_dim_t *dim, void *buff_id, void *va,
-		      size_t size, uint32_t auto_repeat, acapd_fence_t *fence,
-		      acapd_chnl_t *chnl);
+	int (*config)(acapd_chnl_t *chnl, acapd_shm_t *shm, acapd_dim_t *dim,
+		      uint32_t auto_repeat);
 	int (*start)(acapd_chnl_t *chnl, acapd_fence_t *fence);
 	int (*stop)(acapd_chnl_t *chnl);
 	int (*poll)(acapd_chnl_t *chnl, uint32_t wait_for_complete);
@@ -93,8 +101,8 @@ struct acapd_chnl {
 };
 
 
-int acapd_dma_config(acapd_dim_t *dim, void *buff_id, void *va, size_t size,
-	uint32_t auto_repeat, acapd_fence_t *fence, acapd_chnl_t *chnl);
+int acapd_dma_config(acapd_chnl_t *chnl, acapd_shm_t *shm, acapd_dim_t *dim,
+		     uint32_t auto_repeat);
 int acapd_dma_start(acapd_chnl_t *chnl, acapd_fence_t *fence);
 int acapd_dma_stop(acapd_chnl_t *chnl);
 int acapd_dma_poll(acapd_chnl_t *chnl, uint32_t wait_for_complete);
@@ -103,10 +111,12 @@ int acapd_create_dma_channel(char *name, int iommu_group,
 			     acapd_dir_t dir, acapd_chnl_t *chnl);
 int acapd_destroy_dma_channel(acapd_chnl_t *chnl);
 
+#include <acapd/sys/@PROJECT_SYSTEM@/dma.h>
+
 /** @} */
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __METAL_DMA__H__ */
+#endif /* _ACAPD_DMA_H */

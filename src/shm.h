@@ -16,6 +16,7 @@
 extern "C" {
 #endif
 
+#include <acapd/accel.h>
 #include <acapd/helper.h>
 #include <acapd/dma.h>
 #include <stdint.h>
@@ -51,10 +52,6 @@ int acapd_free_shm(acapd_shm_t *shm);
 int acapd_attach_shm(acapd_chnl_t *chnl, acapd_shm_t *shm);
 
 int acapd_detach_shm(acapd_chnl_t *chnl, acapd_shm_t *shm);
-
-int acapd_create_dma_channel(char *name, uint32_t type, int chnl_id, acapd_chnl_t *chnl);
-
-int acapd_destroy_dma_channel(acapd_chnl_t *chnl);
 
 int acapd_sync_shm_device(acapd_shm_t *shm, acapd_chnl_t *chnl);
 

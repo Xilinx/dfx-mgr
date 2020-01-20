@@ -33,7 +33,7 @@ typedef struct acapd_vfio_chnl {
 	int container; /**< vfio container fd */
 	int group; /**< vfio group id */
 	int device; /**< vfio device fd */
-	acapd_vfio_io ios[ACAPD_VFIO_MAX_REGIONS]; /**< io regions */
+	acapd_vfio_io_t ios[ACAPD_VFIO_MAX_REGIONS]; /**< io regions */
 	acapd_list_t mmaps; /**< memory maps list */
 } acapd_vfio_chnl_t;
 
