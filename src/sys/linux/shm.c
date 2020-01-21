@@ -1,27 +1,38 @@
+#include <acapd/print.h>
+#include <acapd/shm.h>
+#include <errno.h>
 #include <unistd.h>
-#include<stdlib.h>
-#include "shm.h"
+#include <stdlib.h>
+#include <sys/mman.h>
 
-int acapd_alloc_shm(char *shm_allocator_name, acapd_shm_t *shm, size_t size, uint32_t attr){
-	
+static void *acapd_vfio_alloc_shm(acapd_shm_allocator_t *allocator,
+				acapd_shm_t *shm, size_t size, uint32_t attr)
+{
+	(void)allocator;
+	(void)attr;
+	if (shm == NULL) {
+		acapd_perror("%s: error, shm is NULL.\n", __func__);
+		return NULL;
+	}
 	shm->va = mmap(0, size, PROT_READ | PROT_WRITE,
-			     MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
-	shm->refcount = 0;
-}
-int acapd_free_shm(acapd_shm_t *shm){
+			MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+	return shm->va;
 }
 
-int acapd_attach_shm(acapd_chnl_t *chnl, acapd_shm_t *shm){
-	chnl->dma_ops->mmap(shm->va, 0, shm->size, chnl);
-	shm->refcount++;
-	//metal_list_add_tail(shm->refs,);
+static void acapd_vfio_free_shm(acapd_shm_allocator_t *allocator,
+			       acapd_shm_t *shm)
+{
+	(void)allocator;
+	if (shm == NULL) {
+		acapd_perror("%s: error, shm is NULL.\n", __func__);
+		return;
+	}
+	(void)munmap(shm->va, shm->size);
 }
 
-int acapd_detach_shm(acapd_chnl_t *chnl, acapd_shm_t *shm){
-	//metal_list_del(node);
-	shm->refcount--;
-}
-int acapd_sync_shm_device(acapd_shm_t *shm, acapd_chnl_t *chnl){
-
-}
-
+acapd_shm_allocator_t acapd_default_shm_allocator = {
+	.name = "vfio_shm_allocator",
+	.priv = NULL,
+	.alloc = acapd_vfio_alloc_shm,
+	.free = acapd_vfio_free_shm,
+};

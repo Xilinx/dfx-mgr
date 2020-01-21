@@ -15,30 +15,38 @@
 extern "C" {
 #endif
 
+#include <acapd/dma.h>
+#include <acapd/shm.h>
+#include <acapd/helper.h>
+
 #define ACAPD_VFIO_MAX_REGIONS	8U /**< max IO regions of a vfio device */
 
 typedef struct acapd_vfio_io {
-	void *addr;
+	void *va;
 	size_t size;
 } acapd_vfio_io_t;
 
 typedef struct acapd_vfio_mmap {
-	void *addr;
+	void *va;
 	uint64_t da;
 	size_t size;
+	acapd_list_t node;
 } acapd_vfio_mmap_t;
 
 typedef struct acapd_vfio_chnl {
-	acapd_chnl_t *chnl; /**< pointer to acapd channel */
 	int container; /**< vfio container fd */
 	int group; /**< vfio group id */
 	int device; /**< vfio device fd */
+	char *dev_name; /**< vfio device name */
 	acapd_vfio_io_t ios[ACAPD_VFIO_MAX_REGIONS]; /**< io regions */
 	acapd_list_t mmaps; /**< memory maps list */
+	acapd_list_t node;	
+	int refs;
 } acapd_vfio_chnl_t;
 
-void *vfio_dma_mmap(void *buff_id, size_t start_off, size_t size, acapd_chnl_t *chnl);
-void *vfio_dma_munmap(void *buff_id, size_t start_off, size_t size, acapd_chnl_t *chnl);
-int vfio_open_channel(char *name, int iommu_group, acapd_chnl_conn_t conn_type, int chnl_id, acapd_dir_t dir, acapd_chnl_t *chnl);
+void *vfio_dma_mmap(acapd_chnl_t *chnl, acapd_shm_t *shm);
+int vfio_dma_munmap(acapd_chnl_t *chnl, acapd_shm_t *shm);
+int vfio_open_channel(acapd_chnl_t *chnl);
+int vfio_close_channel(acapd_chnl_t *chnl);
 
 #endif

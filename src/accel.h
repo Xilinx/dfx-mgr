@@ -39,8 +39,9 @@ extern "C" {
 #define ACAPD_ACCEL_PKG_TYPE_PDI	1U
 #define ACAPD_ACCEL_PKG_TYPE_LAST	2U
 
-#include <acapd/sys/@PROJECT_SYSTEM@/accel.h>
+#include <acapd/dma.h>
 #include <acapd/helper.h>
+#include <acapd/sys/@PROJECT_SYSTEM@/accel.h>
 
 /**
  * @brief accel package information structure
@@ -63,7 +64,7 @@ typedef struct {
 	unsigned int is_cached; /**< if the accelerator is cached */
 	int load_failure; /**< load failure */
 	int num_chnls;	/**< number of channels */
-	acapd_list_t chnls; /**< list of channels */
+	acapd_chnl_t *chnls; /**< list of channels */
 } acapd_accel_t;
 
 acapd_accel_pkg_hd_t *acapd_alloc_pkg(size_t size);

@@ -72,24 +72,23 @@ typedef int acapd_fence_t;
 /** DMA Channel Operations */
 typedef struct acapd_dma_ops {
 	const char name[128]; /**< name of the DMA operation */
-	void *(*mmap)(void *buff_id, size_t start_off, size_t size,
-		      acapd_chnl_t *chnl);
-	int (*munmap)(void *buff_id, size_t start_off, size_t size,
-		      acapd_chnl_t *chnl);
+	void *(*mmap)(acapd_chnl_t *chnl, acapd_shm_t *shm);
+	int (*munmap)(acapd_chnl_t *chnl, acapd_shm_t *shm);
 	int (*config)(acapd_chnl_t *chnl, acapd_shm_t *shm, acapd_dim_t *dim,
 		      uint32_t auto_repeat);
 	int (*start)(acapd_chnl_t *chnl, acapd_fence_t *fence);
 	int (*stop)(acapd_chnl_t *chnl);
 	int (*poll)(acapd_chnl_t *chnl, uint32_t wait_for_complete);
-	int (*open_chnl)(acapd_chnl_t *chnl);
-	int (*close_chnl)(acapd_chnl_t *chnl);
+	int (*open)(acapd_chnl_t *chnl);
+	int (*close)(acapd_chnl_t *chnl);
 } acapd_dma_ops_t;
 
 /**
  * @brief ACAPD DMA channel data structure
  */
-struct acapd_chnl {
+typedef struct acapd_chnl {
 	char name[128]; /**< DMA channel name/or path */
+	char *dev_name; /**< related device name */
 	char *id; /**< DMA channel logical id */
 	int iommu_group; /**< iommu group if the channel is behind IOMMU */
 	int chnl_id; /**< hardware channel id of a data mover controller */
@@ -98,7 +97,7 @@ struct acapd_chnl {
 	void *sys_info; /**< System private data for the channel */
 	acapd_dma_ops_t *ops;
 	acapd_list_t node;
-};
+} acapd_chnl_t;
 
 
 int acapd_dma_config(acapd_chnl_t *chnl, acapd_shm_t *shm, acapd_dim_t *dim,

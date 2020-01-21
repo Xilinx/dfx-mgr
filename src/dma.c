@@ -104,8 +104,11 @@ int acapd_create_dma_channel(char *name, int iommu_group,
 		memset(chnl->name, 0, sizeof(chnl->name));
 		strncpy(chnl->name, name, len);
 	}
-	ret = sys_acapd_create_dma_channel(name, iommu_group, conn_type,
-					   chnl_id, dir, chnl);
+	if (chnl->ops == NULL || chnl->ops->open == NULL) {
+		acapd_perror("%s: no open channel ops.\n", __func__);
+		return -EINVAL;
+	}
+	ret = chnl->ops->open(chnl);
 	if (ret != 0) {
 		acapd_perror("%s: system failed to create DMA channel.\n",
 			     __func__);
@@ -123,8 +126,8 @@ int acapd_destroy_dma_channel(acapd_chnl_t *chnl)
 	if (chnl->ops == NULL) {
 		return 0;
 	}
-	if (chnl->ops->close_chnl == NULL) {
+	if (chnl->ops->close == NULL) {
 		return 0;
 	}
-	return chnl->ops->close_chnl(chnl);
+	return chnl->ops->close(chnl);
 }
