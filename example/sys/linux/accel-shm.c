@@ -64,6 +64,7 @@ int main(int argc, char *argv[])
 	 * it from CDO */
 
 	/* Wait for output data ready */
+	/* For now, this function force to return 1 as no ready pin can poke */
 	ret = acapd_accel_wait_for_data_ready(&bzip2_accel);
 	/* Read data */
 	ret = acapd_accel_read_data(&bzip2_accel, &rx_shm);

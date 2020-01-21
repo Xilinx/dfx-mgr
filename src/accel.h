@@ -82,6 +82,8 @@ int load_accel(acapd_accel_t *accel, unsigned int async);
 
 int accel_load_status(acapd_accel_t *accel);
 
+int acapd_accel_wait_for_data_ready(acapd_accel_t *accel);
+
 /*
  * TODO: Do we want stop accel for accel swapping?
  */

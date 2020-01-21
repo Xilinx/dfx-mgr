@@ -67,7 +67,6 @@ int acapd_accel_write_data(acapd_accel_t *accel, acapd_shm_t *shm);
 
 int acapd_accel_read_data(acapd_accel_t *accel, acapd_shm_t *shm);
 
-int acapd_accel_wait_for_data_ready(acapd_accel_t *accel);
 
 #ifdef __cplusplus
 }

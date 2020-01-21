@@ -121,3 +121,10 @@ int remove_accel(acapd_accel_t *accel, unsigned int async)
 		return ret;
 	}
 }
+
+int acapd_accel_wait_for_data_ready(acapd_accel_t *accel)
+{
+	/* TODO: always ready */
+	(void)accel;
+	return 1;
+}
