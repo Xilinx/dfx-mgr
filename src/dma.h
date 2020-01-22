@@ -88,15 +88,16 @@ typedef struct acapd_dma_ops {
  */
 typedef struct acapd_chnl {
 	char name[128]; /**< DMA channel name/or path */
-	char *dev_name; /**< related device name */
+	const char *dev_name; /**< related device name */
 	char *id; /**< DMA channel logical id */
 	int iommu_group; /**< iommu group if the channel is behind IOMMU */
 	int chnl_id; /**< hardware channel id of a data mover controller */
 	acapd_dir_t dir; /**< DMA channel direction */
 	uint32_t conn_type; /**< type of data connection with this channel */
 	void *sys_info; /**< System private data for the channel */
-	acapd_dma_ops_t *ops;
-	acapd_list_t node;
+	int is_open; /**< Indicate if the channel is open */
+	acapd_dma_ops_t *ops; /**< DMA operations */
+	acapd_list_t node; /**< list node */
 } acapd_chnl_t;
 
 
@@ -105,7 +106,10 @@ int acapd_dma_config(acapd_chnl_t *chnl, acapd_shm_t *shm, acapd_dim_t *dim,
 int acapd_dma_start(acapd_chnl_t *chnl, acapd_fence_t *fence);
 int acapd_dma_stop(acapd_chnl_t *chnl);
 int acapd_dma_poll(acapd_chnl_t *chnl, uint32_t wait_for_complete);
-int acapd_create_dma_channel(char *name, int iommu_group,
+int acapd_dma_open(acapd_chnl_t *chnl);
+int acapd_dma_close(acapd_chnl_t *chnl);
+int acapd_create_dma_channel(const char *name, const char *dev_name,
+			     int iommu_group,
 			     acapd_chnl_conn_t conn_type, int chnl_id,
 			     acapd_dir_t dir, acapd_chnl_t *chnl);
 int acapd_destroy_dma_channel(acapd_chnl_t *chnl);

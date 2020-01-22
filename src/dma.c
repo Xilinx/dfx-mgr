@@ -80,16 +80,58 @@ int acapd_dma_poll(acapd_chnl_t *chnl, uint32_t wait_for_complete)
 	return chnl->ops->poll(chnl, wait_for_complete);
 }
 
-int acapd_create_dma_channel(char *name, int iommu_group,
-			     acapd_chnl_conn_t conn_type, int chnl_id,
-			     acapd_dir_t dir, acapd_chnl_t *chnl)
+int acapd_dma_open(acapd_chnl_t *chnl)
 {
 	int ret;
 
+	acapd_debug("%s\n", __func__);
 	if (chnl == NULL) {
 		acapd_perror("%s: channel pointer is NULL.\n", __func__);
 		return -EINVAL;
 	}
+	if (chnl->is_open != 0) {
+		return 0;
+	}
+	if (chnl->ops == NULL || chnl->ops->open == NULL) {
+		acapd_perror("%s: no open channel ops.\n", __func__);
+		return -EINVAL;
+	}
+	ret = chnl->ops->open(chnl);
+	if (ret != 0) {
+		acapd_perror("%s: system failed to open DMA channel.\n",
+			     __func__);
+		return -EINVAL;
+	}
+	chnl->is_open = 1;
+	return 0;
+}
+
+int acapd_dma_close(acapd_chnl_t *chnl)
+{
+	acapd_debug("%s\n", __func__);
+	if (chnl->is_open == 0) {
+		return 0;
+	}
+	chnl->is_open = 0;
+	if (chnl->ops == NULL) {
+		return 0;
+	}
+	if (chnl->ops->close == NULL) {
+		return 0;
+	}
+	return chnl->ops->close(chnl);
+}
+
+int acapd_create_dma_channel(const char *name, const char *dev_name,
+			     int iommu_group,
+			     acapd_chnl_conn_t conn_type, int chnl_id,
+			     acapd_dir_t dir, acapd_chnl_t *chnl)
+{
+	if (chnl == NULL) {
+		acapd_perror("%s: channel pointer is NULL.\n", __func__);
+		return -EINVAL;
+	}
+	chnl->dev_name = dev_name;
 	chnl->iommu_group = iommu_group;
 	chnl->chnl_id = chnl_id;
 	chnl->dir = dir;
@@ -104,17 +146,7 @@ int acapd_create_dma_channel(char *name, int iommu_group,
 		memset(chnl->name, 0, sizeof(chnl->name));
 		strncpy(chnl->name, name, len);
 	}
-	if (chnl->ops == NULL || chnl->ops->open == NULL) {
-		acapd_perror("%s: no open channel ops.\n", __func__);
-		return -EINVAL;
-	}
-	ret = chnl->ops->open(chnl);
-	if (ret != 0) {
-		acapd_perror("%s: system failed to create DMA channel.\n",
-			     __func__);
-		return -EINVAL;
-	}
-	return ret;
+	return acapd_dma_open(chnl);
 }
 
 int acapd_destroy_dma_channel(acapd_chnl_t *chnl)
@@ -123,11 +155,5 @@ int acapd_destroy_dma_channel(acapd_chnl_t *chnl)
 		acapd_perror("%s: channel pointer is NULL.\n", __func__);
 		return -EINVAL;
 	}
-	if (chnl->ops == NULL) {
-		return 0;
-	}
-	if (chnl->ops->close == NULL) {
-		return 0;
-	}
-	return chnl->ops->close(chnl);
+	return acapd_dma_close(chnl);
 }

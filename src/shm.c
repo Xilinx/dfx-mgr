@@ -155,12 +155,8 @@ int acapd_accel_write_data(acapd_accel_t *accel, acapd_shm_t *shm)
 		acapd_perror("%s: no write channel is found.\n", __func__);
 		return -EINVAL;
 	}
-	if (chnl->ops == NULL || chnl->ops->open == NULL) {
-		acapd_perror("%s: No function defined to open channel.\n");
-		return -EINVAL;
-	}
 	acapd_debug("%s: opening chnnl\n", __func__);
-	ret = chnl->ops->open(chnl);
+	ret = acapd_dma_open(chnl);
 	if (ret < 0) {
 		acapd_perror("%s: failed to open channel.\n", __func__);
 		return -EINVAL;
@@ -203,7 +199,7 @@ int acapd_accel_read_data(acapd_accel_t *accel, acapd_shm_t *shm)
 	acapd_chnl_t *chnl = NULL;
 	acapd_dim_t dim;
 	int ret;
-	int transfered_len;
+	int transfered_len = 0;
 
 	if (accel == NULL) {
 		acapd_perror("%s: fafiled due to accel is NULL.\n", __func__);
@@ -227,11 +223,8 @@ int acapd_accel_read_data(acapd_accel_t *accel, acapd_shm_t *shm)
 		acapd_perror("%s: no write channel is found.\n", __func__);
 		return -EINVAL;
 	}
-	if (chnl->ops == NULL || chnl->ops->open == NULL) {
-		acapd_perror("%s: No function defined to open channel.\n");
-		return -EINVAL;
-	}
-	ret = chnl->ops->open(chnl);
+	acapd_debug("%s: opening chnnl\n", __func__);
+	ret = acapd_dma_open(chnl);
 	if (ret < 0) {
 		acapd_perror("%s: failed to open channel.\n", __func__);
 		return -EINVAL;
@@ -239,18 +232,21 @@ int acapd_accel_read_data(acapd_accel_t *accel, acapd_shm_t *shm)
 	dim.number_of_dims = 1;
 	dim.strides[0] = 1;
 	/* Attach memory to the channel */
+	acapd_debug("%s: attaching memory to chnnl\n", __func__);
 	ret = acapd_attach_shm(chnl, shm);
 	if (ret != 0) {
 		acapd_perror("%s: failed to attach tx shm\n", __func__);
 		return -EINVAL;
 	}
 	/* Check if it is ok to transfer data */
+	acapd_debug("%s: poll chnl to check if it can receive data\n", __func__);
 	ret = acapd_dma_poll(chnl, 1);
 	if (ret < 0) {
 		acapd_perror("%s: chnl is not ready\n", __func__);
 		return -EINVAL;
 	}
 	/* Config channel to receive data */
+	acapd_debug("%s: config chnl\n", __func__);
 	ret = acapd_dma_config(chnl, shm, &dim, 0);
 	if (ret < 0) {
 		acapd_perror("%s: failed to config chnl\n",
@@ -259,6 +255,7 @@ int acapd_accel_read_data(acapd_accel_t *accel, acapd_shm_t *shm)
 	}
 	transfered_len = ret;
 	/* Start transferring */
+	acapd_debug("%s: start chnl\n", __func__);
 	ret = acapd_dma_start(chnl, NULL);
 	if (ret != 0) {
 		acapd_perror("%s: failed to start chnl\n",
@@ -266,6 +263,7 @@ int acapd_accel_read_data(acapd_accel_t *accel, acapd_shm_t *shm)
 		return -EINVAL;
 	}
 	/* Wait until data has been received */
+	acapd_debug("%s: wait for chnl to complete\n", __func__);
 	ret = acapd_dma_poll(chnl, 1);
 	if (ret < 0) {
 		acapd_perror("%s: chnl is not done successfully\n", __func__);
