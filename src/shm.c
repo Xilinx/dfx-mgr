@@ -240,7 +240,7 @@ int acapd_accel_read_data(acapd_accel_t *accel, acapd_shm_t *shm)
 	acapd_debug("%s: attaching memory to chnnl\n", __func__);
 	ret = acapd_attach_shm(chnl, shm);
 	if (ret != 0) {
-		acapd_perror("%s: failed to attach tx shm\n", __func__);
+		acapd_perror("%s: failed to attach rx shm\n", __func__);
 		return -EINVAL;
 	}
 	/* Check if it is ok to transfer data */
