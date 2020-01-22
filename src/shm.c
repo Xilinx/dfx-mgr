@@ -75,9 +75,14 @@ int acapd_attach_shm(acapd_chnl_t *chnl, acapd_shm_t *shm)
 	}
 	if (already_attached == 0) {
 		if (chnl->ops && chnl->ops->mmap != NULL) {
+			void *va;
+
 			acapd_debug("%s: calling channel mmap op.\n",
 				    __func__);
-			chnl->ops->mmap(chnl, shm);
+			va = chnl->ops->mmap(chnl, shm);
+			if (va == NULL) {
+				return -EINVAL;
+			}
 		}
 		acapd_list_add_tail(&shm->refs, &chnl->node);
 		shm->refcount++;
