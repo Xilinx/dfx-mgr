@@ -68,7 +68,7 @@ void *vfio_dma_mmap(acapd_chnl_t *chnl, acapd_shm_t *shm)
 		if ((da + shm->size) < mmap->da) {
 			continue;
 		}
-		if ((da + shm->size) < tmp) {
+		if ((da + shm->size) <= tmp) {
 			da = tmp;
 		}
 	}
@@ -90,7 +90,7 @@ void *vfio_dma_mmap(acapd_chnl_t *chnl, acapd_shm_t *shm)
 	mmap->da = da;
 	mmap->size = shm->size;
 	acapd_list_add_tail(&vchnl_info->mmaps, &mmap->node);
-	acapd_debug("%s: mmap shm done\n", __func__);
+	acapd_debug("%s: mmap shm done, 0x%llx, 0x%llx\n", __func__, da, shm->size);
 	return shm->va;
 }
 
