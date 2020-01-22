@@ -145,11 +145,14 @@ int vfio_open_channel(acapd_chnl_t *chnl)
 
 	/* Check if vfio device has been opened */
 	vchnl_info = NULL;
+	acapd_debug("%s: check if device has already opened.\n",  __func__);
 	acapd_list_for_each(&vfio_devs, node) {
 		acapd_vfio_chnl_t *lvchnl_info;
 
 		lvchnl_info = (acapd_vfio_chnl_t *)acapd_container_of(node,
 					acapd_vfio_chnl_t, node);
+		acapd_debug("%s: checking %s.\n", __func__,
+			    lvchnl_info->dev_name);
 		if (strcmp(chnl->dev_name, lvchnl_info->dev_name) == 0) {
 			vchnl_info = lvchnl_info;
 			break;
@@ -158,7 +161,9 @@ int vfio_open_channel(acapd_chnl_t *chnl)
 
 	/* Device is already opened */
 	if (vchnl_info != NULL) {
+		acapd_debug("%s: device is already opened.\n", __func__);
 		vchnl_info->refs++;
+		chnl->sys_info = vchnl_info;
 		return 0;
 	}
 	vchnl_info = malloc(sizeof(*vchnl_info));
@@ -167,19 +172,25 @@ int vfio_open_channel(acapd_chnl_t *chnl)
 		return -EINVAL;
 	}
 	memset(vchnl_info, 0, sizeof(*vchnl_info));
+	vchnl_info->dev_name = chnl->dev_name;
 	snprintf(group_path, 64, "/dev/vfio/%d", chnl->iommu_group);
 
 	acapd_list_init(&vchnl_info->mmaps);
 	chnl->sys_info = vchnl_info;
+	acapd_debug("%s: open container.\n", __func__);
 	vchnl_info->container = open(VFIO_CONTAINER,O_RDWR);
+	acapd_debug("%s: open group.\n", __func__);
 	vchnl_info->group = open(group_path,O_RDWR);
 
 	 /* Add the group to the container */
+	acapd_debug("%s: add group to container.\n", __func__);
 	ioctl(vchnl_info->group, VFIO_GROUP_SET_CONTAINER, &vchnl_info->container);
 
 	/* Enable the IOMMU mode we want */
+	acapd_debug("%s: enable IOMMU mode.\n", __func__);
 	ioctl(vchnl_info->container, VFIO_SET_IOMMU, VFIO_TYPE1_IOMMU);
 
+	acapd_debug("%s: get vfio device.\n", __func__);
 	vchnl_info->device = ioctl(vchnl_info->group,
 				   VFIO_GROUP_GET_DEVICE_FD,
 				   chnl->dev_name);
@@ -217,7 +228,25 @@ int vfio_open_channel(acapd_chnl_t *chnl)
 
 int vfio_close_channel(acapd_chnl_t *chnl)
 {
+	acapd_vfio_chnl_t *vchnl_info;
+
 	/* TODO */
-	(void)chnl;
+	if (chnl == NULL) {
+		acapd_perror("%s: chnl is NULL.\n", __func__);
+		return -EINVAL;
+	}
+	vchnl_info = (acapd_vfio_chnl_t *)chnl->sys_info;
+	if (vchnl_info == NULL) {
+		return 0;
+	}
+	chnl->sys_info = NULL;
+	vchnl_info->refs--;
+	if (vchnl_info->refs != 0) {
+		return 0;
+	}
+	/* TODO: Close VFIO device */
+	/* Remove the vchnl_info from vchnls list */
+	acapd_list_del(&vchnl_info->node);
+	free(vchnl_info);
 	return 0;
 }
