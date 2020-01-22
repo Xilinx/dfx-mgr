@@ -74,9 +74,10 @@ void *vfio_dma_mmap(acapd_chnl_t *chnl, acapd_shm_t *shm)
 	}
 	dma_map.iova = da;
 	ret = ioctl(vchnl_info->container, VFIO_IOMMU_MAP_DMA, &dma_map);
-	if(ret) {
-		acapd_perror("%s: Could not map DMA memory for vfio\n",
-			     __func__);
+	if (ret) {
+		acapd_perror("%s: Could not map DMA memory %d,%s. %p, 0x%llx\n",
+			     __func__, vchnl_info->container, strerror(ret),
+			     shm->va, da);
 		return NULL;
 	}
 	mmap = malloc(sizeof(*mmap));
@@ -142,6 +143,7 @@ int vfio_open_channel(acapd_chnl_t *chnl)
 	char group_path[64];
 	uint32_t i;
 	acapd_list_t *node;
+	int ret;
 
 	/* Check if vfio device has been opened */
 	vchnl_info = NULL;
@@ -179,16 +181,33 @@ int vfio_open_channel(acapd_chnl_t *chnl)
 	chnl->sys_info = vchnl_info;
 	acapd_debug("%s: open container.\n", __func__);
 	vchnl_info->container = open(VFIO_CONTAINER,O_RDWR);
+	if (vchnl_info->container < 0) {
+		acapd_perror("%s: failed to open container.\n", __func__);
+		return -EINVAL;
+	}
 	acapd_debug("%s: open group.\n", __func__);
 	vchnl_info->group = open(group_path,O_RDWR);
+	if (vchnl_info->group < 0) {
+		acapd_perror("%s: failed to open group.\n", __func__);
+		return -EINVAL;
+	}
 
 	 /* Add the group to the container */
 	acapd_debug("%s: add group to container.\n", __func__);
-	ioctl(vchnl_info->group, VFIO_GROUP_SET_CONTAINER, &vchnl_info->container);
+	ret = ioctl(vchnl_info->group, VFIO_GROUP_SET_CONTAINER,
+		    &vchnl_info->container);
+	if (ret < 0) {
+		acapd_perror("%s: failed to group set container ioctl.\n", __func__);
+		return -EINVAL;
+	}
 
 	/* Enable the IOMMU mode we want */
 	acapd_debug("%s: enable IOMMU mode.\n", __func__);
-	ioctl(vchnl_info->container, VFIO_SET_IOMMU, VFIO_TYPE1_IOMMU);
+	ret = ioctl(vchnl_info->container, VFIO_SET_IOMMU, VFIO_TYPE1_IOMMU);
+	if (ret < 0) {
+		acapd_perror("%s: failed to set iommu.\n");
+		return -EINVAL;
+	}
 
 	acapd_debug("%s: get vfio device.\n", __func__);
 	vchnl_info->device = ioctl(vchnl_info->group,
@@ -202,7 +221,7 @@ int vfio_open_channel(acapd_chnl_t *chnl)
 
 	memset(vchnl_info->ios, 0, sizeof(vchnl_info->ios));
 	ioctl(vchnl_info->device, VFIO_DEVICE_GET_INFO, &device_info);
-	for (i=0; i < device_info.num_regions; i++){
+	for (i = 0; i < device_info.num_regions; i++){
 		struct vfio_region_info reg = { .argsz = sizeof(reg)};
 
 		reg.index = i;
@@ -230,7 +249,6 @@ int vfio_close_channel(acapd_chnl_t *chnl)
 {
 	acapd_vfio_chnl_t *vchnl_info;
 
-	/* TODO */
 	if (chnl == NULL) {
 		acapd_perror("%s: chnl is NULL.\n", __func__);
 		return -EINVAL;
