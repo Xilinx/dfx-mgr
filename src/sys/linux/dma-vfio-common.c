@@ -89,6 +89,7 @@ void *vfio_dma_mmap(acapd_chnl_t *chnl, acapd_shm_t *shm)
 	mmap->da = da;
 	mmap->size = shm->size;
 	acapd_list_add_tail(&vchnl_info->mmaps, &mmap->node);
+	acapd_debug("%s: mmap shm done\n", __func__);
 	return shm->va;
 }
 
