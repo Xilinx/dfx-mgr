@@ -16,10 +16,16 @@
 void *acapd_alloc_shm(char *shm_allocator_name, acapd_shm_t *shm, size_t size,
 		      uint32_t attr)
 {
+	void *va;
 	(void)shm_allocator_name;
 	shm->refcount = 0;
-	return acapd_default_shm_allocator.alloc(&acapd_default_shm_allocator,
-						  shm, size, attr);
+	acapd_list_init(&shm->refs);
+	va = acapd_default_shm_allocator.alloc(&acapd_default_shm_allocator,
+					       shm, size, attr);
+	if (va != NULL) {
+		shm->size = size;
+	}
+	return va;
 }
 
 int acapd_free_shm(acapd_shm_t *shm)
@@ -69,6 +75,8 @@ int acapd_attach_shm(acapd_chnl_t *chnl, acapd_shm_t *shm)
 	}
 	if (already_attached == 0) {
 		if (chnl->ops && chnl->ops->mmap != NULL) {
+			acapd_debug("%s: calling channel mmap op.\n",
+				    __func__);
 			chnl->ops->mmap(chnl, shm);
 		}
 		acapd_list_add_tail(&shm->refs, &chnl->node);
@@ -151,6 +159,7 @@ int acapd_accel_write_data(acapd_accel_t *accel, acapd_shm_t *shm)
 		acapd_perror("%s: No function defined to open channel.\n");
 		return -EINVAL;
 	}
+	acapd_debug("%s: opening chnnl\n", __func__);
 	ret = chnl->ops->open(chnl);
 	if (ret < 0) {
 		acapd_perror("%s: failed to open channel.\n", __func__);
@@ -158,17 +167,20 @@ int acapd_accel_write_data(acapd_accel_t *accel, acapd_shm_t *shm)
 	}
 	dim.number_of_dims = 1;
 	dim.strides[0] = 1;
+	acapd_debug("%s: attaching shm to channel\n", __func__);
 	ret = acapd_attach_shm(chnl, shm);
 	if (ret != 0) {
 		acapd_perror("%s: failed to attach tx shm\n", __func__);
 		return -EINVAL;
 	}
 	/* Check if it is ok to transfer data */
+	acapd_debug("%s: polling  channel status\n", __func__);
 	ret = acapd_dma_poll(chnl, 1);
 	if (ret < 0) {
 		acapd_perror("%s: chnl is not ready\n", __func__);
 		return -EINVAL;
 	}
+	acapd_debug("%s: configuring channel dma\n", __func__);
 	ret = acapd_dma_config(chnl, shm, &dim, 0);
 	if (ret < 0) {
 		acapd_perror("%s: failed to config chnl\n",
@@ -176,6 +188,7 @@ int acapd_accel_write_data(acapd_accel_t *accel, acapd_shm_t *shm)
 		return -EINVAL;
 	}
 	transfered_len = ret;
+	acapd_debug("%s: starting channel dma\n", __func__);
 	ret = acapd_dma_start(chnl, NULL);
 	if (ret != 0) {
 		acapd_perror("%s: failed to start chnl\n",
