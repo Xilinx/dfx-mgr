@@ -11,7 +11,8 @@
 #include <stdio.h>
 #include <string.h>
 
-int acapd_dma_config(acapd_chnl_t *chnl, acapd_shm_t *shm, acapd_dim_t *dim,
+int acapd_dma_config(acapd_chnl_t *chnl, acapd_shm_t *shm,
+		     acapd_shape_t *stride,
 		     uint32_t auto_repeat)
 {
 	if (chnl == NULL) {
@@ -26,7 +27,7 @@ int acapd_dma_config(acapd_chnl_t *chnl, acapd_shm_t *shm, acapd_dim_t *dim,
 		acapd_perror("%s: channel config dma op is NULL.\n", __func__);
 		return -EINVAL;
 	}
-	return chnl->ops->config(chnl, shm, dim, auto_repeat);
+	return chnl->ops->config(chnl, shm, stride, auto_repeat);
 }
 
 int acapd_dma_start(acapd_chnl_t *chnl, acapd_fence_t *fence)

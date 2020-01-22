@@ -53,12 +53,12 @@ typedef enum acpad_chnl_status {
 #define ACAPD_MAX_DIMS	4U
 
 /**
- * @brief DMA dimension structure
+ * @brief ACAPD data shape structure
  */
-typedef struct acapd_dim {
-	int number_of_dims; /**< Number of dimentions */
-	int strides[ACAPD_MAX_DIMS]; /**< stride of each dimention */
-} acapd_dim_t;
+typedef struct acapd_shape {
+	int num_of_dims; /**< Number of dimensions */
+	int dim[ACAPD_MAX_DIMS]; /**< Number of elements in each dimension */
+} acapd_shape_t;
 
 typedef struct acapd_chnl acapd_chnl_t;
 typedef struct acapd_shm acapd_shm_t;
@@ -74,7 +74,8 @@ typedef struct acapd_dma_ops {
 	const char name[128]; /**< name of the DMA operation */
 	void *(*mmap)(acapd_chnl_t *chnl, acapd_shm_t *shm);
 	int (*munmap)(acapd_chnl_t *chnl, acapd_shm_t *shm);
-	int (*config)(acapd_chnl_t *chnl, acapd_shm_t *shm, acapd_dim_t *dim,
+	int (*config)(acapd_chnl_t *chnl, acapd_shm_t *shm,
+		      acapd_shape_t *stride,
 		      uint32_t auto_repeat);
 	int (*start)(acapd_chnl_t *chnl, acapd_fence_t *fence);
 	int (*stop)(acapd_chnl_t *chnl);
@@ -101,7 +102,8 @@ typedef struct acapd_chnl {
 } acapd_chnl_t;
 
 
-int acapd_dma_config(acapd_chnl_t *chnl, acapd_shm_t *shm, acapd_dim_t *dim,
+int acapd_dma_config(acapd_chnl_t *chnl, acapd_shm_t *shm,
+		     acapd_shape_t *stride,
 		     uint32_t auto_repeat);
 int acapd_dma_start(acapd_chnl_t *chnl, acapd_fence_t *fence);
 int acapd_dma_stop(acapd_chnl_t *chnl);

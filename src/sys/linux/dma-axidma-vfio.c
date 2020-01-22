@@ -27,7 +27,7 @@
  * TODO
  */
 static int axidma_vfio_dma_config(acapd_chnl_t *chnl, acapd_shm_t *shm,
-				  acapd_dim_t *dim, uint32_t auto_repeat)
+				  acapd_shape_t *stride, uint32_t auto_repeat)
 {
 #if 0
 	acapd_vfio_chnl_t *vchnl_info;
@@ -45,7 +45,7 @@ static int axidma_vfio_dma_config(acapd_chnl_t *chnl, acapd_shm_t *shm,
 #else
 	(void)chnl;
 	(void)shm;
-	(void)dim;
+	(void)stride;
 	(void)auto_repeat;
 
 #endif

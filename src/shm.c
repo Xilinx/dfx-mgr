@@ -134,7 +134,7 @@ void *acapd_accel_alloc_shm(acapd_accel_t *accel, size_t size, acapd_shm_t *shm)
 int acapd_accel_write_data(acapd_accel_t *accel, acapd_shm_t *shm)
 {
 	acapd_chnl_t *chnl = NULL;
-	acapd_dim_t dim;
+	acapd_shape_t stride;
 	int ret;
 	int transfered_len;
 
@@ -166,8 +166,8 @@ int acapd_accel_write_data(acapd_accel_t *accel, acapd_shm_t *shm)
 		acapd_perror("%s: failed to open channel.\n", __func__);
 		return -EINVAL;
 	}
-	dim.number_of_dims = 1;
-	dim.strides[0] = 1;
+	stride.num_of_dims = 1;
+	stride.dim[0] = 1;
 	acapd_debug("%s: attaching shm to channel\n", __func__);
 	ret = acapd_attach_shm(chnl, shm);
 	if (ret != 0) {
@@ -182,7 +182,7 @@ int acapd_accel_write_data(acapd_accel_t *accel, acapd_shm_t *shm)
 		return -EINVAL;
 	}
 	acapd_debug("%s: configuring channel dma\n", __func__);
-	ret = acapd_dma_config(chnl, shm, &dim, 0);
+	ret = acapd_dma_config(chnl, shm, &stride, 0);
 	if (ret < 0) {
 		acapd_perror("%s: failed to config chnl\n",
 			     __func__);
@@ -202,7 +202,7 @@ int acapd_accel_write_data(acapd_accel_t *accel, acapd_shm_t *shm)
 int acapd_accel_read_data(acapd_accel_t *accel, acapd_shm_t *shm)
 {
 	acapd_chnl_t *chnl = NULL;
-	acapd_dim_t dim;
+	acapd_shape_t stride;
 	int ret;
 	int transfered_len = 0;
 
@@ -234,8 +234,8 @@ int acapd_accel_read_data(acapd_accel_t *accel, acapd_shm_t *shm)
 		acapd_perror("%s: failed to open channel.\n", __func__);
 		return -EINVAL;
 	}
-	dim.number_of_dims = 1;
-	dim.strides[0] = 1;
+	stride.num_of_dims = 1;
+	stride.dim[0] = 1;
 	/* Attach memory to the channel */
 	acapd_debug("%s: attaching memory to chnnl\n", __func__);
 	ret = acapd_attach_shm(chnl, shm);
@@ -252,7 +252,7 @@ int acapd_accel_read_data(acapd_accel_t *accel, acapd_shm_t *shm)
 	}
 	/* Config channel to receive data */
 	acapd_debug("%s: config chnl\n", __func__);
-	ret = acapd_dma_config(chnl, shm, &dim, 0);
+	ret = acapd_dma_config(chnl, shm, &stride, 0);
 	if (ret < 0) {
 		acapd_perror("%s: failed to config chnl\n",
 			     __func__);
