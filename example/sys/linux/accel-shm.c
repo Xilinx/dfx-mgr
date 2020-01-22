@@ -59,19 +59,19 @@ int main(int argc, char *argv[])
 	/* allocate memory */
 	tx_va = acapd_accel_alloc_shm(&bzip2_accel, 1024*1024, &tx_shm);
 	if (tx_va == NULL) {
-		fprintf(stderr, "Failed to allocate tx memory.\n");
+		fprintf(stderr, "ERROR: Failed to allocate tx memory.\n");
 		return -EINVAL;
 	}
 	rx_va = acapd_accel_alloc_shm(&bzip2_accel, 1024*1024, &rx_shm);
 	if (rx_va == NULL) {
-		fprintf(stderr, "Failed to allocate rx memory.\n");
+		fprintf(stderr, "ERROR: allocate rx memory.\n");
 		return -EINVAL;
 	}
 
 	/* Transfer data */
 	ret = acapd_accel_write_data(&bzip2_accel, &tx_shm);
 	if (ret < 0) {
-		fprintf(stderr, "Failed to write to accelerator.\n");
+		fprintf(stderr, "ERROR: Failed to write to accelerator.\n");
 		return -EINVAL;
 	}
 	/* TODO: Execute acceleration (optional as load_accel can also start
