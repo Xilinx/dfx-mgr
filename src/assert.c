@@ -5,6 +5,7 @@
  */
 
 #include <acapd/assert.h>
+#include <stdio.h>
 
 void acapd_assert(unsigned int cond)
 {
