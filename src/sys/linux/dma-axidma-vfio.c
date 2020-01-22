@@ -124,18 +124,45 @@ static int axidma_vfio_dma_poll(acapd_chnl_t *chnl, uint32_t wait_for_complete)
 
 static int axidma_vfio_dma_open(acapd_chnl_t *chnl)
 {
-#if 0
-	int ret, need_reset;
+	int ret;
+	//int need_reset;
+	struct stat s;
+	char tmpstr[256];
 
+	/* unbind the driver if required */
+	sprintf(tmpstr, "/sys/bus/platform/drivers/xilinx-vdma/%s",
+		chnl->dev_name);
+	ret = stat(tmpstr, &s);
+	if(ret >= 0) {
+		/* Need to unbind the driver */
+		sprintf(tmpstr,
+			"echo %s > /sys/bus/platform/drivers/xilinx-vdma/unbind",
+			chnl->dev_name);
+		system(tmpstr);
+	}
+	sprintf(tmpstr, "/sys/bus/platform/drivers/vfio-platform/%s",
+		chnl->dev_name);
+	ret = stat(tmpstr, &s);
+	if(ret < 0) {
+		/* Need to bind the driver with vfio  */
+		sprintf(tmpstr,
+			"echo vfio-platform > /sys/bus/platform/devices/%s/driver_override",
+			chnl->dev_name);
+		system(tmpstr);
+		sprintf(tmpstr,
+			"echo %s > /sys/bus/platform/drivers_probe",
+			chnl->dev_name);
+		system(tmpstr);
+	}
 	ret = vfio_open_channel(chnl);
 	if (ret < 0) {
-		acapd_perror("%s: failed to open vfio channel.\n");
+		acapd_perror("%s: failed to open vfio channel.\n", __func__);
+		return -EINVAL;
 	}
+#if 0
 	if (chnl->refs == 1) {
 		/* First time to open channel, reset it */
 	}
-#else
-	(void)chnl;
 #endif
 	return 0;
 

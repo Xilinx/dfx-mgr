@@ -183,7 +183,9 @@ int vfio_open_channel(acapd_chnl_t *chnl)
 				   VFIO_GROUP_GET_DEVICE_FD,
 				   chnl->dev_name);
 	if (vchnl_info->device < 0) {
-		acapd_perror("%s: Failed to get vfio axidma device\n", __func__);
+		acapd_perror("%s: Failed to get vfio device %s.\n",
+			     __func__, chnl->dev_name);
+		return -EINVAL;
 	}
 
 	memset(vchnl_info->ios, 0, sizeof(vchnl_info->ios));
