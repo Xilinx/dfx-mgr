@@ -162,6 +162,10 @@ static acapd_chnl_status_t axidma_vfio_dma_poll(acapd_chnl_t *chnl)
 	if (chnl->dir == ACAPD_DMA_DEV_W) {
 		/* write to stream, read tx DMA status */
 		base_va = (void *)((char *)base_va + XAXIDMA_TX_OFFSET);
+		v = *((volatile uint32_t *)((char *)base_va + XAXIDMA_CR_OFFSET));
+		if ((v & XAXIDMA_CR_RUNSTOP_MASK) == 0) {
+			return ACAPD_CHNL_IDLE;
+		}
 		v = *((volatile uint32_t *)((char *)base_va + XAXIDMA_SR_OFFSET));
 		if ((v & XAXIDMA_ERR_ALL_MASK) != 0) {
 			acapd_perror("%s, tx channel of %s errors: 0x%x\n",
@@ -175,6 +179,10 @@ static acapd_chnl_status_t axidma_vfio_dma_poll(acapd_chnl_t *chnl)
 	} else {
 		/* read from stream, read rx DMA status */
 		base_va = (void *)((char *)base_va + XAXIDMA_RX_OFFSET);
+		v = *((volatile uint32_t *)((char *)base_va + XAXIDMA_CR_OFFSET));
+		if ((v & XAXIDMA_CR_RUNSTOP_MASK) == 0) {
+			return ACAPD_CHNL_IDLE;
+		}
 		v = *((volatile uint32_t *)((char *)base_va + XAXIDMA_SR_OFFSET));
 		if ((v & XAXIDMA_ERR_ALL_MASK) != 0) {
 			acapd_perror("%s, rx channel of %s errors: 0x%x\n",
