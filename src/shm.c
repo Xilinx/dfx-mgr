@@ -175,27 +175,22 @@ int acapd_accel_write_data(acapd_accel_t *accel, acapd_shm_t *shm)
 		return -EINVAL;
 	}
 	/* Check if it is ok to transfer data */
-	acapd_debug("%s: polling  channel status\n", __func__);
-	ret = acapd_dma_poll(chnl, 1);
+	acapd_debug("%s: polling channel status\n", __func__);
+	ret = acapd_dma_poll(chnl, 0, NULL, 0);
 	if (ret < 0) {
 		acapd_perror("%s: chnl is not ready\n", __func__);
 		return -EINVAL;
+	} else if (ret == (int)ACAPD_CHNL_INPROGRESS) {
+		return -EBUSY;
 	}
-	acapd_debug("%s: configuring channel dma\n", __func__);
-	ret = acapd_dma_config(chnl, shm, &stride, 0);
+	acapd_debug("%s: transfer data\n", __func__);
+	ret = acapd_dma_transfer(chnl, shm, &stride, 0, NULL);
 	if (ret < 0) {
-		acapd_perror("%s: failed to config chnl\n",
+		acapd_perror("%s: failed to transfer data\n",
 			     __func__);
 		return -EINVAL;
 	}
 	transfered_len = ret;
-	acapd_debug("%s: starting channel dma\n", __func__);
-	ret = acapd_dma_start(chnl, NULL);
-	if (ret != 0) {
-		acapd_perror("%s: failed to start chnl\n",
-			     __func__);
-		return -EINVAL;
-	}
 	return transfered_len;
 }
 
@@ -245,31 +240,25 @@ int acapd_accel_read_data(acapd_accel_t *accel, acapd_shm_t *shm)
 	}
 	/* Check if it is ok to transfer data */
 	acapd_debug("%s: poll chnl to check if it can receive data\n", __func__);
-	ret = acapd_dma_poll(chnl, 1);
+	ret = acapd_dma_poll(chnl, 0, NULL, 0);
 	if (ret < 0) {
 		acapd_perror("%s: chnl is not ready\n", __func__);
 		return -EINVAL;
+	} else if (ret == (int)ACAPD_CHNL_INPROGRESS) {
+		return -EBUSY;
 	}
 	/* Config channel to receive data */
-	acapd_debug("%s: config chnl\n", __func__);
-	ret = acapd_dma_config(chnl, shm, &stride, 0);
+	acapd_debug("%s: transfer data\n", __func__);
+	ret = acapd_dma_transfer(chnl, shm, &stride, 0, NULL);
 	if (ret < 0) {
-		acapd_perror("%s: failed to config chnl\n",
+		acapd_perror("%s: failed to transfer data\n",
 			     __func__);
 		return -EINVAL;
 	}
 	transfered_len = ret;
-	/* Start transferring */
-	acapd_debug("%s: start chnl\n", __func__);
-	ret = acapd_dma_start(chnl, NULL);
-	if (ret != 0) {
-		acapd_perror("%s: failed to start chnl\n",
-			     __func__);
-		return -EINVAL;
-	}
 	/* Wait until data has been received */
 	acapd_debug("%s: wait for chnl to complete\n", __func__);
-	ret = acapd_dma_poll(chnl, 1);
+	ret = acapd_dma_poll(chnl, 1, NULL, 0);
 	if (ret < 0) {
 		acapd_perror("%s: chnl is not done successfully\n", __func__);
 		return -EINVAL;

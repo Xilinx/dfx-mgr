@@ -48,5 +48,6 @@ void *vfio_dma_mmap(acapd_chnl_t *chnl, acapd_shm_t *shm);
 int vfio_dma_munmap(acapd_chnl_t *chnl, acapd_shm_t *shm);
 int vfio_open_channel(acapd_chnl_t *chnl);
 int vfio_close_channel(acapd_chnl_t *chnl);
+uint64_t vfio_va_to_da(acapd_chnl_t *chnl, void *va);
 
 #endif

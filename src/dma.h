@@ -48,6 +48,8 @@ typedef enum acpad_chnl_status {
 	ACAPD_CHNL_IDLE		= 0U, /**< Channel is idle */
 	ACAPD_CHNL_INPROGRESS	= 1U, /**< Channel is in progress */
 	ACAPD_CHNL_STALLED	= 2U, /**< Channel is stalled */
+	ACAPD_CHNL_ERRORS	= 4U, /**< Channel is stalled */
+	ACAPD_CHNL_TIMEOUT	= 8U, /**< Channel is stalled */
 } acapd_chnl_status_t;
 
 #define ACAPD_MAX_DIMS	4U
@@ -69,17 +71,23 @@ typedef struct acapd_shm acapd_shm_t;
  */
 typedef int acapd_fence_t;
 
+/**
+ * @brief DMA poll callback
+ * TODO
+ */
+typedef void (*acapd_dma_cb_t)(acapd_chnl_t *chnl, int reason);
+
 /** DMA Channel Operations */
 typedef struct acapd_dma_ops {
 	const char name[128]; /**< name of the DMA operation */
 	void *(*mmap)(acapd_chnl_t *chnl, acapd_shm_t *shm);
 	int (*munmap)(acapd_chnl_t *chnl, acapd_shm_t *shm);
-	int (*config)(acapd_chnl_t *chnl, acapd_shm_t *shm,
-		      acapd_shape_t *stride,
-		      uint32_t auto_repeat);
-	int (*start)(acapd_chnl_t *chnl, acapd_fence_t *fence);
+	int (*transfer)(acapd_chnl_t *chnl, acapd_shm_t *shm,
+			acapd_shape_t *stride, uint32_t auto_repeat,
+			acapd_fence_t *fence);
 	int (*stop)(acapd_chnl_t *chnl);
-	int (*poll)(acapd_chnl_t *chnl, uint32_t wait_for_complete);
+	acapd_chnl_status_t (*poll)(acapd_chnl_t *chnl);
+	int (*reset)(acapd_chnl_t *chnl);
 	int (*open)(acapd_chnl_t *chnl);
 	int (*close)(acapd_chnl_t *chnl);
 } acapd_dma_ops_t;
@@ -101,14 +109,14 @@ typedef struct acapd_chnl {
 	acapd_list_t node; /**< list node */
 } acapd_chnl_t;
 
-
-int acapd_dma_config(acapd_chnl_t *chnl, acapd_shm_t *shm,
-		     acapd_shape_t *stride,
-		     uint32_t auto_repeat);
-int acapd_dma_start(acapd_chnl_t *chnl, acapd_fence_t *fence);
+int acapd_dma_transfer(acapd_chnl_t *chnl, acapd_shm_t *shm,
+		       acapd_shape_t *stride, uint32_t auto_repeat,
+		       acapd_fence_t *fence);
 int acapd_dma_stop(acapd_chnl_t *chnl);
-int acapd_dma_poll(acapd_chnl_t *chnl, uint32_t wait_for_complete);
+int acapd_dma_poll(acapd_chnl_t *chnl, uint32_t wait_for_complete,
+		   acapd_dma_cb_t poll_cb, uint32_t timeout);
 int acapd_dma_open(acapd_chnl_t *chnl);
+int acapd_dma_reset(acapd_chnl_t *chnl);
 int acapd_dma_close(acapd_chnl_t *chnl);
 int acapd_create_dma_channel(const char *name, const char *dev_name,
 			     int iommu_group,

@@ -28,8 +28,11 @@ typedef struct acapd_shm_allocator acapd_shm_allocator_t;
 typedef struct acapd_shm_allocator {
 	const char *name; /**< name of shmem provider */
 	void *priv; /**< private data */
-	void *(*alloc)(acapd_shm_allocator_t *allocator, acapd_shm_t *shm, size_t size,  uint32_t attr); /**< shmem allocation function */
-	void  (*free)(acapd_shm_allocator_t *allocator, acapd_shm_t *shm); /**< shmem free function */
+	void *(*alloc)(acapd_shm_allocator_t *allocator, acapd_shm_t *shm,
+			size_t size,
+			uint32_t attr); /**< shmem allocation function */
+	void  (*free)(acapd_shm_allocator_t *allocator,
+		      acapd_shm_t *shm); /**< shmem free function */
 	acapd_list_t node; /**< node */
 } acapd_shm_allocator_t;
 

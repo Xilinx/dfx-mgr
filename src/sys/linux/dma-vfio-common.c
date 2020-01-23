@@ -268,3 +268,32 @@ int vfio_close_channel(acapd_chnl_t *chnl)
 	free(vchnl_info);
 	return 0;
 }
+
+uint64_t vfio_va_to_da(acapd_chnl_t *chnl, void *va)
+{
+	acapd_vfio_chnl_t *vchnl_info;
+	acapd_list_t *node;
+	acapd_vfio_mmap_t *mmap;
+	char *lva = va;
+
+	if (chnl == NULL) {
+		acapd_perror("%s: chnl is NULL.\n", __func__);
+		return -EINVAL;
+	}
+	vchnl_info = (acapd_vfio_chnl_t *)chnl->sys_info;
+	if (vchnl_info == NULL) {
+		acapd_perror("%s: vfio chnl info is NULL.\n", __func__);
+		return -EINVAL;
+	}
+
+	acapd_list_for_each(&vchnl_info->mmaps, node) {
+		mmap = (acapd_vfio_mmap_t *)(acapd_container_of(node, acapd_vfio_mmap_t, node));
+		if (lva >= (char *)mmap->va && lva < ((char *)mmap->va + mmap->size)) {
+			uint64_t offset;
+
+			offset = lva - (char *)mmap->va;
+			return mmap->da + offset;
+		}
+	}
+	return (uint64_t)(-1);
+}

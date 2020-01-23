@@ -11,9 +11,9 @@
 #include <stdio.h>
 #include <string.h>
 
-int acapd_dma_config(acapd_chnl_t *chnl, acapd_shm_t *shm,
-		     acapd_shape_t *stride,
-		     uint32_t auto_repeat)
+int acapd_dma_transfer(acapd_chnl_t *chnl, acapd_shm_t *shm,
+		       acapd_shape_t *stride,
+		       uint32_t auto_repeat, acapd_fence_t *fence)
 {
 	if (chnl == NULL) {
 		acapd_perror("%s: channel pointer is NULL.\n", __func__);
@@ -23,28 +23,11 @@ int acapd_dma_config(acapd_chnl_t *chnl, acapd_shm_t *shm,
 		acapd_perror("%s: channel ops is NULL.\n", __func__);
 		return -EINVAL;
 	}
-	if (chnl->ops->config == NULL) {
+	if (chnl->ops->transfer == NULL) {
 		acapd_perror("%s: channel config dma op is NULL.\n", __func__);
 		return -EINVAL;
 	}
-	return chnl->ops->config(chnl, shm, stride, auto_repeat);
-}
-
-int acapd_dma_start(acapd_chnl_t *chnl, acapd_fence_t *fence)
-{
-	if (chnl == NULL) {
-		acapd_perror("%s: channel pointer is NULL.\n", __func__);
-		return -EINVAL;
-	}
-	if (chnl->ops == NULL) {
-		acapd_perror("%s: channel ops is NULL.\n", __func__);
-		return -EINVAL;
-	}
-	if (chnl->ops->start == NULL) {
-		acapd_perror("%s: channel start dma op is NULL.\n", __func__);
-		return -EINVAL;
-	}
-	return chnl->ops->start(chnl, fence);
+	return chnl->ops->transfer(chnl, shm, stride, auto_repeat, fence);
 }
 
 int acapd_dma_stop(acapd_chnl_t *chnl)
@@ -64,8 +47,14 @@ int acapd_dma_stop(acapd_chnl_t *chnl)
 	return chnl->ops->stop(chnl);
 }
 
-int acapd_dma_poll(acapd_chnl_t *chnl, uint32_t wait_for_complete)
+int acapd_dma_poll(acapd_chnl_t *chnl, uint32_t wait_for_complete,
+		   acapd_dma_cb_t cb, uint32_t timeout)
 {
+	acapd_chnl_status_t status;
+
+	/* TODO: timeout and async */
+	(void)cb;
+	(void)timeout;
 	if (chnl == NULL) {
 		acapd_perror("%s: channel pointer is NULL.\n", __func__);
 		return -EINVAL;
@@ -78,7 +67,33 @@ int acapd_dma_poll(acapd_chnl_t *chnl, uint32_t wait_for_complete)
 		acapd_perror("%s: channel poll dma op is NULL.\n", __func__);
 		return -EINVAL;
 	}
-	return chnl->ops->poll(chnl, wait_for_complete);
+	do {
+		status = chnl->ops->poll(chnl);
+		if (status == ACAPD_CHNL_ERRORS) {
+			return (int)(-status);
+		}
+		if (status == ACAPD_CHNL_IDLE) {
+			return 0;
+		}
+	}while(wait_for_complete);
+	return (int)ACAPD_CHNL_INPROGRESS;
+}
+
+int acapd_dma_reset(acapd_chnl_t *chnl)
+{
+	if (chnl == NULL) {
+		acapd_perror("%s: channel pointer is NULL.\n", __func__);
+		return -EINVAL;
+	}
+	if (chnl->ops == NULL) {
+		acapd_perror("%s: channel ops is NULL.\n", __func__);
+		return -EINVAL;
+	}
+	if (chnl->ops->reset == NULL) {
+		acapd_perror("%s: channel reset dma op is NULL.\n", __func__);
+		return -EINVAL;
+	}
+	return chnl->ops->reset(chnl);
 }
 
 int acapd_dma_open(acapd_chnl_t *chnl)
