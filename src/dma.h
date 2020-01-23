@@ -83,6 +83,7 @@ typedef struct acapd_dma_ops {
 	void *(*mmap)(acapd_chnl_t *chnl, acapd_shm_t *shm);
 	int (*munmap)(acapd_chnl_t *chnl, acapd_shm_t *shm);
 	int (*transfer)(acapd_chnl_t *chnl, acapd_shm_t *shm,
+			void *va, size_t size,
 			acapd_shape_t *stride, uint32_t auto_repeat,
 			acapd_fence_t *fence);
 	int (*stop)(acapd_chnl_t *chnl);
@@ -110,6 +111,7 @@ typedef struct acapd_chnl {
 } acapd_chnl_t;
 
 int acapd_dma_transfer(acapd_chnl_t *chnl, acapd_shm_t *shm,
+		       void *va, size_t size,
 		       acapd_shape_t *stride, uint32_t auto_repeat,
 		       acapd_fence_t *fence);
 int acapd_dma_stop(acapd_chnl_t *chnl);

@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Transfer data */
-	ret = acapd_accel_write_data(&bzip2_accel, &tx_shm);
+	ret = acapd_accel_write_data(&bzip2_accel, &tx_shm, tx_va, DATA_SIZE_BYTES, 0);
 	if (ret < 0) {
 		fprintf(stderr, "ERROR: Failed to write to accelerator.\n");
 		return -EINVAL;
@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
 	}
 	/* Read data */
 #if 1
-	ret = acapd_accel_read_data(&bzip2_accel, &rx_shm);
+	ret = acapd_accel_read_data(&bzip2_accel, &rx_shm, rx_va, DATA_SIZE_BYTES, 1);
 	if (ret < 0) {
 		fprintf(stderr, "Failed to read from accelerator.\n");
 		return -EINVAL;

@@ -131,7 +131,8 @@ void *acapd_accel_alloc_shm(acapd_accel_t *accel, size_t size, acapd_shm_t *shm)
 	return acapd_alloc_shm(NULL, shm, size, 0);
 }
 
-int acapd_accel_write_data(acapd_accel_t *accel, acapd_shm_t *shm)
+int acapd_accel_write_data(acapd_accel_t *accel, acapd_shm_t *shm,
+			   void *va, size_t size, int wait_for_complete)
 {
 	acapd_chnl_t *chnl = NULL;
 	acapd_shape_t stride;
@@ -184,17 +185,28 @@ int acapd_accel_write_data(acapd_accel_t *accel, acapd_shm_t *shm)
 		return -EBUSY;
 	}
 	acapd_debug("%s: transfer data\n", __func__);
-	ret = acapd_dma_transfer(chnl, shm, &stride, 0, NULL);
+	ret = acapd_dma_transfer(chnl, shm, va, size, &stride, 0, NULL);
 	if (ret < 0) {
 		acapd_perror("%s: failed to transfer data\n",
 			     __func__);
 		return -EINVAL;
 	}
 	transfered_len = ret;
+	if (wait_for_complete != 0) {
+		/* Wait until data has been sent*/
+		acapd_debug("%s: wait for chnl to complete\n", __func__);
+		ret = acapd_dma_poll(chnl, 1, NULL, 0);
+		if (ret < 0) {
+			acapd_perror("%s: chnl is not done successfully\n",
+				     __func__);
+			return -EINVAL;
+		}
+	}
 	return transfered_len;
 }
 
-int acapd_accel_read_data(acapd_accel_t *accel, acapd_shm_t *shm)
+int acapd_accel_read_data(acapd_accel_t *accel, acapd_shm_t *shm,
+			  void *va, size_t size, int wait_for_complete)
 {
 	acapd_chnl_t *chnl = NULL;
 	acapd_shape_t stride;
@@ -239,7 +251,7 @@ int acapd_accel_read_data(acapd_accel_t *accel, acapd_shm_t *shm)
 		return -EINVAL;
 	}
 	/* Check if it is ok to transfer data */
-	acapd_debug("%s: poll chnl to check if it can receive data\n", __func__);
+	acapd_debug("%s: check if chnl is ready to receive data.\n", __func__);
 	ret = acapd_dma_poll(chnl, 0, NULL, 0);
 	if (ret < 0) {
 		acapd_perror("%s: chnl is not ready\n", __func__);
@@ -249,19 +261,22 @@ int acapd_accel_read_data(acapd_accel_t *accel, acapd_shm_t *shm)
 	}
 	/* Config channel to receive data */
 	acapd_debug("%s: transfer data\n", __func__);
-	ret = acapd_dma_transfer(chnl, shm, &stride, 0, NULL);
+	ret = acapd_dma_transfer(chnl, shm, va, size, &stride, 0, NULL);
 	if (ret < 0) {
 		acapd_perror("%s: failed to transfer data\n",
 			     __func__);
 		return -EINVAL;
 	}
 	transfered_len = ret;
-	/* Wait until data has been received */
-	acapd_debug("%s: wait for chnl to complete\n", __func__);
-	ret = acapd_dma_poll(chnl, 1, NULL, 0);
-	if (ret < 0) {
-		acapd_perror("%s: chnl is not done successfully\n", __func__);
-		return -EINVAL;
+	if (wait_for_complete != 0) {
+		/* Wait until data has been received */
+		acapd_debug("%s: wait for chnl to complete\n", __func__);
+		ret = acapd_dma_poll(chnl, 1, NULL, 0);
+		if (ret < 0) {
+			acapd_perror("%s: chnl is not done successfully\n",
+				     __func__);
+			return -EINVAL;
+		}
 	}
 	return transfered_len;
 }

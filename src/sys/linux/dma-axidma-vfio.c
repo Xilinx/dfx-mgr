@@ -60,6 +60,7 @@
 #define XAXIDMA_ERR_ALL_MASK		0x00000770  /**< All errors */
 
 static int axidma_vfio_dma_transfer(acapd_chnl_t *chnl, acapd_shm_t *shm,
+				    void *va, size_t size,
 				    acapd_shape_t *stride, uint32_t auto_repeat,
 				    acapd_fence_t *fence)
 {
@@ -74,7 +75,7 @@ static int axidma_vfio_dma_transfer(acapd_chnl_t *chnl, acapd_shm_t *shm,
 	vchnl_info = (acapd_vfio_chnl_t *)chnl->sys_info;
 	base_va = vchnl_info->ios[0].va;
 
-	da = vfio_va_to_da(chnl, shm->va);
+	da = vfio_va_to_da(chnl, va);
 	if (da == (uint64_t)(-1)) {
 		acapd_perror("%s: failed to get da from va %p.\n",
 			     __func__, shm->va);
@@ -99,7 +100,7 @@ static int axidma_vfio_dma_transfer(acapd_chnl_t *chnl, acapd_shm_t *shm,
 		*((uint32_t *)((char *)base_va + XAXIDMA_SRCADDR_MSB_OFFSET)) =
 			(uint32_t)((da & 0xFFFFFFFF00000000) >> 32);
 		*((uint32_t *)((char *)base_va + XAXIDMA_BUFFLEN_OFFSET)) =
-			shm->size;
+			size;
 
 	} else {
 		acapd_debug("%s: data from stream to da 0x%llx.\n",
@@ -120,9 +121,9 @@ static int axidma_vfio_dma_transfer(acapd_chnl_t *chnl, acapd_shm_t *shm,
 		*((uint32_t *)((char *)base_va + XAXIDMA_DESTADDR_MSB_OFFSET)) =
 			(uint32_t)((da & 0xFFFFFFFF00000000) >> 32);
 		*((uint32_t *)((char *)base_va + XAXIDMA_BUFFLEN_OFFSET)) =
-			shm->size;
+			size;
 	}
-	return shm->size;
+	return size;
 }
 
 static int axidma_vfio_dma_stop(acapd_chnl_t *chnl)
