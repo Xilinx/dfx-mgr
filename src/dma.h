@@ -77,15 +77,24 @@ typedef int acapd_fence_t;
  */
 typedef void (*acapd_dma_cb_t)(acapd_chnl_t *chnl, int reason);
 
+/**
+ * @brief DMA configuration type
+ */
+typedef struct acapd_dma_config  {
+	acapd_shm_t *shm; /**< shared memory pointer */
+	void *va; /**< start address of the data in the shared memory */
+	size_t size; /**< size of the data */
+	acapd_shape_t *stride; /**< stride in the data transfer */
+	uint32_t auto_repeat; /**< if the dma transfer will auto repeat */
+	acapd_fence_t *fence; /**< fence of the dma transfer */
+} acapd_dma_config_t;
+
 /** DMA Channel Operations */
 typedef struct acapd_dma_ops {
 	const char name[128]; /**< name of the DMA operation */
 	void *(*mmap)(acapd_chnl_t *chnl, acapd_shm_t *shm);
 	int (*munmap)(acapd_chnl_t *chnl, acapd_shm_t *shm);
-	int (*transfer)(acapd_chnl_t *chnl, acapd_shm_t *shm,
-			void *va, size_t size,
-			acapd_shape_t *stride, uint32_t auto_repeat,
-			acapd_fence_t *fence);
+	int (*transfer)(acapd_chnl_t *chnl, acapd_dma_config_t *config);
 	int (*stop)(acapd_chnl_t *chnl);
 	acapd_chnl_status_t (*poll)(acapd_chnl_t *chnl);
 	int (*reset)(acapd_chnl_t *chnl);
@@ -110,10 +119,19 @@ typedef struct acapd_chnl {
 	acapd_list_t node; /**< list node */
 } acapd_chnl_t;
 
-int acapd_dma_transfer(acapd_chnl_t *chnl, acapd_shm_t *shm,
-		       void *va, size_t size,
-		       acapd_shape_t *stride, uint32_t auto_repeat,
-		       acapd_fence_t *fence);
+static inline void acapd_dma_init_config(acapd_dma_config_t *config,
+					 acapd_shm_t *shm, void *va,
+					 size_t size)
+{
+	config->shm = shm;
+	config->va = va;
+	config->size = size;
+	config->auto_repeat = 0;
+	config->stride = NULL;
+	config->fence = NULL;
+}
+
+int acapd_dma_transfer(acapd_chnl_t *chnl, acapd_dma_config_t *config);
 int acapd_dma_stop(acapd_chnl_t *chnl);
 int acapd_dma_poll(acapd_chnl_t *chnl, uint32_t wait_for_complete,
 		   acapd_dma_cb_t poll_cb, uint32_t timeout);

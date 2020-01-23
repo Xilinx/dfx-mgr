@@ -11,11 +11,12 @@
 #include <stdio.h>
 #include <string.h>
 
-int acapd_dma_transfer(acapd_chnl_t *chnl, acapd_shm_t *shm,
-		       void *va, size_t size,
-		       acapd_shape_t *stride,
-		       uint32_t auto_repeat, acapd_fence_t *fence)
+int acapd_dma_transfer(acapd_chnl_t *chnl, acapd_dma_config_t *config)
 {
+	acapd_shm_t *shm;
+	void *va;
+	size_t size;
+
 	if (chnl == NULL) {
 		acapd_perror("%s: channel pointer is NULL.\n", __func__);
 		return -EINVAL;
@@ -28,18 +29,24 @@ int acapd_dma_transfer(acapd_chnl_t *chnl, acapd_shm_t *shm,
 		acapd_perror("%s: channel config dma op is NULL.\n", __func__);
 		return -EINVAL;
 	}
-	if (size == 0) {
-		acapd_perror("%s: size to transfer is 0.\n", __func__);
+	if (config == NULL) {
+		acapd_perror("%s: channel config is NULL.\n", __func__);
 		return -EINVAL;
 	}
-	if ((char *)va > (char *)shm->va ||
+	if (config->shm ==  NULL) {
+		acapd_perror("%s: channel config shm is NULL.\n", __func__);
+		return -EINVAL;
+	}
+	va = config->va;
+	size = config->size;
+	shm = config->shm;
+	if ((char *)va < (char *)shm->va ||
 	    (char *)va + size > (char *)shm->va + shm->size) {
 		acapd_perror("%s: %p,size 0x%llx is beyond %p,size 0x%llx.\n",
 				__func__, va, size, shm->va, shm->size);
 		return -EINVAL;
 	}
-	return chnl->ops->transfer(chnl, shm, va, size, stride,
-				   auto_repeat, fence);
+	return chnl->ops->transfer(chnl, config);
 }
 
 int acapd_dma_stop(acapd_chnl_t *chnl)

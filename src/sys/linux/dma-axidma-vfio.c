@@ -59,26 +59,25 @@
 #define XAXIDMA_ERR_SG_DEC_MASK		0x00000400  /**< SG decode err */
 #define XAXIDMA_ERR_ALL_MASK		0x00000770  /**< All errors */
 
-static int axidma_vfio_dma_transfer(acapd_chnl_t *chnl, acapd_shm_t *shm,
-				    void *va, size_t size,
-				    acapd_shape_t *stride, uint32_t auto_repeat,
-				    acapd_fence_t *fence)
+static int axidma_vfio_dma_transfer(acapd_chnl_t *chnl, 
+				    acapd_dma_config_t *config)
 {
 	acapd_vfio_chnl_t *vchnl_info;
 	void *base_va; /**< AXI DMA reg mmaped base va address */
 	uint64_t da;
 	uint32_t v;
+	void *va;
+	size_t size;
 
-	(void)stride;
-	(void)auto_repeat;
-	(void)fence;
 	vchnl_info = (acapd_vfio_chnl_t *)chnl->sys_info;
 	base_va = vchnl_info->ios[0].va;
 
+	va = config->va;
+	size = config->size;
 	da = vfio_va_to_da(chnl, va);
 	if (da == (uint64_t)(-1)) {
 		acapd_perror("%s: failed to get da from va %p.\n",
-			     __func__, shm->va);
+			     __func__, va);
 		return -EINVAL;
 	}
 	if (chnl->dir == ACAPD_DMA_DEV_W) {
