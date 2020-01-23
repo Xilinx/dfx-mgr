@@ -8,6 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#define DATA_SIZE_BYTES (4*1024)
 
 void usage (const char *cmd)
 {
@@ -23,6 +24,7 @@ int main(int argc, char *argv[])
 	acapd_chnl_t chnls[2];
 	int ret;
 	void *tx_va, *rx_va;
+	uint32_t *dptr;
 
 	while ((opt = getopt(argc, argv, "p:")) != -1) {
 		switch (opt) {
@@ -57,12 +59,17 @@ int main(int argc, char *argv[])
 	bzip2_accel.num_chnls = 2;
 
 	/* allocate memory */
-	tx_va = acapd_accel_alloc_shm(&bzip2_accel, 1024*1024, &tx_shm);
+	tx_va = acapd_accel_alloc_shm(&bzip2_accel, DATA_SIZE_BYTES, &tx_shm);
 	if (tx_va == NULL) {
 		fprintf(stderr, "ERROR: Failed to allocate tx memory.\n");
 		return -EINVAL;
 	}
-	rx_va = acapd_accel_alloc_shm(&bzip2_accel, 1024*1024, &rx_shm);
+	dptr = (uint32_t *)tx_va;
+	for (uint32_t i = 0; i < DATA_SIZE_BYTES/4; i++) {
+		*((uint32_t *)dptr) = i + 1;
+		dptr++;
+	}
+	rx_va = acapd_accel_alloc_shm(&bzip2_accel, DATA_SIZE_BYTES, &rx_shm);
 	if (rx_va == NULL) {
 		fprintf(stderr, "ERROR: allocate rx memory.\n");
 		return -EINVAL;
@@ -85,12 +92,22 @@ int main(int argc, char *argv[])
 		return -EINVAL;
 	}
 	/* Read data */
+#if 1
 	ret = acapd_accel_read_data(&bzip2_accel, &rx_shm);
 	if (ret < 0) {
 		fprintf(stderr, "Failed to read from accelerator.\n");
 		return -EINVAL;
 	}
-
+	dptr = (uint32_t *)rx_va;
+	for (uint32_t i = 0; i < DATA_SIZE_BYTES/4; i++) {
+		if (*((uint32_t *)dptr) != (i + 1)) {
+			fprintf(stderr, "ERROR: wrong data: [%d]: 0x%x.\n",
+				i, *((volatile uint32_t *)dptr));
+			return -1;
+		}
+		dptr++;
+	}
+#endif
 	sleep(2);
 	printf("Removing accel %s.\n", pkg_path);
 	remove_accel(&bzip2_accel, 0);
