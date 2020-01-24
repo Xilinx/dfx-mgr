@@ -40,6 +40,7 @@ void *vfio_dma_mmap(acapd_chnl_t *chnl, acapd_shm_t *shm)
 	acapd_list_t *node;
 	acapd_vfio_mmap_t *mmap;
 	uint64_t da;
+	size_t size;
 
 	if (chnl == NULL) {
 		acapd_perror("%s: chnl is NULL.\n", __func__);
@@ -55,7 +56,8 @@ void *vfio_dma_mmap(acapd_chnl_t *chnl, acapd_shm_t *shm)
 		acapd_perror("%s: vfio chnl info is NULL.\n", __func__);
 		return NULL;
 	}
-	dma_map.size = shm->size;
+	size = acapd_align_up(shm->size, (4 * 1024));
+	dma_map.size = size;
 	dma_map.vaddr = (uint64_t)((uintptr_t)(shm->va));
 	dma_map.flags = VFIO_DMA_MAP_FLAG_READ | VFIO_DMA_MAP_FLAG_WRITE;
 	/* Calculate da address */
@@ -65,19 +67,19 @@ void *vfio_dma_mmap(acapd_chnl_t *chnl, acapd_shm_t *shm)
 
 		mmap = (acapd_vfio_mmap_t *)(acapd_container_of(node, acapd_vfio_mmap_t, node));
 		tmp = mmap->da + mmap->size;
-		if ((da + shm->size) < mmap->da) {
+		if ((da + size) < mmap->da) {
 			continue;
 		}
-		if ((da + shm->size) <= tmp) {
+		if ((da + size) <= tmp) {
 			da = tmp;
 		}
 	}
 	dma_map.iova = da;
 	ret = ioctl(vchnl_info->container, VFIO_IOMMU_MAP_DMA, &dma_map);
 	if (ret) {
-		acapd_perror("%s: Could not map DMA memory %d,%s. %p, 0x%llx\n",
+		acapd_perror("%s: Could not map DMA memory %d,%s. %p, 0x%llx, 0x%lx\n",
 			     __func__, vchnl_info->container, strerror(ret),
-			     shm->va, da);
+			     shm->va, da, size);
 		return NULL;
 	}
 	mmap = malloc(sizeof(*mmap));
@@ -88,9 +90,9 @@ void *vfio_dma_mmap(acapd_chnl_t *chnl, acapd_shm_t *shm)
 	}
 	mmap->va = shm->va;
 	mmap->da = da;
-	mmap->size = shm->size;
+	mmap->size = size;
 	acapd_list_add_tail(&vchnl_info->mmaps, &mmap->node);
-	acapd_debug("%s: mmap shm done, 0x%llx, 0x%llx\n", __func__, da, shm->size);
+	acapd_debug("%s: mmap shm done, 0x%llx, 0x%llx\n", __func__, da, size);
 	return shm->va;
 }
 

@@ -89,4 +89,12 @@ static inline acapd_list_t *acapd_list_first(acapd_list_t *list)
 #define acapd_container_of(ptr, structure, member)  \
     (void *)((uintptr_t)(ptr) - offset_of(structure, member))
 
+/** Align 'size' down to a multiple of 'align' (must be a power of two). */
+#define acapd_align_down(size, align)			\
+	((size) & ~((align) - 1))
+
+/** Align 'size' up to a multiple of 'align' (must be a power of two). */
+#define acapd_align_up(size, align)			\
+	acapd_align_down((size) + (align) - 1, align)
+
 #endif /*  _ACAPD_HELPER_H */
