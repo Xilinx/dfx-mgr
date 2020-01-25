@@ -28,7 +28,7 @@ typedef struct acapd_shm_allocator acapd_shm_allocator_t;
 typedef struct acapd_shm_allocator {
 	const char *name; /**< name of shmem provider */
 	void *priv; /**< private data */
-	void *(*alloc)(acapd_shm_allocator_t *allocator, acapd_shm_t *shm,
+	int (*alloc)(acapd_shm_allocator_t *allocator, acapd_shm_t *shm,
 			size_t size,
 			uint32_t attr); /**< shmem allocation function */
 	void  (*free)(acapd_shm_allocator_t *allocator,
@@ -37,7 +37,7 @@ typedef struct acapd_shm_allocator {
 } acapd_shm_allocator_t;
 
 /** ACPAD shared memory data structure. */
-struct acapd_shm {
+typedef struct acapd_shm {
 	char *name; /**< shared memory name */
 	char *va; /**< shared memory virtual address */
 	size_t size; /**< shared memory size */
@@ -48,16 +48,16 @@ struct acapd_shm {
 	acapd_shm_allocator_t *allocator; /**< allocator where this shared
 					    memory is from */
 	acapd_list_t refs; /**< attached acapd channels references list */
-};
+} acapd_shm_t;
 
 extern acapd_shm_allocator_t acapd_default_shm_allocator;
 
-void *acapd_alloc_shm(char *shm_allocator_name, acapd_shm_t *shm, size_t size,
+int acapd_alloc_shm(char *shm_allocator_name, acapd_shm_t *shm, size_t size,
 		      uint32_t attr);
 
 int acapd_free_shm(acapd_shm_t *shm);
 
-int acapd_attach_shm(acapd_chnl_t *chnl, acapd_shm_t *shm);
+void *acapd_attach_shm(acapd_chnl_t *chnl, acapd_shm_t *shm);
 
 int acapd_detach_shm(acapd_chnl_t *chnl, acapd_shm_t *shm);
 

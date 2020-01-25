@@ -24,7 +24,7 @@ int main(void)
 	//}
 	//xil_printf("Configure package.\r\n");
 	//ret = acapd_config_pkg(pkg1, ACAPD_ACCEL_PKG_TYPE_PDI, "pr1-rm1",
-	//		       (8 * 1204 * 1024), (void *)0x10000000, 0);
+	//		       (8 * 1204 * 1024), (void *)0x10000000);
 	//if (ret < 0) {
 	//	xil_printf("Failed to configure package.\r\n");
 	//	return -1;

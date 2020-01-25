@@ -21,7 +21,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "dma-vfio-common.h"
+#include "acapd-vfio-common.h"
 
 #define XAXIDMA_TX_OFFSET	0x00000000 /**< TX channel registers base
 					     *  offset */
@@ -62,19 +62,24 @@
 static int axidma_vfio_dma_transfer(acapd_chnl_t *chnl, 
 				    acapd_dma_config_t *config)
 {
-	acapd_vfio_chnl_t *vchnl_info;
+	acapd_device_t *dev;
 	void *base_va; /**< AXI DMA reg mmaped base va address */
-	uint64_t da;
 	uint32_t v;
+	uint64_t da;
 	void *va;
 	size_t size;
 
-	vchnl_info = (acapd_vfio_chnl_t *)chnl->sys_info;
-	base_va = vchnl_info->ios[0].va;
+	acapd_assert(chnl != NULL);
+	acapd_assert(chnl->dev != NULL);
+	acapd_assert(chnl->dev->va != NULL);
+	acapd_assert(chnl->dev->ops != NULL);
+	acapd_assert(chnl->dev->ops->va_to_da != NULL);
+	dev = chnl->dev;
+	base_va = dev->va;
 
 	va = config->va;
 	size = config->size;
-	da = vfio_va_to_da(chnl, va);
+	da = dev->ops->va_to_da(dev, va);
 	if (da == (uint64_t)(-1)) {
 		acapd_perror("%s: failed to get da from va %p.\n",
 			     __func__, va);
@@ -127,12 +132,15 @@ static int axidma_vfio_dma_transfer(acapd_chnl_t *chnl,
 
 static int axidma_vfio_dma_stop(acapd_chnl_t *chnl)
 {
-	acapd_vfio_chnl_t *vchnl_info;
+	acapd_device_t *dev;
 	void *base_va; /**< AXI DMA reg mmaped base va address */
 	uint32_t v;
 
-	vchnl_info = (acapd_vfio_chnl_t *)chnl->sys_info;
-	base_va = vchnl_info->ios[0].va;
+	acapd_assert(chnl != NULL);
+	acapd_assert(chnl->dev != NULL);
+	acapd_assert(chnl->dev->va != NULL);
+	dev = chnl->dev;
+	base_va = dev->va;
 
 	if (chnl->dir == ACAPD_DMA_DEV_W) {
 		/* write to stream, stop tx DMA */
@@ -152,12 +160,15 @@ static int axidma_vfio_dma_stop(acapd_chnl_t *chnl)
 
 static acapd_chnl_status_t axidma_vfio_dma_poll(acapd_chnl_t *chnl)
 {
-	acapd_vfio_chnl_t *vchnl_info;
+	acapd_device_t *dev;
 	void *base_va; /**< AXI DMA reg mmaped base va address */
 	uint32_t v;
 
-	vchnl_info = (acapd_vfio_chnl_t *)chnl->sys_info;
-	base_va = vchnl_info->ios[0].va;
+	acapd_assert(chnl != NULL);
+	acapd_assert(chnl->dev != NULL);
+	acapd_assert(chnl->dev->va != NULL);
+	dev = chnl->dev;
+	base_va = dev->va;
 
 	if (chnl->dir == ACAPD_DMA_DEV_W) {
 		/* write to stream, read tx DMA status */
@@ -169,7 +180,7 @@ static acapd_chnl_status_t axidma_vfio_dma_poll(acapd_chnl_t *chnl)
 		v = *((volatile uint32_t *)((char *)base_va + XAXIDMA_SR_OFFSET));
 		if ((v & XAXIDMA_ERR_ALL_MASK) != 0) {
 			acapd_perror("%s, tx channel of %s errors: 0x%x\n",
-				     __func__, chnl->dev_name, v);
+				     __func__, dev->dev_name, v);
 			return ACAPD_CHNL_ERRORS;
 		} else if ((v & XAXIDMA_IDLE_MASK) != 0) {
 			return ACAPD_CHNL_IDLE;
@@ -186,7 +197,7 @@ static acapd_chnl_status_t axidma_vfio_dma_poll(acapd_chnl_t *chnl)
 		v = *((volatile uint32_t *)((char *)base_va + XAXIDMA_SR_OFFSET));
 		if ((v & XAXIDMA_ERR_ALL_MASK) != 0) {
 			acapd_perror("%s, rx channel of %s errors: 0x%x\n",
-				     __func__, chnl->dev_name, v);
+				     __func__, dev->dev_name, v);
 			return ACAPD_CHNL_ERRORS;
 		} else if ((v & XAXIDMA_IDLE_MASK) != 0) {
 			return ACAPD_CHNL_IDLE;
@@ -198,19 +209,22 @@ static acapd_chnl_status_t axidma_vfio_dma_poll(acapd_chnl_t *chnl)
 
 static int axidma_vfio_dma_reset(acapd_chnl_t *chnl)
 {
-	acapd_vfio_chnl_t *vchnl_info;
+	acapd_device_t *dev;
 	void *base_va; /**< AXI DMA reg mmaped base va address */
 
-	vchnl_info = (acapd_vfio_chnl_t *)chnl->sys_info;
-	base_va = vchnl_info->ios[0].va;
+	acapd_assert(chnl != NULL);
+	acapd_assert(chnl->dev != NULL);
+	acapd_assert(chnl->dev->va != NULL);
+	dev = chnl->dev;
+	base_va = dev->va;
 
 	if (chnl->dir == ACAPD_DMA_DEV_W) {
-		/* write to stream, stop tx DMA */
+		/* write to stream, reset tx DMA */
 		base_va = (void *)((char *)base_va + XAXIDMA_TX_OFFSET);
 		*((volatile uint32_t *)((char *)base_va + XAXIDMA_CR_OFFSET)) =
 			XAXIDMA_CR_RESET_MASK;
 	} else {
-		/* read from stream, stop rx DMA */
+		/* read from stream, reset rx DMA */
 		base_va = (void *)((char *)base_va + XAXIDMA_RX_OFFSET);
 		*((volatile uint32_t *)((char *)base_va + XAXIDMA_CR_OFFSET)) =
 			XAXIDMA_CR_RESET_MASK;
@@ -220,49 +234,25 @@ static int axidma_vfio_dma_reset(acapd_chnl_t *chnl)
 
 static int axidma_vfio_dma_open(acapd_chnl_t *chnl)
 {
+	acapd_device_t *dev;
 	int ret;
-	struct stat s;
-	char tmpstr[256];
-	acapd_vfio_chnl_t *vchnl_info;
 
-	/* unbind the driver if required */
-	sprintf(tmpstr, "/sys/bus/platform/drivers/xilinx-vdma/%s",
-		chnl->dev_name);
-	ret = stat(tmpstr, &s);
-	if(ret >= 0) {
-		/* Need to unbind the driver */
-		sprintf(tmpstr,
-			"echo %s > /sys/bus/platform/drivers/xilinx-vdma/unbind",
-			chnl->dev_name);
-		system(tmpstr);
-	}
-	sprintf(tmpstr, "/sys/bus/platform/drivers/vfio-platform/%s",
-		chnl->dev_name);
-	ret = stat(tmpstr, &s);
-	if(ret < 0) {
-		/* Need to bind the driver with vfio  */
-		sprintf(tmpstr,
-			"echo vfio-platform > /sys/bus/platform/devices/%s/driver_override",
-			chnl->dev_name);
-		system(tmpstr);
-		sprintf(tmpstr,
-			"echo %s > /sys/bus/platform/drivers_probe",
-			chnl->dev_name);
-		system(tmpstr);
-	}
-	ret = vfio_open_channel(chnl);
+	acapd_assert(chnl != NULL);
+	acapd_assert(chnl->dev != NULL);
+	dev = chnl->dev;
+	ret = acapd_device_get(dev);
 	if (ret < 0) {
-		acapd_perror("%s: failed to open vfio channel.\n", __func__);
+		acapd_perror("%s: failed to get device %s.\n",
+			     __func__, dev->dev_name);
 		return -EINVAL;
 	}
-	vchnl_info = (acapd_vfio_chnl_t *)chnl->sys_info;
-	if (vchnl_info->refs == 1) {
+	if (dev->refs == 1) {
+		/* First time to open channel, reset it */
 		void *reg_va; /**< AXI DMA reg mmaped base va address */
 		uint32_t v;
 
-		reg_va = vchnl_info->ios[0].va;
+		reg_va = dev->va;
 		reg_va = (void *)((char *)reg_va + XAXIDMA_TX_OFFSET + XAXIDMA_CR_OFFSET);
-		/* First time to open channel, reset it */
 		*((volatile uint32_t *)reg_va) = XAXIDMA_CR_RESET_MASK;
 		do {
 			v = *((volatile uint32_t *)reg_va);
@@ -271,14 +261,36 @@ static int axidma_vfio_dma_open(acapd_chnl_t *chnl)
 	return 0;
 }
 
+static int axidma_vfio_dma_close(acapd_chnl_t *chnl)
+{
+	acapd_device_t *dev;
+	int ret;
+
+	acapd_assert(chnl != NULL);
+	acapd_assert(chnl->dev != NULL);
+	dev = chnl->dev;
+	if (dev->refs == 1) {
+		/* last one to put device, reset it */
+		void *reg_va; /**< AXI DMA reg mmaped base va address */
+		uint32_t v;
+
+		reg_va = dev->va;
+		reg_va = (void *)((char *)reg_va + XAXIDMA_TX_OFFSET + XAXIDMA_CR_OFFSET);
+		*((volatile uint32_t *)reg_va) = XAXIDMA_CR_RESET_MASK;
+		do {
+			v = *((volatile uint32_t *)reg_va);
+		} while ((v & XAXIDMA_CR_RESET_MASK) != 0);
+	}
+	ret = acapd_device_put(dev);
+	return ret;
+}
+
 acapd_dma_ops_t axidma_vfio_dma_ops = {
 	.name = "axidma_vfio_dma",
-	.mmap = vfio_dma_mmap,
-	.munmap = vfio_dma_munmap,
 	.transfer = axidma_vfio_dma_transfer,
 	.stop = axidma_vfio_dma_stop,
 	.poll = axidma_vfio_dma_poll,
 	.reset = axidma_vfio_dma_reset,
 	.open = axidma_vfio_dma_open,
-	.close = vfio_close_channel,
+	.close = axidma_vfio_dma_close,
 };

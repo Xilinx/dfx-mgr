@@ -6,6 +6,7 @@
 
 #include <acapd/accel.h>
 #include <acapd/assert.h>
+#include <acapd/device.h>
 #include <acapd/print.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -169,4 +170,34 @@ int acapd_accel_reset_channel(acapd_accel_t *accel)
 		acapd_dma_reset(chnl);
 	}
 	return 0;
+}
+
+void *acapd_accel_get_reg_va(acapd_accel_t *accel, const char *name)
+{
+	acapd_device_t *dev;
+
+	acapd_assert(accel != NULL);
+	dev = NULL;
+	if (name == NULL) {
+		dev = &accel->accel_dev[0];
+	} else {
+		for (int i = 0; i < accel->num_accel_devs; i++) {
+			acapd_device_t *tmpdev;
+
+			tmpdev = &accel->accel_dev[i];
+			if (strcmp(tmpdev->dev_name, name) == 0) {
+				dev = tmpdev;
+				break;
+			}
+		}
+	}
+	if (dev == NULL) {
+		acapd_perror("%s: failed to get %s device.\n", __func__, name);
+		return NULL;
+	}
+	if (dev->va == NULL) {
+		acapd_perror("%s: %s va is NULL, please open dev first.\n",
+			     __func__, dev->dev_name);
+	}
+	return dev->va;
 }

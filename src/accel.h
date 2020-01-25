@@ -40,20 +40,9 @@ extern "C" {
 #define ACAPD_ACCEL_PKG_TYPE_LAST	2U
 
 #include <acapd/dma.h>
+#include <acapd/device.h>
 #include <acapd/helper.h>
 #include <acapd/sys/@PROJECT_SYSTEM@/accel.h>
-
-typedef struct {
-	const char *dev_name; /**< device name */
-	uint64_t reg_pa; /**< physical base address */
-	size_t reg_size; /**< size of the registers */
-	int dev_id; /**< device id. In Linux, it can be file id */
-	int intr_id; /**< interrupt id */
-	void *va; /**< logical address */
-	const char *version; /**< device version */
-	const char *driver; /**< name of the driver */
-	int iommu_group; /**< iommu group */
-} acapd_device_t;
 
 /**
  * @brief accel package information structure
@@ -99,6 +88,8 @@ int load_accel(acapd_accel_t *accel, unsigned int async);
 int accel_load_status(acapd_accel_t *accel);
 
 int acapd_accel_wait_for_data_ready(acapd_accel_t *accel);
+
+void *acapd_accel_get_reg_va(acapd_accel_t *accel, const char *name);
 
 /*
  * TODO: Do we want stop accel for accel swapping?

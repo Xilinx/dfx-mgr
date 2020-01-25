@@ -21,6 +21,7 @@ extern "C" {
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <acapd/device.h>
 #include <acapd/print.h>
 #include <acapd/helper.h>
 /**
@@ -92,24 +93,20 @@ typedef struct acapd_dma_config  {
 /** DMA Channel Operations */
 typedef struct acapd_dma_ops {
 	const char name[128]; /**< name of the DMA operation */
-	void *(*mmap)(acapd_chnl_t *chnl, acapd_shm_t *shm);
-	int (*munmap)(acapd_chnl_t *chnl, acapd_shm_t *shm);
+	int (*open)(acapd_chnl_t *chnl);
+	int (*close)(acapd_chnl_t *chnl);
 	int (*transfer)(acapd_chnl_t *chnl, acapd_dma_config_t *config);
 	int (*stop)(acapd_chnl_t *chnl);
 	acapd_chnl_status_t (*poll)(acapd_chnl_t *chnl);
 	int (*reset)(acapd_chnl_t *chnl);
-	int (*open)(acapd_chnl_t *chnl);
-	int (*close)(acapd_chnl_t *chnl);
 } acapd_dma_ops_t;
 
 /**
  * @brief ACAPD DMA channel data structure
  */
 typedef struct acapd_chnl {
-	char name[128]; /**< DMA channel name/or path */
-	const char *dev_name; /**< related device name */
-	char *id; /**< DMA channel logical id */
-	int iommu_group; /**< iommu group if the channel is behind IOMMU */
+	const char *name; /**< DMA channel name/or path */
+	acapd_device_t *dev; /**< pointer to the DMA device */
 	int chnl_id; /**< hardware channel id of a data mover controller */
 	acapd_dir_t dir; /**< DMA channel direction */
 	uint32_t conn_type; /**< type of data connection with this channel */
@@ -131,6 +128,8 @@ static inline void acapd_dma_init_config(acapd_dma_config_t *config,
 	config->fence = NULL;
 }
 
+void *acapd_dma_attach(acapd_chnl_t *chnl, acapd_shm_t *shm);
+int acapd_dma_detach(acapd_chnl_t *chnl, acapd_shm_t *shm);
 int acapd_dma_transfer(acapd_chnl_t *chnl, acapd_dma_config_t *config);
 int acapd_dma_stop(acapd_chnl_t *chnl);
 int acapd_dma_poll(acapd_chnl_t *chnl, uint32_t wait_for_complete,
@@ -138,8 +137,7 @@ int acapd_dma_poll(acapd_chnl_t *chnl, uint32_t wait_for_complete,
 int acapd_dma_open(acapd_chnl_t *chnl);
 int acapd_dma_reset(acapd_chnl_t *chnl);
 int acapd_dma_close(acapd_chnl_t *chnl);
-int acapd_create_dma_channel(const char *name, const char *dev_name,
-			     int iommu_group,
+int acapd_create_dma_channel(const char *name, acapd_device_t *dev,
 			     acapd_chnl_conn_t conn_type, int chnl_id,
 			     acapd_dir_t dir, acapd_chnl_t *chnl);
 int acapd_destroy_dma_channel(acapd_chnl_t *chnl);

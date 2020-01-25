@@ -6,14 +6,14 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-static void *acapd_vfio_alloc_shm(acapd_shm_allocator_t *allocator,
+static int acapd_vfio_alloc_shm(acapd_shm_allocator_t *allocator,
 				acapd_shm_t *shm, size_t size, uint32_t attr)
 {
 	(void)allocator;
 	(void)attr;
 	if (shm == NULL) {
 		acapd_perror("%s: shm is NULL.\n", __func__);
-		return NULL;
+		return -EINVAL;
 	}
 	if (shm->id < 0) {
 		shm->id = 0;
@@ -33,7 +33,8 @@ static void *acapd_vfio_alloc_shm(acapd_shm_allocator_t *allocator,
 			    __func__, shm->va,
 			    shm->id, size);
 	}
-	return shm->va;
+	shm->size = size;
+	return 0;
 }
 
 static void acapd_vfio_free_shm(acapd_shm_allocator_t *allocator,

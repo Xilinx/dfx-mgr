@@ -20,8 +20,12 @@ int main(int argc, char *argv[])
 	int opt;
 	char *pkg_path = NULL;
 	acapd_accel_t bzip2_accel;
-	acapd_shm_t tx_shm, rx_shm;
+	acapd_device_t shell_dev;
+	acapd_device_t rm_dev;
+	acapd_device_t accel_dev;
+	acapd_device_t dma_dev;
 	acapd_chnl_t chnls[2];
+	acapd_shm_t tx_shm, rx_shm;
 	int ret;
 	void *tx_va, *rx_va;
 	uint32_t *dptr;
@@ -41,6 +45,16 @@ int main(int argc, char *argv[])
 		usage(argv[0]);
 		return -EINVAL;
 	}
+
+	printf("Setting accel devices.\n");
+	memset(&shell_dev, 0, sizeof(shell_dev));
+	memset(&rm_dev, 0, sizeof(rm_dev));
+	memset(&accel_dev, 0, sizeof(accel_dev));
+	memset(&dma_dev, 0, sizeof(dma_dev));
+	dma_dev.dev_name = "a4000000.dma";
+	dma_dev.driver = "vfio-platform";
+	dma_dev.iommu_group = 0;
+
 	printf("Initializing accel with %s.\n", pkg_path);
 	init_accel(&bzip2_accel, (acapd_accel_pkg_hd_t *)pkg_path);
 
@@ -49,10 +63,10 @@ int main(int argc, char *argv[])
 
 	/* TODO adding channels to acceleration */
 	memset(chnls, 0, sizeof(chnls));
-	chnls[0].dev_name = "a4000000.dma";
+	chnls[0].dev = &dma_dev;
 	chnls[0].ops = &axidma_vfio_dma_ops;
 	chnls[0].dir = ACAPD_DMA_DEV_W;
-	chnls[1].dev_name = "a4000000.dma";
+	chnls[1].dev = &dma_dev;
 	chnls[1].ops = &axidma_vfio_dma_ops;
 	chnls[1].dir = ACAPD_DMA_DEV_R;
 	bzip2_accel.chnls = chnls;
@@ -74,6 +88,8 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "ERROR: allocate rx memory.\n");
 		return -EINVAL;
 	}
+
+	/* user can use acapd_accel_get_reg_va() to get accelerator address */
 
 	/* Transfer data */
 	ret = acapd_accel_write_data(&bzip2_accel, &tx_shm, tx_va, DATA_SIZE_BYTES, 0);

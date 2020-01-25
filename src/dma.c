@@ -5,11 +5,40 @@
  */
 
 #include <acapd/dma.h>
+#include <acapd/device.h>
 #include <acapd/assert.h>
 #include <acapd/shm.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+
+void *acapd_dma_attach(acapd_chnl_t *chnl, acapd_shm_t *shm)
+{
+	if (chnl == NULL) {
+		acapd_perror("%s: channel pointer is NULL.\n", __func__);
+		return NULL;
+	}
+	if (shm ==  NULL) {
+		acapd_perror("%s: shm is NULL.\n", __func__);
+		return NULL;
+	}
+	acapd_assert(chnl->dev != NULL);
+	return acapd_device_attach_shm(chnl->dev, shm);
+}
+
+int acapd_dma_detach(acapd_chnl_t *chnl, acapd_shm_t *shm)
+{
+	if (chnl == NULL) {
+		acapd_perror("%s: channel pointer is NULL.\n", __func__);
+		return -EINVAL;
+	}
+	if (shm ==  NULL) {
+		acapd_perror("%s: shm is NULL.\n", __func__);
+		return -EINVAL;
+	}
+	acapd_assert(chnl->dev != NULL);
+	return acapd_device_detach_shm(chnl->dev, shm);
+}
 
 int acapd_dma_transfer(acapd_chnl_t *chnl, acapd_dma_config_t *config)
 {
@@ -158,8 +187,7 @@ int acapd_dma_close(acapd_chnl_t *chnl)
 	return chnl->ops->close(chnl);
 }
 
-int acapd_create_dma_channel(const char *name, const char *dev_name,
-			     int iommu_group,
+int acapd_create_dma_channel(const char *name, acapd_device_t *dev,
 			     acapd_chnl_conn_t conn_type, int chnl_id,
 			     acapd_dir_t dir, acapd_chnl_t *chnl)
 {
@@ -167,21 +195,15 @@ int acapd_create_dma_channel(const char *name, const char *dev_name,
 		acapd_perror("%s: channel pointer is NULL.\n", __func__);
 		return -EINVAL;
 	}
-	chnl->dev_name = dev_name;
-	chnl->iommu_group = iommu_group;
+	if (dev == NULL) {
+		acapd_perror("%s: dev pointer is NULL.\n", __func__);
+		return -EINVAL;
+	}
+	chnl->dev = dev;
 	chnl->chnl_id = chnl_id;
 	chnl->dir = dir;
 	chnl->conn_type = conn_type;
-	if (name != NULL) {
-		unsigned int len;
-
-		len = strlen(name);
-		if (len > sizeof(chnl->name) - 1) {
-			len = sizeof(chnl->name) - 1;
-		}
-		memset(chnl->name, 0, sizeof(chnl->name));
-		strncpy(chnl->name, name, len);
-	}
+	chnl->name = name;
 	return acapd_dma_open(chnl);
 }
 
