@@ -43,6 +43,18 @@ extern "C" {
 #include <acapd/helper.h>
 #include <acapd/sys/@PROJECT_SYSTEM@/accel.h>
 
+typedef struct {
+	const char *dev_name; /**< device name */
+	uint64_t reg_pa; /**< physical base address */
+	size_t reg_size; /**< size of the registers */
+	int dev_id; /**< device id. In Linux, it can be file id */
+	int intr_id; /**< interrupt id */
+	void *va; /**< logical address */
+	const char *version; /**< device version */
+	const char *driver; /**< name of the driver */
+	int iommu_group; /**< iommu group */
+} acapd_device_t;
+
 /**
  * @brief accel package information structure
  */
@@ -63,6 +75,10 @@ typedef struct {
 	unsigned int status; /**< status of the accelarator */
 	unsigned int is_cached; /**< if the accelerator is cached */
 	int load_failure; /**< load failure */
+	int num_accel_devs; /**< number of accelerator devices */
+	acapd_device_t *shell_dev; /**< shell device reg structure */
+	acapd_device_t *rm_dev; /**< reconfiguration module reg structure */
+	acapd_device_t *accel_dev; /**< accelerator reg structure */
 	int num_chnls;	/**< number of channels */
 	acapd_chnl_t *chnls; /**< list of channels */
 } acapd_accel_t;
