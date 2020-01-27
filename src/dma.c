@@ -40,6 +40,7 @@ int acapd_dma_transfer(acapd_chnl_t *chnl, acapd_dma_config_t *config)
 	va = config->va;
 	size = config->size;
 	shm = config->shm;
+	acapd_debug("%s: =>%p, =>%p \n", __func__, va, shm->va);
 	if ((char *)va < (char *)shm->va ||
 	    (char *)va + size > (char *)shm->va + shm->size) {
 		acapd_perror("%s: %p,size 0x%llx is beyond %p,size 0x%llx.\n",

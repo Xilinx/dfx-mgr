@@ -128,3 +128,45 @@ int acapd_accel_wait_for_data_ready(acapd_accel_t *accel)
 	(void)accel;
 	return 1;
 }
+
+int acapd_accel_open_channel(acapd_accel_t *accel)
+{
+	acapd_assert(accel != NULL);
+	acapd_assert(accel->chnls != NULL);
+	for (int i = 0; i < accel->num_chnls; i++) {
+		acapd_chnl_t *chnl = NULL;
+		int ret;
+
+		chnl = &accel->chnls[i];
+		acapd_debug("%s: opening chnnl\n", __func__);
+		ret = acapd_dma_open(chnl);
+		if (ret < 0) {
+			acapd_perror("%s: failed to open channel.\n", __func__);
+			return ret;
+		}
+	}
+	return 0;
+}
+
+/* This function only reset AXIS DMA channel not the accelerator
+ */
+int acapd_accel_reset_channel(acapd_accel_t *accel)
+{
+	int ret;
+
+	acapd_assert(accel != NULL);
+	acapd_assert(accel->chnls != NULL);
+	ret = acapd_accel_open_channel(accel);
+	if (ret < 0) {
+		acapd_perror("%s: open channel fails.\n", __func__);
+		return ret;
+	}
+	for (int i = 0; i < accel->num_chnls; i++) {
+		acapd_chnl_t *chnl = NULL;
+
+		chnl = &accel->chnls[i];
+		acapd_dma_stop(chnl);
+		acapd_dma_reset(chnl);
+	}
+	return 0;
+}

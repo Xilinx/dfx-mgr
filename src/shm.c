@@ -13,6 +13,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <sys/mman.h>
+
+
 void *acapd_alloc_shm(char *shm_allocator_name, acapd_shm_t *shm, size_t size,
 		      uint32_t attr)
 {
@@ -127,7 +130,9 @@ void *acapd_accel_alloc_shm(acapd_accel_t *accel, size_t size, acapd_shm_t *shm)
 		acapd_perror("%s: failed due to shm is NULL\n", __func__);
 		return NULL;
 	}
-	memset(shm, 0, sizeof(*shm));
+	/* We can not use memset to clear memory here as some variables of shm
+	 * structure are required to be defined at this point for example FD.
+	 */
 	return acapd_alloc_shm(NULL, shm, size, 0);
 }
 
@@ -278,3 +283,47 @@ int acapd_accel_read_data(acapd_accel_t *accel, acapd_shm_t *shm,
 	}
 	return transfered_len;
 }
+
+int acapd_accel_read_complete(acapd_accel_t *accel)
+{
+	acapd_chnl_t *chnl = NULL;
+	int ret;
+	int transfered_len = 0;
+	if (accel == NULL) {
+		acapd_perror("%s: fafiled due to accel is NULL.\n", __func__);
+		return -EINVAL;
+	}
+	if (accel->chnls == NULL) {
+		acapd_perror("%s: accel doesn't have channels.\n", __func__);
+		return -EINVAL;
+	}
+	/* Assuming only two channels, tx and rx in the list */
+	for (int i = 0; i < accel->num_chnls; i++) {
+		acapd_chnl_t *lchnl;
+		lchnl = &accel->chnls[i];
+		if (lchnl->dir == ACAPD_DMA_DEV_R) {
+			chnl = lchnl;
+			break;
+		}
+	}
+	if (chnl == NULL) {
+		acapd_perror("%s: no write channel is found.\n", __func__);
+		return -EINVAL;
+	}
+	acapd_debug("%s: opening chnnl\n", __func__);
+	ret = acapd_dma_open(chnl);
+	if (ret < 0) {
+		acapd_perror("%s: failed to open channel.\n", __func__);
+		return -EINVAL;
+	}
+	/* Wait until data has been received */
+	acapd_debug("%s: wait for chnl to complete\n", __func__);
+	ret = acapd_dma_poll(chnl, 1, NULL, 0);
+	if (ret < 0) {
+		acapd_perror("%s: chnl is not done successfully\n",
+			     __func__);
+		return -EINVAL;
+	}
+	return transfered_len;
+}
+

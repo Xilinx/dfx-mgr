@@ -1,0 +1,3 @@
+[submodule "example/aes128"]
+	path = example/aes128
+	url = https://gitenterprise.xilinx.com/SET-HW/aesdemo.git

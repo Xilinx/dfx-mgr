@@ -18,3 +18,5 @@ CMakeCache.txt
 # cscope files
 cscope.*
 ncscope.*
+*.*~
+*~

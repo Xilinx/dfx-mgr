@@ -104,6 +104,8 @@ int acapd_accel_wait_for_data_ready(acapd_accel_t *accel);
  * TODO: Do we want stop accel for accel swapping?
  */
 int remove_accel(acapd_accel_t *accel, unsigned int async);
+int acapd_accel_open_channel(acapd_accel_t *accel);
+int acapd_accel_reset_channel(acapd_accel_t *accel);
 
 #ifdef ACAPD_INTERNAL
 int sys_load_accel(acapd_accel_t *accel, unsigned int async);
