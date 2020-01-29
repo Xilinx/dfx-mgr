@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
 	acapd_accel_t bzip2_accel;
 	acapd_device_t shell_dev;
 	acapd_device_t rm_dev;
-	acapd_device_t accel_dev;
+	acapd_device_t ip_dev[2];
 	acapd_device_t dma_dev;
 	acapd_chnl_t chnls[2];
 	acapd_shm_t tx_shm, rx_shm;
@@ -49,17 +49,14 @@ int main(int argc, char *argv[])
 	printf("Setting accel devices.\n");
 	memset(&shell_dev, 0, sizeof(shell_dev));
 	memset(&rm_dev, 0, sizeof(rm_dev));
-	memset(&accel_dev, 0, sizeof(accel_dev));
+	memset(&ip_dev, 0, sizeof(ip_dev));
 	memset(&dma_dev, 0, sizeof(dma_dev));
+	rm_dev.dev_name = "90000000.gpio";
+	ip_dev[0].dev_name = "20100000000.bram";
+	ip_dev[1].dev_name = "20120000000.axi_cdma";
 	dma_dev.dev_name = "a4000000.dma";
 	dma_dev.driver = "vfio-platform";
 	dma_dev.iommu_group = 0;
-
-	printf("Initializing accel with %s.\n", pkg_path);
-	init_accel(&bzip2_accel, (acapd_accel_pkg_hd_t *)pkg_path);
-
-	printf("Loading accel %s.\n", pkg_path);
-	load_accel(&bzip2_accel, 0);
 
 	/* TODO adding channels to acceleration */
 	memset(chnls, 0, sizeof(chnls));
@@ -69,14 +66,31 @@ int main(int argc, char *argv[])
 	chnls[1].dev = &dma_dev;
 	chnls[1].ops = &axidma_vfio_dma_ops;
 	chnls[1].dir = ACAPD_DMA_DEV_R;
+	/* allocate memory */
+	printf("Initializing accel with %s.\n", pkg_path);
+	init_accel(&bzip2_accel, (acapd_accel_pkg_hd_t *)pkg_path);
+
+	bzip2_accel.num_ip_devs = 2;
+	bzip2_accel.ip_dev = ip_dev;
+	bzip2_accel.shell_dev = &shell_dev;
+	bzip2_accel.rm_dev = &rm_dev;
 	bzip2_accel.chnls = chnls;
 	bzip2_accel.num_chnls = 2;
 
-	/* allocate memory */
+	printf("Loading accel %s.\n", pkg_path);
+	ret = load_accel(&bzip2_accel, 0);
+	if (ret < 0) {
+		fprintf(stderr, "ERROR: failed to load accel.\n");
+		goto error;
+	}
+
+	memset(&tx_shm, 0, sizeof(tx_shm));
+	memset(&rx_shm, 0, sizeof(rx_shm));
 	tx_va = acapd_accel_alloc_shm(&bzip2_accel, DATA_SIZE_BYTES, &tx_shm);
 	if (tx_va == NULL) {
 		fprintf(stderr, "ERROR: Failed to allocate tx memory.\n");
-		return -EINVAL;
+		ret = -EINVAL;
+		goto error;
 	}
 	dptr = (uint32_t *)tx_va;
 	for (uint32_t i = 0; i < DATA_SIZE_BYTES/4; i++) {
@@ -86,7 +100,8 @@ int main(int argc, char *argv[])
 	rx_va = acapd_accel_alloc_shm(&bzip2_accel, DATA_SIZE_BYTES, &rx_shm);
 	if (rx_va == NULL) {
 		fprintf(stderr, "ERROR: allocate rx memory.\n");
-		return -EINVAL;
+		ret = -EINVAL;
+		goto error;
 	}
 
 	/* user can use acapd_accel_get_reg_va() to get accelerator address */
@@ -95,7 +110,8 @@ int main(int argc, char *argv[])
 	ret = acapd_accel_write_data(&bzip2_accel, &tx_shm, tx_va, DATA_SIZE_BYTES, 0);
 	if (ret < 0) {
 		fprintf(stderr, "ERROR: Failed to write to accelerator.\n");
-		return -EINVAL;
+		ret = -EINVAL;
+		goto error;
 	}
 	/* TODO: Execute acceleration (optional as load_accel can also start
 	 * it from CDO */
@@ -105,7 +121,8 @@ int main(int argc, char *argv[])
 	ret = acapd_accel_wait_for_data_ready(&bzip2_accel);
 	if (ret < 0) {
 		fprintf(stderr, "Failed to check if accelerator is ready.\n");
-		return -EINVAL;
+		ret = -EINVAL;
+		goto error;
 	}
 	/* Read data */
 #if 1
@@ -119,14 +136,17 @@ int main(int argc, char *argv[])
 		if (*((uint32_t *)dptr) != (i + 1)) {
 			fprintf(stderr, "ERROR: wrong data: [%d]: 0x%x.\n",
 				i, *((volatile uint32_t *)dptr));
-			return -1;
+			ret = -EINVAL;
+			goto error;
 		}
 		dptr++;
 	}
+	ret = 0;
 #endif
 	sleep(2);
+error:
 	printf("Removing accel %s.\n", pkg_path);
 	remove_accel(&bzip2_accel, 0);
-	return 0;
+	return ret;
 }
 
