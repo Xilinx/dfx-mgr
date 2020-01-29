@@ -23,7 +23,7 @@ to specify where the libfpga is. Here is how to build the Linux library:
   $ mkdir build
   $ cd build
   $ cmake ../ -DCMAKE_TOOLCHAIN_FILE=versal-linux \
-    -DCMAKE_INCLUDE_PATH=<libfpga_include>
+    -DCMAKE_INCLUDE_PATH=<libfpga_include>;<libmetal_include>
   $ make VERBOSE=1 DESTDIR=$(pwd) install
 ```
 The `libfpga` source and library is in `/group/siv3/staff/acapd/`
@@ -36,7 +36,8 @@ example:
   $ mkdir build
   $ cd build
   $ cmake ../ -DCMAKE_TOOLCHAIN_FILE=versal-linux \
-    -DCMAKE_INCLUDE_PATH=<libfpga_include> \
+    -DCMAKE_INCLUDE_PATH=<libfpga_include>;<libmetal_include> \
+    -DDCMAKE_LIBRARY_PATH=<libfpga_lib_dir>;<libmetal_lib_dir>;<sysfs_lib_dir> \
     -DWITH_EXAMPLE=y
   $ make VERBOSE=1 DESTDIR=$(pwd) install
 ```
