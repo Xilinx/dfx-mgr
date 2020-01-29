@@ -179,12 +179,12 @@ void *acapd_accel_get_reg_va(acapd_accel_t *accel, const char *name)
 	acapd_assert(accel != NULL);
 	dev = NULL;
 	if (name == NULL) {
-		dev = &accel->accel_dev[0];
+		dev = &accel->ip_dev[0];
 	} else {
-		for (int i = 0; i < accel->num_accel_devs; i++) {
+		for (int i = 0; i < accel->num_ip_devs; i++) {
 			acapd_device_t *tmpdev;
 
-			tmpdev = &accel->accel_dev[i];
+			tmpdev = &accel->ip_dev[i];
 			if (strcmp(tmpdev->dev_name, name) == 0) {
 				dev = tmpdev;
 				break;
