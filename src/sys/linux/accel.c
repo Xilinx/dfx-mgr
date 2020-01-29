@@ -117,39 +117,33 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 		return ACAPD_ACCEL_FAILURE;
 	} else {
 		/* TODO: FIXME: hardcoded to release isolation */
-		int fd;
-		unsigned int page_addr, page_offset;
-		unsigned int page_size=sysconf(_SC_PAGESIZE);
-		uint32_t paddr;
-		void *ptr;
+		void *reg_va;
+		acapd_device_t *dev;
 
-		fd = open("/dev/mem", O_RDWR);
-		if (fd < 1) {
-			acapd_perror("Failed to open devmem.\r\n");
-			return -EINVAL;
+		if (accel->rm_dev == NULL) {
+			acapd_perror("%s: no rm dev specified. Failed isolation.\n",
+				     __func__);
+			return ACAPD_ACCEL_FAILURE;
 		}
 
-		paddr = 0x90010000;
-		page_addr = (paddr & ~(page_size - 1));
-		page_offset = (unsigned int)paddr - page_addr;
-		ptr = mmap(NULL, page_size, PROT_READ|PROT_WRITE, MAP_SHARED,
-			   fd, page_addr);
-		if (ptr == NULL) {
-			acapd_perror("Failed to mmap clock isolation addr.\r\n");
-			return -EINVAL;
+		dev = accel->rm_dev;
+		reg_va = dev->va;
+		if (reg_va == NULL) {
+			ret = acapd_device_open(dev);
+			if (ret < 0) {
+				acapd_perror("%s: failed to open rm dev %s.\n",
+					     __func__, dev->dev_name);
+				return ACAPD_ACCEL_FAILURE;
+			}
+			reg_va = dev->va;
+			if (reg_va == NULL) {
+				acapd_perror("%s: rm dev %s va is NULL.\n",
+					     __func__, dev->dev_name);
+				return ACAPD_ACCEL_FAILURE;
+			}
 		}
-		*((volatile uint32_t *)((char *)ptr + page_offset)) = 0x1;
-
-		paddr = 0x90000000;
-		page_addr = (paddr & ~(page_size - 1));
-		page_offset = (unsigned int)paddr - page_addr;
-		ptr = mmap(NULL, page_size, PROT_READ|PROT_WRITE, MAP_SHARED,
-			   fd, page_addr);
-		if (ptr == NULL) {
-			acapd_perror("Failed to mmap clock isolation addr.\r\n");
-			return -EINVAL;
-		}
-		*((volatile uint32_t *)((char *)ptr + page_offset)) = 0x1;
+		*((volatile uint32_t *)((char *)reg_va + 0x10000)) = 0x1;
+		*((volatile uint32_t *)((char *)reg_va + 0x0)) = 0x1;
 		return ACAPD_ACCEL_SUCCESS;
 	}
 }

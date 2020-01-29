@@ -196,8 +196,14 @@ void *acapd_accel_get_reg_va(acapd_accel_t *accel, const char *name)
 		return NULL;
 	}
 	if (dev->va == NULL) {
-		acapd_perror("%s: %s va is NULL, please open dev first.\n",
+		int ret;
+
+		ret = acapd_device_open(dev);
+		if (ret < 0) {
+			acapd_perror("%s: failed to open dev %s.\n",
 			     __func__, dev->dev_name);
+			return NULL;
+		}
 	}
 	return dev->va;
 }
