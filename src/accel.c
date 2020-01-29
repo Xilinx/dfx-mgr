@@ -86,6 +86,36 @@ int load_accel(acapd_accel_t *accel, unsigned int async)
 	} else {
 		accel->load_failure = ret;
 	}
+	if (accel->status == ACAPD_ACCEL_SUCCESS) {
+		/* TODO: FIXME: hardcoded to release isolation */
+		void *reg_va;
+		acapd_device_t *dev;
+
+		if (accel->rm_dev == NULL) {
+			acapd_debug("%s: no rm dev specified.\n",
+				     __func__);
+			return ret;
+		}
+
+		dev = accel->rm_dev;
+		reg_va = dev->va;
+		if (reg_va == NULL) {
+			ret = acapd_device_open(dev);
+			if (ret < 0) {
+				acapd_perror("%s: failed to open rm dev %s.\n",
+					     __func__, dev->dev_name);
+				return ACAPD_ACCEL_FAILURE;
+			}
+			reg_va = dev->va;
+			if (reg_va == NULL) {
+				acapd_perror("%s: rm dev %s va is NULL.\n",
+					     __func__, dev->dev_name);
+				return ACAPD_ACCEL_FAILURE;
+			}
+		}
+		*((volatile uint32_t *)((char *)reg_va + 0x10000)) = 0x1;
+		*((volatile uint32_t *)((char *)reg_va + 0x0)) = 0x1;
+	}
 	return ret;
 }
 
@@ -110,7 +140,34 @@ int remove_accel(acapd_accel_t *accel, unsigned int async)
 		return ACAPD_ACCEL_INPROGRESS;
 	} else {
 		int ret;
+		void *reg_va;
+		acapd_device_t *dev;
 
+		/* TODO: FIXME: hardcoded to assert isolation */
+		if (accel->rm_dev == NULL) {
+			acapd_debug("%s: no rm dev specified. Failed isolation.\n",
+				     __func__);
+		} else {
+			dev = accel->rm_dev;
+			reg_va = dev->va;
+			if (reg_va == NULL) {
+				ret = acapd_device_open(dev);
+				if (ret < 0) {
+					acapd_perror("%s: failed to open rm dev %s.\n",
+						     __func__, dev->dev_name);
+					return ACAPD_ACCEL_FAILURE;
+				}
+				reg_va = dev->va;
+				if (reg_va == NULL) {
+					acapd_perror("%s: rm dev %s va is NULL.\n",
+						     __func__, dev->dev_name);
+						return ACAPD_ACCEL_FAILURE;
+				}
+			}
+			*((volatile uint32_t *)((char *)reg_va + 0x10000)) = 0x1;
+			*((volatile uint32_t *)((char *)reg_va + 0x0)) = 0x1;
+
+		}
 		ret = sys_remove_accel(accel, async);
 		if (ret == ACAPD_ACCEL_SUCCESS) {
 			accel->status = ACAPD_ACCEL_STATUS_UNLOADED;

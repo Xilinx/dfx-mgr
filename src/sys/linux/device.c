@@ -12,6 +12,7 @@
 #include <dirent.h>
 #include <ftw.h>
 #include <fcntl.h>
+#include "generic-device.h"
 #include <libfpga.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,9 +33,11 @@ int sys_device_open(acapd_device_t *dev)
 		return 0;
 	}
 	if (dev->driver == NULL) {
-		dev->driver = "vfio-platform";
+		dev->driver = "uio_pdrv_genirq";
 	}
-	if (strcmp(dev->driver, "vfio-platform") == 0) {
+	if (strcmp(dev->driver, "uio_pdrv_genirq") == 0) {
+		dev->ops = &acapd_linux_generic_dev_ops;
+	} else if (strcmp(dev->driver, "vfio-platform") == 0) {
 		int ret;
 		char tmpstr[256];
 		struct stat s;
@@ -74,9 +77,10 @@ int sys_device_open(acapd_device_t *dev)
 			system(tmpstr);
 		}
 		dev->ops = &acapd_vfio_dev_ops;
-		return dev->ops->open(dev);
+	} else {
+		acapd_perror("%s: no ops found for device %s.\n", __func__, dev->dev_name);
+		return -EINVAL;
 	}
-	acapd_perror("%s: no ops found for device %s.\n", __func__, dev->dev_name);
-	return -EINVAL;
+	return dev->ops->open(dev);
 }
 

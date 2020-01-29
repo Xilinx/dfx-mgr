@@ -116,34 +116,6 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 			     fpga_cfg_id);
 		return ACAPD_ACCEL_FAILURE;
 	} else {
-		/* TODO: FIXME: hardcoded to release isolation */
-		void *reg_va;
-		acapd_device_t *dev;
-
-		if (accel->rm_dev == NULL) {
-			acapd_perror("%s: no rm dev specified. Failed isolation.\n",
-				     __func__);
-			return ACAPD_ACCEL_FAILURE;
-		}
-
-		dev = accel->rm_dev;
-		reg_va = dev->va;
-		if (reg_va == NULL) {
-			ret = acapd_device_open(dev);
-			if (ret < 0) {
-				acapd_perror("%s: failed to open rm dev %s.\n",
-					     __func__, dev->dev_name);
-				return ACAPD_ACCEL_FAILURE;
-			}
-			reg_va = dev->va;
-			if (reg_va == NULL) {
-				acapd_perror("%s: rm dev %s va is NULL.\n",
-					     __func__, dev->dev_name);
-				return ACAPD_ACCEL_FAILURE;
-			}
-		}
-		*((volatile uint32_t *)((char *)reg_va + 0x10000)) = 0x1;
-		*((volatile uint32_t *)((char *)reg_va + 0x0)) = 0x1;
 		return ACAPD_ACCEL_SUCCESS;
 	}
 }

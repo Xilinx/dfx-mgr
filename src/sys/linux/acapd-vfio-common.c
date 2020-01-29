@@ -9,6 +9,7 @@
 #include <acapd/dma.h>
 #include <acapd/helper.h>
 #include <acapd/print.h>
+#include <acapd/shm.h>
 #include <errno.h>
 #include "acapd-vfio-common.h"
 #include <dirent.h>
@@ -57,7 +58,7 @@ static int acapd_vfio_device_open(acapd_device_t *dev)
 	snprintf(group_path, 64, "/dev/vfio/%d", dev->iommu_group);
 
 	acapd_list_init(&vdev->mmaps);
-	acapd_debug("%s: open container.\n", __func__);
+	acapd_debug("%s: %s, open container.\n", __func__, dev->dev_name);
 	vdev->container = open(VFIO_CONTAINER,O_RDWR);
 	if (vdev->container < 0) {
 		acapd_perror("%s: failed to open container.\n", __func__);
@@ -67,7 +68,7 @@ static int acapd_vfio_device_open(acapd_device_t *dev)
 	acapd_debug("%s: open group.\n", __func__);
 	vdev->group = open(group_path,O_RDWR);
 	if (vdev->group < 0) {
-		acapd_perror("%s: failed to open group.\n", __func__);
+		acapd_perror("%s:%s failed to open group.\n", __func__, dev->dev_name);
 		ret = -EINVAL;
 		goto error;
 	}

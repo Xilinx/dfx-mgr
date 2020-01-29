@@ -15,7 +15,7 @@
 extern "C" {
 #endif
 
-#include <acapd/shm.h>
+#include <acapd/device.h>
 #include <acapd/helper.h>
 
 typedef struct acapd_vfio_mmap {
