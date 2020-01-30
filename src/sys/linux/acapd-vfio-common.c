@@ -31,6 +31,49 @@
 
 #define VFIO_CONTAINER  "/dev/vfio/vfio"
 
+static int acapd_vfio_bind(acapd_device_t *dev)
+{
+	char tmpstr[128];
+	int ret;
+	struct stat s;
+
+	/* TODO: There should be a better way to see if the device
+	 * has driver bounded */
+	if (strstr(dev->dev_name, ".dma") != NULL) {
+
+		sprintf(tmpstr,
+			"/sys/bus/platform/drivers/xilinx-vdma/%s",
+			dev->dev_name);
+		ret = stat(tmpstr, &s);
+		if(ret >= 0) {
+			/* Need to unbind the driver */
+			sprintf(tmpstr,
+				"echo %s > /sys/bus/platform/drivers/xilinx-vdma/unbind",
+				dev->dev_name);
+			system(tmpstr);
+		}
+	}
+	/* bound driver with VFIO
+	 * TODO: Should move to vfio device operation.
+	 */
+	sprintf(tmpstr,
+		"/sys/bus/platform/drivers/vfio-platform/%s",
+		dev->dev_name);
+	ret = stat(tmpstr, &s);
+	if(ret < 0) {
+		/* Need to bind the driver with vfio  */
+		sprintf(tmpstr,
+			"echo vfio-platform > /sys/bus/platform/devices/%s/driver_override",
+			dev->dev_name);
+		system(tmpstr);
+		sprintf(tmpstr,
+			"echo %s > /sys/bus/platform/drivers_probe",
+			dev->dev_name);
+		system(tmpstr);
+	}
+	return 0;
+}
+
 static int acapd_vfio_device_open(acapd_device_t *dev)
 {
 	struct vfio_device_info device_info = { .argsz = sizeof(device_info)};
@@ -55,18 +98,30 @@ static int acapd_vfio_device_open(acapd_device_t *dev)
 		return -ENOMEM;
 	}
 	memset(vdev, 0, sizeof(*vdev));
-	snprintf(group_path, 64, "/dev/vfio/%d", dev->iommu_group);
-
 	acapd_list_init(&vdev->mmaps);
-	acapd_debug("%s: %s, open container.\n", __func__, dev->dev_name);
-	vdev->container = open(VFIO_CONTAINER,O_RDWR);
-	if (vdev->container < 0) {
-		acapd_perror("%s: failed to open container.\n", __func__);
-		ret = -EINVAL;
-		goto error;
+	snprintf(group_path, 64, "/dev/vfio/%d", dev->iommu_group);
+	if (access(group_path, F_OK) != 0) {
+		acapd_debug("%s: %s, bind vfio driver.\n",
+			    __func__, dev->dev_name);
+		ret = acapd_vfio_bind(dev);
+		if (ret < 0) {
+			acapd_perror("%s: %s failed to bind driver.\n",
+				     __func__, dev->dev_name);
+			ret = -EINVAL;
+			goto error;
+		}
+		acapd_debug("%s: %s, open container.\n",
+			    __func__, dev->dev_name);
+		vdev->container = open(VFIO_CONTAINER,O_RDWR);
+		if (vdev->container < 0) {
+			acapd_perror("%s: failed to open container.\n",
+				     __func__);
+			ret = -EINVAL;
+			goto error;
+		}
 	}
 	acapd_debug("%s: open group.\n", __func__);
-	vdev->group = open(group_path,O_RDWR);
+	vdev->group = open(group_path, O_RDWR);
 	if (vdev->group < 0) {
 		acapd_perror("%s:%s failed to open group.\n", __func__, dev->dev_name);
 		ret = -EINVAL;

@@ -6,7 +6,7 @@
 
 /*
  * @file	dma.h
- * @brief	DMA primitives for libmetal.
+ * @brief	DMA primitives
  */
 
 #ifndef _ACAPD_DMA_H

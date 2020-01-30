@@ -54,6 +54,7 @@ typedef struct acapd_device_ops {
 typedef struct acapd_device {
 	const char *dev_name; /**< device name */
 	const char *bus_name; /**< bus name */
+	char path[64]; /**< file path */
 	uint64_t reg_pa; /**< physical base address */
 	size_t reg_size; /**< size of the registers */
 	int id; /**< device id. In Linux, it can be file id */
