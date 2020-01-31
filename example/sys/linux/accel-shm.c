@@ -3,6 +3,7 @@
 #include <acapd/shm.h>
 #include <errno.h>
 #include <getopt.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,22 +11,29 @@
 
 #define DATA_SIZE_BYTES (4*1024)
 
+static acapd_accel_t bzip2_accel;
+static acapd_device_t shell_dev;
+static acapd_device_t rm_dev;
+static acapd_device_t ip_dev[2];
+static acapd_device_t dma_dev;
+static acapd_chnl_t chnls[2];
+static acapd_shm_t tx_shm, rx_shm;
+
 void usage (const char *cmd)
 {
 	fprintf(stdout, "Usage %s -p <pkg_path>\n", cmd);
+}
+
+void sig_handler(int signo)
+{
+	(void)signo;
+	remove_accel(&bzip2_accel, 0);
 }
 
 int main(int argc, char *argv[])
 {
 	int opt;
 	char *pkg_path = NULL;
-	acapd_accel_t bzip2_accel;
-	acapd_device_t shell_dev;
-	acapd_device_t rm_dev;
-	acapd_device_t ip_dev[2];
-	acapd_device_t dma_dev;
-	acapd_chnl_t chnls[2];
-	acapd_shm_t tx_shm, rx_shm;
 	int ret;
 	void *tx_va, *rx_va;
 	uint32_t *dptr;
@@ -77,6 +85,7 @@ int main(int argc, char *argv[])
 	bzip2_accel.chnls = chnls;
 	bzip2_accel.num_chnls = 2;
 
+	signal(SIGINT, sig_handler);
 	printf("Loading accel %s.\n", pkg_path);
 	ret = load_accel(&bzip2_accel, 0);
 	if (ret != 0) {
