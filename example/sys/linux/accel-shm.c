@@ -65,15 +65,8 @@ int main(int argc, char *argv[])
 	dma_dev.dev_name = "a4000000.dma";
 	dma_dev.driver = "vfio-platform";
 	dma_dev.iommu_group = 0;
+	rm_dev.dev_name = "90000000.gpio";
 
-	/* TODO adding channels to acceleration */
-	memset(chnls, 0, sizeof(chnls));
-	chnls[0].dev = &dma_dev;
-	chnls[0].ops = &axidma_vfio_dma_ops;
-	chnls[0].dir = ACAPD_DMA_DEV_W;
-	chnls[1].dev = &dma_dev;
-	chnls[1].ops = &axidma_vfio_dma_ops;
-	chnls[1].dir = ACAPD_DMA_DEV_R;
 	/* allocate memory */
 	printf("Initializing accel with %s.\n", pkg_path);
 	init_accel(&bzip2_accel, (acapd_accel_pkg_hd_t *)pkg_path);

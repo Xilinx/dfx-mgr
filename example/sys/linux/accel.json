@@ -1,0 +1,43 @@
+{	
+	"accel_devices":[
+		{
+			"dev_name":"20100000000.accel",
+			"reg_base":"",
+			"reg_size":"",
+			"dev_path":""
+		},
+		{
+			"dev_name":"",
+			"reg_base":"",
+			"reg_size":"",
+			"dev_path":""
+		}],
+	"sharedMemoryConfig": {
+		"sizeInKB": "4",
+		"sharedMemType" : "ddr"
+	},
+	"dataMoverConfig": {
+		"dma_dev_name":"a4000000.dma",
+		"dma_driver":"vfio-platform",
+		"dma_reg_base":"",
+		"dma_reg_size":"",
+		"iommu_group":"0",
+		"Bus": "platform",
+		"HWType": "axidma",
+		"dataMoverCacheCoherent": "Yes",
+		"dataMoverVirtualAddress": "Yes",
+		"dataMoverChnls":[
+			{
+				"chnl_id": 0,
+				"chnl_dir": "ACAPD_DMA_DEV_W"
+			},
+			{
+				"chnl_id": 0,
+				"chnl_dir": "ACAPD_DMA_DEV_R"
+			}]
+	},
+	"AccelHandshakeType": "streamDataFromTrg",
+	"fallbackBehaviour": "None"
+}
+	
+		

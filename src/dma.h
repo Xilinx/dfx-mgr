@@ -30,7 +30,7 @@ extern "C" {
 typedef enum acapd_dir {
 	ACAPD_DMA_DEV_R	= 1U, /**< DMA direction, device read */
 	ACAPD_DMA_DEV_W, /**< DMA direction, device write */
-	ACAPD_DMA_DEV_WR, /**< DMA direction, device read/write */
+	ACAPD_DMA_DEV_RW, /**< DMA direction, device read/write */
 } acapd_dir_t;
 
 /**

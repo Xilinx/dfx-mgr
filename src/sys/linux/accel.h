@@ -11,7 +11,7 @@
 
 #ifndef _ACAPD_LINUX_ACCEL_H
 #define _ACAPD_LINUX_ACCEL_H
-
+#include <stdio.h>
 /**
  * @brief accel system specific information
  */
