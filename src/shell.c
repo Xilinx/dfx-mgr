@@ -124,14 +124,14 @@ int acapd_shell_assert_isolation(acapd_accel_t *accel, int slot)
 	*((volatile uint32_t *)((char *)reg_va + regs->clock_release)) = 0;
 	while(1) {
 		v = *((volatile uint32_t *)((char *)reg_va + regs->clock_status));
-		if ((v & regs->clock_release_mask) != 0) {
+		if ((v & regs->clock_release_mask) == 0) {
 			break;
 		}
 	}
 	*((volatile uint32_t *)((char *)reg_va + regs->reset_release)) = 0;
 	while(1) {
 		v = *((volatile uint32_t *)((char *)reg_va + regs->reset_status));
-		if ((v & regs->reset_release_mask) != 0) {
+		if ((v & regs->reset_release_mask) == 0) {
 			break;
 		}
 	}
