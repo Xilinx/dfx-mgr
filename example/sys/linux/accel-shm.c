@@ -151,8 +151,8 @@ int main(int argc, char *argv[])
 		dptr++;
 	}
 	ret = 0;
+	printf("Test Done.\n");
 #endif
-	sleep(2);
 error:
 	printf("Removing accel %s.\n", pkg_path);
 	remove_accel(&bzip2_accel, 0);
