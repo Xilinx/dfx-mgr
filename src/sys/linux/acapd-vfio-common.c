@@ -39,6 +39,13 @@ static int acapd_vfio_bind(acapd_device_t *dev)
 
 	/* TODO: There should be a better way to see if the device
 	 * has driver bounded */
+	sprintf(tmpstr,
+		"/sys/bus/platform/drivers/vfio-platform");
+	ret = stat(tmpstr, &s);
+	if (ret < 0) {
+		/* It can be in container, no access to sysfs */
+		return 0;
+	}
 	if (strstr(dev->dev_name, ".dma") != NULL) {
 
 		sprintf(tmpstr,
@@ -100,25 +107,23 @@ static int acapd_vfio_device_open(acapd_device_t *dev)
 	memset(vdev, 0, sizeof(*vdev));
 	acapd_list_init(&vdev->mmaps);
 	snprintf(group_path, 64, "/dev/vfio/%d", dev->iommu_group);
-	if (access(group_path, F_OK) != 0) {
-		acapd_debug("%s: %s, bind vfio driver.\n",
-			    __func__, dev->dev_name);
-		ret = acapd_vfio_bind(dev);
-		if (ret < 0) {
-			acapd_perror("%s: %s failed to bind driver.\n",
-				     __func__, dev->dev_name);
-			ret = -EINVAL;
-			goto error;
-		}
-		acapd_debug("%s: %s, open container.\n",
-			    __func__, dev->dev_name);
-		vdev->container = open(VFIO_CONTAINER,O_RDWR);
-		if (vdev->container < 0) {
-			acapd_perror("%s: failed to open container.\n",
-				     __func__);
-			ret = -EINVAL;
-			goto error;
-		}
+	acapd_debug("%s: %s, bind vfio driver.\n",
+		    __func__, dev->dev_name);
+	ret = acapd_vfio_bind(dev);
+	if (ret < 0) {
+		acapd_perror("%s: %s failed to bind driver.\n",
+			     __func__, dev->dev_name);
+		ret = -EINVAL;
+		goto error;
+	}
+	acapd_debug("%s: %s, open container.\n",
+		    __func__, dev->dev_name);
+	vdev->container = open(VFIO_CONTAINER,O_RDWR);
+	if (vdev->container < 0) {
+		acapd_perror("%s: failed to open container.\n",
+			     __func__);
+		ret = -EINVAL;
+		goto error;
 	}
 	acapd_debug("%s: open group.\n", __func__);
 	vdev->group = open(group_path, O_RDWR);
@@ -133,8 +138,8 @@ static int acapd_vfio_device_open(acapd_device_t *dev)
 	ret = ioctl(vdev->group, VFIO_GROUP_SET_CONTAINER,
 		    &vdev->container);
 	if (ret < 0) {
-		acapd_perror("%s: %s failed to group set container ioctl.\n", 
-			     __func__, dev->dev_name);
+		acapd_perror("%s: %s failed to group set container ioctl:%s.\n", 
+			     __func__, dev->dev_name, strerror(errno));
 		ret = -EINVAL;
 		goto error;
 	}
