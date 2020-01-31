@@ -287,6 +287,7 @@ int acapd_accel_read_complete(acapd_accel_t *accel)
 			     __func__);
 		return -EINVAL;
 	}
+	acapd_debug("%s: channel is complete\n", __func__);
 	return transfered_len;
 }
 

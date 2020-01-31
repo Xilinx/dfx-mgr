@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 	memset(&rm_dev, 0, sizeof(rm_dev));
 	memset(&ip_dev, 0, sizeof(ip_dev));
 	memset(&dma_dev, 0, sizeof(dma_dev));
-	rm_dev.dev_name = "90000000.gpio";
+	shell_dev.dev_name = "90000000.gpio";
 	ip_dev[0].dev_name = "20100000000.bram";
 	ip_dev[1].dev_name = "20120000000.axi_cdma";
 	dma_dev.dev_name = "a4000000.dma";
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
 
 	printf("Loading accel %s.\n", pkg_path);
 	ret = load_accel(&bzip2_accel, 0);
-	if (ret < 0) {
+	if (ret != 0) {
 		fprintf(stderr, "ERROR: failed to load accel.\n");
 		goto error;
 	}

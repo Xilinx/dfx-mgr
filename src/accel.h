@@ -68,6 +68,7 @@ typedef struct {
 	acapd_device_t *shell_dev; /**< shell device reg structure */
 	acapd_device_t *rm_dev; /**< reconfiguration module reg structure */
 	acapd_device_t *ip_dev; /**< accelerator IPs reg structure */
+	int rm_slot; /**< Reconfiguration module slot */
 	int num_chnls;	/**< number of channels */
 	acapd_chnl_t *chnls; /**< list of channels */
 } acapd_accel_t;
