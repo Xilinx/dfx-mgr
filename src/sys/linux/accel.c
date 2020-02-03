@@ -315,22 +315,51 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 		acapd_perror("Failed to extract package %s.\n", pkg_name);
 		return ACAPD_ACCEL_FAILURE;
 	}
+	parseShellJson(accel);
 	parseAccelJson(accel);
-	ret = fpga_cfg_init(accel->sys_info.tmp_dir, 0, 0);
-	if (ret < 0) {
-		acapd_perror("Failed to initialize fpga config, %d.\n", ret);
-		return ACAPD_ACCEL_FAILURE;
-	}
-	fpga_cfg_id = ret;
-	accel->sys_info.fpga_cfg_id = fpga_cfg_id;
-	acapd_print("loading %d.\n",  fpga_cfg_id);
-	ret = fpga_cfg_load(fpga_cfg_id);
-	if (ret != 0) {
-		acapd_perror("Failed to load fpga config: %d\n",
+	if (accel->shell_dev == NULL) {
+		for (int i = ; i < MAX_ACCEL_IPS; i++) {
+			const char *tmpname, *tmppath;
+			int getip;
+			char tmpstr[32];
+
+			sprintf(tmpstr, "ACCEL_IP%d_NAME", i);
+			tmpname = getenv(tmpstr);
+			if (tmpname != NULL) {
+				ip_dev[i].dev_name = tmpname;
+			}
+			sprintf(tmpstr, "ACCEL_IP%d_PATH", i);
+			tmppath = getenv(tmpstr);
+			if (tmppath != NULL) {
+				size_t len;
+				len = sizeof(ip_dev[i].path) - 1;
+			    memset(ip_dev[i].path, 0, len + 1);
+				if (len > strlen(tmppath)) {
+					len = strlen(tmppath);
+				}
+				strncpy(ip_dev[i].path, tmppath, len);
+			}
+			if (tmpname == NULL && tmppath == NULL) {
+				break;
+			}
+		}
+    } else {
+		ret = fpga_cfg_init(accel->sys_info.tmp_dir, 0, 0);
+		if (ret < 0) {
+			acapd_perror("Failed to initialize fpga config, %d.\n", ret);
+			return ACAPD_ACCEL_FAILURE;
+		}
+		fpga_cfg_id = ret;
+		accel->sys_info.fpga_cfg_id = fpga_cfg_id;
+		acapd_print("loading %d.\n",  fpga_cfg_id);
+		ret = fpga_cfg_load(fpga_cfg_id);
+		if (ret != 0) {
+			acapd_perror("Failed to load fpga config: %d\n",
 			     fpga_cfg_id);
-		return ACAPD_ACCEL_FAILURE;
-	} else {
-		return ACAPD_ACCEL_SUCCESS;
+			return ACAPD_ACCEL_FAILURE;
+		} else {
+			return ACAPD_ACCEL_SUCCESS;
+		}
 	}
 }
 
