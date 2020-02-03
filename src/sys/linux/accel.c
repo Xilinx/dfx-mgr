@@ -81,14 +81,13 @@ static int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
   return -1;
 }
 
-int parseAccelJson(acapd_accel_t *accel)
+int parseAccelJson(acapd_accel_t *accel, char *filename)
 {
 	FILE *fptr;
 	long numBytes;
 	jsmn_parser parser;
 	jsmntok_t token[128];
 	int ret,i;
-	char filename[128]={0};
 	char *jsonData;
 	acapd_device_t *dma_dev;
 
@@ -98,9 +97,6 @@ int parseAccelJson(acapd_accel_t *accel)
 		return -EINVAL;
 	}
 
-	strcpy(filename, accel->sys_info.tmp_dir);
-	strcat(filename, "accel.json");
-	printf("Reading accel.json %s\n",filename);
 
 	fptr = fopen(filename, "r");
 	if (fptr == NULL)
@@ -219,20 +215,15 @@ error:
 	return ret;
 }
 
-int parseShellJson(acapd_accel_t *accel)
+int parseShellJson(acapd_accel_t *accel, char *filename)
 {
 	FILE *fptr;
 	long numBytes;
 	jsmn_parser parser;
 	jsmntok_t token[128];
 	int ret,i;
-	char filename[128]={0};
 	char *jsonData;
 	acapd_device_t *dev;
-
-	strcpy(filename, accel->sys_info.tmp_dir);
-	strcat(filename, "shell.json");
-	printf("Reading shell.json %s\n",filename);
 
 	fptr = fopen(filename, "r");
 	if (fptr == NULL)
@@ -339,27 +330,36 @@ int sys_accel_config(acapd_accel_t *accel)
 	char cmd[512];
 	int ret;
 	char *pkg_name;
+	char *config_path;
+	char *shell_config_path;
 
-	/* Use timestamp to name the tmparary directory */
-	acapd_debug("Creating tmp dir for package.\n");
-	tmp_dirname = mkdtemp(template);
-	if (tmp_dirname == NULL) {
-		acapd_perror("Failed to create tmp dir for package:%s.\n",
+	config_path = getenv("ACCEL_CONFIG_PATH");
+	if(config_path == NULL) {
+		/* Use timestamp to name the tmparary directory */
+		acapd_debug("Creating tmp dir for package.\n");
+		tmp_dirname = mkdtemp(template);
+		if (tmp_dirname == NULL) {
+			acapd_perror("Failed to create tmp dir for package:%s.\n",
 			     strerror(errno));
-		return ACAPD_ACCEL_FAILURE;
+			return ACAPD_ACCEL_FAILURE;
+		}
+		sprintf(accel->sys_info.tmp_dir, "%s/", tmp_dirname);
+		pkg = accel->pkg;
+		pkg_name = (char *)pkg;
+		/* TODO: Assuming the package is a tar.gz format */
+		sprintf(cmd, "tar -C %s -xzf %s", tmp_dirname, pkg_name);
+		ret = system(cmd);
+		if (ret != 0) {
+			acapd_perror("Failed to extract package %s.\n", pkg_name);
+			return ACAPD_ACCEL_FAILURE;
+		}
+		strcpy(config_path, accel->sys_info.tmp_dir);
+		strcat(config_path, "accel.json");
+		strcpy(shell_config_path, accel->sys_info.tmp_dir);
+		strcat(shell_config_path, "shell.json");
 	}
-	sprintf(accel->sys_info.tmp_dir, "%s/", tmp_dirname);
-	pkg = accel->pkg;
-	pkg_name = (char *)pkg;
-	/* TODO: Assuming the package is a tar.gz format */
-	sprintf(cmd, "tar -C %s -xzf %s", tmp_dirname, pkg_name);
-	ret = system(cmd);
-	if (ret != 0) {
-		acapd_perror("Failed to extract package %s.\n", pkg_name);
-		return ACAPD_ACCEL_FAILURE;
-	}
-	parseShellJson(accel);
-	parseAccelJson(accel);
+	parseShellJson(accel,shell_config_path);
+	parseAccelJson(accel, config_path);
 	if (accel->shell_dev == NULL) {
 		for (int i = 0; i < accel->num_ip_devs; i++) {
 			const char *tmpname, *tmppath;
