@@ -23,7 +23,7 @@ endforeach()
 collector_list  (_list PROJECT_LIB_DIRS)
 link_directories (${_list})
 
-foreach (_app accel-bzip2 accel-shm)
+foreach (_app accel-bzip2 accel-shm accel-aes)
   set (_src ${CMAKE_CURRENT_SOURCE_DIR}/${_app}.c)
   if (WITH_SHARED_LIB)
     add_executable (${_app}-share ${_src})
