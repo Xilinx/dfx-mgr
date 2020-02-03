@@ -87,6 +87,7 @@ void init_accel(acapd_accel_t *accel, acapd_accel_pkg_hd_t *pkg);
 
 int load_accel(acapd_accel_t *accel, unsigned int async);
 
+int acapd_accel_config(acapd_accel_t *accel);
 int accel_load_status(acapd_accel_t *accel);
 
 int acapd_accel_wait_for_data_ready(acapd_accel_t *accel);
@@ -101,6 +102,8 @@ int acapd_accel_open_channel(acapd_accel_t *accel);
 int acapd_accel_reset_channel(acapd_accel_t *accel);
 
 #ifdef ACAPD_INTERNAL
+int sys_accel_config(acapd_accel_t *accel);
+
 int sys_load_accel(acapd_accel_t *accel, unsigned int async);
 
 int sys_remove_accel(acapd_accel_t *accel, unsigned int async);

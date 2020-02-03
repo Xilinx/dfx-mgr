@@ -331,18 +331,15 @@ int parseRMJson(acapd_accel_t *accel)
 	return 0;
 }
 
-int sys_load_accel(acapd_accel_t *accel, unsigned int async)
+int sys_accel_config(acapd_accel_t *accel)
 {
 	acapd_accel_pkg_hd_t *pkg;
 	char template[] = "/tmp/accel.XXXXXX";
 	char *tmp_dirname;
 	char cmd[512];
 	int ret;
-	int fpga_cfg_id;
 	char *pkg_name;
 
-	/* TODO: only support synchronous mode for now */
-	(void)async;
 	/* Use timestamp to name the tmparary directory */
 	acapd_debug("Creating tmp dir for package.\n");
 	tmp_dirname = mkdtemp(template);
@@ -392,22 +389,31 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 		}
 		return ACAPD_ACCEL_SUCCESS;
 	} else {
-		ret = fpga_cfg_init(accel->sys_info.tmp_dir, 0, 0);
-		if (ret < 0) {
-			acapd_perror("Failed to initialize fpga config, %d.\n", ret);
-			return ACAPD_ACCEL_FAILURE;
-		}
-		fpga_cfg_id = ret;
-		accel->sys_info.fpga_cfg_id = fpga_cfg_id;
-		acapd_print("loading %d.\n",  fpga_cfg_id);
-		ret = fpga_cfg_load(fpga_cfg_id);
-		if (ret != 0) {
-			acapd_perror("Failed to load fpga config: %d\n",
-			     fpga_cfg_id);
-			return ACAPD_ACCEL_FAILURE;
-		} else {
-			return ACAPD_ACCEL_SUCCESS;
-		}
+		return ACAPD_ACCEL_SUCCESS;
+	}
+}
+
+int sys_load_accel(acapd_accel_t *accel, unsigned int async)
+{
+	int ret;
+	int fpga_cfg_id;
+
+	(void)async;
+	ret = fpga_cfg_init(accel->sys_info.tmp_dir, 0, 0);
+	if (ret < 0) {
+		acapd_perror("Failed to initialize fpga config, %d.\n", ret);
+		return ACAPD_ACCEL_FAILURE;
+	}
+	fpga_cfg_id = ret;
+	accel->sys_info.fpga_cfg_id = fpga_cfg_id;
+	acapd_print("loading %d.\n",  fpga_cfg_id);
+	ret = fpga_cfg_load(fpga_cfg_id);
+	if (ret != 0) {
+		acapd_perror("Failed to load fpga config: %d\n",
+		     fpga_cfg_id);
+		return ACAPD_ACCEL_FAILURE;
+	} else {
+		return ACAPD_ACCEL_SUCCESS;
 	}
 }
 

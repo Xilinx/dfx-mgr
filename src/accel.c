@@ -66,10 +66,16 @@ int acapd_config_pkg(acapd_accel_pkg_hd_t *pkg, uint32_t type, char *name,
 void init_accel(acapd_accel_t *accel, acapd_accel_pkg_hd_t *pkg)
 {
 	acapd_assert(accel != NULL);
-	acapd_assert(pkg != NULL);
+	//acapd_assert(pkg != NULL);
 	memset(accel, 0, sizeof(*accel));
 	accel->pkg = pkg;
 	accel->status = ACAPD_ACCEL_STATUS_UNLOADED;
+}
+
+int acapd_accel_config(acapd_accel_t *accel)
+{
+	acapd_assert(accel != NULL);
+	return sys_accel_config(accel);
 }
 
 int load_accel(acapd_accel_t *accel, unsigned int async)
@@ -82,6 +88,17 @@ int load_accel(acapd_accel_t *accel, unsigned int async)
 		accel->rm_slot = 0;
 	}
 	/* assert isolation before programming */
+	ret = acapd_accel_config(accel);
+	if (accel->shell_dev == NULL) {
+		if (accel->num_chnls == 0) {
+			acapd_perror("%: no shell, and no channels.\n", __func__);
+			return ACAPD_ACCEL_FAILURE;
+		} else {
+			acapd_debug("%s: no shell, but has channels.\n");
+			return ACAPD_ACCEL_SUCCESS;
+		}
+	}
+
 	ret = acapd_shell_assert_isolation(accel, accel->rm_slot);
 	if (ret < 0) {
 		acapd_perror("%s, failed to assert isolaction.\n",
