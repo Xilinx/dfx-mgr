@@ -15,6 +15,7 @@
 #include <dirent.h>
 #include <ftw.h>
 #include <fcntl.h>
+#include "generic-device.h"
 #include <libfpga.h>
 #include <linux/vfio.h>
 #include <linux/types.h>
@@ -33,52 +34,7 @@
 
 static int acapd_vfio_bind(acapd_device_t *dev)
 {
-	char tmpstr[128];
-	int ret;
-	struct stat s;
-
-	/* TODO: There should be a better way to see if the device
-	 * has driver bounded */
-	sprintf(tmpstr,
-		"/sys/bus/platform/drivers/vfio-platform");
-	ret = stat(tmpstr, &s);
-	if (ret < 0) {
-		/* It can be in container, no access to sysfs */
-		return 0;
-	}
-	if (strstr(dev->dev_name, ".dma") != NULL) {
-
-		sprintf(tmpstr,
-			"/sys/bus/platform/drivers/xilinx-vdma/%s",
-			dev->dev_name);
-		ret = stat(tmpstr, &s);
-		if(ret >= 0) {
-			/* Need to unbind the driver */
-			sprintf(tmpstr,
-				"echo %s > /sys/bus/platform/drivers/xilinx-vdma/unbind",
-				dev->dev_name);
-			system(tmpstr);
-		}
-	}
-	/* bound driver with VFIO
-	 * TODO: Should move to vfio device operation.
-	 */
-	sprintf(tmpstr,
-		"/sys/bus/platform/drivers/vfio-platform/%s",
-		dev->dev_name);
-	ret = stat(tmpstr, &s);
-	if(ret < 0) {
-		/* Need to bind the driver with vfio  */
-		sprintf(tmpstr,
-			"echo vfio-platform > /sys/bus/platform/devices/%s/driver_override",
-			dev->dev_name);
-		system(tmpstr);
-		sprintf(tmpstr,
-			"echo %s > /sys/bus/platform/drivers_probe",
-			dev->dev_name);
-		system(tmpstr);
-	}
-	return 0;
+	return acapd_generic_device_bind(dev, "vfio-platform");
 }
 
 static int acapd_vfio_device_open(acapd_device_t *dev)
@@ -187,10 +143,11 @@ static int acapd_vfio_device_open(acapd_device_t *dev)
 				       MAP_SHARED,
 				       vdev->device,
 				       reg.offset);
-			if (dev->va == NULL) {
+			if (dev->va == MAP_FAILED) {
 				acapd_perror("%s:%s Failed to mmap: 0x%llx.\n",
 					     __func__, dev->dev_name,
 					     reg.offset);
+				dev->va = NULL;
 				ret = -EINVAL;
 				goto error;
 			}

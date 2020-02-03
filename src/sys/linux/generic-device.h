@@ -18,4 +18,6 @@ extern "C" {
 #include <acapd/device.h>
 
 extern acapd_device_ops_t acapd_linux_generic_dev_ops;
+
+int acapd_generic_device_bind(acapd_device_t *dev, const char *drv);
 #endif /* _ACAPD_LINUX_GENERIC_DEVICE_H */

@@ -5,8 +5,6 @@ collector_list  (_list PROJECT_LIB_DIRS)
 link_directories (${_list})
 
 set (_deps "fpga")
-list (APPEND _deps "metal")
-list (APPEND _deps "sysfs")
 foreach (_lib ${_deps})
   message ("Looking for ${_lib}")
   message ("LIBRARY PATH ${CMAKE_LIBRARY_PATH}")
