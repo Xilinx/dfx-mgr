@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 acapd_accel_pkg_hd_t *acapd_alloc_pkg(size_t size)
 {
