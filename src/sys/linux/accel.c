@@ -126,6 +126,7 @@ int parseAccelJson(acapd_accel_t *accel)
 			int numDevices = token[i+1].size;
 			acapd_device_t devs[numDevices];
 			memset(devs, 0, sizeof(devs));
+			char *tmppath;
 			i+=2;
 
 			for(j=0; j < numDevices; j++){
@@ -135,8 +136,13 @@ int parseAccelJson(acapd_accel_t *accel)
 					devs[j].reg_pa = (uint64_t)atoi(strndup(jsonData+token[i+j+4].start, token[i+j+4].end - token[i+j+4].start));
 				if (jsoneq(jsonData, &token[i+j+5],"reg_size") == 0)
 					devs[j].reg_size = (size_t)atoi(strndup(jsonData+token[i+j+2].start, token[i+j+6].end - token[i+j+6].start));
-				if (jsoneq(jsonData, &token[i+j+7],"dev_path") == 0)
-					devs[j].path = strndup(jsonData+token[i+j+8].start, token[i+j+8].end - token[i+j+8].start);
+				if (jsoneq(jsonData, &token[i+j+7],"dev_path") == 0) {
+					tmppath = strndup(jsonData+token[i+j+8].start, token[i+j+8].end - token[i+j+8].start);
+					if (strlen(tmppath) != 0) {
+						memset(devs[j].path, 0, sizeof(devs[j].path));
+						strncpy(devs[j].path, tmppath, sizeof(devs[j].path) - 1);
+					}
+				}
 				i+=8;
 			}
 			accel->ip_dev = devs;
