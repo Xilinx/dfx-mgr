@@ -1,6 +1,6 @@
 {
 	"device_name":"90000000.gpio",
 	"shell_type":"1x1",
-	"register_addr":"",
-	"size":""
+	"reg_base":"",
+	"reg_size":""
 }

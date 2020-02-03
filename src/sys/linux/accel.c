@@ -135,15 +135,8 @@ int parseAccelJson(acapd_accel_t *accel)
 				if (jsoneq(jsonData, &token[i+j+3],"reg_base") == 0)
 					devs[j].reg_pa = (uint64_t)atoi(strndup(jsonData+token[i+j+4].start, token[i+j+4].end - token[i+j+4].start));
 				if (jsoneq(jsonData, &token[i+j+5],"reg_size") == 0)
-					devs[j].reg_size = (size_t)atoi(strndup(jsonData+token[i+j+2].start, token[i+j+6].end - token[i+j+6].start));
-				if (jsoneq(jsonData, &token[i+j+7],"dev_path") == 0) {
-					tmppath = strndup(jsonData+token[i+j+8].start, token[i+j+8].end - token[i+j+8].start);
-					if (strlen(tmppath) != 0) {
-						memset(devs[j].path, 0, sizeof(devs[j].path));
-						strncpy(devs[j].path, tmppath, sizeof(devs[j].path) - 1);
-					}
-				}
-				i+=8;
+					devs[j].reg_size = (size_t)atoi(strndup(jsonData+token[i+j+6].start, token[i+j+6].end - token[i+j+6].start));
+				i+=6;
 			}
 			accel->ip_dev = devs;
 		}
@@ -197,51 +190,98 @@ int parseAccelJson(acapd_accel_t *accel)
 
 int parseShellJson(acapd_accel_t *accel)
 {
-	FILE *fp;
+	FILE *fptr;
 	long numBytes;
 	jsmn_parser parser;
 	jsmntok_t token[128];
 	int ret,i;
-	char filename[128];
+	char filename[128]={0};
 	char *jsonData;
 
 	strcpy(filename, accel->sys_info.tmp_dir);
 	strcat(filename, "shell.json");
 	printf("Reading shell.json %s\n",filename);
 
-	fp = fopen(filename, "r");
-	if (fp == NULL)
+	fptr = fopen(filename, "r");
+	if (fptr == NULL)
 		return -1;
-	fseek(fp, 0L, SEEK_END);
-	numBytes = ftell(fp);
-	fseek(fp, 0L, SEEK_SET);
+	fseek(fptr, 0L, SEEK_END);
+	numBytes = ftell(fptr);
+	fseek(fptr, 0L, SEEK_SET);
 
 	jsonData = (char *)calloc(numBytes, sizeof(char));
 	if (jsonData == NULL)
 		return -1;
-	fread(jsonData, sizeof(char), numBytes, fp);
-	fclose(fp);
+	fread(jsonData, sizeof(char), numBytes, fptr);
+	fclose(fptr);
 	printf("jsonData read:\n %s\n",jsonData);
 
 	jsmn_init(&parser);
-	ret = jsmn_parse(&parser, jsonData, numBytes, token, sizeof(token)/sizeof(token[0]));
+	ret = jsmn_parse(&parser, jsonData, sizeof(jsonData), token, sizeof(token)/sizeof(token[0]));
 	if (ret < 0){
 		printf("Failed to parse JSON: %d\n", ret);
 	}
+
 	for(i=1; i < ret; i++){
 		if (token[i].type == JSMN_OBJECT)
 			continue;
-		if(jsoneq(jsonData, &token[i],"device_name") == 0)
-			accel->shell_dev->dev_name = strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start);
-		if(jsoneq(jsonData, &token[i],"register_addr") == 0){}
-		if(jsoneq(jsonData, &token[i],"size") == 0){}
-		if(jsoneq(jsonData, &token[i],"numPL_AccelSlots") == 0){}
-		if(jsoneq(jsonData, &token[i],"numAIE_AccelSlots") == 0){}
-		if(jsoneq(jsonData, &token[i],"dataMoverNum") == 0){}
-		if(jsoneq(jsonData, &token[i],"dataMoverType") == 0){}
+		if (jsoneq(jsonData, &token[i],"device_name") == 0)
+			accel->shell_dev.dev_name = strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start);
+		if (jsoneq(jsonData, &token[i],"shell_type") == 0)
+			printf("Shell is %s\n",strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start));
+		if (jsoneq(jsonData, &token[i],"reg_base")== 0)
+			accel->shell_dev.reg_pa = (uint64_t)atoi(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start));
+		if (jsoneq(jsonData, &token[i],"reg_size") == 0){}
+			accel->shell_dev.reg_size = (size_t)atoi(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start));
+	}
+	return 0;
+}
+
+int parseRMJson(acapd_accel_t *accel)
+{
+	FILE *fptr;
+	long numBytes;
+	jsmn_parser parser;
+	jsmntok_t token[128];
+	int ret,i;
+	char filename[128]={0};
+	char *jsonData;
+
+	strcpy(filename, accel->sys_info.tmp_dir);
+	strcat(filename, "rm.json");
+	printf("Reading rm.json %s\n",filename);
+
+	fptr = fopen(filename, "r");
+	if (fptr == NULL)
+		return -1;
+	fseek(fptr, 0L, SEEK_END);
+	numBytes = ftell(fptr);
+	fseek(fptr, 0L, SEEK_SET);
+
+	jsonData = (char *)calloc(numBytes, sizeof(char));
+	if (jsonData == NULL)
+		return -1;
+	fread(jsonData, sizeof(char), numBytes, fptr);
+	fclose(fptr);
+	printf("jsonData read:\n %s\n",jsonData);
+
+	jsmn_init(&parser);
+	ret = jsmn_parse(&parser, jsonData, sizeof(jsonData), token, sizeof(token)/sizeof(token[0]));
+	if (ret < 0){
+		printf("Failed to parse JSON: %d\n", ret);
 	}
 
-	free(jsonData);
+	for(i=1; i < ret; i++){
+		if (token[i].type == JSMN_OBJECT)
+			continue;
+		if (jsoneq(jsonData, &token[i],"rm_dev_name") == 0)
+			accel->rm_dev.dev_name = strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start);
+		if (jsoneq(jsonData, &token[i],"rm_reg_base") == 0)
+			accel->rm_dev.reg_pa = (uint64_t)atoi(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start));
+		if (jsoneq(jsonData, &token[i],"rm_reg_size")== 0)
+			accel->rm_dev.reg_size = (size_t)atoi(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start));
+		if (jsoneq(jsonData, &token[i],"isolation_slot") == 0){}
+	}
 	return 0;
 }
 

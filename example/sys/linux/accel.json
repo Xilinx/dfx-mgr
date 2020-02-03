@@ -3,14 +3,12 @@
 		{
 			"dev_name":"20100000000.accel",
 			"reg_base":"",
-			"reg_size":"",
-			"dev_path":""
+			"reg_size":""
 		},
 		{
 			"dev_name":"",
 			"reg_base":"",
-			"reg_size":"",
-			"dev_path":""
+			"reg_size":""
 		}],
 	"sharedMemoryConfig": {
 		"sizeInKB": "4",
