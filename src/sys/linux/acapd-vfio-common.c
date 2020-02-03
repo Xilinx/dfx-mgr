@@ -34,6 +34,7 @@
 
 static int acapd_vfio_bind(acapd_device_t *dev)
 {
+	dev->bus_name = "platform";
 	return acapd_generic_device_bind(dev, "vfio-platform");
 }
 
