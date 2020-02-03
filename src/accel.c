@@ -80,10 +80,12 @@ int load_accel(acapd_accel_t *accel, unsigned int async)
 	if (accel->rm_slot < 0) {
 		accel->rm_slot = 0;
 	}
-	ret = acapd_shell_release_isolation(accel, accel->rm_slot);
-	if (ret != 0) {
-		acapd_perror("%s: failed to release isolation.\n");
-		return ACAPD_ACCEL_FAILURE;
+	/* assert isolation before programming */
+	ret = acapd_shell_assert_isolation(accel, accel->rm_slot);
+	if (ret < 0) {
+		acapd_perror("%s, failed to assert isolaction.\n",
+			     __func__);
+		return ret;
 	}
 	/* TODO: Check if the accel is valid */
 	/* For now, for now assume it is always PDI/DTB */
@@ -96,6 +98,12 @@ int load_accel(acapd_accel_t *accel, unsigned int async)
 		accel->load_failure = ret;
 	}
 	if (accel->status == ACAPD_ACCEL_SUCCESS) {
+		ret = acapd_shell_release_isolation(accel, accel->rm_slot);
+		if (ret != 0) {
+			acapd_perror("%s: failed to release isolation.\n");
+			return ACAPD_ACCEL_FAILURE;
+		}
+		sleep(1);
 	}
 	return ret;
 }
