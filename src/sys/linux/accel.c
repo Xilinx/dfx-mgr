@@ -454,9 +454,14 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 int sys_load_accel_post(acapd_accel_t *accel)
 {
 	acapd_assert(accel != NULL);
+	char cmd[512];
+	char tmpstr[512];
+
+	strcpy(cmd,"docker run --rm -v /usr/lib:/x_usrlib -v /usr/bin/:/xbin/ -v /lib/:/xlib ");
+
 	for (int i = 0; i < accel->num_ip_devs; i++) {
 		int ret;
-		char tmpstr[32];
+		char tmpstr[512];
 
 		ret = acapd_device_open(&accel->ip_dev[i]);
 		if (ret != 0) {
@@ -464,7 +469,18 @@ int sys_load_accel_post(acapd_accel_t *accel)
 				     __func__, accel->ip_dev[i].dev_name);
 			return -EINVAL;
 		}
+		sprintf(tmpstr,"--device=%s:%s ",accel->ip_dev[i].path,accel->ip_dev[i].path);
+		strcat(cmd,tmpstr);
 	}
+	sprintf(tmpstr,"docker load < %s/container.tar",accel->sys_info.tmp_dir);
+	acapd_debug("%s:Loading docker container\n",__func__);
+	system(tmpstr);
+
+	sprintf(tmpstr," -e \"ACCEL_CONFIG_PATH=%s/accel.json\"",accel->sys_info.tmp_dir);
+	strcat(cmd, tmpstr);
+	strcat(cmd, " -it container");
+	acapd_debug("%s: docker run cmd: %s\n",__func__,cmd);
+	system(cmd);
 	return 0;
 }
 
