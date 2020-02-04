@@ -330,13 +330,17 @@ int sys_accel_config(acapd_accel_t *accel)
 	char cmd[512];
 	int ret;
 	char *pkg_name;
-	char *config_path;
-	char *shell_config_path;
+	char *env_config_path, config_path[128];
+	char shell_config_path[128];
 
-	config_path = getenv("ACCEL_CONFIG_PATH");
-	if(config_path == NULL) {
+	env_config_path = getenv("ACCEL_CONFIG_PATH");
+	memset(config_path, 0, sizeof(config_path));
+	memset(shell_config_path, 0, sizeof(shell_config_path));
+	if(env_config_path == NULL) {
+		size_t len;
+
 		/* Use timestamp to name the tmparary directory */
-		acapd_debug("Creating tmp dir for package.\n");
+		acapd_debug("%s: Creating tmp dir for package.\n", __func__);
 		tmp_dirname = mkdtemp(template);
 		if (tmp_dirname == NULL) {
 			acapd_perror("Failed to create tmp dir for package:%s.\n",
@@ -353,10 +357,35 @@ int sys_accel_config(acapd_accel_t *accel)
 			acapd_perror("Failed to extract package %s.\n", pkg_name);
 			return ACAPD_ACCEL_FAILURE;
 		}
-		strcpy(config_path, accel->sys_info.tmp_dir);
+		len = sizeof(config_path) - strlen("accel.json") - 1;
+		if (len > strlen(accel->sys_info.tmp_dir)) {
+			len = strlen(accel->sys_info.tmp_dir);
+		} else {
+			acapd_perror("%s: accel config path is too long.\n");
+			return ACAPD_ACCEL_FAILURE;
+		}
+		strncpy(config_path, accel->sys_info.tmp_dir, len);
 		strcat(config_path, "accel.json");
-		strcpy(shell_config_path, accel->sys_info.tmp_dir);
+		len = sizeof(shell_config_path) - strlen("shell.json") - 1;
+		if (len > strlen(accel->sys_info.tmp_dir)) {
+			len = strlen(accel->sys_info.tmp_dir);
+		} else {
+			acapd_perror("%s: accel shell config path is too long.\n");
+			return ACAPD_ACCEL_FAILURE;
+		}
+		strncpy(shell_config_path, accel->sys_info.tmp_dir, len);
 		strcat(shell_config_path, "shell.json");
+	} else {
+		size_t len;
+
+		len = sizeof(config_path) - 1;
+		if (len > strlen(env_config_path)) {
+			len = strlen(env_config_path);
+		} else {
+			acapd_perror("%s: accel config env path is too long.\n");
+			return ACAPD_ACCEL_FAILURE;
+		}
+		strncpy(config_path, env_config_path, len);
 	}
 	parseShellJson(accel,shell_config_path);
 	parseAccelJson(accel, config_path);
@@ -399,12 +428,16 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 	int fpga_cfg_id;
 
 	(void)async;
+	acapd_debug("%s 0: accel %p,%p\n", __func__, accel, &accel->sys_info);
+	acapd_debug("%s: init package dir: %s.\n", __func__, accel->sys_info.tmp_dir);
 	ret = fpga_cfg_init(accel->sys_info.tmp_dir, 0, 0);
 	if (ret < 0) {
 		acapd_perror("Failed to initialize fpga config, %d.\n", ret);
 		return ACAPD_ACCEL_FAILURE;
 	}
+	acapd_debug("%s: init package dir: %s done .\n", __func__, accel->sys_info.tmp_dir);
 	fpga_cfg_id = ret;
+	acapd_debug("%s: accel %p,%p\n", __func__, accel, &accel->sys_info);
 	accel->sys_info.fpga_cfg_id = fpga_cfg_id;
 	acapd_debug("%s: loading %d.\n", __func__, fpga_cfg_id);
 	ret = fpga_cfg_load(fpga_cfg_id);

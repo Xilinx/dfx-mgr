@@ -88,6 +88,7 @@ int load_accel(acapd_accel_t *accel, unsigned int async)
 		accel->rm_slot = 0;
 	}
 	/* assert isolation before programming */
+	acapd_debug("%s: config accel.\n", __func__);
 	ret = acapd_accel_config(accel);
 	if (accel->shell_dev == NULL) {
 		if (accel->num_chnls == 0) {
@@ -99,6 +100,7 @@ int load_accel(acapd_accel_t *accel, unsigned int async)
 		}
 	}
 
+	acapd_debug("%s: assert isolation.\n", __func__);
 	ret = acapd_shell_assert_isolation(accel, accel->rm_slot);
 	if (ret < 0) {
 		acapd_perror("%s, failed to assert isolaction.\n",
@@ -107,6 +109,7 @@ int load_accel(acapd_accel_t *accel, unsigned int async)
 	}
 	/* TODO: Check if the accel is valid */
 	/* For now, for now assume it is always PDI/DTB */
+	acapd_debug("%s: load accel.\n", __func__);
 	ret = sys_load_accel(accel, async);
 	if (ret == ACAPD_ACCEL_SUCCESS) {
 		accel->status = ACAPD_ACCEL_STATUS_INUSE;
