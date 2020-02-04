@@ -128,6 +128,7 @@ int load_accel(acapd_accel_t *accel, unsigned int async)
 		}
 		acapd_debug("%s: releasing isolation done.\n", __func__);
 	}
+	ret = sys_load_accel_post(accel);
 	return ret;
 }
 

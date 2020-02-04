@@ -428,6 +428,7 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 	int fpga_cfg_id;
 
 	(void)async;
+	acapd_assert(accel != NULL);
 	acapd_debug("%s 0: accel %p,%p\n", __func__, accel, &accel->sys_info);
 	acapd_debug("%s: init package dir: %s.\n", __func__, accel->sys_info.tmp_dir);
 	ret = fpga_cfg_init(accel->sys_info.tmp_dir, 0, 0);
@@ -448,6 +449,31 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 	} else {
 		return ACAPD_ACCEL_SUCCESS;
 	}
+}
+
+int sys_load_accel_post(acapd_accel_t *accel)
+{
+	acapd_assert(accel != NULL);
+	for (int i = 0; i < accel->num_ip_devs; i++) {
+		int ret;
+		char tmpstr[32];
+
+		ret = acapd_device_open(&accel->ip_dev[i]);
+		if (ret != 0) {
+			acapd_perror("%s: failed to open accel ip %s.\n",
+				     __func__, accel->ip_dev[i].dev_name);
+			return -EINVAL;
+		}
+		sprintf(tmpstr, "ACCEL_IP%d_PATH", i);
+		ret = setenv(tmpstr, accel->ip_dev[i].path, 1);
+		if (ret != 0) {
+			acapd_perror("%s: failed to set path env for %s, %s.\n",
+				     __func__, accel->ip_dev[i].dev_name,
+				     strerror(errno));
+			return -EINVAL;
+		}
+	}
+	return 0;
 }
 
 int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
