@@ -12,11 +12,6 @@
 #define DATA_SIZE_BYTES (4*1024)
 
 static acapd_accel_t bzip2_accel;
-static acapd_device_t shell_dev;
-static acapd_device_t rm_dev;
-static acapd_device_t ip_dev[2];
-static acapd_device_t dma_dev;
-static acapd_chnl_t chnls[2];
 static acapd_shm_t tx_shm, rx_shm;
 
 void usage (const char *cmd)
@@ -55,28 +50,10 @@ int main(int argc, char *argv[])
 	}
 
 	printf("Setting accel devices.\n");
-	memset(&shell_dev, 0, sizeof(shell_dev));
-	memset(&rm_dev, 0, sizeof(rm_dev));
-	memset(&ip_dev, 0, sizeof(ip_dev));
-	memset(&dma_dev, 0, sizeof(dma_dev));
-	shell_dev.dev_name = "90000000.gpio";
-	ip_dev[0].dev_name = "20100000000.bram";
-	ip_dev[1].dev_name = "20120000000.axi_cdma";
-	dma_dev.dev_name = "a4000000.dma";
-	dma_dev.driver = "vfio-platform";
-	dma_dev.iommu_group = 0;
-	rm_dev.dev_name = "90000000.gpio";
 
 	/* allocate memory */
 	printf("Initializing accel with %s.\n", pkg_path);
 	init_accel(&bzip2_accel, (acapd_accel_pkg_hd_t *)pkg_path);
-
-	bzip2_accel.num_ip_devs = 2;
-	bzip2_accel.ip_dev = ip_dev;
-	bzip2_accel.shell_dev = &shell_dev;
-	bzip2_accel.rm_dev = &rm_dev;
-	bzip2_accel.chnls = chnls;
-	bzip2_accel.num_chnls = 2;
 
 	signal(SIGINT, sig_handler);
 	printf("Loading accel %s.\n", pkg_path);
@@ -127,7 +104,6 @@ int main(int argc, char *argv[])
 		goto error;
 	}
 	/* Read data */
-#if 1
 	ret = acapd_accel_read_data(&bzip2_accel, &rx_shm, rx_va, DATA_SIZE_BYTES, 1);
 	if (ret < 0) {
 		fprintf(stderr, "Failed to read from accelerator.\n");
@@ -145,7 +121,6 @@ int main(int argc, char *argv[])
 	}
 	ret = 0;
 	printf("Test Done.\n");
-#endif
 error:
 	printf("Removing accel %s.\n", pkg_path);
 	remove_accel(&bzip2_accel, 0);
