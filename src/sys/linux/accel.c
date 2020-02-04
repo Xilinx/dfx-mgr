@@ -406,7 +406,7 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 	}
 	fpga_cfg_id = ret;
 	accel->sys_info.fpga_cfg_id = fpga_cfg_id;
-	acapd_print("loading %d.\n",  fpga_cfg_id);
+	acapd_debug("%s: loading %d.\n",  fpga_cfg_id);
 	ret = fpga_cfg_load(fpga_cfg_id);
 	if (ret != 0) {
 		acapd_perror("Failed to load fpga config: %d\n",

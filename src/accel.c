@@ -115,13 +115,15 @@ int load_accel(acapd_accel_t *accel, unsigned int async)
 	} else {
 		accel->load_failure = ret;
 	}
-	if (accel->status == ACAPD_ACCEL_SUCCESS) {
+	acapd_debug("%s: loaded pdi.\n", __func__);
+	if (accel->status == ACAPD_ACCEL_STATUS_INUSE) {
+		acapd_debug("%s: releasing isolation.\n", __func__);
 		ret = acapd_shell_release_isolation(accel, accel->rm_slot);
 		if (ret != 0) {
 			acapd_perror("%s: failed to release isolation.\n");
 			return ACAPD_ACCEL_FAILURE;
 		}
-		sleep(1);
+		acapd_debug("%s: releasing isolation done.\n", __func__);
 	}
 	return ret;
 }
