@@ -113,7 +113,7 @@ int parseAccelJson(acapd_accel_t *accel, char *filename)
 	printf("jsonData read:\n %s\n",jsonData);
 
 	jsmn_init(&parser);
-	ret = jsmn_parse(&parser, jsonData, sizeof(jsonData), token, sizeof(token)/sizeof(token[0]));
+	ret = jsmn_parse(&parser, jsonData, numBytes, token, sizeof(token)/sizeof(token[0]));
 	if (ret < 0){
 		printf("Failed to parse JSON: %d\n", ret);
 	}
@@ -191,7 +191,7 @@ int parseAccelJson(acapd_accel_t *accel, char *filename)
 				chnls[j].ops = &axidma_vfio_dma_ops;
 				i+=4;//move token to point to next channel in array
 			}
-			accel->num_chnls = token[i+1].size;
+			accel->num_chnls = numChnls;
 			accel->chnls = chnls;
 		}
 		if (jsoneq(jsonData, &token[i],"AccelHandshakeType") == 0){}
@@ -240,7 +240,7 @@ int parseShellJson(acapd_accel_t *accel, char *filename)
 	printf("jsonData read:\n %s\n",jsonData);
 
 	jsmn_init(&parser);
-	ret = jsmn_parse(&parser, jsonData, sizeof(jsonData), token, sizeof(token)/sizeof(token[0]));
+	ret = jsmn_parse(&parser, jsonData, numBytes, token, sizeof(token)/sizeof(token[0]));
 	if (ret < 0){
 		printf("Failed to parse JSON: %d\n", ret);
 	}
@@ -297,7 +297,7 @@ int parseRMJson(acapd_accel_t *accel)
 	printf("jsonData read:\n %s\n",jsonData);
 
 	jsmn_init(&parser);
-	ret = jsmn_parse(&parser, jsonData, sizeof(jsonData), token, sizeof(token)/sizeof(token[0]));
+	ret = jsmn_parse(&parser, jsonData, numBytes, token, sizeof(token)/sizeof(token[0]));
 	if (ret < 0){
 		printf("Failed to parse JSON: %d\n", ret);
 	}
