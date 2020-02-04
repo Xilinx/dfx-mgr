@@ -166,7 +166,7 @@ static int acapd_generic_device_get_uio_path(acapd_device_t *dev)
 				close(fd);
 				goto out;
 			}
-			printf("%s: size %s.\n", __func__, size_str);
+			acapd_debug("%s: size %s.\n", __func__, size_str);
 			size = (size_t)strtoll(size_str, NULL, 16);
 			dev->reg_size = size;
 
