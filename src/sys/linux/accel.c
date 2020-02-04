@@ -464,14 +464,6 @@ int sys_load_accel_post(acapd_accel_t *accel)
 				     __func__, accel->ip_dev[i].dev_name);
 			return -EINVAL;
 		}
-		sprintf(tmpstr, "ACCEL_IP%d_PATH", i);
-		ret = setenv(tmpstr, accel->ip_dev[i].path, 1);
-		if (ret != 0) {
-			acapd_perror("%s: failed to set path env for %s, %s.\n",
-				     __func__, accel->ip_dev[i].dev_name,
-				     strerror(errno));
-			return -EINVAL;
-		}
 	}
 	return 0;
 }
