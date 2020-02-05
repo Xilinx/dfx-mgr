@@ -80,7 +80,6 @@ int main(int argc, char *argv[])
 	bzip2_accel.num_ip_devs = 2;
 	bzip2_accel.ip_dev = ip_dev;
 	bzip2_accel.shell_dev = &shell_dev;
-	bzip2_accel.rm_dev = &rm_dev;
 	bzip2_accel.chnls = chnls;
 	bzip2_accel.num_chnls = 2;
 
