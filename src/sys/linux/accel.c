@@ -226,6 +226,17 @@ int sys_load_accel_post(acapd_accel_t *accel)
 		sprintf(tmpstr,"--device=%s:%s ",accel->ip_dev[i].path,accel->ip_dev[i].path);
 		strcat(cmd,tmpstr);
 	}
+	for (int i = 0; i < accel->num_chnls; i++) {
+		int ret;
+
+		ret = acapd_device_open(accel->chnls[i].dev);
+		if (ret != 0) {
+			acapd_perror("%s: failed to open chnl dev %s.\n",
+				     __func__, accel->chnls[i].dev->dev_name);
+			return -EINVAL;
+		}
+	}
+
 	sprintf(tmpstr,"docker load < %s/container.tar",accel->sys_info.tmp_dir);
 	acapd_debug("%s:Loading docker container\n",__func__);
 	system(tmpstr);

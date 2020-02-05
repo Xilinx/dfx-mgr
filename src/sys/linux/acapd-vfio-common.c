@@ -34,7 +34,16 @@
 
 static int acapd_vfio_bind(acapd_device_t *dev)
 {
+	char tmpstr[128];
 	dev->bus_name = "platform";
+
+	/* Check if it is able to access sysfs */
+	sprintf(tmpstr, "/sys/bus/platform/drivers/vfio-platform");
+	if (access(tmpstr, F_OK) != 0) {
+		acapd_debug("%s: no sysfs access, maybe in container, go ahead.\n",
+			    __func__);
+		return 0;
+	}
 	return acapd_generic_device_bind(dev, "vfio-platform");
 }
 
