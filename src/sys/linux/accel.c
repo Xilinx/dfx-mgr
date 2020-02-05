@@ -212,8 +212,7 @@ int sys_load_accel_post(acapd_accel_t *accel)
 	char cmd[512];
 	char tmpstr[512];
 
-	strcpy(cmd,"docker run --rm -v /usr/lib:/x_usrlib -v /usr/bin/:/xbin/ -v /lib/:/xlib ");
-
+	sprintf(cmd,"docker run --rm -v /usr/lib:/x_usrlib -v /usr/bin/:/xbin/ -v /lib/:/xlib -v %s:%s ",accel->sys_info.tmp_dir,accel->sys_info.tmp_dir);
 	for (int i = 0; i < accel->num_ip_devs; i++) {
 		int ret;
 		char tmpstr[512];
