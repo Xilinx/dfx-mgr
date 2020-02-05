@@ -239,14 +239,9 @@ int sys_load_accel_post(acapd_accel_t *accel)
 	return 0;
 }
 
-int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
+int sys_close_accel(acapd_accel_t *accel)
 {
-	int ret, fpga_cfg_id;
-
-	/* TODO: for now, only synchronous mode is supported */
-	(void)async;
 	/* Close devices and free memory */
-
 	acapd_assert(accel != NULL);
 	for (int i = 0; i < accel->num_chnls; i++) {
 		acapd_debug("%s: closing channel %d.\n", __func__, i);
@@ -269,6 +264,16 @@ int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
 		accel->ip_dev = NULL;
 		accel->num_ip_devs = 0;
 	}
+	return 0;
+}
+
+int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
+{
+	int ret, fpga_cfg_id;
+
+	/* TODO: for now, only synchronous mode is supported */
+	(void)async;
+
 	fpga_cfg_id = accel->sys_info.fpga_cfg_id;
 	if (accel->sys_info.tmp_dir != NULL) {
 		ret = remove_directory(accel->sys_info.tmp_dir);

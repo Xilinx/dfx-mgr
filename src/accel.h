@@ -108,6 +108,8 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async);
 
 int sys_load_accel_post(acapd_accel_t *accel);
 
+int sys_close_accel(acapd_accel_t *accel);
+
 int sys_remove_accel(acapd_accel_t *accel, unsigned int async);
 #endif /* ACAPD_INTERNAL */
 

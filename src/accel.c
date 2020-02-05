@@ -66,7 +66,6 @@ int acapd_config_pkg(acapd_accel_pkg_hd_t *pkg, uint32_t type, char *name,
 void init_accel(acapd_accel_t *accel, acapd_accel_pkg_hd_t *pkg)
 {
 	acapd_assert(accel != NULL);
-	//acapd_assert(pkg != NULL);
 	memset(accel, 0, sizeof(*accel));
 	accel->pkg = pkg;
 	accel->status = ACAPD_ACCEL_STATUS_UNLOADED;
@@ -83,7 +82,6 @@ int load_accel(acapd_accel_t *accel, unsigned int async)
 	int ret;
 
 	acapd_assert(accel != NULL);
-	acapd_assert(accel->pkg != NULL);
 
 	/* assert isolation before programming */
 	acapd_debug("%s: config accel.\n", __func__);
@@ -157,19 +155,26 @@ int remove_accel(acapd_accel_t *accel, unsigned int async)
 	} else {
 		int ret;
 
+		ret = sys_close_accel(accel);
+		if (ret < 0) {
+			acapd_perror("%s: failed to close accel.\n", __func__);
+			return ACAPD_ACCEL_FAILURE;
+		}
 		ret = sys_needs_load_accel(accel);
 		if (ret == 0) {
 			acapd_debug("%s: no need to load accel.\n", __func__);
-			return 0;
+			accel->status = ACAPD_ACCEL_STATUS_UNLOADED;
+			return ACAPD_ACCEL_SUCCESS;
+		} else {
+			ret = acapd_shell_assert_isolation(accel);
+			if (ret < 0) {
+				acapd_perror("%s, failed to assert isolaction.\n",
+				             __func__);
+				return ret;
+			}
+			ret = sys_remove_accel(accel, async);
+			acapd_shell_put();
 		}
-		ret = acapd_shell_assert_isolation(accel);
-		if (ret < 0) {
-			acapd_perror("%s, failed to assert isolaction.\n",
-				     __func__);
-			return ret;
-		}
-		ret = sys_remove_accel(accel, async);
-		acapd_shell_put();
 		if (ret == ACAPD_ACCEL_SUCCESS) {
 			accel->status = ACAPD_ACCEL_STATUS_UNLOADED;
 		} else if (ret == ACAPD_ACCEL_INPROGRESS) {
