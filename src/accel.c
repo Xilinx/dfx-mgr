@@ -84,24 +84,27 @@ int load_accel(acapd_accel_t *accel, unsigned int async)
 
 	acapd_assert(accel != NULL);
 	acapd_assert(accel->pkg != NULL);
-	if (accel->rm_slot < 0) {
-		accel->rm_slot = 0;
-	}
+
 	/* assert isolation before programming */
 	acapd_debug("%s: config accel.\n", __func__);
 	ret = acapd_accel_config(accel);
-	if (accel->shell_dev == NULL) {
-		if (accel->num_chnls == 0) {
-			acapd_perror("%: no shell, and no channels.\n", __func__);
+	if (ret < 0) {
+		acapd_perror("%s: failed to config accel.\n", __func__);
+		return ACAPD_ACCEL_FAILURE;
+	}
+	ret = sys_needs_load_accel(accel);
+	if (ret == 0) {
+		acapd_debug("%s: no need to load accel.\n", __func__);
+		return 0;
+	} else {
+		ret = acapd_shell_get();
+		if (ret < 0) {
+			acapd_perror("%s: failed to get shell.\n", __func__);
 			return ACAPD_ACCEL_FAILURE;
-		} else {
-			acapd_debug("%s: no shell, but has channels.\n");
-			return ACAPD_ACCEL_SUCCESS;
 		}
 	}
-
 	acapd_debug("%s: assert isolation.\n", __func__);
-	ret = acapd_shell_assert_isolation(accel, accel->rm_slot);
+	ret = acapd_shell_assert_isolation(accel);
 	if (ret < 0) {
 		acapd_perror("%s, failed to assert isolaction.\n",
 			     __func__);
@@ -121,7 +124,7 @@ int load_accel(acapd_accel_t *accel, unsigned int async)
 	acapd_debug("%s: loaded pdi.\n", __func__);
 	if (accel->status == ACAPD_ACCEL_STATUS_INUSE) {
 		acapd_debug("%s: releasing isolation.\n", __func__);
-		ret = acapd_shell_release_isolation(accel, accel->rm_slot);
+		ret = acapd_shell_release_isolation(accel);
 		if (ret != 0) {
 			acapd_perror("%s: failed to release isolation.\n");
 			return ACAPD_ACCEL_FAILURE;
@@ -158,13 +161,14 @@ int remove_accel(acapd_accel_t *accel, unsigned int async)
 		if (accel->rm_slot < 0) {
 			accel->rm_slot = 0;
 		}
-		ret = acapd_shell_assert_isolation(accel, accel->rm_slot);
+		ret = acapd_shell_assert_isolation(accel);
 		if (ret < 0) {
 			acapd_perror("%s, failed to assert isolaction.\n",
 				     __func__);
 			return ret;
 		}
 		ret = sys_remove_accel(accel, async);
+		acapd_shell_put();
 		if (ret == ACAPD_ACCEL_SUCCESS) {
 			accel->status = ACAPD_ACCEL_STATUS_UNLOADED;
 		} else if (ret == ACAPD_ACCEL_INPROGRESS) {

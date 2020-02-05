@@ -64,10 +64,8 @@ typedef struct {
 	unsigned int status; /**< status of the accelarator */
 	unsigned int is_cached; /**< if the accelerator is cached */
 	int load_failure; /**< load failure */
-	int config_from_file; /**< indicate the configuration is from file */
 	int num_ip_devs; /**< number of accelerator devices */
 	acapd_device_t *shell_dev; /**< shell device reg structure */
-	acapd_device_t *rm_dev; /**< reconfiguration module reg structure */
 	acapd_device_t *ip_dev; /**< accelerator IPs reg structure */
 	int rm_slot; /**< Reconfiguration module slot */
 	int num_chnls;	/**< number of channels */
@@ -102,6 +100,8 @@ int acapd_accel_open_channel(acapd_accel_t *accel);
 int acapd_accel_reset_channel(acapd_accel_t *accel);
 
 #ifdef ACAPD_INTERNAL
+int sys_needs_load_accel(acapd_accel_t *accel);
+
 int sys_accel_config(acapd_accel_t *accel);
 
 int sys_load_accel(acapd_accel_t *accel, unsigned int async);

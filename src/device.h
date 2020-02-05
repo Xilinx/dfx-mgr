@@ -52,16 +52,16 @@ typedef struct acapd_device_ops {
 } acapd_device_ops_t;
 
 typedef struct acapd_device {
-	const char *dev_name; /**< device name */
-	const char *bus_name; /**< bus name */
+	char *dev_name; /**< device name */
+	char *bus_name; /**< bus name */
 	char path[64]; /**< file path */
 	uint64_t reg_pa; /**< physical base address */
 	size_t reg_size; /**< size of the registers */
 	int id; /**< device id. In Linux, it can be file id */
 	int intr_id; /**< interrupt id */
 	void *va; /**< logical address */
-	const char *version; /**< device version */
-	const char *driver; /**< name of the driver */
+	char *version; /**< device version */
+	char *driver; /**< name of the driver */
 	int iommu_group; /**< iommu group */
 	int refs; /**< references to this device */
 	acapd_device_ops_t *ops; /**< device operation */

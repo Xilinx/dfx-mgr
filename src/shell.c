@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 
+#include <acapd/accel.h>
 #include <acapd/shell.h>
 #include <acapd/device.h>
 #include <acapd/assert.h>
@@ -11,16 +12,7 @@
 #include <stdio.h>
 #include <string.h>
 
-typedef struct acapd_shell_regs {
-	uint32_t clock_release;
-	uint32_t clock_status;
-	uint32_t reset_release;
-	uint32_t reset_status;
-	uint32_t clock_release_mask;
-	uint32_t reset_release_mask;
-} acapd_shell_regs_t;
-
-const acapd_shell_regs_t shel_1x1_regs = {
+const acapd_shell_regs_t shell_1x1_regs = {
 	.clock_release = 0x10000U,
 	.clock_status = 0x10008U,
 	.reset_release = 0x0U,
@@ -29,25 +21,55 @@ const acapd_shell_regs_t shel_1x1_regs = {
 	.reset_release_mask = 0x1U,
 };
 
-int acapd_shell_release_isolation(acapd_accel_t *accel, int slot)
+static acapd_shell_t shell = {
+	.regs = &shell_1x1_regs,
+};
+
+int acapd_shell_config(const char *config)
+{
+	return sys_shell_config(&shell, config);
+}
+
+int acapd_shell_get()
+{
+	if (shell.dev.va == NULL) {
+		int ret;
+
+		ret = acapd_shell_config(NULL);
+		if (ret < 0) {
+			acapd_perror("%s: no shell dev specified.\n",
+				     __func__);
+			return ACAPD_ACCEL_FAILURE;
+		} else {
+			return 0;
+		}
+		ret = acapd_device_open(&(shell.dev));
+		if (ret < 0) {
+			acapd_perror("%s: failed to open shell dev.\n");
+			return ACAPD_ACCEL_FAILURE;
+		}
+	} else {
+		return 0;
+	}
+}
+
+int acapd_shell_put()
+{
+	/* Empty for now */
+	return 0;
+}
+
+int acapd_shell_release_isolation(acapd_accel_t *accel)
 {
 	/* TODO: FIXME: hardcoded to release isolation */
 	void *reg_va;
 	acapd_device_t *dev;
-	uint32_t v;
 	const acapd_shell_regs_t *regs;
+	uint32_t v;
 
-	(void)slot;
-	acapd_assert(accel != NULL);
-	acapd_assert(accel->shell_dev != NULL);
-
-	if (accel->shell_dev == NULL) {
-		acapd_debug("%s: no shell dev specified.\n",
-			     __func__);
-		return 0;
-	}
-
-	dev = accel->shell_dev;
+	(void)accel;
+	dev = &shell.dev;
+	regs = shell.regs;
 	acapd_debug("%s: %s.\n", __func__, dev->dev_name);
 	reg_va = dev->va;
 	if (reg_va == NULL) {
@@ -66,7 +88,6 @@ int acapd_shell_release_isolation(acapd_accel_t *accel, int slot)
 			return ACAPD_ACCEL_FAILURE;
 		}
 	}
-	regs = &shel_1x1_regs;
 	*((volatile uint32_t *)((char *)reg_va + regs->clock_release)) = 0x1;
 	while(1) {
 		v = *((volatile uint32_t *)((char *)reg_va + regs->clock_status));
@@ -84,7 +105,7 @@ int acapd_shell_release_isolation(acapd_accel_t *accel, int slot)
 	return 0;
 }
 
-int acapd_shell_assert_isolation(acapd_accel_t *accel, int slot)
+int acapd_shell_assert_isolation(acapd_accel_t *accel)
 {
 	/* TODO: FIXME: hardcoded to release isolation */
 	void *reg_va;
@@ -92,17 +113,8 @@ int acapd_shell_assert_isolation(acapd_accel_t *accel, int slot)
 	uint32_t v;
 	const acapd_shell_regs_t *regs;
 
-	(void)slot;
 	acapd_assert(accel != NULL);
-	acapd_assert(accel->shell_dev != NULL);
-
-	if (accel->shell_dev == NULL) {
-		acapd_debug("%s: no shell dev specified.\n",
-			     __func__);
-		return 0;
-	}
-
-	dev = accel->shell_dev;
+	dev = &(shell.dev);
 	reg_va = dev->va;
 	if (reg_va == NULL) {
 		int ret;
@@ -120,7 +132,7 @@ int acapd_shell_assert_isolation(acapd_accel_t *accel, int slot)
 			return ACAPD_ACCEL_FAILURE;
 		}
 	}
-	regs = &shel_1x1_regs;
+	regs = shell.regs;
 	*((volatile uint32_t *)((char *)reg_va + regs->clock_release)) = 0;
 	while(1) {
 		v = *((volatile uint32_t *)((char *)reg_va + regs->clock_status));

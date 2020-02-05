@@ -8,7 +8,9 @@ collect (PROJECT_LIB_SOURCES acapd-vfio-common.c)
 collect (PROJECT_LIB_SOURCES dma-axidma-vfio.c)
 collect (PROJECT_LIB_SOURCES device.c)
 collect (PROJECT_LIB_SOURCES generic-device.c)
+collect (PROJECT_LIB_SOURCES json-config.c)
 collect (PROJECT_LIB_SOURCES print.c)
 collect (PROJECT_LIB_SOURCES shm.c)
+collect (PROJECT_LIB_SOURCES shell.c)
 
 # vim: expandtab:ts=2:sw=2:smartindent
