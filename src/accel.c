@@ -157,9 +157,10 @@ int remove_accel(acapd_accel_t *accel, unsigned int async)
 	} else {
 		int ret;
 
-		/* TODO: FIXME: hardcoded to assert isolation */
-		if (accel->rm_slot < 0) {
-			accel->rm_slot = 0;
+		ret = sys_needs_load_accel(accel);
+		if (ret == 0) {
+			acapd_debug("%s: no need to load accel.\n", __func__);
+			return 0;
 		}
 		ret = acapd_shell_assert_isolation(accel);
 		if (ret < 0) {
