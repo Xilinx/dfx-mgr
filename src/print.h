@@ -18,8 +18,10 @@ extern "C" {
 
 #ifndef DEBUG
 #define acapd_debug(...)
+#define acapd_praw(...)
 #else
 void acapd_debug(const char *format, ...);
+#define acapd_praw printf
 #endif /* DEBUG */
 void acapd_print(const char *format, ...);
 void acapd_perror(const char *format, ...);

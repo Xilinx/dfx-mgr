@@ -60,12 +60,12 @@ int parseAccelJson(acapd_accel_t *accel, const char *filename)
 		return -1;
 	fread(jsonData, sizeof(char), numBytes, fptr);
 	fclose(fptr);
-	printf("jsonData read:\n %s\n",jsonData);
+	acapd_praw("jsonData read:\n %s\n",jsonData);
 
 	jsmn_init(&parser);
 	ret = jsmn_parse(&parser, jsonData, numBytes, token, sizeof(token)/sizeof(token[0]));
 	if (ret < 0){
-		printf("Failed to parse JSON: %d\n", ret);
+		acapd_praw("Failed to parse JSON: %d\n", ret);
 	}
 
 	for(i=1; i < ret; i++){
@@ -188,12 +188,12 @@ int parseShellJson(acapd_shell_t *shell, const char *filename)
 		return -1;
 	fread(jsonData, sizeof(char), numBytes, fptr);
 	fclose(fptr);
-	printf("jsonData read:\n %s\n",jsonData);
+	acapd_praw("jsonData read:\n %s\n",jsonData);
 
 	jsmn_init(&parser);
 	ret = jsmn_parse(&parser, jsonData, numBytes, token, sizeof(token)/sizeof(token[0]));
 	if (ret < 0){
-		printf("Failed to parse JSON: %d\n", ret);
+		acapd_praw("Failed to parse JSON: %d\n", ret);
 	}
 
 	dev = &shell->dev;
@@ -202,8 +202,9 @@ int parseShellJson(acapd_shell_t *shell, const char *filename)
 			continue;
 		if (jsoneq(jsonData, &token[i],"device_name") == 0)
 			dev->dev_name = strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start);
-		if (jsoneq(jsonData, &token[i],"shell_type") == 0)
-			printf("Shell is %s\n",strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start));
+		if (jsoneq(jsonData, &token[i],"shell_type") == 0) {
+			acapd_praw("Shell is %s\n",strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start));
+		}
 		if (jsoneq(jsonData, &token[i],"reg_base")== 0)
 			dev->reg_pa = (uint64_t)atoi(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start));
 		if (jsoneq(jsonData, &token[i],"reg_size") == 0){}
