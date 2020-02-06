@@ -158,28 +158,19 @@ int sys_accel_config(acapd_accel_t *accel)
 	}
 }
 
-int sys_needs_load_accel(acapd_accel_t *accel) {
-	char *pkg_dir;
-	DIR *d;
+int sys_needs_load_accel(acapd_accel_t *accel)
+{
+	char *tmpstr;
 
-	pkg_dir = accel->sys_info.tmp_dir;
-	if (pkg_dir == NULL) {
-		acapd_debug("%s: No need to load accel.\n", __func__);
+	(void)accel;
+	tmpstr = getenv("ACCEL_CONFIG_PATH");
+	if (tmpstr != NULL) {
+		acapd_debug("%s, no need to load.\n", __func__);
 		return 0;
+	} else {
+		acapd_debug("%s, need to load.\n", __func__);
+		return 1;
 	}
-	d = opendir(pkg_dir);
-	if (d) {
-		struct dirent *p;
-
-		while ((p = readdir(d)) != NULL) {
-			/* Skip the names "." and ".." as we don't want
-			 * to recurse on them. */
-			if (strstr(p->d_name, ".dtbo") != NULL) {
-				return 1;
-			}
-		}
-	}
-	return 0;
 }
 
 int sys_load_accel(acapd_accel_t *accel, unsigned int async)
