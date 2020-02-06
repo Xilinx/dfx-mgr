@@ -231,6 +231,11 @@ int sys_load_accel_post(acapd_accel_t *accel)
 		}
 	}
 
+	sprintf(tmpstr, "%s/container.tar", accel->sys_info.tmp_dir);
+	if (access(tmpstr, F_OK) != 0) {
+		acapd_debug("%s: no need to launch container.\n", __func__);
+		return 0;
+	}
 	sprintf(tmpstr,"docker load < %s/container.tar",accel->sys_info.tmp_dir);
 	acapd_debug("%s:Loading docker container\n",__func__);
 	system(tmpstr);
