@@ -19,6 +19,7 @@ void usage (const char *cmd)
 void sig_handler(int signo)
 {
 	(void)signo;
+	printf("Removing accel.\n");
 	remove_accel(&bzip2_accel, 0);
 }
 
@@ -64,8 +65,8 @@ int main(int argc, char *argv[])
 
 	/* run user application */
 error:
-	//printf("Removing accel %s.\n", pkg_path);
-	//remove_accel(&bzip2_accel, 0);
+	printf("Removing accel %s.\n", pkg_path);
+	remove_accel(&bzip2_accel, 0);
 	return ret;
 }
 
