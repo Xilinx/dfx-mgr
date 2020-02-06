@@ -11,6 +11,7 @@
 #include <dirent.h>
 #include <ftw.h>
 #include <fcntl.h>
+#include "generic-device.h"
 #include "json-config.h"
 #include <libfpga.h>
 #include <stdio.h>
@@ -212,7 +213,7 @@ int sys_load_accel_post(acapd_accel_t *accel)
 	char cmd[512];
 	char tmpstr[512];
 
-	sprintf(cmd,"docker run --rm -v /usr/lib:/x_usrlib -v /usr/bin/:/xbin/ -v /lib/:/xlib -v %s:%s ",accel->sys_info.tmp_dir,accel->sys_info.tmp_dir);
+	sprintf(cmd,"docker run --ulimit memlock=67108864:67108864 --rm -v /usr/lib:/x_usrlib -v /usr/bin/:/xbin/ -v /lib/:/xlib -v %s:%s ",accel->sys_info.tmp_dir,accel->sys_info.tmp_dir);
 	for (int i = 0; i < accel->num_ip_devs; i++) {
 		int ret;
 		char tmpstr[512];
@@ -225,11 +226,13 @@ int sys_load_accel_post(acapd_accel_t *accel)
 		}
 		sprintf(tmpstr,"--device=%s:%s ",accel->ip_dev[i].path,accel->ip_dev[i].path);
 		strcat(cmd,tmpstr);
+		strcat(cmd,"--device=/dev/vfio:/dev/vfio ");
 	}
 	for (int i = 0; i < accel->num_chnls; i++) {
 		int ret;
 
-		ret = acapd_device_open(accel->chnls[i].dev);
+		ret = acapd_generic_device_bind(accel->chnls[i].dev,
+						accel->chnls[i].dev->driver);
 		if (ret != 0) {
 			acapd_perror("%s: failed to open chnl dev %s.\n",
 				     __func__, accel->chnls[i].dev->dev_name);

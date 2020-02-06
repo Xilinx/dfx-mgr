@@ -27,6 +27,9 @@ int acapd_generic_device_bind(acapd_device_t *dev, const char *drv)
 
 	acapd_assert(dev != NULL);
 	acapd_assert(drv != NULL);
+	if (dev->bus_name == NULL) {
+		dev->bus_name = "platform";
+	}
 	sprintf(tmpstr, "/sys/bus/%s/drivers", dev->bus_name);
 	d = opendir(tmpstr);
 	if (d == NULL) {

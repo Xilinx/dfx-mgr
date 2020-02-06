@@ -94,7 +94,8 @@ static int acapd_vfio_device_open(acapd_device_t *dev)
 	acapd_debug("%s: open group.\n", __func__);
 	vdev->group = open(group_path, O_RDWR);
 	if (vdev->group < 0) {
-		acapd_perror("%s:%s failed to open group.\n", __func__, dev->dev_name);
+		acapd_perror("%s:%s failed to open group, %s.\n",
+			     __func__, dev->dev_name, strerror(errno));
 		ret = -EINVAL;
 		goto error;
 	}
@@ -239,7 +240,7 @@ static void *acapd_vfio_device_attach(acapd_device_t *dev, acapd_shm_t *shm)
 	dma_map.vaddr = (uint64_t)((uintptr_t)(shm->va));
 	dma_map.flags = VFIO_DMA_MAP_FLAG_READ | VFIO_DMA_MAP_FLAG_WRITE;
 	/* Calculate da address */
-	da = 0;
+	da = 0x1000;
 	acapd_list_for_each(&vdev->mmaps, node) {
 		uint64_t tmp;
 
