@@ -88,6 +88,7 @@ int acapd_shell_release_isolation(acapd_accel_t *accel)
 			return ACAPD_ACCEL_FAILURE;
 		}
 	}
+	acapd_debug("%s(%p): release isolation\n", __func__, reg_va);
 	*((volatile uint32_t *)((char *)reg_va + regs->clock_release)) = 0x1;
 	while(1) {
 		v = *((volatile uint32_t *)((char *)reg_va + regs->clock_status));
@@ -133,6 +134,7 @@ int acapd_shell_assert_isolation(acapd_accel_t *accel)
 		}
 	}
 	regs = shell.regs;
+	acapd_debug("%s(%p): assert isolation\n", __func__, reg_va);
 	*((volatile uint32_t *)((char *)reg_va + regs->clock_release)) = 0;
 	while(1) {
 		v = *((volatile uint32_t *)((char *)reg_va + regs->clock_status));

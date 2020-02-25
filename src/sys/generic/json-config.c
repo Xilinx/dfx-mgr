@@ -11,14 +11,9 @@
 #include <acapd/print.h>
 #include <acapd/shell.h>
 #include <errno.h>
-#include <dirent.h>
-#include <ftw.h>
-#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -31,14 +26,13 @@ static int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
   return -1;
 }
 
-int parseAccelJson(acapd_accel_t *accel, const char *filename)
+int parseAccelJson(acapd_accel_t *accel, const char *config, size_t csize)
 {
-	FILE *fptr;
-	long numBytes;
 	jsmn_parser parser;
 	jsmntok_t token[128];
 	int ret,i;
-	char *jsonData;
+	const char *jsonData;
+	size_t numBytes;
 	acapd_device_t *dma_dev;
 
 	dma_dev = (acapd_device_t *)calloc(1, sizeof(*dma_dev));
@@ -47,19 +41,8 @@ int parseAccelJson(acapd_accel_t *accel, const char *filename)
 		return -EINVAL;
 	}
 
-
-	fptr = fopen(filename, "r");
-	if (fptr == NULL)
-		return -1;
-	fseek(fptr, 0L, SEEK_END);
-	numBytes = ftell(fptr);
-	fseek(fptr, 0L, SEEK_SET);
-
-	jsonData = (char *)calloc(numBytes, sizeof(char));
-	if (jsonData == NULL)
-		return -1;
-	fread(jsonData, sizeof(char), numBytes, fptr);
-	fclose(fptr);
+	jsonData = config;
+	numBytes = csize;
 	acapd_praw("jsonData read:\n %s\n",jsonData);
 
 	jsmn_init(&parser);
@@ -103,7 +86,12 @@ int parseAccelJson(acapd_accel_t *accel, const char *filename)
 			dma_dev->dev_name = strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start);
 		if (jsoneq(jsonData, &token[i],"dma_driver") == 0)
 			dma_dev->driver = strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start);
-		if (jsoneq(jsonData, &token[i],"dma_reg_base") == 0){}
+		if (jsoneq(jsonData, &token[i],"dma_reg_base") == 0){
+			dma_dev->reg_pa = (uint64_t)strtoll(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 16);
+		}
+		if (jsoneq(jsonData, &token[i],"dma_reg_size") == 0){
+			dma_dev->reg_size = (size_t)strtoll(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 16);
+		}
 		if (jsoneq(jsonData, &token[i],"iommu_group") == 0)
 			dma_dev->iommu_group = atoi(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start));
 		if (jsoneq(jsonData, &token[i],"Bus") == 0){}
@@ -137,7 +125,7 @@ int parseAccelJson(acapd_accel_t *accel, const char *filename)
 						chnls[j].dir = ACAPD_DMA_DEV_RW;
 				}
 				chnls[j].dev = dma_dev;
-				chnls[j].ops = &axidma_vfio_dma_ops;
+				chnls[j].ops = &axidma_generic_ops;
 				i+=4;//move token to point to next channel in array
 			}
 			accel->num_chnls = numChnls;
@@ -164,30 +152,18 @@ error:
 	return ret;
 }
 
-int parseShellJson(acapd_shell_t *shell, const char *filename)
+int parseShellJson(acapd_shell_t *shell, const char *config, size_t csize)
 {
-	FILE *fptr;
-	long numBytes;
+	size_t numBytes;
 	jsmn_parser parser;
 	jsmntok_t token[128];
 	int ret,i;
-	char *jsonData;
+	const char *jsonData;
 	acapd_device_t *dev;
 
 	acapd_assert(shell != NULL);
-	acapd_assert(filename != NULL);
-	fptr = fopen(filename, "r");
-	if (fptr == NULL)
-		return -1;
-	fseek(fptr, 0L, SEEK_END);
-	numBytes = ftell(fptr);
-	fseek(fptr, 0L, SEEK_SET);
-
-	jsonData = (char *)calloc(numBytes, sizeof(char));
-	if (jsonData == NULL)
-		return -1;
-	fread(jsonData, sizeof(char), numBytes, fptr);
-	fclose(fptr);
+	numBytes = csize;
+	jsonData = config;
 	acapd_praw("jsonData read:\n %s\n",jsonData);
 
 	jsmn_init(&parser);
@@ -206,9 +182,9 @@ int parseShellJson(acapd_shell_t *shell, const char *filename)
 			acapd_praw("Shell is %s\n",strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start));
 		}
 		if (jsoneq(jsonData, &token[i],"reg_base")== 0)
-			dev->reg_pa = (uint64_t)atoi(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start));
+			dev->reg_pa = (uint64_t)strtoll(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 16);
 		if (jsoneq(jsonData, &token[i],"reg_size") == 0){}
-			dev->reg_size = (size_t)atoi(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start));
+			dev->reg_size = (size_t)strtoll(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 16);
 	}
 	return 0;
 }

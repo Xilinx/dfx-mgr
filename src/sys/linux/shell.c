@@ -20,7 +20,7 @@ int sys_shell_config(acapd_shell_t *shell, const char *config)
 
 	if (config != NULL) {
 		if (access(config, F_OK) != 0) {
-			acapd_print("%s: config %s doesn't exist, check config env.\n",
+			acapd_debug("%s: config %s doesn't exist, check config env.\n",
 				    __func__, config);
 		}
 	}

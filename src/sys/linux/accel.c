@@ -180,7 +180,7 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 
 	(void)async;
 	acapd_assert(accel != NULL);
-	acapd_debug("%s: init package dir: %s.\n", __func__, accel->sys_info.tmp_dir);
+	acapd_debug("%s: init package dir: %s/.\n", __func__, accel->sys_info.tmp_dir);
 	ret = fpga_cfg_init(accel->sys_info.tmp_dir, 0, 0);
 	if (ret < 0) {
 		acapd_perror("Failed to initialize fpga config, %d.\n", ret);

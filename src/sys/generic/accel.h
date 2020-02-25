@@ -18,7 +18,10 @@
  * @brief accel system specific information
  */
 typedef struct {
-	uint32_t reserved;
+	uint64_t accel_json_pa;
+	uint64_t accel_json_size;
+	uint64_t accel_pdi_pa;
+	uint64_t accel_pdi_size;
 } acapd_accel_sys_t;
 
 #endif /* _ACAPD_LINUX_ACCEL_H */
