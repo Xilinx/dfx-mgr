@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <xil_cache.h>
 
 #define XAXIDMA_TX_OFFSET	0x00000000 /**< TX channel registers base
 					     *  offset */
@@ -79,6 +80,7 @@ static int axidma_generic_transfer(acapd_chnl_t *chnl,
 	if (chnl->dir == ACAPD_DMA_DEV_W) {
 		acapd_debug("%s(%p): data from da 0x%llx,0x%llx to stream.\n",
 			    __func__, dev->va, da, size);
+		Xil_DCacheFlushRange((uintptr_t)va, size);
 		/* write to stream, setup tx DMA */
 		base_va = (void *)((char *)base_va + XAXIDMA_TX_OFFSET);
 		v = *((volatile uint32_t *)((char *)base_va + XAXIDMA_CR_OFFSET));
@@ -100,6 +102,7 @@ static int axidma_generic_transfer(acapd_chnl_t *chnl,
 	} else {
 		acapd_debug("%s(%p): data from stream to da 0x%llx, 0x%llx.\n",
 			    __func__, dev->va, da, size);
+		Xil_DCacheInvalidateRange((uintptr_t)va, size);
 		/* read from stream, setup rx DMA */
 		base_va = (void *)((char *)base_va + XAXIDMA_RX_OFFSET);
 		v = *((volatile uint32_t *)((char *)base_va + XAXIDMA_CR_OFFSET));
