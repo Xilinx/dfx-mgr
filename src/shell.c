@@ -13,10 +13,10 @@
 #include <string.h>
 
 const acapd_shell_regs_t shell_1x1_regs = {
-	.clock_release = 0x10000U,
-	.clock_status = 0x10008U,
-	.reset_release = 0x0U,
-	.reset_status = 0x8U,
+	.clock_release = 0x4000U,
+	.clock_status = 0x4000U,
+	.reset_release = 0x4004U,
+	.reset_status = 0x4004U,
 	.clock_release_mask = 0x1U,
 	.reset_release_mask = 0x1U,
 };
@@ -103,6 +103,7 @@ int acapd_shell_release_isolation(acapd_accel_t *accel)
 			break;
 		}
 	}
+	acapd_debug("%s(%p): release isolation done\n", __func__, reg_va);
 	return 0;
 }
 
