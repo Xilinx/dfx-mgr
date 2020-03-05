@@ -26,7 +26,6 @@ int sys_device_open(acapd_device_t *dev)
 		return 0;
 	}
 	dev->ops = &sys_generic_dev_ops;
-	dev->refs = 0;
 	return dev->ops->open(dev);
 }
 
@@ -40,7 +39,7 @@ static int sys_generic_device_open(acapd_device_t *dev)
 		acapd_perror("%s: dev va is NULL.\n", __func__);
 		return -EINVAL;
 	}
-	dev->refs++;
+	dev->priv = dev->va;
 	return 0;
 }
 
@@ -50,7 +49,6 @@ static int sys_generic_device_close(acapd_device_t *dev)
 		acapd_perror("%s: dev is NULL.\n", __func__);
 		return -EINVAL;
 	}
-	dev->refs--;
 	return 0;
 }
 
