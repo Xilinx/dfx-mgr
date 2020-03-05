@@ -54,7 +54,7 @@ int acapd_config_pkg(acapd_accel_pkg_hd_t *pkg, uint32_t type, char *name,
 
 		nsize = sizeof(tmppkg->name) - 1;
 		if (nsize < strlen(name)) {
-			nsize = strlen(name);
+			nsize = strlen(name) - 1;
 		}
 		strncpy(tmppkg->name, name, nsize);
 	}
