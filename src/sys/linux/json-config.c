@@ -39,9 +39,13 @@ int parseAccelJson(acapd_accel_t *accel, const char *filename)
 	jsmntok_t token[128];
 	int ret,i;
 	char *jsonData;
+	char *dma_ops;
 	acapd_device_t *dma_dev;
+	uint32_t buff_size = 0;
 
 	dma_dev = (acapd_device_t *)calloc(1, sizeof(*dma_dev));
+	dma_ops = (char *)calloc(64, sizeof(char));
+	
 	if (dma_dev == NULL) {
 		acapd_perror("%s: failed to alloc mem for dma dev.\n", __func__);
 		return -EINVAL;
@@ -106,8 +110,11 @@ int parseAccelJson(acapd_accel_t *accel, const char *filename)
 		if (jsoneq(jsonData, &token[i],"dma_reg_base") == 0){}
 		if (jsoneq(jsonData, &token[i],"iommu_group") == 0)
 			dma_dev->iommu_group = atoi(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start));
+		if (jsoneq(jsonData, &token[i],"max_buf_size") == 0)
+			buff_size = atoi(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start));
 		if (jsoneq(jsonData, &token[i],"Bus") == 0){}
-		if (jsoneq(jsonData, &token[i],"HWType") == 0){}
+		if (jsoneq(jsonData, &token[i],"HWType") == 0)
+			dma_ops = strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start);
 		if (jsoneq(jsonData, &token[i],"dataMoverCacheCoherent") == 0){}
 		if (jsoneq(jsonData, &token[i],"dataMoverVirtualAddress") == 0){}
 		if (jsoneq(jsonData, &token[i],"dataMoverChnls") == 0){
@@ -137,7 +144,11 @@ int parseAccelJson(acapd_accel_t *accel, const char *filename)
 						chnls[j].dir = ACAPD_DMA_DEV_RW;
 				}
 				chnls[j].dev = dma_dev;
-				chnls[j].ops = &axidma_vfio_dma_ops;
+				chnls[j].max_buf_size = buff_size;
+				if (!strcmp(dma_ops,"axidma"))
+					chnls[j].ops = &axidma_vfio_dma_ops;
+				else if (!strcmp(dma_ops,"mcdma"))
+					chnls[j].ops = &mcdma_vfio_dma_ops;
 				i+=4;//move token to point to next channel in array
 			}
 			accel->num_chnls = numChnls;

@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 	/* user can use acapd_accel_get_reg_va() to get accelerator address */
 
 	/* Transfer data */
-	ret = acapd_accel_write_data(&bzip2_accel, &tx_shm, tx_va, DATA_SIZE_BYTES, 0);
+	ret = acapd_accel_write_data(&bzip2_accel, &tx_shm, tx_va, DATA_SIZE_BYTES, 0, 0);
 	if (ret < 0) {
 		fprintf(stderr, "ERROR: Failed to write to accelerator.\n");
 		ret = -EINVAL;

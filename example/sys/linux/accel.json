@@ -21,7 +21,8 @@
 		"dma_reg_size":"",
 		"iommu_group":"0",
 		"Bus": "platform",
-		"HWType": "axidma",
+		"HWType": "mcdma",
+		"max_buf_size":"8388608",
 		"dataMoverCacheCoherent": "Yes",
 		"dataMoverVirtualAddress": "Yes",
 		"dataMoverChnls":[

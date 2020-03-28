@@ -88,6 +88,7 @@ typedef struct acapd_dma_config  {
 	acapd_shape_t *stride; /**< stride in the data transfer */
 	uint32_t auto_repeat; /**< if the dma transfer will auto repeat */
 	acapd_fence_t *fence; /**< fence of the dma transfer */
+	uint8_t tid; /* tid is 8bits in bd*/
 } acapd_dma_config_t;
 
 /** DMA Channel Operations */
@@ -114,11 +115,13 @@ typedef struct acapd_chnl {
 	int is_open; /**< Indicate if the channel is open */
 	acapd_dma_ops_t *ops; /**< DMA operations */
 	acapd_list_t node; /**< list node */
+	char *bd_va;
+	uint32_t max_buf_size;
 } acapd_chnl_t;
 
 static inline void acapd_dma_init_config(acapd_dma_config_t *config,
 					 acapd_shm_t *shm, void *va,
-					 size_t size)
+					 size_t size, uint8_t tid)
 {
 	config->shm = shm;
 	config->va = va;
@@ -126,6 +129,7 @@ static inline void acapd_dma_init_config(acapd_dma_config_t *config,
 	config->auto_repeat = 0;
 	config->stride = NULL;
 	config->fence = NULL;
+	config->tid = tid;
 }
 
 void *acapd_dma_attach(acapd_chnl_t *chnl, acapd_shm_t *shm);

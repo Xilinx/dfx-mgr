@@ -67,7 +67,7 @@ int acapd_sync_shm_device(acapd_shm_t *shm, acapd_chnl_t *chnl);
 void *acapd_accel_alloc_shm(acapd_accel_t *accel, size_t size, acapd_shm_t *shm);
 
 int acapd_accel_write_data(acapd_accel_t *accel, acapd_shm_t *shm,
-			   void *va, size_t size, int wait_for_complete);
+			   void *va, size_t size, int wait_for_complete, uint8_t tid);
 
 int acapd_accel_read_data(acapd_accel_t *accel, acapd_shm_t *shm,
 			  void *va, size_t size, int wait_for_complete);

@@ -121,8 +121,11 @@ int acapd_dma_poll(acapd_chnl_t *chnl, uint32_t wait_for_complete,
 		if (status == ACAPD_CHNL_ERRORS) {
 			return (int)(-status);
 		}
-		if (status == ACAPD_CHNL_IDLE) {
+		else if (status == ACAPD_CHNL_IDLE) {
 			return 0;
+		}
+		else if (status == ACAPD_CHNL_STALLED) {
+			return ACAPD_CHNL_STALLED;
 		}
 	}while(wait_for_complete);
 	return (int)ACAPD_CHNL_INPROGRESS;

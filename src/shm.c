@@ -75,6 +75,7 @@ void *acapd_accel_alloc_shm(acapd_accel_t *accel, size_t size, acapd_shm_t *shm)
 	int ret;
 
 	(void)accel;
+
 	if (shm == NULL) {
 		acapd_perror("%s: failed due to shm is NULL\n", __func__);
 		return NULL;
@@ -94,11 +95,12 @@ void *acapd_accel_alloc_shm(acapd_accel_t *accel, size_t size, acapd_shm_t *shm)
 		acapd_perror("%s: va is NULL.\n", __func__);
 		return NULL;
 	}
+
 	return shm->va;
 }
 
 int acapd_accel_write_data(acapd_accel_t *accel, acapd_shm_t *shm,
-			   void *va, size_t size, int wait_for_complete)
+			   void *va, size_t size, int wait_for_complete, uint8_t tid)
 {
 	acapd_chnl_t *chnl = NULL;
 	acapd_dma_config_t config;
@@ -150,7 +152,7 @@ int acapd_accel_write_data(acapd_accel_t *accel, acapd_shm_t *shm,
 		return -EBUSY;
 	}
 	acapd_debug("%s: transfer data\n", __func__);
-	acapd_dma_init_config(&config, shm, va, size);
+	acapd_dma_init_config(&config, shm, va, size, tid);
 	ret = acapd_dma_transfer(chnl, &config);
 	if (ret < 0) {
 		acapd_perror("%s: failed to transfer data\n",
@@ -226,7 +228,7 @@ int acapd_accel_read_data(acapd_accel_t *accel, acapd_shm_t *shm,
 	}
 	/* Config channel to receive data */
 	acapd_debug("%s: transfer data\n", __func__);
-	acapd_dma_init_config(&config, shm, va, size);
+	acapd_dma_init_config(&config, shm, va, size, 0);
 	ret = acapd_dma_transfer(chnl, &config);
 	if (ret < 0) {
 		acapd_perror("%s: failed to transfer data\n",
