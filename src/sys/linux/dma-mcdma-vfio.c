@@ -40,6 +40,7 @@
 #define S2MM_SR	0x0504 /*Status register*/
 #define S2MM_CHEN	0x0508 /*Channel enable/disable */
 #define S2MM_CHSER	0x050C /*Channel in progress register*/
+#define S2MM_ERR	0x0510 /*error register*/
 
 #define S2MM_CH1CR	0x0540 /*Ch1 control register*/
 #define S2MM_CH1SR	0x0544 /*Ch1 status register*/
@@ -62,7 +63,6 @@ static int mcdma_vfio_dma_transfer(acapd_chnl_t *chnl,
 	acapd_device_t *dev;
 	void *base_va; /**< AXI DMA reg mmaped base va address */
 	uint64_t buf_addr, bd_pa, next_bd_pa;
-	uint32_t v;
 	void *va;
 	void *bd_va;
 	void *next_bd_va;
@@ -70,7 +70,7 @@ static int mcdma_vfio_dma_transfer(acapd_chnl_t *chnl,
 	acapd_shm_t bd_shm;
 	int ret;
 	void *retva;
-	uint32_t buf_size, transfer_buf_size;
+	uint32_t buf_size, transfer_buf_size, tid;
 
 	acapd_assert(chnl != NULL);
 	acapd_assert(chnl->dev != NULL);
@@ -121,6 +121,8 @@ static int mcdma_vfio_dma_transfer(acapd_chnl_t *chnl,
 
 	next_bd_pa = bd_pa;
 	next_bd_va = bd_va;
+	tid = config->tid << 24;
+
 	/* Program descriptors */
 	for (; transfer_buf_size != 0; ) {
 		uint32_t tmpbuf_size = transfer_buf_size;
@@ -143,8 +145,10 @@ static int mcdma_vfio_dma_transfer(acapd_chnl_t *chnl,
 		/* buffer length bits 25:0| sof bit 31 | eof bit 30*/
 		*((volatile uint32_t *)((char *)next_bd_va+0x14)) = (tmpbuf_size & 0x3FFFFFF) | 0x80000000 | 0x40000000;
 
-		/* Program the tid bits 31:24*/		
-		*((volatile uint32_t *)((char *)next_bd_va+0x18)) = config->tid & 0xFF000000;
+		/* MM2S Program the tid bits 31:24*/
+		if (chnl->dir == ACAPD_DMA_DEV_W) {
+			*((volatile uint32_t *)((char *)next_bd_va+ 0x18)) = tid & 0xFF000000;
+		}
 
 		if (transfer_buf_size != 0)
 		{
@@ -153,7 +157,19 @@ static int mcdma_vfio_dma_transfer(acapd_chnl_t *chnl,
 		}
 	}
 	if (chnl->dir == ACAPD_DMA_DEV_W) {
-		acapd_perror("%s: data from memory 0x%llx to stream, config->size %d, offset %d\n",
+		uint32_t rx_status, rx_error;
+		rx_status = *((volatile uint32_t *)((char *)base_va + S2MM_SR));
+		rx_error = *((volatile uint32_t *)((char *)base_va + S2MM_ERR));
+
+		if (((rx_status & MCDMA_HALTED_MASK) && (rx_error != 0)) ||
+									(rx_status & MCDMA_IDLE_MASK))
+		{
+			acapd_debug("%s: MM2S Reset dma engine rx_status 0x%llx rx_err 0x%llx\n",
+													__func__, rx_status, rx_error);
+			*((volatile uint32_t *)((char *)base_va + MM2S_CR)) = MCDMA_RESET_MASK;
+		}
+
+		acapd_perror("%s: MM2S data from memory 0x%llx to stream, config->size %d, offset %d\n",
 			    __func__, buf_addr,config->size, offset);
 	
 		//enable the channel
@@ -161,7 +177,7 @@ static int mcdma_vfio_dma_transfer(acapd_chnl_t *chnl,
 
 		/* Program Current desc */
 		*((volatile uint32_t *)((char *)base_va + offset + MM2S_CH1CURDESC_LSB)) = bd_pa & 0xFFFFFFC0;
-		*((uint32_t *)((char *)base_va + offset + MM2S_CH1CURDESC_MSB)) = bd_pa >> 32;
+		*((volatile uint32_t *)((char *)base_va + offset + MM2S_CH1CURDESC_MSB)) = bd_pa >> 32;
 		
 		//Enable fetch bit for channel
 		*((volatile uint32_t *)((char *)base_va + offset + MM2S_CH1CR)) = MCDMA_CHANNEL_FETCH_MASK;
@@ -171,32 +187,35 @@ static int mcdma_vfio_dma_transfer(acapd_chnl_t *chnl,
 
 		//program Tail desc. Each channel needs two desc-for data and control each
 		*((volatile uint32_t *)((char *)base_va + offset + MM2S_CH1TAILDESC_LSB)) = next_bd_pa & 0xFFFFFFC0;
-		*((uint32_t *)((char *)base_va + offset + MM2S_CH1TAILDESC_MSB)) = next_bd_pa >> 32;
-		
-		v = *((volatile uint32_t *)((char *)base_va + MM2S_ERR));
-		acapd_perror("%s: MM2S curr_bd_pa 0x%llx tail_bd_pa 0x%llx err %d\n",__func__, bd_pa, next_bd_pa,v);
-		//v = *((volatile uint32_t *)((char *)base_va + 0x20));
-		//acapd_perror("%s: MM2S chnls completed reg %d\n",__func__, v);
+		*((volatile uint32_t *)((char *)base_va + offset + MM2S_CH1TAILDESC_MSB)) = next_bd_pa >> 32;
 
 	} else {
-		acapd_perror("%s: data from stream to memory 0x%llx.\n",
-			    __func__, buf_addr);
+		uint32_t tx_status, tx_error;
+		tx_status = *((volatile uint32_t *)((char *)base_va + MM2S_SR));
+		tx_error = *((volatile uint32_t *)((char *)base_va + MM2S_ERR));
 		
+		if (((tx_status & MCDMA_HALTED_MASK) && (tx_error != 0)) ||
+									(tx_status & MCDMA_IDLE_MASK))
+		{
+			acapd_debug("%s: S2MM Reset dma engine tx_status 0x%llx tx_err 0x%llx\n",
+													__func__, tx_status, tx_error);
+			*((volatile uint32_t *)((char *)base_va + S2MM_CR)) = MCDMA_RESET_MASK;
+		}
+		acapd_perror("%s: S2MM data from stream to memory 0x%llx.\n",
+			    __func__, buf_addr);
+
 		//enable the channel
 		*((volatile uint32_t *)((char *)base_va + S2MM_CHEN)) = MCDMA_CHANNELS_MASK;
 
 		*((volatile uint32_t *)((char *)base_va + offset + S2MM_CH1CURDESC_LSB)) = bd_pa & 0xFFFFFFC0;
-		*((uint32_t *)((char *)base_va + offset + S2MM_CH1CURDESC_MSB)) = bd_pa >> 32;
+		*((volatile uint32_t *)((char *)base_va + offset + S2MM_CH1CURDESC_MSB)) = bd_pa >> 32;
 		
 		*((volatile uint32_t *)((char *)base_va + offset +  S2MM_CH1CR)) = MCDMA_CHANNEL_FETCH_MASK;
 
 		*((volatile uint32_t *)((char *)base_va + S2MM_CR)) = MCDMA_RUNSTOP_MASK;
-
 		/* program Tail desc. Each channel needs two desc-for data and control each*/
 		*((volatile uint32_t *)((char *)base_va + offset + S2MM_CH1TAILDESC_LSB)) = next_bd_pa & 0xFFFFFFC0;
-		*((uint32_t *)((char *)base_va + offset + S2MM_CH1TAILDESC_MSB)) = next_bd_pa >> 32;
-		
-		acapd_perror("%s: S2MM curr_bd_pa 0x%llx tail_bd_pa 0x%llx\n",__func__, bd_pa, next_bd_pa);
+		*((volatile uint32_t *)((char *)base_va + offset + S2MM_CH1TAILDESC_MSB)) = next_bd_pa >> 32;
 	}
 	return buf_size;
 }
@@ -271,13 +290,9 @@ static int mcdma_vfio_dma_reset(acapd_chnl_t *chnl)
 
 	if (chnl->dir == ACAPD_DMA_DEV_W) {
 		*((volatile uint32_t *)((char *)base_va + MM2S_CR)) = MCDMA_RESET_MASK;
-		sleep(1);
-		*((volatile uint32_t *)((char *)base_va + MM2S_CR)) = 0x0;
 
 	} else {
 		*((volatile uint32_t *)((char *)base_va + S2MM_CR)) = MCDMA_RESET_MASK;
-		sleep(1);
-		*((volatile uint32_t *)((char *)base_va + S2MM_CR)) = 0x0;
 	}
 	return 0;
 }
