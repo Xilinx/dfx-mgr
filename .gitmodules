@@ -1,3 +1,6 @@
 [submodule "example/aes128"]
 	path = example/aes128
 	url = https://gitenterprise.xilinx.com/SET-HW/aesdemo.git
+[submodule "example/sihaExamples"]
+	path = example/sihaExamples
+	url = https://gitenterprise.xilinx.com/SET-HW/sihaAcapdExamples.git
