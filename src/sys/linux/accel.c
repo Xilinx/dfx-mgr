@@ -173,12 +173,10 @@ int sys_needs_load_accel(acapd_accel_t *accel)
 	}
 }
 
-int sys_load_accel(acapd_accel_t *accel, unsigned int async)
+int sys_fetch_accel(acapd_accel_t *accel)
 {
 	int ret;
-	int fpga_cfg_id;
 
-	(void)async;
 	acapd_assert(accel != NULL);
 	acapd_debug("%s: init package dir: %s/.\n", __func__, accel->sys_info.tmp_dir);
 	ret = fpga_cfg_init(accel->sys_info.tmp_dir, 0, 0);
@@ -186,8 +184,22 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 		acapd_perror("Failed to initialize fpga config, %d.\n", ret);
 		return ACAPD_ACCEL_FAILURE;
 	}
-	fpga_cfg_id = ret;
-	accel->sys_info.fpga_cfg_id = fpga_cfg_id;
+	accel->sys_info.fpga_cfg_id = ret;
+	return ACAPD_ACCEL_SUCCESS;
+}
+
+int sys_load_accel(acapd_accel_t *accel, unsigned int async)
+{
+	int ret;
+	int fpga_cfg_id;
+
+	(void)async;
+	acapd_assert(accel != NULL);
+	if (accel->is_cached == 0) {
+		acapd_perror("%s: accel is not cached.\n");
+		return ACAPD_ACCEL_FAILURE;
+	}
+	fpga_cfg_id = accel->sys_info.fpga_cfg_id;
 	ret = fpga_cfg_load(fpga_cfg_id);
 	if (ret != 0) {
 		acapd_perror("Failed to load fpga config: %d\n",

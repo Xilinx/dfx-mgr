@@ -111,6 +111,14 @@ int load_accel(acapd_accel_t *accel, unsigned int async)
 	/* TODO: Check if the accel is valid */
 	/* For now, for now assume it is always PDI/DTB */
 	acapd_debug("%s: load accel.\n", __func__);
+	if (accel->is_cached == 0) {
+		ret = sys_fetch_accel(accel);
+		if (ret != ACAPD_ACCEL_SUCCESS) {
+			acapd_perror("%s, failed to fetch accelertor.\n");
+			return ret;
+		}
+		accel->is_cached = 1;
+	}
 	ret = sys_load_accel(accel, async);
 	if (ret == ACAPD_ACCEL_SUCCESS) {
 		accel->status = ACAPD_ACCEL_STATUS_INUSE;

@@ -63,6 +63,12 @@ int sys_accel_config(acapd_accel_t *accel)
 	return ret;
 }
 
+int sys_fetch_accel(acapd_accel_t *accel)
+{
+	(void)accel;
+	return ACAPD_ACCEL_SUCCESS;
+}
+
 int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 {
 	XFpga XFpgaInst = {0};
