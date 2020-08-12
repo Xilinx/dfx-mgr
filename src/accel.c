@@ -101,7 +101,7 @@ int load_accel(acapd_accel_t *accel, unsigned int async)
 			return ACAPD_ACCEL_FAILURE;
 		}
 	}
-	acapd_debug("%s: assert isolation.\n", __func__);
+	printf("%s: assert isolation.\n", __func__);
 	ret = acapd_shell_assert_isolation(accel);
 	if (ret < 0) {
 		acapd_perror("%s, failed to assert isolaction.\n",
@@ -110,11 +110,11 @@ int load_accel(acapd_accel_t *accel, unsigned int async)
 	}
 	/* TODO: Check if the accel is valid */
 	/* For now, for now assume it is always PDI/DTB */
-	acapd_debug("%s: load accel.\n", __func__);
+	printf("%s: load accel.\n", __func__);
 	if (accel->is_cached == 0) {
 		ret = sys_fetch_accel(accel);
 		if (ret != ACAPD_ACCEL_SUCCESS) {
-			acapd_perror("%s, failed to fetch accelertor.\n");
+			acapd_perror("%s, failed to fetch accelertor.\n",__func__);
 			return ret;
 		}
 		accel->is_cached = 1;
@@ -127,17 +127,17 @@ int load_accel(acapd_accel_t *accel, unsigned int async)
 	} else {
 		accel->load_failure = ret;
 	}
-	acapd_debug("%s: loaded pdi.\n", __func__);
+	printf("%s: loaded pdi.\n", __func__);
 	if (accel->status == ACAPD_ACCEL_STATUS_INUSE) {
-		acapd_debug("%s: releasing isolation.\n", __func__);
+		printf("%s: releasing isolation.\n", __func__);
 		ret = acapd_shell_release_isolation(accel);
 		if (ret != 0) {
-			acapd_perror("%s: failed to release isolation.\n");
+			printf("%s: failed to release isolation.\n",__func__);
 			return ACAPD_ACCEL_FAILURE;
 		}
-		acapd_debug("%s: releasing isolation done.\n", __func__);
+		acapd_perror("%s: releasing isolation done.\n", __func__);
 	}
-	ret = sys_load_accel_post(accel);
+	//ret = sys_load_accel_post(accel);
 	return ret;
 }
 
