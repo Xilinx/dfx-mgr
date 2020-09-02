@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
 	init_accel(&bzip2_accel, (acapd_accel_pkg_hd_t *)pkg_path);
 
 	printf("Loading accel %s.\n", pkg_path);
-	load_accel(&bzip2_accel, 0);
+	load_accel(&bzip2_accel, NULL, 0);
 
 	sleep(2);
 	printf("Removing accel %s.\n", pkg_path);

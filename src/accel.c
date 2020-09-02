@@ -77,13 +77,12 @@ int acapd_accel_config(acapd_accel_t *accel)
 	return sys_accel_config(accel);
 }
 
-int load_accel(acapd_accel_t *accel, unsigned int async)
+int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int async)
 {
 	int ret;
 
 	acapd_assert(accel != NULL);
 
-	/* assert isolation before programming */
 	acapd_debug("%s: config accel.\n", __func__);
 	ret = acapd_accel_config(accel);
 	if (ret < 0) {
@@ -95,12 +94,13 @@ int load_accel(acapd_accel_t *accel, unsigned int async)
 		acapd_debug("%s: no need to load accel.\n", __func__);
 		return 0;
 	} else {
-		ret = acapd_shell_get();
+		ret = acapd_shell_get(shell_config);
 		if (ret < 0) {
 			acapd_perror("%s: failed to get shell.\n", __func__);
 			return ACAPD_ACCEL_FAILURE;
 		}
 	}
+	/* assert isolation before programming */
 	printf("%s: assert isolation.\n", __func__);
 	ret = acapd_shell_assert_isolation(accel);
 	if (ret < 0) {
@@ -137,7 +137,7 @@ int load_accel(acapd_accel_t *accel, unsigned int async)
 		}
 		acapd_perror("%s: releasing isolation done.\n", __func__);
 	}
-	//ret = sys_load_accel_post(accel);
+	ret = sys_load_accel_post(accel);
 	return ret;
 }
 

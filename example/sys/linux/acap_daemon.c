@@ -21,20 +21,22 @@ enum enum_param_names {
     EPN_TEXT1,
 };
 
-void load_accelerator(const char *pkg_path)
+void load_accelerator(const char *pkg_path, const char *shell)
 {
 	acapd_accel_t accel;
 	printf("Initializing accel with %s.\n", pkg_path);
     init_accel(&accel, (acapd_accel_pkg_hd_t *)pkg_path);
 	printf("Loading accel %s.\n", pkg_path);
-    load_accel(&accel, 0);
-	//sleep(2);
-    printf("Removing accel %s.\n", pkg_path);
-    remove_accel(&accel, 0);
+    load_accel(&accel, shell, 0);
 }
 
+void remove_accelerator(const char *slot)
+{
+	printf("Removing accel from slot %s\n",slot);
+    //remove_accel(&accel, 0);
+}
 static char *requested_uri;
-static const char *path;
+static const char *arg;
 static int
 callback_http(struct lws *wsi, enum lws_callback_reasons reason,
 			void *user, void *in, size_t len)
@@ -65,16 +67,16 @@ callback_http(struct lws *wsi, enum lws_callback_reasons reason,
 					printf("undefined string in http body %s\n", param_names[n]);
 				else {
 					//printf("http body %s value %s\n",param_names[n],lws_spa_get_string(pss->spa, n));
-					path = lws_spa_get_string(pss->spa,n);
+					arg = lws_spa_get_string(pss->spa,n);
 				}
 			}
 		}
 		if(strcmp(requested_uri,"/loadpdi") == 0){
 			lwsl_user("Loading pdi \n");
-			load_accelerator(path);
+			load_accelerator(arg,NULL);
 		}
 		else if(strcmp(requested_uri,"/remove") == 0)
-			lwsl_user("DUMMY Removing pdi");
+			remove_accelerator(arg);
 		//if (pss->spa && lws_spa_destroy(pss->spa))
 		//	return -1;
 		
@@ -149,6 +151,7 @@ int main(int argc, const char **argv)
 			/* | LLL_EXT */ /* | LLL_CLIENT */ /* | LLL_LATENCY */
 			/* | LLL_DEBUG */;
 
+	printf("Starting http daemon\n");
 	signal(SIGINT, sigint_handler);
 
 	if ((p = lws_cmdline_option(argc, argv, "-d")))

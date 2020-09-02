@@ -22,18 +22,17 @@ extern "C" {
 #include <acapd/accel.h>
 
 typedef struct acapd_shell_regs {
-	uint32_t clock_release;
-	uint32_t clock_status;
-	uint32_t reset_release;
-	uint32_t reset_status;
-	uint32_t clock_release_mask;
-	uint32_t reset_release_mask;
+	uint32_t *offset;
+	uint32_t *values;
 } acapd_shell_regs_t;
 
 typedef struct acapd_shell {
 	acapd_device_t dev;
+	acapd_device_t clock_dev;
 	char *type;
-	const acapd_shell_regs_t *regs;
+	const acapd_shell_regs_t *slot_regs;
+	int num_slots;
+	acapd_accel_t **active_slots;
 	int is_configured;
 } acapd_shell_t;
 
@@ -47,7 +46,6 @@ int acapd_shell_assert_isolation(acapd_accel_t *accel);
 int sys_shell_config(acapd_shell_t *shell, const char *config);
 #endif /* ACAPD_INTERNAL */
 /** @} */
-
 #ifdef __cplusplus
 }
 #endif

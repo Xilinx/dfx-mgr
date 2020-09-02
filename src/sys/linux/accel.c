@@ -21,8 +21,10 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
 #include "accel.h"
+#include "zynq_ioctl.h"
 
 #define DTBO_ROOT_DIR "/sys/kernel/config/device-tree/overlays"
 
@@ -188,12 +190,37 @@ int sys_fetch_accel(acapd_accel_t *accel)
 	return ACAPD_ACCEL_SUCCESS;
 }
 
+void sys_zocl_alloc_bo(acapd_accel_t *accel)
+{
+	int fd = open("/dev/dri/renderD128", O_RDWR);
+	printf("%s Allocating zocl BO accel %s\n",__func__,accel->pkg->name);
+	if (fd < 0) {
+		return;
+	}
+    
+	struct drm_zocl_create_bo info1 = {4096, 0xffffffff, DRM_ZOCL_BO_FLAGS_COHERENT | DRM_ZOCL_BO_FLAGS_CMA};
+    int result = ioctl(fd, DRM_IOCTL_ZOCL_CREATE_BO, &info1);
+    printf("result %d handle %u\n",result, info1.handle);
+	
+	struct drm_zocl_info_bo infoInfo1 = {info1.handle, 0, 0};
+    result = ioctl(fd, DRM_IOCTL_ZOCL_INFO_BO, &infoInfo1);
+    printf("result %d size %lu %ld\n",result,infoInfo1.size, infoInfo1.paddr);
+
+	struct drm_prime_handle h = {info1.handle, DRM_RDWR, -1};
+	result = ioctl(fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &h);
+	if (result) {
+		acapd_perror("%s DRM_IOCTL_PRIME_HANDLE_TO_FD failed\n",__func__);
+	}
+	printf("FD %d\n",h.fd);
+}
+
 int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 {
 	int ret;
 	int fpga_cfg_id;
 
 	(void)async;
+	sys_zocl_alloc_bo(accel);
 	acapd_assert(accel != NULL);
 	if (accel->is_cached == 0) {
 		acapd_perror("%s: accel is not cached.\n");

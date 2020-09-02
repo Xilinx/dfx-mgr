@@ -7,7 +7,6 @@
 #include <acapd/accel.h>
 #include <acapd/assert.h>
 #include <acapd/device.h>
-#include <acapd/jsmn.h>
 #include <acapd/print.h>
 #include <acapd/shell.h>
 #include <errno.h>
@@ -22,6 +21,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <jsmn.h>
 
 static int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
   if (tok->type == JSMN_STRING && (int)strlen(s) == tok->end - tok->start &&
@@ -184,7 +184,9 @@ int parseShellJson(acapd_shell_t *shell, const char *filename)
 	int ret,i;
 	char *jsonData;
 	acapd_device_t *dev;
-
+	acapd_device_t *clk_dev;
+	
+	printf("Parse shell.json\n");
 	acapd_assert(shell != NULL);
 	acapd_assert(filename != NULL);
 	fptr = fopen(filename, "r");
@@ -208,6 +210,8 @@ int parseShellJson(acapd_shell_t *shell, const char *filename)
 	}
 
 	dev = &shell->dev;
+	clk_dev = &shell->clock_dev;
+
 	for(i=1; i < ret; i++){
 		if (token[i].type == JSMN_OBJECT)
 			continue;
@@ -217,9 +221,62 @@ int parseShellJson(acapd_shell_t *shell, const char *filename)
 			acapd_praw("Shell is %s\n",strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start));
 		}
 		if (jsoneq(jsonData, &token[i],"reg_base")== 0)
-			dev->reg_pa = (uint64_t)atoi(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start));
+			dev->reg_pa = (uint64_t)strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 16);
 		if (jsoneq(jsonData, &token[i],"reg_size") == 0){}
-			dev->reg_size = (size_t)atoi(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start));
+			dev->reg_size = (size_t)strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 16);
+		if (jsoneq(jsonData, &token[i],"clock_device_name") == 0)
+			clk_dev->dev_name = strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start);
+		if (jsoneq(jsonData, &token[i],"clock_reg_base")== 0)
+			clk_dev->reg_pa = (uint64_t)strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 16);
+		if (jsoneq(jsonData, &token[i],"clock_reg_size") == 0){}
+			clk_dev->reg_size = (size_t)strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 16);
+		if (jsoneq(jsonData, &token[i],"slots") == 0){
+			int j;
+			if(token[i+1].type != JSMN_ARRAY) {
+				acapd_perror("shell.json slots expects an array \n");
+				continue;
+			}
+			int numSlots = token[i+1].size;
+			acapd_shell_regs_t *slot_regs;
+
+			slot_regs = (acapd_shell_regs_t *)calloc(numSlots, sizeof(*slot_regs));
+			if (slot_regs == NULL) {
+				acapd_perror("%s: failed to alloc mem for slot regs.\n", __func__);
+				ret = -ENOMEM;
+			}
+
+			i+=3;
+			for(j=0; j < numSlots; j++){
+				if (jsoneq(jsonData, &token[i+j],"offset") == 0){
+					int k;
+					if(token[i+j+1].type != JSMN_ARRAY) {
+						acapd_perror("shell.json offset expects an array \n");
+						continue;
+					}
+					slot_regs[j].offset = (uint32_t *)calloc(token[i+j+1].size, sizeof(uint32_t *));
+					for (k = 0; k < token[i+j+1].size; k++){
+						slot_regs[j].offset[k] = (uint32_t)strtol(strndup(jsonData+token[i+j+k+2].start, token[i+j+k+2].end - token[i+j+k+2].start), NULL, 16);
+					}
+					i += token[i+j+1].size;//increment by number of elements in offset array
+				}
+				if (jsoneq(jsonData, &token[i+j+2],"values") == 0){
+					int k;
+					if(token[i+j+3].type != JSMN_ARRAY) {
+						acapd_perror("shell.json values expects an array \n");
+						continue;
+					}
+					slot_regs[j].values = (uint32_t *)calloc(token[i+j+3].size, sizeof(uint32_t *));
+					for (k = 0; k < token[i+j+3].size; k++){
+						slot_regs[j].values[k] = (uint32_t)strtol(strndup(jsonData+token[i+j+k+4].start, token[i+j+k+4].end - token[i+j+k+4].start), NULL, 16);
+					}
+					i += token[i+j+3].size;//increment by number of elements in offset array
+				}
+				i+=4;//increment to point to next slot
+			}
+			shell->num_slots = numSlots;
+			shell->slot_regs = slot_regs;
+			shell->active_slots = (acapd_accel_t **)calloc(shell->num_slots, sizeof(acapd_accel_t *));
+		}
 	}
 	return 0;
 }

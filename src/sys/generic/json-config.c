@@ -7,7 +7,6 @@
 #include <acapd/accel.h>
 #include <acapd/assert.h>
 #include <acapd/device.h>
-#include <acapd/jsmn.h>
 #include <acapd/print.h>
 #include <acapd/shell.h>
 #include <errno.h>
@@ -17,6 +16,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <jsmn.h>
 
 static int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
   if (tok->type == JSMN_STRING && (int)strlen(s) == tok->end - tok->start &&

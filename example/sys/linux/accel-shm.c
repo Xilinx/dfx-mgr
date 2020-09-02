@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
 
 	signal(SIGINT, sig_handler);
 	printf("Loading accel %s.\n", pkg_path);
-	ret = load_accel(&bzip2_accel, 0);
+	ret = load_accel(&bzip2_accel, NULL, 0);
 	if (ret != 0) {
 		fprintf(stderr, "ERROR: failed to load accel.\n");
 		goto error;
