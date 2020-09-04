@@ -71,10 +71,21 @@ void init_accel(acapd_accel_t *accel, acapd_accel_pkg_hd_t *pkg)
 	accel->status = ACAPD_ACCEL_STATUS_UNLOADED;
 }
 
-int acapd_accel_config(acapd_accel_t *accel)
+int acapd_parse_config(acapd_accel_t *accel, const char *shell_config)
 {
-	acapd_assert(accel != NULL);
-	return sys_accel_config(accel);
+	int ret;
+	
+	ret = sys_accel_config(accel);
+	if (ret < 0) {
+		acapd_perror("%s: failed to config accel.\n", __func__);
+		return ACAPD_ACCEL_FAILURE;
+	}
+	ret = acapd_shell_config(shell_config);
+	if (ret < 0) {
+		acapd_perror("%s: failed to config shell.\n", __func__);
+		return ACAPD_ACCEL_FAILURE;
+	}
+	return ret;
 }
 
 int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int async)
@@ -84,21 +95,21 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 	acapd_assert(accel != NULL);
 
 	acapd_debug("%s: config accel.\n", __func__);
-	ret = acapd_accel_config(accel);
+	ret = acapd_parse_config(accel, shell_config);
 	if (ret < 0) {
-		acapd_perror("%s: failed to config accel.\n", __func__);
+		acapd_perror("%s: failed to parse config files.\n", __func__);
 		return ACAPD_ACCEL_FAILURE;
 	}
 	ret = sys_needs_load_accel(accel);
 	if (ret == 0) {
 		acapd_debug("%s: no need to load accel.\n", __func__);
 		return 0;
-	} else {
-		ret = acapd_shell_get(shell_config);
-		if (ret < 0) {
-			acapd_perror("%s: failed to get shell.\n", __func__);
-			return ACAPD_ACCEL_FAILURE;
-		}
+	//} else {
+	//	ret = acapd_shell_get(shell_config);
+	//	if (ret < 0) {
+	//		acapd_perror("%s: failed to get shell.\n", __func__);
+	//		return ACAPD_ACCEL_FAILURE;
+	//	}
 	}
 	/* assert isolation before programming */
 	printf("%s: assert isolation.\n", __func__);
@@ -156,9 +167,12 @@ int accel_load_status(acapd_accel_t *accel)
 int remove_accel(acapd_accel_t *accel, unsigned int async)
 {
 	acapd_assert(accel != NULL);
+	printf("%s Enter\n",__func__);
 	if (accel->status == ACAPD_ACCEL_STATUS_UNLOADED) {
+		acapd_perror("%s: accel is not loaded.\n", __func__);
 		return ACAPD_ACCEL_SUCCESS;
 	} else if (accel->status == ACAPD_ACCEL_STATUS_UNLOADING) {
+		acapd_perror("%s: accel is unloading .\n", __func__);
 		return ACAPD_ACCEL_INPROGRESS;
 	} else {
 		int ret;
@@ -181,7 +195,7 @@ int remove_accel(acapd_accel_t *accel, unsigned int async)
 				return ret;
 			}
 			ret = sys_remove_accel(accel, async);
-			acapd_shell_put();
+			//acapd_shell_put();
 		}
 		if (ret == ACAPD_ACCEL_SUCCESS) {
 			accel->status = ACAPD_ACCEL_STATUS_UNLOADED;
@@ -277,4 +291,16 @@ void *acapd_accel_get_reg_va(acapd_accel_t *accel, const char *name)
 		}
 	}
 	return dev->va;
+}
+
+void get_mm2s_fd(acapd_accel_t *accel)
+{
+	acapd_assert(accel != NULL);
+	sys_get_mm2s_fd(accel);
+}
+
+void get_s2mm_fd(acapd_accel_t *accel)
+{
+	acapd_assert(accel != NULL);
+	sys_get_s2mm_fd(accel);
 }

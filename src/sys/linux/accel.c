@@ -11,8 +11,6 @@
 #include <dirent.h>
 #include <ftw.h>
 #include <fcntl.h>
-#include "generic-device.h"
-#include "json-config.h"
 #include <libfpga.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,11 +20,17 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <unistd.h>
 #include "accel.h"
 #include "zynq_ioctl.h"
+#include "generic-device.h"
+#include "json-config.h"
 
 #define DTBO_ROOT_DIR "/sys/kernel/config/device-tree/overlays"
+#define BUFFER_LENGTH 250
+static int socket_d = -1, socket_d2 = -1;
 
 static int remove_directory(const char *path)
 {
@@ -198,28 +202,40 @@ void sys_zocl_alloc_bo(acapd_accel_t *accel)
 		return;
 	}
     
-	struct drm_zocl_create_bo info1 = {4096, 0xffffffff, DRM_ZOCL_BO_FLAGS_COHERENT | DRM_ZOCL_BO_FLAGS_CMA};
-    int result = ioctl(fd, DRM_IOCTL_ZOCL_CREATE_BO, &info1);
-    printf("result %d handle %u\n",result, info1.handle);
+	struct drm_zocl_create_bo mm2s = {4096, 0xffffffff, DRM_ZOCL_BO_FLAGS_COHERENT | DRM_ZOCL_BO_FLAGS_CMA};
+	struct drm_zocl_create_bo s2mm = {4096, 0xffffffff, DRM_ZOCL_BO_FLAGS_COHERENT | DRM_ZOCL_BO_FLAGS_CMA};
+    int result = ioctl(fd, DRM_IOCTL_ZOCL_CREATE_BO, &mm2s);
+    result = ioctl(fd, DRM_IOCTL_ZOCL_CREATE_BO, &s2mm);
 	
-	struct drm_zocl_info_bo infoInfo1 = {info1.handle, 0, 0};
-    result = ioctl(fd, DRM_IOCTL_ZOCL_INFO_BO, &infoInfo1);
-    printf("result %d size %lu %ld\n",result,infoInfo1.size, infoInfo1.paddr);
+	struct drm_zocl_info_bo mm2sInfo = {mm2s.handle, 0, 0};
+    result = ioctl(fd, DRM_IOCTL_ZOCL_INFO_BO, &mm2sInfo);
+    printf("m2ss result %d size %lu %ld\n",result,mm2sInfo.size, mm2sInfo.paddr);
+	struct drm_zocl_info_bo s2mmInfo = {s2mm.handle, 0, 0};
+    result = ioctl(fd, DRM_IOCTL_ZOCL_INFO_BO, &s2mmInfo);
+    printf("result %d size %lu %ld\n",result,s2mmInfo.size, s2mmInfo.paddr);
 
-	struct drm_prime_handle h = {info1.handle, DRM_RDWR, -1};
-	result = ioctl(fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &h);
+	struct drm_prime_handle mm2s_h = {mm2s.handle, DRM_RDWR, -1};
+	result = ioctl(fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &mm2s_h);
 	if (result) {
-		acapd_perror("%s DRM_IOCTL_PRIME_HANDLE_TO_FD failed\n",__func__);
+		acapd_perror("%s MM2S DRM_IOCTL_PRIME_HANDLE_TO_FD failed\n",__func__);
 	}
-	printf("FD %d\n",h.fd);
+	struct drm_prime_handle s2mm_h = {s2mm.handle, DRM_RDWR, -1};
+	result = ioctl(fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &s2mm_h);
+	if (result) {
+		acapd_perror("%s S2MM DRM_IOCTL_PRIME_HANDLE_TO_FD failed\n",__func__);
+	}
+	accel->mm2s_fd = mm2s_h.fd;
+	accel->s2mm_fd = s2mm_h.fd;
+	printf("MM2S_FD %d S2MM_FD %d \n",accel->mm2s_fd, accel->s2mm_fd);
 }
 
 int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 {
-	int ret;
+	int ret;//, length;
 	int fpga_cfg_id;
-
+	struct sockaddr_un serveraddr;
 	(void)async;
+
 	sys_zocl_alloc_bo(accel);
 	acapd_assert(accel != NULL);
 	if (accel->is_cached == 0) {
@@ -231,10 +247,27 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 	if (ret != 0) {
 		acapd_perror("Failed to load fpga config: %d\n",
 		     fpga_cfg_id);
-		return ACAPD_ACCEL_FAILURE;
-	} else {
-		return ACAPD_ACCEL_SUCCESS;
+	//	return ACAPD_ACCEL_FAILURE;
 	}
+
+	//Create a socket to send dmabuf FD 
+	socket_d = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (socket_d < 0)
+		printf("%s socket creation failed\n",__func__);
+	memset(&serveraddr, 0, sizeof(serveraddr));
+	serveraddr.sun_family = AF_UNIX;
+	strcpy(serveraddr.sun_path, "/tmp/server");
+	if (bind(socket_d, (struct sockaddr *)&serveraddr, SUN_LEN(&serveraddr)) == -1)
+		acapd_perror("%s socket bind() failed ret %d",__func__,ret);
+	printf("%s socket bind done\n",__func__);
+	//socket will queue upto 10 incoming connections
+	if (listen(socket_d, 10) == -1)
+		acapd_perror("%s socket listen() failed ret %d",__func__,ret);
+	printf("%s socket listen done\n",__func__);
+	
+	
+	return ACAPD_ACCEL_SUCCESS;
+	
 }
 
 int sys_load_accel_post(acapd_accel_t *accel)
@@ -321,8 +354,8 @@ int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
 
 	/* TODO: for now, only synchronous mode is supported */
 	(void)async;
-
 	fpga_cfg_id = accel->sys_info.fpga_cfg_id;
+	printf("%s  Enter path %s\n",__func__,accel->sys_info.tmp_dir);
 	if (accel->sys_info.tmp_dir != NULL) {
 		ret = remove_directory(accel->sys_info.tmp_dir);
 		if (ret != 0) {
@@ -344,5 +377,70 @@ int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
 		acapd_perror("Failed to destroy accel: %d.\n", ret);
 		return ACAPD_ACCEL_FAILURE;
 	}
+	if (socket_d != -1) {
+		close(socket_d);
+		close(socket_d2);
+	}
 	return ACAPD_ACCEL_SUCCESS;
+}
+
+void sys_send_fd(int fd)
+{
+	char dummy = '$';
+    struct msghdr msg;
+    struct iovec iov;
+
+    char cmsgbuf[CMSG_SPACE(sizeof(int))];
+
+	socket_d2 = accept(socket_d, NULL, NULL);
+	printf("%s socket accept done\n",__func__);
+    if (socket_d2 < 0)
+		acapd_perror("%s failed to accept() connections ret %d",__func__,socket_d2);
+	
+	//length = BUFFER_LENGTH;
+    //ret = setsockopt(socket_d2, SOL_SOCKET, SO_SNDLOWAT,
+    //                                      (char *)&length, sizeof(length));
+	//if (ret < 0)
+	//	acapd_perror("%s setsockopt(SO_SNDLOWAT) failed ret %d",__func__,ret);
+    
+	iov.iov_base = &dummy;
+    iov.iov_len = sizeof(dummy);
+
+    msg.msg_name = NULL;
+    msg.msg_namelen = 0;
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    msg.msg_flags = 0;
+    msg.msg_control = cmsgbuf;
+    msg.msg_controllen = CMSG_LEN(sizeof(int));
+
+    struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
+    cmsg->cmsg_level = SOL_SOCKET;
+    cmsg->cmsg_type = SCM_RIGHTS;
+    cmsg->cmsg_len = CMSG_LEN(sizeof(int));
+
+    *(int*) CMSG_DATA(cmsg) = fd;
+
+	printf("%s Sending FD %d\n",__func__, fd);
+    int ret = sendmsg(socket_d2, &msg, 0);
+
+    if (ret == -1) {
+        printf("%s send FD failed with %s\n", __func__,strerror(errno));
+		return;
+    }
+	printf("%s Send FD succesful\n",__func__);
+}
+
+void sys_get_mm2s_fd(acapd_accel_t *accel)
+{
+	printf("%s Enter fd %d\n",__func__,accel->mm2s_fd);
+	if (accel->mm2s_fd > 0)
+		sys_send_fd(accel->mm2s_fd);
+}
+
+void sys_get_s2mm_fd(acapd_accel_t *accel)
+{
+	printf("%s Enter\n",__func__);
+	if (accel->s2mm_fd > 0)
+		sys_send_fd(accel->s2mm_fd);
 }

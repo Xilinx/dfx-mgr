@@ -6,8 +6,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <acapd/accel.h>
+#include <acapd/shell.h>
 
 static int interrupted;
+static acapd_accel_t **active_slots;
+static acapd_accel_t accel;
 
 struct pss {
 	struct lws_spa *spa;
@@ -23,17 +26,56 @@ enum enum_param_names {
 
 void load_accelerator(const char *pkg_path, const char *shell)
 {
-	acapd_accel_t accel;
+	int i;
 	printf("Initializing accel with %s.\n", pkg_path);
     init_accel(&accel, (acapd_accel_pkg_hd_t *)pkg_path);
-	printf("Loading accel %s.\n", pkg_path);
-    load_accel(&accel, shell, 0);
+	printf("Loading accel %s. \n", pkg_path);
+	if (active_slots == NULL)
+	{	
+		printf("%s allocating active_slots\n",__func__);
+		active_slots = (acapd_accel_t **)calloc(3, sizeof(acapd_accel_t *));
+	}
+	for (i = 0; i < 3; i++) {
+		if (active_slots[i] == NULL){
+			accel.rm_slot = i;
+			load_accel(&accel, shell, 0);
+			active_slots[i] = &accel;
+			printf("Loaded accel to slot %d mm2s fd %d\n",i,accel.mm2s_fd);	
+			break;
+		}
+	} 
 }
 
-void remove_accelerator(const char *slot)
+void remove_accelerator(int slot)
 {
-	printf("Removing accel from slot %s\n",slot);
-    //remove_accel(&accel, 0);
+	printf("Removing accel from slot %d\n",slot);
+	if (active_slots == NULL || active_slots[slot] == NULL){
+		printf("%s No Accel in slot %d\n",__func__,slot);
+		return;
+	}
+    remove_accel(&accel, 0);
+	active_slots[slot] = NULL;
+}
+void getInputFD(int slot)
+{
+	//acapd_accel_t * accel = active_slots[slot];
+	printf("%s Enter\n mm2s fd %d\n",__func__,accel.mm2s_fd);
+	if (active_slots == NULL || active_slots[slot] == NULL){
+		printf("%s No Accel in slot %d\n",__func__,slot);
+		return;
+	}
+	
+	get_mm2s_fd(&accel);
+}
+void getOutputFD(int slot)
+{
+	printf("%s Enter\n",__func__);
+	if (active_slots == NULL || active_slots[slot] == NULL){
+		printf("%s No Accel in slot %d\n",__func__,slot);
+		return;
+	}
+	get_s2mm_fd(active_slots[slot]);
+
 }
 static char *requested_uri;
 static const char *arg;
@@ -72,11 +114,21 @@ callback_http(struct lws *wsi, enum lws_callback_reasons reason,
 			}
 		}
 		if(strcmp(requested_uri,"/loadpdi") == 0){
-			lwsl_user("Loading pdi \n");
+			lwsl_user("Received loadpdi \n");
 			load_accelerator(arg,NULL);
 		}
-		else if(strcmp(requested_uri,"/remove") == 0)
-			remove_accelerator(arg);
+		else if(strcmp(requested_uri,"/remove") == 0){
+			lwsl_user("Received remove \n");
+			remove_accelerator(atoi(arg));
+		}
+		else if(strcmp(requested_uri,"/getInFD") == 0){
+			lwsl_user("Received getInFD\n");
+			getInputFD(atoi(arg));
+		}
+		else if(strcmp(requested_uri,"/getOutFD") == 0){
+			lwsl_user("received getOutFD \n");
+			getOutputFD(atoi(arg));
+		}
 		//if (pss->spa && lws_spa_destroy(pss->spa))
 		//	return -1;
 		

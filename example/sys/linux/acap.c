@@ -6,7 +6,7 @@
 
 static int interrupted;
 static struct lws *web_socket;
-static const char *pdi_path;
+static const char *arg;
 
 struct pss {
 	char body_part;
@@ -49,7 +49,7 @@ callback_http(struct lws *wsi, enum lws_callback_reasons reason,
 		case 0:
 			if (lws_client_http_multipart(wsi, "text1", NULL, NULL,&p,end))
 				return -1;
-			p += lws_snprintf(p, end - p,"%s",pdi_path);
+			p += lws_snprintf(p, end - p,"%s",arg);
 			n = LWS_WRITE_HTTP;
 			break;
 		case 1:
@@ -137,10 +137,19 @@ int main(int argc, const char **argv)
 	ccinfo.ssl_connection = LCCSCF_HTTP_MULTIPART_MIME | LCCSCF_ALLOW_SELFSIGNED;	
 	if ((option = lws_cmdline_option(argc, argv, "-loadpdi"))) {
 		ccinfo.path = "/loadpdi";
-		pdi_path = option;
+		arg = option;
 	}
-	else if ((lws_cmdline_option(argc, argv, "-remove"))) {
+	else if ((option = lws_cmdline_option(argc, argv, "-remove"))) {
 		ccinfo.path = "/remove";
+		arg = option;
+	}
+	else if ((option = lws_cmdline_option(argc, argv, "-getInFD"))) {
+		ccinfo.path = "/getInFD";
+		arg = option;
+	}
+	else if ((option = lws_cmdline_option(argc, argv, "-getOutFD"))) {
+		ccinfo.path = "/getOutFD";
+		arg = option;
 	}
 	ccinfo.method = "POST";
 

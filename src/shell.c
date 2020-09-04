@@ -20,34 +20,34 @@ int acapd_shell_config(const char *config)
 	return sys_shell_config(&shell, config);
 }
 
-int acapd_shell_get(const char *config)
-{
-	if (shell.dev.va == NULL) {
-		int ret;
+//int acapd_shell_get(const char *config)
+//{
+//	if (shell.dev.va == NULL) {
+//		int ret;
+//
+//		ret = acapd_shell_config(config);
+//		if (ret < 0) {
+//			acapd_perror("%s: no shell dev specified.\n",
+//				     __func__);
+//			return ACAPD_ACCEL_FAILURE;
+//		} else {
+//			return 0;
+//		}
+//		ret = acapd_device_open(&(shell.dev));
+//		if (ret < 0) {
+//			acapd_perror("%s: failed to open shell dev.\n");
+//			return ACAPD_ACCEL_FAILURE;
+//		}
+//	} else {
+//		return 0;
+//	}
+//}
 
-		ret = acapd_shell_config(config);
-		if (ret < 0) {
-			acapd_perror("%s: no shell dev specified.\n",
-				     __func__);
-			return ACAPD_ACCEL_FAILURE;
-		} else {
-			return 0;
-		}
-		ret = acapd_device_open(&(shell.dev));
-		if (ret < 0) {
-			acapd_perror("%s: failed to open shell dev.\n");
-			return ACAPD_ACCEL_FAILURE;
-		}
-	} else {
-		return 0;
-	}
-}
-
-int acapd_shell_put()
-{
+//int acapd_shell_put()
+//{
 	/* Empty for now */
-	return 0;
-}
+//	return 0;
+//}
 
 int acapd_shell_release_isolation(acapd_accel_t *accel)
 {
@@ -60,7 +60,7 @@ int acapd_shell_release_isolation(acapd_accel_t *accel)
 
 	(void)accel;
 	dev = &shell.dev;
-	regs = shell.slot_regs[0];
+	regs = shell.slot_regs[accel->rm_slot];
 	acapd_debug("%s: %s.\n", __func__, dev->dev_name);
 	reg_va = dev->va;
 	if (reg_va == NULL) {
@@ -111,9 +111,7 @@ int acapd_shell_assert_isolation(acapd_accel_t *accel)
 
 	acapd_assert(accel != NULL);
 	dev = &(shell.dev);
-	printf("before slot_regs\n");
-	regs = shell.slot_regs[0];
-	printf("after slot_regs\n");
+	regs = shell.slot_regs[accel->rm_slot];
 	reg_va = dev->va;
 	if (reg_va == NULL) {
 		int ret;
@@ -149,4 +147,9 @@ int acapd_shell_assert_isolation(acapd_accel_t *accel)
 	//	}
 	//}
 	return 0;
+}
+
+int get_shell_slots()
+{
+	return shell.num_slots;
 }

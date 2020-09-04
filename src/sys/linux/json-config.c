@@ -201,12 +201,12 @@ int parseShellJson(acapd_shell_t *shell, const char *filename)
 		return -1;
 	fread(jsonData, sizeof(char), numBytes, fptr);
 	fclose(fptr);
-	acapd_praw("jsonData read:\n %s\n",jsonData);
+	acapd_debug("jsonData read:\n %s\n",jsonData);
 
 	jsmn_init(&parser);
 	ret = jsmn_parse(&parser, jsonData, numBytes, token, sizeof(token)/sizeof(token[0]));
 	if (ret < 0){
-		acapd_praw("Failed to parse JSON: %d\n", ret);
+		acapd_perror("Failed to parse JSON: %d\n", ret);
 	}
 
 	dev = &shell->dev;
@@ -218,7 +218,6 @@ int parseShellJson(acapd_shell_t *shell, const char *filename)
 		if (jsoneq(jsonData, &token[i],"device_name") == 0)
 			dev->dev_name = strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start);
 		if (jsoneq(jsonData, &token[i],"shell_type") == 0) {
-			acapd_praw("Shell is %s\n",strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start));
 		}
 		if (jsoneq(jsonData, &token[i],"reg_base")== 0)
 			dev->reg_pa = (uint64_t)strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 16);
@@ -230,7 +229,7 @@ int parseShellJson(acapd_shell_t *shell, const char *filename)
 			clk_dev->reg_pa = (uint64_t)strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 16);
 		if (jsoneq(jsonData, &token[i],"clock_reg_size") == 0){}
 			clk_dev->reg_size = (size_t)strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 16);
-		if (jsoneq(jsonData, &token[i],"slots") == 0){
+		if (jsoneq(jsonData, &token[i],"isolation_slots") == 0){
 			int j;
 			if(token[i+1].type != JSMN_ARRAY) {
 				acapd_perror("shell.json slots expects an array \n");
@@ -244,7 +243,6 @@ int parseShellJson(acapd_shell_t *shell, const char *filename)
 				acapd_perror("%s: failed to alloc mem for slot regs.\n", __func__);
 				ret = -ENOMEM;
 			}
-
 			i+=3;
 			for(j=0; j < numSlots; j++){
 				if (jsoneq(jsonData, &token[i+j],"offset") == 0){
@@ -275,7 +273,7 @@ int parseShellJson(acapd_shell_t *shell, const char *filename)
 			}
 			shell->num_slots = numSlots;
 			shell->slot_regs = slot_regs;
-			shell->active_slots = (acapd_accel_t **)calloc(shell->num_slots, sizeof(acapd_accel_t *));
+			//shell->active_slots = (acapd_accel_t **)calloc(shell->num_slots, sizeof(acapd_accel_t *));
 		}
 	}
 	return 0;

@@ -32,7 +32,6 @@ typedef struct acapd_shell {
 	char *type;
 	const acapd_shell_regs_t *slot_regs;
 	int num_slots;
-	acapd_accel_t **active_slots;
 	int is_configured;
 } acapd_shell_t;
 
@@ -41,6 +40,7 @@ int acapd_shell_get();
 int acapd_shell_put();
 int acapd_shell_release_isolation(acapd_accel_t *accel);
 int acapd_shell_assert_isolation(acapd_accel_t *accel);
+int get_shell_slots();
 
 #ifdef ACAPD_INTERNAL
 int sys_shell_config(acapd_shell_t *shell, const char *config);
