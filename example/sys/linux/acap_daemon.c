@@ -9,8 +9,8 @@
 #include <acapd/shell.h>
 
 static int interrupted;
-static acapd_accel_t **active_slots;
-static acapd_accel_t accel;
+static acapd_accel_t *active_slots[3];
+//static acapd_accel_t accel;
 
 struct pss {
 	struct lws_spa *spa;
@@ -27,54 +27,57 @@ enum enum_param_names {
 void load_accelerator(const char *pkg_path, const char *shell)
 {
 	int i;
-	printf("Initializing accel with %s.\n", pkg_path);
-    init_accel(&accel, (acapd_accel_pkg_hd_t *)pkg_path);
+	acapd_accel_t *accel = malloc(sizeof(acapd_accel_t));
 	printf("Loading accel %s. \n", pkg_path);
-	if (active_slots == NULL)
-	{	
-		printf("%s allocating active_slots\n",__func__);
-		active_slots = (acapd_accel_t **)calloc(3, sizeof(acapd_accel_t *));
-	}
+	//if (active_slots == NULL)
+	//{	
+	//	printf("%s allocating active_slots\n",__func__);
+	//	active_slots = calloc(3, sizeof(acapd_accel_t *));
+	//}
 	for (i = 0; i < 3; i++) {
 		if (active_slots[i] == NULL){
-			accel.rm_slot = i;
-			load_accel(&accel, shell, 0);
-			active_slots[i] = &accel;
-			printf("Loaded accel to slot %d mm2s fd %d\n",i,accel.mm2s_fd);	
+			init_accel(accel, (acapd_accel_pkg_hd_t *)pkg_path);
+			accel->rm_slot = i;
+			load_accel(accel, shell, 0);
+			active_slots[i] = accel;
+			printf("Loaded accel to slot %d mm2s fd %d\n",i,accel->mm2s_fd);	
 			break;
 		}
-	} 
+	}
 }
 
 void remove_accelerator(int slot)
 {
-	printf("Removing accel from slot %d\n",slot);
+	acapd_accel_t *accel = active_slots[slot];
+	printf("Removing accel %s from slot %d\n",accel->sys_info.tmp_dir,slot);
 	if (active_slots == NULL || active_slots[slot] == NULL){
 		printf("%s No Accel in slot %d\n",__func__,slot);
 		return;
 	}
-    remove_accel(&accel, 0);
+    remove_accel(accel, 0);
+	free(accel);
 	active_slots[slot] = NULL;
 }
 void getInputFD(int slot)
 {
-	//acapd_accel_t * accel = active_slots[slot];
-	printf("%s Enter\n mm2s fd %d\n",__func__,accel.mm2s_fd);
+	acapd_accel_t *accel = active_slots[slot];
 	if (active_slots == NULL || active_slots[slot] == NULL){
 		printf("%s No Accel in slot %d\n",__func__,slot);
 		return;
 	}
 	
-	get_mm2s_fd(&accel);
+	printf("%s Enter\n mm2s fd %d\n",__func__,accel->mm2s_fd);
+	get_mm2s_fd(accel);
 }
 void getOutputFD(int slot)
 {
+	acapd_accel_t *accel = active_slots[slot];
 	printf("%s Enter\n",__func__);
 	if (active_slots == NULL || active_slots[slot] == NULL){
 		printf("%s No Accel in slot %d\n",__func__,slot);
 		return;
 	}
-	get_s2mm_fd(active_slots[slot]);
+	get_s2mm_fd(accel);
 
 }
 static char *requested_uri;

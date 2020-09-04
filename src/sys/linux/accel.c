@@ -30,6 +30,8 @@
 
 #define DTBO_ROOT_DIR "/sys/kernel/config/device-tree/overlays"
 #define BUFFER_LENGTH 250
+#define SERVER_PATH     "/tmp/server"
+
 static int socket_d = -1, socket_d2 = -1;
 
 static int remove_directory(const char *path)
@@ -209,10 +211,10 @@ void sys_zocl_alloc_bo(acapd_accel_t *accel)
 	
 	struct drm_zocl_info_bo mm2sInfo = {mm2s.handle, 0, 0};
     result = ioctl(fd, DRM_IOCTL_ZOCL_INFO_BO, &mm2sInfo);
-    printf("m2ss result %d size %lu %ld\n",result,mm2sInfo.size, mm2sInfo.paddr);
+    printf("m2ss BO result %d size %lu paddr 0x%lx\n",result,mm2sInfo.size, mm2sInfo.paddr);
 	struct drm_zocl_info_bo s2mmInfo = {s2mm.handle, 0, 0};
     result = ioctl(fd, DRM_IOCTL_ZOCL_INFO_BO, &s2mmInfo);
-    printf("result %d size %lu %ld\n",result,s2mmInfo.size, s2mmInfo.paddr);
+    printf("s2mm BO result %d size %lu paddr 0x%lx\n",result,s2mmInfo.size, s2mmInfo.paddr);
 
 	struct drm_prime_handle mm2s_h = {mm2s.handle, DRM_RDWR, -1};
 	result = ioctl(fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &mm2s_h);
@@ -251,19 +253,23 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 	}
 
 	//Create a socket to send dmabuf FD 
+	if (socket_d != -1)
+		return ACAPD_ACCEL_SUCCESS;
 	socket_d = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (socket_d < 0)
 		printf("%s socket creation failed\n",__func__);
 	memset(&serveraddr, 0, sizeof(serveraddr));
 	serveraddr.sun_family = AF_UNIX;
-	strcpy(serveraddr.sun_path, "/tmp/server");
+	strcpy(serveraddr.sun_path, SERVER_PATH);
+
 	if (bind(socket_d, (struct sockaddr *)&serveraddr, SUN_LEN(&serveraddr)) == -1)
 		acapd_perror("%s socket bind() failed ret %d",__func__,ret);
 	printf("%s socket bind done\n",__func__);
+
 	//socket will queue upto 10 incoming connections
 	if (listen(socket_d, 10) == -1)
 		acapd_perror("%s socket listen() failed ret %d",__func__,ret);
-	printf("%s socket listen done\n",__func__);
+	printf("%s Ready for client connect \n",__func__);
 	
 	
 	return ACAPD_ACCEL_SUCCESS;
@@ -380,16 +386,17 @@ int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
 	if (socket_d != -1) {
 		close(socket_d);
 		close(socket_d2);
+		unlink(SERVER_PATH);
 	}
 	return ACAPD_ACCEL_SUCCESS;
 }
 
-void sys_send_fd(int fd)
+void sys_send_fd(int fd2)
 {
 	char dummy = '$';
     struct msghdr msg;
     struct iovec iov;
-
+	char *str = "server\n";
     char cmsgbuf[CMSG_SPACE(sizeof(int))];
 
 	socket_d2 = accept(socket_d, NULL, NULL);
@@ -402,7 +409,13 @@ void sys_send_fd(int fd)
     //                                      (char *)&length, sizeof(length));
 	//if (ret < 0)
 	//	acapd_perror("%s setsockopt(SO_SNDLOWAT) failed ret %d",__func__,ret);
-    
+    int fd;
+	mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+	char filename[] = "/tmp/file";
+	fd = open(filename, O_RDWR | O_SYNC | O_CREAT | O_APPEND, mode);
+	
+	write(fd2, str, strlen(str));
+	
 	iov.iov_base = &dummy;
     iov.iov_len = sizeof(dummy);
 
@@ -419,9 +432,9 @@ void sys_send_fd(int fd)
     cmsg->cmsg_type = SCM_RIGHTS;
     cmsg->cmsg_len = CMSG_LEN(sizeof(int));
 
-    *(int*) CMSG_DATA(cmsg) = fd;
+    *(int*) CMSG_DATA(cmsg) = fd2;
 
-	printf("%s Sending FD %d\n",__func__, fd);
+	printf("%s Sending FD %d\n",__func__, fd2);
     int ret = sendmsg(socket_d2, &msg, 0);
 
     if (ret == -1) {
@@ -429,6 +442,7 @@ void sys_send_fd(int fd)
 		return;
     }
 	printf("%s Send FD succesful\n",__func__);
+	close(fd);
 }
 
 void sys_get_mm2s_fd(acapd_accel_t *accel)

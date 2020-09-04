@@ -1,7 +1,5 @@
 build*/
 *.o
-*.so*
-*.a
 *.bin
 *.map
 *.out
