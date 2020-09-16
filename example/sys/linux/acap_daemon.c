@@ -5,12 +5,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <dirent.h>
+#include <stdlib.h>
 #include <acapd/accel.h>
 #include <acapd/shell.h>
 
 static int interrupted;
 static acapd_accel_t *active_slots[3];
-//static acapd_accel_t accel;
 
 struct pss {
 	struct lws_spa *spa;
@@ -23,12 +24,44 @@ static const char * const param_names[] = {
 enum enum_param_names {
     EPN_TEXT1,
 };
+char *find_accel(const char *name, int slot)
+{
+	char dir_path[256];
+	char *accel_path = malloc(sizeof(char)*1024);
+	DIR *d;
+	struct dirent *dir;
 
-void load_accelerator(const char *pkg_path, const char *shell)
+	sprintf(dir_path,"/home/root/firmware");
+    d = opendir(dir_path);
+    if (d == NULL) {
+		printf("Directory %s not found\n",dir_path);
+	}
+	while((dir = readdir(d)) != NULL) {
+		if (dir->d_type == DT_DIR) {
+			if (strlen(dir->d_name) > 64) {
+				continue;
+			}
+			if(strcmp(dir->d_name, name) == 0){
+				sprintf(accel_path,"/home/root/firmware/%s/%s_slot%d.tar.gz",dir->d_name,dir->d_name,slot);
+				if (access(accel_path, F_OK) == 0){
+					printf("Found accelerator %s\n",accel_path);
+					return accel_path;
+				}
+				else
+					printf("No %s accel for slot %d found\n",name,slot);
+			}
+			else
+				printf("Directory %s not found in %s\n",dir->d_name,dir_path);
+		}
+	}
+	return NULL;
+}
+
+void load_accelerator(const char *accel_name, const char *shell)
 {
 	int i;
+	char *path;
 	acapd_accel_t *accel = malloc(sizeof(acapd_accel_t));
-	printf("Loading accel %s. \n", pkg_path);
 	//if (active_slots == NULL)
 	//{	
 	//	printf("%s allocating active_slots\n",__func__);
@@ -36,14 +69,21 @@ void load_accelerator(const char *pkg_path, const char *shell)
 	//}
 	for (i = 0; i < 3; i++) {
 		if (active_slots[i] == NULL){
-			init_accel(accel, (acapd_accel_pkg_hd_t *)pkg_path);
+			path = find_accel(accel_name, i);
+			if (path == NULL){
+				continue;
+			}
+			init_accel(accel, (acapd_accel_pkg_hd_t *)path);
+			printf("Loading accel %s to slot %d \n", path,i);
 			accel->rm_slot = i;
+			/* Set rm_slot before load_accel() so isolation for appropriate slot can be applied*/
 			load_accel(accel, shell, 0);
 			active_slots[i] = accel;
-			printf("Loaded accel to slot %d mm2s fd %d\n",i,accel->mm2s_fd);	
 			break;
 		}
 	}
+	if (accel->rm_slot < 0)
+		printf("Couldn't find empty slot for %s\n",accel_name);
 }
 
 void remove_accelerator(int slot)
@@ -58,18 +98,7 @@ void remove_accelerator(int slot)
 	free(accel);
 	active_slots[slot] = NULL;
 }
-void getInputFD(int slot)
-{
-	acapd_accel_t *accel = active_slots[slot];
-	if (active_slots == NULL || active_slots[slot] == NULL){
-		printf("%s No Accel in slot %d\n",__func__,slot);
-		return;
-	}
-	
-	printf("%s Enter\n mm2s fd %d\n",__func__,accel->mm2s_fd);
-	get_mm2s_fd(accel);
-}
-void getOutputFD(int slot)
+void getFD(int slot)
 {
 	acapd_accel_t *accel = active_slots[slot];
 	printf("%s Enter\n",__func__);
@@ -77,8 +106,37 @@ void getOutputFD(int slot)
 		printf("%s No Accel in slot %d\n",__func__,slot);
 		return;
 	}
-	get_s2mm_fd(accel);
-
+	get_fds(accel, slot);
+}
+void getPA(int slot)
+{
+	acapd_accel_t *accel = active_slots[slot];
+	printf("%s Enter\n",__func__);
+	if (active_slots == NULL || active_slots[slot] == NULL){
+		printf("%s No Accel in slot %d\n",__func__,slot);
+		return;
+	}
+	get_PA(accel);
+}
+void getShellFD(int slot)
+{
+	acapd_accel_t *accel = active_slots[slot];
+	printf("%s Enter\n",__func__);
+	if (active_slots == NULL || active_slots[slot] == NULL){
+		printf("%s No Accel in slot %d\n",__func__,slot);
+		return;
+	}
+	get_shell_fd(accel);
+}
+void getClockFD(int slot)
+{
+	acapd_accel_t *accel = active_slots[slot];
+	printf("%s Enter\n",__func__);
+	if (active_slots == NULL || active_slots[slot] == NULL){
+		printf("%s No Accel in slot %d\n",__func__,slot);
+		return;
+	}
+	get_shell_clock_fd(accel);
 }
 static char *requested_uri;
 static const char *arg;
@@ -90,10 +148,12 @@ callback_http(struct lws *wsi, enum lws_callback_reasons reason,
 	int n;	
 	switch (reason) {
 	case LWS_CALLBACK_HTTP:
+		printf("server LWS_CALLBACK_HTTP\n");
 		requested_uri = (char *)in;
 		break;
 
 	case LWS_CALLBACK_HTTP_BODY:
+		printf("server LWS_CALLBACK_HTTP_BODY\n");
 		if(!pss->spa) {
 			pss->spa = lws_spa_create(wsi, param_names, LWS_ARRAY_SIZE(param_names), 1024, NULL, NULL);
 			if(!pss->spa)
@@ -104,7 +164,7 @@ callback_http(struct lws *wsi, enum lws_callback_reasons reason,
 		break;
 
 	case LWS_CALLBACK_HTTP_BODY_COMPLETION:
-		lwsl_user("LWS_CALLBACK_HTTP_BODY_COMPLETION\n");
+		lwsl_user("server LWS_CALLBACK_HTTP_BODY_COMPLETION\n");
 		lws_spa_finalize(pss->spa);
 		if(pss->spa) {
 			for(n = 0; n < (int)LWS_ARRAY_SIZE(param_names); n++) {
@@ -124,13 +184,21 @@ callback_http(struct lws *wsi, enum lws_callback_reasons reason,
 			lwsl_user("Received remove \n");
 			remove_accelerator(atoi(arg));
 		}
-		else if(strcmp(requested_uri,"/getInFD") == 0){
-			lwsl_user("Received getInFD\n");
-			getInputFD(atoi(arg));
+		else if(strcmp(requested_uri,"/getFD") == 0){
+			lwsl_user("Received getFD\n");
+			getFD(atoi(arg));
 		}
-		else if(strcmp(requested_uri,"/getOutFD") == 0){
-			lwsl_user("received getOutFD \n");
-			getOutputFD(atoi(arg));
+		else if(strcmp(requested_uri,"/getPA") == 0){
+			lwsl_user("Received getPA\n");
+			getPA(atoi(arg));
+		}
+		else if(strcmp(requested_uri,"/getShellFD") == 0){
+			lwsl_user("Received getShellFD\n");
+			getShellFD(atoi(arg));
+		}
+		else if(strcmp(requested_uri,"/getClockFD") == 0){
+			lwsl_user("Received getClockFD\n");
+			getClockFD(atoi(arg));
 		}
 		//if (pss->spa && lws_spa_destroy(pss->spa))
 		//	return -1;
@@ -138,6 +206,7 @@ callback_http(struct lws *wsi, enum lws_callback_reasons reason,
 		break;
 
 	case LWS_CALLBACK_HTTP_DROP_PROTOCOL:
+		printf("server LWS_CALLBACK_HTTP_DROP_PROTOCOL\n");
 		if (pss->spa) {
 			lws_spa_destroy(pss->spa);
 			pss->spa = NULL;

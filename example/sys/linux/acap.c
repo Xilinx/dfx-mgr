@@ -25,8 +25,8 @@ callback_http(struct lws *wsi, enum lws_callback_reasons reason,
 	switch (reason) {
 
 	case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
-		//printf("CLIENT_CONNECTION_ERROR: %s\n",
-		//	 in ? (char *)in : "(null)");
+		printf("CLIENT_CONNECTION_ERROR: %s\n",
+			 in ? (char *)in : "(null)");
 		interrupted = 1;
 		break;
 
@@ -41,7 +41,7 @@ callback_http(struct lws *wsi, enum lws_callback_reasons reason,
 		break;
 
 	case LWS_CALLBACK_CLIENT_HTTP_WRITEABLE:
-		//printf("LWS_CALLBACK_CLIENT_HTTP_WRITEABLE\n");
+		printf("LWS_CALLBACK_CLIENT_HTTP_WRITEABLE\n");
 		
 		if (lws_http_is_redirected_to_get(wsi))
 			break;
@@ -76,6 +76,7 @@ callback_http(struct lws *wsi, enum lws_callback_reasons reason,
 		break;
 
 	case LWS_CALLBACK_CLOSED_CLIENT_HTTP:
+		printf("LWS_CALLBACK_CLOSED_CLIENT_HTTP\n");
 		interrupted = 1;
 		lws_cancel_service(lws_get_context(wsi));
 		break;
@@ -143,13 +144,19 @@ int main(int argc, const char **argv)
 		ccinfo.path = "/remove";
 		arg = option;
 	}
-	else if ((option = lws_cmdline_option(argc, argv, "-getInFD"))) {
-		ccinfo.path = "/getInFD";
+	else if ((option = lws_cmdline_option(argc, argv, "-getFD"))) {
+		ccinfo.path = "/getFD";
 		arg = option;
 	}
-	else if ((option = lws_cmdline_option(argc, argv, "-getOutFD"))) {
-		ccinfo.path = "/getOutFD";
+	else if ((option = lws_cmdline_option(argc, argv, "-getPA"))) {
+		ccinfo.path = "/getPA";
 		arg = option;
+	}
+	else if ((lws_cmdline_option(argc, argv, "-getShellFD"))) {
+		ccinfo.path = "/getShellFD";
+	}
+	else if ((lws_cmdline_option(argc, argv, "-getClockFD"))) {
+		ccinfo.path = "/getClockFD";
 	}
 	ccinfo.method = "POST";
 

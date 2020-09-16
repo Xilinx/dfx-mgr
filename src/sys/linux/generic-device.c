@@ -196,7 +196,6 @@ static int acapd_generic_device_open(acapd_device_t *dev)
 	if (dev->bus_name == NULL) {
 		dev->bus_name = "platform";
 	}
-
 	if (strlen(dev->path) == 0 || access(dev->path, F_OK) != 0) {
 		if (dev->dev_name != NULL) {
 			ret = acapd_generic_device_bind(dev, "uio_pdrv_genirq");

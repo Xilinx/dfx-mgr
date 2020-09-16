@@ -64,6 +64,7 @@ typedef struct acapd_device {
 	char *driver; /**< name of the driver */
 	int iommu_group; /**< iommu group */
 	int refs; /**< references to this device */
+	int dma_hls_fd;
 	acapd_device_ops_t *ops; /**< device operation */
 	void *priv; /**< device private information */
 	acapd_list_t node; /**< node to link to shm reference list */

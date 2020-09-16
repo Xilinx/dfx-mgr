@@ -29,10 +29,8 @@
 #include "json-config.h"
 
 #define DTBO_ROOT_DIR "/sys/kernel/config/device-tree/overlays"
-#define BUFFER_LENGTH 250
-#define SERVER_PATH     "/tmp/server"
-
-static int socket_d = -1, socket_d2 = -1;
+#define SERVER_PATH     "/tmp/server_rm"
+static int socket_d[3];
 
 static int remove_directory(const char *path)
 {
@@ -146,6 +144,7 @@ int sys_accel_config(acapd_accel_t *accel)
 
 			dev = &(accel->ip_dev[i]);
 			sprintf(tmpstr, "ACCEL_IP%d_PATH", i);
+			printf("open ip_dev\n");
 			tmppath = getenv(tmpstr);
 			if (tmppath != NULL) {
 				size_t len;
@@ -198,37 +197,57 @@ int sys_fetch_accel(acapd_accel_t *accel)
 
 void sys_zocl_alloc_bo(acapd_accel_t *accel)
 {
-	int fd = open("/dev/dri/renderD128", O_RDWR);
-	printf("%s Allocating zocl BO accel %s\n",__func__,accel->pkg->name);
-	if (fd < 0) {
+	accel->drm_fd = open("/dev/dri/renderD128", O_RDWR);
+	if (accel->drm_fd < 0) {
 		return;
 	}
     
-	struct drm_zocl_create_bo mm2s = {4096, 0xffffffff, DRM_ZOCL_BO_FLAGS_COHERENT | DRM_ZOCL_BO_FLAGS_CMA};
-	struct drm_zocl_create_bo s2mm = {4096, 0xffffffff, DRM_ZOCL_BO_FLAGS_COHERENT | DRM_ZOCL_BO_FLAGS_CMA};
-    int result = ioctl(fd, DRM_IOCTL_ZOCL_CREATE_BO, &mm2s);
-    result = ioctl(fd, DRM_IOCTL_ZOCL_CREATE_BO, &s2mm);
+	struct drm_zocl_create_bo mm2s = {0x4000000, 0xffffffff, DRM_ZOCL_BO_FLAGS_COHERENT | DRM_ZOCL_BO_FLAGS_CMA};
+	struct drm_zocl_create_bo s2mm = {0x4000000, 0xffffffff, DRM_ZOCL_BO_FLAGS_COHERENT | DRM_ZOCL_BO_FLAGS_CMA};
+	struct drm_zocl_create_bo config = {4096, 0xffffffff, DRM_ZOCL_BO_FLAGS_COHERENT | DRM_ZOCL_BO_FLAGS_CMA};
+    int result = ioctl(accel->drm_fd, DRM_IOCTL_ZOCL_CREATE_BO, &mm2s);
+    result = ioctl(accel->drm_fd, DRM_IOCTL_ZOCL_CREATE_BO, &s2mm);
+    result = ioctl(accel->drm_fd, DRM_IOCTL_ZOCL_CREATE_BO, &config);
 	
 	struct drm_zocl_info_bo mm2sInfo = {mm2s.handle, 0, 0};
-    result = ioctl(fd, DRM_IOCTL_ZOCL_INFO_BO, &mm2sInfo);
-    printf("m2ss BO result %d size %lu paddr 0x%lx\n",result,mm2sInfo.size, mm2sInfo.paddr);
+    result = ioctl(accel->drm_fd, DRM_IOCTL_ZOCL_INFO_BO, &mm2sInfo);
+    printf("m2ss BO size %lu paddr 0x%lx\n",mm2sInfo.size, mm2sInfo.paddr);
 	struct drm_zocl_info_bo s2mmInfo = {s2mm.handle, 0, 0};
-    result = ioctl(fd, DRM_IOCTL_ZOCL_INFO_BO, &s2mmInfo);
-    printf("s2mm BO result %d size %lu paddr 0x%lx\n",result,s2mmInfo.size, s2mmInfo.paddr);
+    result = ioctl(accel->drm_fd, DRM_IOCTL_ZOCL_INFO_BO, &s2mmInfo);
+    printf("s2mm BO size %lu paddr 0x%lx\n",s2mmInfo.size, s2mmInfo.paddr);
+	struct drm_zocl_info_bo configInfo = {config.handle, 0, 0};
+    result = ioctl(accel->drm_fd, DRM_IOCTL_ZOCL_INFO_BO, &configInfo);
+    printf("config BO size %lu paddr 0x%lx\n",configInfo.size, configInfo.paddr);
 
 	struct drm_prime_handle mm2s_h = {mm2s.handle, DRM_RDWR, -1};
-	result = ioctl(fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &mm2s_h);
+	result = ioctl(accel->drm_fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &mm2s_h);
 	if (result) {
-		acapd_perror("%s MM2S DRM_IOCTL_PRIME_HANDLE_TO_FD failed\n",__func__);
+		acapd_perror("%s MM2S DRM_IOCTL_PRIME_HANDLE_TO_FD failed %d\n",__func__,result);
 	}
 	struct drm_prime_handle s2mm_h = {s2mm.handle, DRM_RDWR, -1};
-	result = ioctl(fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &s2mm_h);
+	result = ioctl(accel->drm_fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &s2mm_h);
 	if (result) {
-		acapd_perror("%s S2MM DRM_IOCTL_PRIME_HANDLE_TO_FD failed\n",__func__);
+		acapd_perror("%s S2MM DRM_IOCTL_PRIME_HANDLE_TO_FD failed %d\n",__func__,result);
 	}
-	accel->mm2s_fd = mm2s_h.fd;
-	accel->s2mm_fd = s2mm_h.fd;
-	printf("MM2S_FD %d S2MM_FD %d \n",accel->mm2s_fd, accel->s2mm_fd);
+	struct drm_prime_handle config_h = {config.handle, DRM_RDWR, -1};
+	result = ioctl(accel->drm_fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &config_h);
+	if (result) {
+		acapd_perror("%s S2MM DRM_IOCTL_PRIME_HANDLE_TO_FD failed ret %d\n",__func__,result);
+	}
+	accel->fd[0] = mm2s_h.fd;
+	accel->fd[1] = s2mm_h.fd;
+	accel->fd[2] = config_h.fd;
+	accel->handle[0] = mm2s.handle;
+	accel->handle[1] = s2mm.handle;
+	accel->handle[2] = config.handle;
+	accel->PA[0] = mm2sInfo.paddr;
+	accel->PA[1] = mm2sInfo.size;
+	accel->PA[2] = s2mmInfo.paddr;
+	accel->PA[3] = s2mmInfo.size;
+	accel->PA[4] = configInfo.paddr;
+	accel->PA[5] = configInfo.size;
+	acapd_debug("%s: MM2S_FD %d S2MM_FD %d config_FD %d slot %d\n",__func__,
+						accel->fd[0], accel->fd[1],accel->fd[2],accel->rm_slot);
 }
 
 int sys_load_accel(acapd_accel_t *accel, unsigned int async)
@@ -236,6 +255,7 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 	int ret;//, length;
 	int fpga_cfg_id;
 	struct sockaddr_un serveraddr;
+	char path[strlen(SERVER_PATH)+2];
 	(void)async;
 
 	sys_zocl_alloc_bo(accel);
@@ -249,29 +269,41 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 	if (ret != 0) {
 		acapd_perror("Failed to load fpga config: %d\n",
 		     fpga_cfg_id);
-	//	return ACAPD_ACCEL_FAILURE;
+		//return ACAPD_ACCEL_FAILURE;
 	}
 
+	for (int i = 0; i < accel->num_ip_devs; i++) {
+		int ret;
+		ret = acapd_device_open(&accel->ip_dev[i]);
+		if (ret != 0) {
+			acapd_perror("%s: failed to open accel ip %s.\n",
+				     __func__, accel->ip_dev[i].dev_name);
+			return -EINVAL;
+		}
+	}
 	//Create a socket to send dmabuf FD 
-	if (socket_d != -1)
+	if (socket_d[accel->rm_slot] > 0)
 		return ACAPD_ACCEL_SUCCESS;
-	socket_d = socket(AF_UNIX, SOCK_STREAM, 0);
-	if (socket_d < 0)
-		printf("%s socket creation failed\n",__func__);
-	memset(&serveraddr, 0, sizeof(serveraddr));
-	serveraddr.sun_family = AF_UNIX;
-	strcpy(serveraddr.sun_path, SERVER_PATH);
+	socket_d[accel->rm_slot] = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (socket_d[accel->rm_slot] < 0)
+		acapd_perror("%s socket creation failed\n",__func__);
 
-	if (bind(socket_d, (struct sockaddr *)&serveraddr, SUN_LEN(&serveraddr)) == -1)
+	memset(&serveraddr, 0, sizeof(serveraddr));
+	sprintf(path,"%s%d",SERVER_PATH,accel->rm_slot);
+	serveraddr.sun_family = AF_UNIX;
+	strcpy(serveraddr.sun_path, path);
+
+	ret = bind(socket_d[accel->rm_slot], (struct sockaddr *)&serveraddr, SUN_LEN(&serveraddr));
+	if (ret < 0)
 		acapd_perror("%s socket bind() failed ret %d",__func__,ret);
 	printf("%s socket bind done\n",__func__);
 
 	//socket will queue upto 10 incoming connections
-	if (listen(socket_d, 10) == -1)
+	ret = listen(socket_d[accel->rm_slot], 10);
+	if (ret < 0)
 		acapd_perror("%s socket listen() failed ret %d",__func__,ret);
-	printf("%s Ready for client connect \n",__func__);
-	
-	
+	printf("%s Server started %s (desc %d) ready for client connect. \n",__func__,path,socket_d[accel->rm_slot]);
+
 	return ACAPD_ACCEL_SUCCESS;
 	
 }
@@ -284,15 +316,15 @@ int sys_load_accel_post(acapd_accel_t *accel)
 
 	sprintf(cmd,"docker run --ulimit memlock=67108864:67108864 --rm -v /usr/lib:/x_usrlib -v /usr/bin/:/xbin/ -v /lib/:/xlib -v %s:%s ",accel->sys_info.tmp_dir,accel->sys_info.tmp_dir);
 	for (int i = 0; i < accel->num_ip_devs; i++) {
-		int ret;
+		//int ret;
 		char tmpstr[512];
 
-		ret = acapd_device_open(&accel->ip_dev[i]);
-		if (ret != 0) {
-			acapd_perror("%s: failed to open accel ip %s.\n",
-				     __func__, accel->ip_dev[i].dev_name);
-			return -EINVAL;
-		}
+		//ret = acapd_device_open(&accel->ip_dev[i]);
+		//if (ret != 0) {
+		//	acapd_perror("%s: failed to open accel ip %s.\n",
+		//		     __func__, accel->ip_dev[i].dev_name);
+		//	return -EINVAL;
+		//}
 		sprintf(tmpstr,"--device=%s:%s ",accel->ip_dev[i].path,accel->ip_dev[i].path);
 		strcat(cmd,tmpstr);
 		strcat(cmd,"--device=/dev/vfio:/dev/vfio ");
@@ -351,12 +383,29 @@ int sys_close_accel(acapd_accel_t *accel)
 		accel->ip_dev = NULL;
 		accel->num_ip_devs = 0;
 	}
+	if(accel->handle[0]){
+		printf("Close zocl BO handle\n");
+		struct drm_gem_close closeInfo = {accel->handle[0], 0};
+		ioctl(accel->drm_fd, DRM_IOCTL_GEM_CLOSE, &closeInfo);
+		closeInfo.handle = accel->handle[1];
+		ioctl(accel->drm_fd, DRM_IOCTL_GEM_CLOSE, &closeInfo);
+		closeInfo.handle = accel->handle[1];
+		ioctl(accel->drm_fd, DRM_IOCTL_GEM_CLOSE, &closeInfo);
+		
+	}
+	if(accel->drm_fd > 0){
+		close(accel->drm_fd);
+		close(accel->fd[0]);
+		close(accel->fd[1]);
+		close(accel->fd[1]);
+	}
 	return 0;
 }
 
 int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
 {
 	int ret, fpga_cfg_id;
+	char path[strlen(SERVER_PATH)+2];
 
 	/* TODO: for now, only synchronous mode is supported */
 	(void)async;
@@ -383,38 +432,30 @@ int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
 		acapd_perror("Failed to destroy accel: %d.\n", ret);
 		return ACAPD_ACCEL_FAILURE;
 	}
-	if (socket_d != -1) {
-		close(socket_d);
-		close(socket_d2);
-		unlink(SERVER_PATH);
+	if (socket_d[accel->rm_slot] > 0) {
+		close(socket_d[accel->rm_slot]);
+		socket_d[accel->rm_slot] = -1;
+		sprintf(path,"%s%d",SERVER_PATH,accel->rm_slot);
+		unlink(path);
+		printf("%s server %s unlink done\n",__func__,path);
 	}
 	return ACAPD_ACCEL_SUCCESS;
 }
 
-void sys_send_fd(int fd2)
+void sys_send_fd(acapd_accel_t *accel, int fd)
 {
 	char dummy = '$';
     struct msghdr msg;
     struct iovec iov;
-	char *str = "server\n";
     char cmsgbuf[CMSG_SPACE(sizeof(int))];
 
-	socket_d2 = accept(socket_d, NULL, NULL);
-	printf("%s socket accept done\n",__func__);
-    if (socket_d2 < 0)
+	printf("%s enter\n",__func__);
+	int socket_d2 = accept(socket_d[accel->rm_slot], NULL, NULL);
+    if (socket_d2 < 0){
 		acapd_perror("%s failed to accept() connections ret %d",__func__,socket_d2);
-	
-	//length = BUFFER_LENGTH;
-    //ret = setsockopt(socket_d2, SOL_SOCKET, SO_SNDLOWAT,
-    //                                      (char *)&length, sizeof(length));
-	//if (ret < 0)
-	//	acapd_perror("%s setsockopt(SO_SNDLOWAT) failed ret %d",__func__,ret);
-    int fd;
-	mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-	char filename[] = "/tmp/file";
-	fd = open(filename, O_RDWR | O_SYNC | O_CREAT | O_APPEND, mode);
-	
-	write(fd2, str, strlen(str));
+		return;
+	}
+	printf("%s socket accept done\n",__func__);
 	
 	iov.iov_base = &dummy;
     iov.iov_len = sizeof(dummy);
@@ -432,29 +473,91 @@ void sys_send_fd(int fd2)
     cmsg->cmsg_type = SCM_RIGHTS;
     cmsg->cmsg_len = CMSG_LEN(sizeof(int));
 
-    *(int*) CMSG_DATA(cmsg) = fd2;
+    *(int*) CMSG_DATA(cmsg) = fd;
 
-	printf("%s Sending FD %d\n",__func__, fd2);
     int ret = sendmsg(socket_d2, &msg, 0);
 
     if (ret == -1) {
         printf("%s send FD failed with %s\n", __func__,strerror(errno));
 		return;
     }
+	//close(socket_d2);
 	printf("%s Send FD succesful\n",__func__);
-	close(fd);
 }
 
-void sys_get_mm2s_fd(acapd_accel_t *accel)
+void sys_send_fds(acapd_accel_t *accel, int *fds, int num_fds)
 {
-	printf("%s Enter fd %d\n",__func__,accel->mm2s_fd);
-	if (accel->mm2s_fd > 0)
-		sys_send_fd(accel->mm2s_fd);
+	char dummy = '$';
+    struct msghdr msg;
+    struct iovec iov;
+    char cmsgbuf[CMSG_SPACE(sizeof(int) * num_fds)];
+	printf("%s enter socket_d %d\n",__func__,socket_d[accel->rm_slot]);
+	memset(cmsgbuf, '\0',sizeof(cmsgbuf));
+	int socket_d2 = accept(socket_d[accel->rm_slot], NULL, NULL);
+    if (socket_d2 < 0){
+		acapd_perror("%s failed to accept() connections ret %d",__func__,socket_d2);
+		return;
+	}
+	printf("%s socket accept done\n",__func__);
+	
+	iov.iov_base = &dummy;
+    iov.iov_len = sizeof(dummy);
+
+    msg.msg_name = NULL;
+    msg.msg_namelen = 0;
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    msg.msg_flags = 0;
+    msg.msg_control = cmsgbuf;
+    msg.msg_controllen = sizeof(cmsgbuf);
+
+    struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
+    cmsg->cmsg_level = SOL_SOCKET;
+    cmsg->cmsg_type = SCM_RIGHTS;
+    cmsg->cmsg_len = CMSG_LEN(sizeof(int) * num_fds);
+
+	memcpy((int*) CMSG_DATA(cmsg), fds, sizeof(int)*num_fds);
+
+    int ret = sendmsg(socket_d2, &msg, 0);
+
+    if (ret == -1) {
+        printf("%s send FD failed with %s\n", __func__,strerror(errno));
+		return;
+    }
+	printf("%s Send FD's succesful\n",__func__);
+	//close(socket_d2);
 }
 
-void sys_get_s2mm_fd(acapd_accel_t *accel)
+void sys_get_PA(acapd_accel_t *accel)
 {
-	printf("%s Enter\n",__func__);
-	if (accel->s2mm_fd > 0)
-		sys_send_fd(accel->s2mm_fd);
+	printf("%s enter sending mm2s PA %lx size %lu\n",__func__,accel->PA[0],accel->PA[1]);
+	int socket_d2 = accept(socket_d[accel->rm_slot], NULL, NULL);
+    if (socket_d2 < 0){
+		acapd_perror("%s failed to accept() connections ret %d",__func__,socket_d2);
+		return;
+	}
+	printf("%s socket accept done\n",__func__);
+	write(socket_d2,&accel->PA,6*sizeof(uint64_t));
+	//close(socket_d2);
+}
+void sys_get_fds(acapd_accel_t *accel, int slot)
+{
+	int fd[5];
+//	int i;
+	fd[0] = accel->fd[0];
+	fd[1] = accel->fd[1];
+	fd[2] = accel->fd[2];
+	fd[3] = accel->ip_dev[2*slot].id;
+	fd[4] = accel->ip_dev[2*slot+1].id;
+	printf("%s Daemon slot %d mm2s %d s2mm %d config %d accel_config %d d_hls %d\n",__func__,slot,fd[0],fd[1],fd[2],fd[3],fd[4]);
+//	for(i=0;i<5;i++){
+//		sleep(5);
+		sys_send_fds(accel, &fd[0], 5);
+//	}
+}
+
+void sys_get_fd(acapd_accel_t *accel, int fd)
+{
+	printf("%s sending FD %d on socket %d\n",__func__, fd, socket_d[accel->rm_slot]);
+	sys_send_fd(accel, fd);
 }

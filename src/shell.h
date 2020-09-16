@@ -38,6 +38,8 @@ typedef struct acapd_shell {
 int acapd_shell_config(const char *config);
 int acapd_shell_get();
 int acapd_shell_put();
+int acapd_shell_clock_fd();
+int acapd_shell_fd();
 int acapd_shell_release_isolation(acapd_accel_t *accel);
 int acapd_shell_assert_isolation(acapd_accel_t *accel);
 int get_shell_slots();

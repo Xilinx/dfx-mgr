@@ -75,6 +75,8 @@ int parseAccelJson(acapd_accel_t *accel, const char *filename)
 	for(i=1; i < ret; i++){
 		if (token[i].type == JSMN_OBJECT)
 			continue;
+		if (jsoneq(jsonData, &token[i],"accel_type") == 0)
+			accel->type = strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start);
 		if (jsoneq(jsonData, &token[i],"accel_devices") == 0){
 			int j;
 			int numDevices = token[i+1].size;
@@ -89,8 +91,9 @@ int parseAccelJson(acapd_accel_t *accel, const char *filename)
 
 			accel->num_ip_devs = numDevices;
 			for(j=0; j < numDevices; j++){
-				if (jsoneq(jsonData, &token[i+j+1],"dev_name") == 0)
+				if (jsoneq(jsonData, &token[i+j+1],"dev_name") == 0){
 					devs[j].dev_name = strndup(jsonData+token[i+j+2].start, token[i+j+2].end - token[i+j+2].start);
+				}
 				if (jsoneq(jsonData, &token[i+j+3],"reg_base") == 0)
 					devs[j].reg_pa = (uint64_t)strtoll(strndup(jsonData+token[i+j+4].start, token[i+j+4].end - token[i+j+4].start), NULL, 16);
 				if (jsoneq(jsonData, &token[i+j+5],"reg_size") == 0)
@@ -186,7 +189,6 @@ int parseShellJson(acapd_shell_t *shell, const char *filename)
 	acapd_device_t *dev;
 	acapd_device_t *clk_dev;
 	
-	printf("Parse shell.json\n");
 	acapd_assert(shell != NULL);
 	acapd_assert(filename != NULL);
 	fptr = fopen(filename, "r");

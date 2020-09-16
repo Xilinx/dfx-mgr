@@ -60,7 +60,7 @@ typedef struct {
 typedef struct {
 	acapd_accel_pkg_hd_t *pkg; /**< pointer to the package */
 	acapd_accel_sys_t sys_info; /**< system specific accel information */
-	unsigned int type; /**< type of the accelarator */
+	char * type; /**< type of the accelarator */
 	unsigned int status; /**< status of the accelarator */
 	unsigned int is_cached; /**< if the accelerator is cached */
 	int load_failure; /**< load failure */
@@ -70,8 +70,11 @@ typedef struct {
 	int rm_slot; /**< Reconfiguration module slot */
 	int num_chnls;	/**< number of channels */
 	acapd_chnl_t *chnls; /**< list of channels */
-	int mm2s_fd;
-	int s2mm_fd;
+	int socket_d; /* stream socket desc*/
+	int drm_fd;
+	int fd[3]; /* MM2S,S2MM,config buffer fd's */
+	uint32_t handle[3];
+	uint64_t PA[6];
 } acapd_accel_t;
 
 acapd_accel_pkg_hd_t *acapd_alloc_pkg(size_t size);
@@ -100,8 +103,10 @@ void *acapd_accel_get_reg_va(acapd_accel_t *accel, const char *name);
 int remove_accel(acapd_accel_t *accel, unsigned int async);
 int acapd_accel_open_channel(acapd_accel_t *accel);
 int acapd_accel_reset_channel(acapd_accel_t *accel);
-void get_mm2s_fd(acapd_accel_t *accel);
-void get_s2mm_fd(acapd_accel_t *accel);
+void get_fds(acapd_accel_t *accel, int slot);
+void get_PA(acapd_accel_t *accel);
+void get_shell_fd();
+void get_shell_clock_fd();
 #ifdef ACAPD_INTERNAL
 int sys_needs_load_accel(acapd_accel_t *accel);
 
@@ -117,8 +122,9 @@ int sys_close_accel(acapd_accel_t *accel);
 
 int sys_remove_accel(acapd_accel_t *accel, unsigned int async);
 
-void sys_get_mm2s_fd(acapd_accel_t *accel);
-void sys_get_s2mm_fd(acapd_accel_t *accel);
+void sys_get_fds(acapd_accel_t *accel, int slot);
+void sys_get_PA(acapd_accel_t *accel);
+void sys_get_fd(acapd_accel_t *accel, int fd);
 #endif /* ACAPD_INTERNAL */
 
 #ifdef __cplusplus

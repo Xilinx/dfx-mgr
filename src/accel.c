@@ -14,60 +14,12 @@
 #include <string.h>
 #include <unistd.h>
 
-acapd_accel_pkg_hd_t *acapd_alloc_pkg(size_t size)
-{
-	acapd_accel_pkg_hd_t *pkg;
-
-	pkg = malloc(size);
-	if (pkg == NULL) {
-		return pkg;
-	}
-	memset(pkg, 0, size);
-	return pkg;
-}
-
-int acapd_config_pkg(acapd_accel_pkg_hd_t *pkg, uint32_t type, char *name,
-		     size_t size, void *data, int is_end)
-{
-	acapd_accel_pkg_hd_t *tmppkg;
-	char *pkgdata;
-
-	acapd_assert(pkg != NULL);
-	if (type >= ACAPD_ACCEL_PKG_TYPE_LAST) {
-		acapd_perror("Failed to config pkg, non supported type %u.\n",
-			     type);
-		return ACAPD_ACCEL_FAILURE;
-	}
-	tmppkg = pkg;
-	while(tmppkg->type != 0) {
-		tmppkg = (acapd_accel_pkg_hd_t *)((char *)tmppkg +
-						   sizeof(*tmppkg) +
-						   tmppkg->size);
-	}
-	tmppkg->type = type;
-	tmppkg->size = (uint64_t)size;
-	tmppkg->is_end = is_end;
-	pkgdata = (char *)tmppkg + sizeof(*tmppkg);
-	memset(tmppkg->name, 0, sizeof(tmppkg->name));
-	if (name != NULL) {
-		size_t nsize;
-
-		nsize = sizeof(tmppkg->name) - 1;
-		if (nsize < strlen(name)) {
-			nsize = strlen(name) - 1;
-		}
-		strncpy(tmppkg->name, name, nsize);
-	}
-
-	memcpy(pkgdata, data, size);
-	return ACAPD_ACCEL_SUCCESS;
-}
-
 void init_accel(acapd_accel_t *accel, acapd_accel_pkg_hd_t *pkg)
 {
 	acapd_assert(accel != NULL);
 	memset(accel, 0, sizeof(*accel));
 	accel->pkg = pkg;
+	accel->rm_slot = -1;
 	accel->status = ACAPD_ACCEL_STATUS_UNLOADED;
 }
 
@@ -146,7 +98,7 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 			printf("%s: failed to release isolation.\n",__func__);
 			return ACAPD_ACCEL_FAILURE;
 		}
-		acapd_perror("%s: releasing isolation done.\n", __func__);
+		acapd_debug("%s: releasing isolation done.\n", __func__);
 	}
 	ret = sys_load_accel_post(accel);
 	return ret;
@@ -293,14 +245,25 @@ void *acapd_accel_get_reg_va(acapd_accel_t *accel, const char *name)
 	return dev->va;
 }
 
-void get_mm2s_fd(acapd_accel_t *accel)
+void get_fds(acapd_accel_t *accel, int slot)
 {
 	acapd_assert(accel != NULL);
-	sys_get_mm2s_fd(accel);
+	sys_get_fds(accel, slot);
 }
 
-void get_s2mm_fd(acapd_accel_t *accel)
+void get_PA(acapd_accel_t *accel)
 {
 	acapd_assert(accel != NULL);
-	sys_get_s2mm_fd(accel);
+	sys_get_PA(accel);
+}
+void get_shell_fd(acapd_accel_t *accel)
+{
+	printf("Enter %s",__func__);
+	sys_get_fd(accel, acapd_shell_fd());	
+}
+
+void get_shell_clock_fd(acapd_accel_t *accel)
+{
+	printf("Enter %s",__func__);
+	sys_get_fd(accel, acapd_shell_clock_fd());
 }
