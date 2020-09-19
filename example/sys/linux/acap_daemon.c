@@ -51,7 +51,7 @@ char *find_accel(const char *name, int slot)
 					printf("No %s accel for slot %d found\n",name,slot);
 			}
 			else
-				printf("Directory %s not found in %s\n",dir->d_name,dir_path);
+				printf("Directory %s not found in %s\n",name,dir_path);
 		}
 	}
 	return NULL;
@@ -62,15 +62,21 @@ void load_accelerator(const char *accel_name, const char *shell)
 	int i;
 	char *path;
 	acapd_accel_t *accel = malloc(sizeof(acapd_accel_t));
+	FILE *fptr;
 	//if (active_slots == NULL)
 	//{	
 	//	printf("%s allocating active_slots\n",__func__);
 	//	active_slots = calloc(3, sizeof(acapd_accel_t *));
 	//}
+	fptr = fopen("/home/root/slot.txt","w");
+	if (fptr == NULL)
+		acapd_perror("Couldn't create /home/root/slot.txt");
+
 	for (i = 0; i < 3; i++) {
 		if (active_slots[i] == NULL){
 			path = find_accel(accel_name, i);
 			if (path == NULL){
+				printf("No accel package found for %s slot %d\n",accel_name,i);
 				continue;
 			}
 			init_accel(accel, (acapd_accel_pkg_hd_t *)path);
@@ -78,12 +84,21 @@ void load_accelerator(const char *accel_name, const char *shell)
 			accel->rm_slot = i;
 			/* Set rm_slot before load_accel() so isolation for appropriate slot can be applied*/
 			load_accel(accel, shell, 0);
+			//if (ret < 0){
+			//	printf("Failed to load accel %s\n",accel_name);
+			//	fprintf(fptr,"%d",-1);
+			//}
 			active_slots[i] = accel;
+			fprintf(fptr,"%d",i);
+			printf("Loaded accel succesfully \n");
 			break;
 		}
 	}
-	if (accel->rm_slot < 0)
+	if (i >= 3){
 		printf("Couldn't find empty slot for %s\n",accel_name);
+		fprintf(fptr,"%d",-1);
+	}
+	fclose(fptr);
 }
 
 void remove_accelerator(int slot)
