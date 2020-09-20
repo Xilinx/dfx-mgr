@@ -158,6 +158,11 @@ int main(int argc, const char **argv)
 	else if ((lws_cmdline_option(argc, argv, "-getClockFD"))) {
 		ccinfo.path = "/getClockFD";
 	}
+	else if ((lws_cmdline_option(argc, argv, "-getRMInfo"))) {
+		ccinfo.path = "/getRMInfo";
+	}
+	else
+		printf("Option not recognized, check again.\n");
 	ccinfo.method = "POST";
 
 	web_socket = lws_client_connect_via_info(&ccinfo);

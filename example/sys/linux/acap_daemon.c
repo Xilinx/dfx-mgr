@@ -56,7 +56,31 @@ char *find_accel(const char *name, int slot)
 	}
 	return NULL;
 }
+void getRMInfo()
+{
+	FILE *fptr;
+	int i;
+	char line[512];
+	acapd_accel_t *accel;
 
+	fptr = fopen("/home/root/rm_info.txt","w");
+	if (fptr == NULL){
+		acapd_perror("Couldn't create /home/root/rm_info.txt");
+		goto out;
+	}
+
+	for (i = 0; i < 3; i++) {
+		if(active_slots[i] == NULL)
+			sprintf(line, "%d,%s",i,"None");
+		else {
+			accel = active_slots[i];
+			sprintf(line,"%d,%s",i,(char *)accel->pkg);
+		}
+		fprintf(fptr,"\n%s",line);	
+	}
+out:
+	fclose(fptr);
+}
 void load_accelerator(const char *accel_name, const char *shell)
 {
 	int i;
@@ -153,6 +177,7 @@ void getClockFD(int slot)
 	}
 	get_shell_clock_fd(accel);
 }
+
 static char *requested_uri;
 static const char *arg;
 static int
@@ -214,6 +239,10 @@ callback_http(struct lws *wsi, enum lws_callback_reasons reason,
 		else if(strcmp(requested_uri,"/getClockFD") == 0){
 			lwsl_user("Received getClockFD\n");
 			getClockFD(atoi(arg));
+		}
+		else if(strcmp(requested_uri,"/getRMInfo") == 0){
+			lwsl_user("Received getRMInfo\n");
+			getRMInfo();
 		}
 		//if (pss->spa && lws_spa_destroy(pss->spa))
 		//	return -1;
