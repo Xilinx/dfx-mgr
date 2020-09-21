@@ -89,7 +89,7 @@ int acapd_config_pkg(acapd_accel_pkg_hd_t *pkg, uint32_t type, char *name,
 void init_accel(acapd_accel_t *accel, acapd_accel_pkg_hd_t *pkg);
 
 int load_accel(acapd_accel_t *accel, const char* shell_config, unsigned int async);
-
+int load_full_bitstream(char *pkg);
 int acapd_accel_config(acapd_accel_t *accel);
 int accel_load_status(acapd_accel_t *accel);
 
@@ -112,9 +112,9 @@ int sys_needs_load_accel(acapd_accel_t *accel);
 
 int sys_accel_config(acapd_accel_t *accel);
 
-int sys_fetch_accel(acapd_accel_t *accel);
+int sys_fetch_accel(acapd_accel_t *accel, int flags);
 
-int sys_load_accel(acapd_accel_t *accel, unsigned int async);
+int sys_load_accel(acapd_accel_t *accel, unsigned int async, int full_bitstream);
 
 int sys_load_accel_post(acapd_accel_t *accel);
 

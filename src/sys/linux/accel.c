@@ -180,13 +180,13 @@ int sys_needs_load_accel(acapd_accel_t *accel)
 	}
 }
 
-int sys_fetch_accel(acapd_accel_t *accel)
+int sys_fetch_accel(acapd_accel_t *accel, int flags)
 {
 	int ret;
 
 	acapd_assert(accel != NULL);
-	acapd_debug("%s: init package dir: %s/.\n", __func__, accel->sys_info.tmp_dir);
-	ret = fpga_cfg_init(accel->sys_info.tmp_dir, 0, 0);
+	acapd_perror("%s: init package dir: %s\n", __func__, accel->sys_info.tmp_dir);
+	ret = fpga_cfg_init(accel->sys_info.tmp_dir, 0, flags);
 	if (ret < 0) {
 		acapd_perror("Failed to initialize fpga config, %d.\n", ret);
 		return ACAPD_ACCEL_FAILURE;
@@ -211,13 +211,13 @@ void sys_zocl_alloc_bo(acapd_accel_t *accel)
 	
 	struct drm_zocl_info_bo mm2sInfo = {mm2s.handle, 0, 0};
     result = ioctl(accel->drm_fd, DRM_IOCTL_ZOCL_INFO_BO, &mm2sInfo);
-    printf("m2ss BO size %lu paddr 0x%lx\n",mm2sInfo.size, mm2sInfo.paddr);
+    acapd_debug("m2ss BO size %lu paddr 0x%lx\n",mm2sInfo.size, mm2sInfo.paddr);
 	struct drm_zocl_info_bo s2mmInfo = {s2mm.handle, 0, 0};
     result = ioctl(accel->drm_fd, DRM_IOCTL_ZOCL_INFO_BO, &s2mmInfo);
-    printf("s2mm BO size %lu paddr 0x%lx\n",s2mmInfo.size, s2mmInfo.paddr);
+    acapd_debug("s2mm BO size %lu paddr 0x%lx\n",s2mmInfo.size, s2mmInfo.paddr);
 	struct drm_zocl_info_bo configInfo = {config.handle, 0, 0};
     result = ioctl(accel->drm_fd, DRM_IOCTL_ZOCL_INFO_BO, &configInfo);
-    printf("config BO size %lu paddr 0x%lx\n",configInfo.size, configInfo.paddr);
+    acapd_debug("config BO size %lu paddr 0x%lx\n",configInfo.size, configInfo.paddr);
 
 	struct drm_prime_handle mm2s_h = {mm2s.handle, DRM_RDWR, -1};
 	result = ioctl(accel->drm_fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &mm2s_h);
@@ -250,7 +250,7 @@ void sys_zocl_alloc_bo(acapd_accel_t *accel)
 						accel->fd[0], accel->fd[1],accel->fd[2],accel->rm_slot);
 }
 
-int sys_load_accel(acapd_accel_t *accel, unsigned int async)
+int sys_load_accel(acapd_accel_t *accel, unsigned int async, int full_bitstream)
 {
 	int ret;//, length;
 	int fpga_cfg_id;
@@ -269,9 +269,12 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 	if (ret != 0) {
 		acapd_perror("Failed to load fpga config: %d\n",
 		     fpga_cfg_id);
-		//return ACAPD_ACCEL_FAILURE;
+		return ACAPD_ACCEL_FAILURE;
 	}
-
+	if (full_bitstream) {
+		printf("Loaded Full bitstream\n");
+		return ACAPD_ACCEL_SUCCESS;
+	}
 	for (int i = 0; i < accel->num_ip_devs; i++) {
 		int ret;
 		ret = acapd_device_open(&accel->ip_dev[i]);

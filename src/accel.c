@@ -39,6 +39,23 @@ int acapd_parse_config(acapd_accel_t *accel, const char *shell_config)
 	}
 	return ret;
 }
+int load_full_bitstream(char *base_path)
+{
+	acapd_accel_t *accel = malloc(sizeof(acapd_accel_t));;
+	int ret;
+
+	memset(accel, 0, sizeof(*accel));
+	sprintf(accel->sys_info.tmp_dir,"%s",base_path);
+	ret = sys_fetch_accel(accel, 1);
+	if (ret != ACAPD_ACCEL_SUCCESS) {
+		acapd_perror("%s, failed to fetch Full Bitstream.\n",__func__);
+		return ret;
+	}
+	ret = sys_load_accel(accel, 0, 0);
+
+	printf("%s: Succesfully loaded Full bitstream\n",__func__);
+	return ret;
+}
 
 int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int async)
 {
@@ -75,14 +92,14 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 	/* For now, for now assume it is always PDI/DTB */
 	printf("%s: load accel.\n", __func__);
 	if (accel->is_cached == 0) {
-		ret = sys_fetch_accel(accel);
+		ret = sys_fetch_accel(accel, 1);
 		if (ret != ACAPD_ACCEL_SUCCESS) {
 			acapd_perror("%s, failed to fetch accelertor.\n",__func__);
 			return ret;
 		}
 		accel->is_cached = 1;
 	}
-	ret = sys_load_accel(accel, async);
+	ret = sys_load_accel(accel, async, 0);
 	if (ret == ACAPD_ACCEL_SUCCESS) {
 		accel->status = ACAPD_ACCEL_STATUS_INUSE;
 	} else if (ret == ACAPD_ACCEL_INPROGRESS) {

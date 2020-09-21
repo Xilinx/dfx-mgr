@@ -12,6 +12,7 @@
 
 static int interrupted;
 static acapd_accel_t *active_slots[3];
+char *default_shell = "/home/root/firmware/";
 
 struct pss {
 	struct lws_spa *spa;
@@ -114,6 +115,7 @@ void load_accelerator(const char *accel_name, const char *shell)
 			//}
 			active_slots[i] = accel;
 			fprintf(fptr,"%d",i);
+			getRMInfo();
 			printf("Loaded accel succesfully \n");
 			break;
 		}
@@ -136,6 +138,7 @@ void remove_accelerator(int slot)
     remove_accel(accel, 0);
 	free(accel);
 	active_slots[slot] = NULL;
+	getRMInfo();
 }
 void getFD(int slot)
 {
@@ -350,7 +353,8 @@ int main(int argc, const char **argv)
 		lwsl_err("Failed to create tls vhost\n");
 		goto bail;
 	}
-
+	printf("Loading base shell %s\n",default_shell);
+	//load_full_bitstream(default_shell);
 	while (n >= 0 && !interrupted)
 		n = lws_service(context, 0);
 
