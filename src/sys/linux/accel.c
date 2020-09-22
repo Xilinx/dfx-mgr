@@ -144,7 +144,6 @@ int sys_accel_config(acapd_accel_t *accel)
 
 			dev = &(accel->ip_dev[i]);
 			sprintf(tmpstr, "ACCEL_IP%d_PATH", i);
-			printf("open ip_dev\n");
 			tmppath = getenv(tmpstr);
 			if (tmppath != NULL) {
 				size_t len;
@@ -180,15 +179,15 @@ int sys_needs_load_accel(acapd_accel_t *accel)
 	}
 }
 
+/* flags indicate 0:Full, 1:Partial */
 int sys_fetch_accel(acapd_accel_t *accel, int flags)
 {
 	int ret;
 
 	acapd_assert(accel != NULL);
-	acapd_perror("%s: init package dir: %s\n", __func__, accel->sys_info.tmp_dir);
 	ret = fpga_cfg_init(accel->sys_info.tmp_dir, 0, flags);
 	if (ret < 0) {
-		acapd_perror("Failed to initialize fpga config, %d.\n", ret);
+		acapd_perror("%s: Failed to initialize fpga config, %d.\n",__func__, ret);
 		return ACAPD_ACCEL_FAILURE;
 	}
 	accel->sys_info.fpga_cfg_id = ret;
@@ -252,15 +251,14 @@ void sys_zocl_alloc_bo(acapd_accel_t *accel)
 
 int sys_load_accel(acapd_accel_t *accel, unsigned int async, int full_bitstream)
 {
-	int ret;//, length;
+	int ret;
 	int fpga_cfg_id;
 	struct sockaddr_un serveraddr;
 	char path[strlen(SERVER_PATH)+2];
 	(void)async;
 
-	sys_zocl_alloc_bo(accel);
 	acapd_assert(accel != NULL);
-	if (accel->is_cached == 0) {
+	if (accel->is_cached == 0 && !full_bitstream) {
 		acapd_perror("%s: accel is not cached.\n");
 		return ACAPD_ACCEL_FAILURE;
 	}
@@ -269,10 +267,11 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async, int full_bitstream)
 	if (ret != 0) {
 		acapd_perror("Failed to load fpga config: %d\n",
 		     fpga_cfg_id);
+		fpga_cfg_destroy(fpga_cfg_id);
 		return ACAPD_ACCEL_FAILURE;
 	}
 	if (full_bitstream) {
-		printf("Loaded Full bitstream\n");
+		acapd_debug("%s:Loaded Full bitstream\n",__func__);
 		return ACAPD_ACCEL_SUCCESS;
 	}
 	for (int i = 0; i < accel->num_ip_devs; i++) {
@@ -284,6 +283,8 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async, int full_bitstream)
 			return -EINVAL;
 		}
 	}
+	sys_zocl_alloc_bo(accel);
+
 	//Create a socket to send dmabuf FD 
 	if (socket_d[accel->rm_slot] > 0)
 		return ACAPD_ACCEL_SUCCESS;
@@ -413,7 +414,7 @@ int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
 	/* TODO: for now, only synchronous mode is supported */
 	(void)async;
 	fpga_cfg_id = accel->sys_info.fpga_cfg_id;
-	printf("%s  Enter path %s\n",__func__,accel->sys_info.tmp_dir);
+	printf("%s Removing accel %s\n",__func__,accel->sys_info.tmp_dir);
 	if (accel->sys_info.tmp_dir != NULL) {
 		ret = remove_directory(accel->sys_info.tmp_dir);
 		if (ret != 0) {
@@ -452,13 +453,11 @@ void sys_send_fd(acapd_accel_t *accel, int fd)
     struct iovec iov;
     char cmsgbuf[CMSG_SPACE(sizeof(int))];
 
-	printf("%s enter\n",__func__);
 	int socket_d2 = accept(socket_d[accel->rm_slot], NULL, NULL);
     if (socket_d2 < 0){
 		acapd_perror("%s failed to accept() connections ret %d",__func__,socket_d2);
 		return;
 	}
-	printf("%s socket accept done\n",__func__);
 	
 	iov.iov_base = &dummy;
     iov.iov_len = sizeof(dummy);
@@ -481,11 +480,12 @@ void sys_send_fd(acapd_accel_t *accel, int fd)
     int ret = sendmsg(socket_d2, &msg, 0);
 
     if (ret == -1) {
-        printf("%s send FD failed with %s\n", __func__,strerror(errno));
+        acapd_perror("%s send FD failed for slot %d  with %s\n", __func__,
+												accel->rm_slot, strerror(errno));
 		return;
     }
 	//close(socket_d2);
-	printf("%s Send FD succesful\n",__func__);
+	printf("%s Send FD succesfull for slot %d\n",__func__, accel->rm_slot);
 }
 
 void sys_send_fds(acapd_accel_t *accel, int *fds, int num_fds)
@@ -494,14 +494,12 @@ void sys_send_fds(acapd_accel_t *accel, int *fds, int num_fds)
     struct msghdr msg;
     struct iovec iov;
     char cmsgbuf[CMSG_SPACE(sizeof(int) * num_fds)];
-	printf("%s enter socket_d %d\n",__func__,socket_d[accel->rm_slot]);
 	memset(cmsgbuf, '\0',sizeof(cmsgbuf));
 	int socket_d2 = accept(socket_d[accel->rm_slot], NULL, NULL);
     if (socket_d2 < 0){
-		acapd_perror("%s failed to accept() connections ret %d",__func__,socket_d2);
+		acapd_perror("%s failed to accept() connections for slot %d ret %d",__func__,accel->rm_slot, socket_d2);
 		return;
 	}
-	printf("%s socket accept done\n",__func__);
 	
 	iov.iov_base = &dummy;
     iov.iov_len = sizeof(dummy);
@@ -524,43 +522,39 @@ void sys_send_fds(acapd_accel_t *accel, int *fds, int num_fds)
     int ret = sendmsg(socket_d2, &msg, 0);
 
     if (ret == -1) {
-        printf("%s send FD failed with %s\n", __func__,strerror(errno));
+        printf("%s send FD's failed for slot %d with %s\n", __func__,accel->rm_slot, strerror(errno));
 		return;
     }
-	printf("%s Send FD's succesful\n",__func__);
+	printf("%s Send FD's succesful for slot %d\n",__func__, accel->rm_slot);
 	//close(socket_d2);
 }
 
 void sys_get_PA(acapd_accel_t *accel)
 {
-	printf("%s enter sending mm2s PA %lx size %lu\n",__func__,accel->PA[0],accel->PA[1]);
+	printf("%s: slot %d mm2s PA %lx size %lx\n",__func__,accel->rm_slot, accel->PA[0],accel->PA[1]);
 	int socket_d2 = accept(socket_d[accel->rm_slot], NULL, NULL);
     if (socket_d2 < 0){
 		acapd_perror("%s failed to accept() connections ret %d",__func__,socket_d2);
 		return;
 	}
-	printf("%s socket accept done\n",__func__);
 	write(socket_d2,&accel->PA,6*sizeof(uint64_t));
 	//close(socket_d2);
 }
 void sys_get_fds(acapd_accel_t *accel, int slot)
 {
 	int fd[5];
-//	int i;
+
 	fd[0] = accel->fd[0];
 	fd[1] = accel->fd[1];
 	fd[2] = accel->fd[2];
 	fd[3] = accel->ip_dev[2*slot].id;
 	fd[4] = accel->ip_dev[2*slot+1].id;
-	printf("%s Daemon slot %d mm2s %d s2mm %d config %d accel_config %d d_hls %d\n",__func__,slot,fd[0],fd[1],fd[2],fd[3],fd[4]);
-//	for(i=0;i<5;i++){
-//		sleep(5);
-		sys_send_fds(accel, &fd[0], 5);
-//	}
+	acapd_debug("%s Daemon slot %d mm2s %d s2mm %d config %d accel_config %d d_hls %d\n",
+												__func__,slot,fd[0],fd[1],fd[2],fd[3],fd[4]);
+	sys_send_fds(accel, &fd[0], 5);
 }
 
 void sys_get_fd(acapd_accel_t *accel, int fd)
 {
-	printf("%s sending FD %d on socket %d\n",__func__, fd, socket_d[accel->rm_slot]);
 	sys_send_fd(accel, fd);
 }

@@ -46,14 +46,14 @@ int load_full_bitstream(char *base_path)
 
 	memset(accel, 0, sizeof(*accel));
 	sprintf(accel->sys_info.tmp_dir,"%s",base_path);
-	ret = sys_fetch_accel(accel, 1);
+	ret = sys_fetch_accel(accel, 0);
 	if (ret != ACAPD_ACCEL_SUCCESS) {
-		acapd_perror("%s, failed to fetch Full Bitstream.\n",__func__);
+		acapd_perror("%s: Failed to fetch Full Bitstream.\n",__func__);
 		return ret;
 	}
-	ret = sys_load_accel(accel, 0, 0);
-
-	printf("%s: Succesfully loaded Full bitstream\n",__func__);
+	ret = sys_load_accel(accel, 0, 1);
+	if (ret < 0)
+		acapd_perror("%s: Error loading full bitstream\n",__func__);
 	return ret;
 }
 
@@ -81,7 +81,6 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 	//	}
 	}
 	/* assert isolation before programming */
-	printf("%s: assert isolation.\n", __func__);
 	ret = acapd_shell_assert_isolation(accel);
 	if (ret < 0) {
 		acapd_perror("%s, failed to assert isolaction.\n",
@@ -90,11 +89,10 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 	}
 	/* TODO: Check if the accel is valid */
 	/* For now, for now assume it is always PDI/DTB */
-	printf("%s: load accel.\n", __func__);
 	if (accel->is_cached == 0) {
 		ret = sys_fetch_accel(accel, 1);
 		if (ret != ACAPD_ACCEL_SUCCESS) {
-			acapd_perror("%s, failed to fetch accelertor.\n",__func__);
+			acapd_perror("%s, failed to fetch partial bistream\n",__func__);
 			return ret;
 		}
 		accel->is_cached = 1;
@@ -105,14 +103,13 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 	} else if (ret == ACAPD_ACCEL_INPROGRESS) {
 		accel->status = ACAPD_ACCEL_STATUS_LOADING;
 	} else {
+		acapd_perror("%s: Failed to load partial bitstream\n",__func__);
 		accel->load_failure = ret;
 	}
-	printf("%s: loaded pdi.\n", __func__);
 	if (accel->status == ACAPD_ACCEL_STATUS_INUSE) {
-		printf("%s: releasing isolation.\n", __func__);
 		ret = acapd_shell_release_isolation(accel);
 		if (ret != 0) {
-			printf("%s: failed to release isolation.\n",__func__);
+			acapd_perror("%s: failed to release isolation.\n",__func__);
 			return ACAPD_ACCEL_FAILURE;
 		}
 		acapd_debug("%s: releasing isolation done.\n", __func__);
@@ -136,7 +133,6 @@ int accel_load_status(acapd_accel_t *accel)
 int remove_accel(acapd_accel_t *accel, unsigned int async)
 {
 	acapd_assert(accel != NULL);
-	printf("%s Enter\n",__func__);
 	if (accel->status == ACAPD_ACCEL_STATUS_UNLOADED) {
 		acapd_perror("%s: accel is not loaded.\n", __func__);
 		return ACAPD_ACCEL_SUCCESS;
@@ -167,6 +163,7 @@ int remove_accel(acapd_accel_t *accel, unsigned int async)
 			//acapd_shell_put();
 		}
 		if (ret == ACAPD_ACCEL_SUCCESS) {
+			acapd_debug("%s:Succesfully removed accel\n");
 			accel->status = ACAPD_ACCEL_STATUS_UNLOADED;
 		} else if (ret == ACAPD_ACCEL_INPROGRESS) {
 			accel->status = ACAPD_ACCEL_STATUS_UNLOADING;
@@ -275,12 +272,10 @@ void get_PA(acapd_accel_t *accel)
 }
 void get_shell_fd(acapd_accel_t *accel)
 {
-	printf("Enter %s",__func__);
 	sys_get_fd(accel, acapd_shell_fd());	
 }
 
 void get_shell_clock_fd(acapd_accel_t *accel)
 {
-	printf("Enter %s",__func__);
 	sys_get_fd(accel, acapd_shell_clock_fd());
 }

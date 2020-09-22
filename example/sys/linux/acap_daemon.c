@@ -25,6 +25,7 @@ static const char * const param_names[] = {
 enum enum_param_names {
     EPN_TEXT1,
 };
+
 char *find_accel(const char *name, int slot)
 {
 	char dir_path[256];
@@ -84,10 +85,11 @@ out:
 }
 void load_accelerator(const char *accel_name, const char *shell)
 {
-	int i;
+	int i, ret;
 	char *path;
 	acapd_accel_t *accel = malloc(sizeof(acapd_accel_t));
 	FILE *fptr;
+
 	//if (active_slots == NULL)
 	//{	
 	//	printf("%s allocating active_slots\n",__func__);
@@ -108,11 +110,13 @@ void load_accelerator(const char *accel_name, const char *shell)
 			printf("Loading accel %s to slot %d \n", path,i);
 			accel->rm_slot = i;
 			/* Set rm_slot before load_accel() so isolation for appropriate slot can be applied*/
-			load_accel(accel, shell, 0);
-			//if (ret < 0){
-			//	printf("Failed to load accel %s\n",accel_name);
-			//	fprintf(fptr,"%d",-1);
-			//}
+			ret = load_accel(accel, shell, 0);
+			if (ret < 0){
+				acapd_perror("%s: Failed to load accel %s\n",__func__,accel_name);
+				fprintf(fptr,"%d",-1);
+				fclose(fptr);
+				return;
+			}
 			active_slots[i] = accel;
 			fprintf(fptr,"%d",i);
 			getRMInfo();
@@ -130,11 +134,11 @@ void load_accelerator(const char *accel_name, const char *shell)
 void remove_accelerator(int slot)
 {
 	acapd_accel_t *accel = active_slots[slot];
-	printf("Removing accel %s from slot %d\n",accel->sys_info.tmp_dir,slot);
 	if (active_slots == NULL || active_slots[slot] == NULL){
 		printf("%s No Accel in slot %d\n",__func__,slot);
 		return;
 	}
+	printf("Removing accel %s from slot %d\n",accel->sys_info.tmp_dir,slot);
     remove_accel(accel, 0);
 	free(accel);
 	active_slots[slot] = NULL;
@@ -143,7 +147,6 @@ void remove_accelerator(int slot)
 void getFD(int slot)
 {
 	acapd_accel_t *accel = active_slots[slot];
-	printf("%s Enter\n",__func__);
 	if (active_slots == NULL || active_slots[slot] == NULL){
 		printf("%s No Accel in slot %d\n",__func__,slot);
 		return;
@@ -153,7 +156,6 @@ void getFD(int slot)
 void getPA(int slot)
 {
 	acapd_accel_t *accel = active_slots[slot];
-	printf("%s Enter\n",__func__);
 	if (active_slots == NULL || active_slots[slot] == NULL){
 		printf("%s No Accel in slot %d\n",__func__,slot);
 		return;
@@ -163,7 +165,6 @@ void getPA(int slot)
 void getShellFD(int slot)
 {
 	acapd_accel_t *accel = active_slots[slot];
-	printf("%s Enter\n",__func__);
 	if (active_slots == NULL || active_slots[slot] == NULL){
 		printf("%s No Accel in slot %d\n",__func__,slot);
 		return;
@@ -173,7 +174,6 @@ void getShellFD(int slot)
 void getClockFD(int slot)
 {
 	acapd_accel_t *accel = active_slots[slot];
-	printf("%s Enter\n",__func__);
 	if (active_slots == NULL || active_slots[slot] == NULL){
 		printf("%s No Accel in slot %d\n",__func__,slot);
 		return;
@@ -314,6 +314,8 @@ int main(int argc, const char **argv)
 	struct lws_context_creation_info info;
 	struct lws_context *context;
 	const char *p;
+	int ret;
+
 	int n = 0, logs = LLL_USER | LLL_ERR | LLL_WARN | LLL_NOTICE
 			/* for LLL_ verbosity above NOTICE to be built into lws,
 			 * lws must have been configured and built with
@@ -353,8 +355,8 @@ int main(int argc, const char **argv)
 		lwsl_err("Failed to create tls vhost\n");
 		goto bail;
 	}
-	printf("Loading base shell %s\n",default_shell);
-	//load_full_bitstream(default_shell);
+	ret = load_full_bitstream(default_shell);
+	printf("Succesfully loaded Full bitstream %s (ret:%d)\n",default_shell,ret);
 	while (n >= 0 && !interrupted)
 		n = lws_service(context, 0);
 
