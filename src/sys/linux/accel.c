@@ -17,7 +17,6 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -83,42 +82,49 @@ static int remove_directory(const char *path)
 
 int sys_accel_config(acapd_accel_t *accel)
 {
-	acapd_accel_pkg_hd_t *pkg;
+	acapd_accel_pkg_hd_t *pkg = accel->pkg;
 	char template[] = "/tmp/accel.XXXXXX";
 	char *tmp_dirname;
 	char cmd[512];
 	int ret;
-	char *pkg_name;
 	char *env_config_path, config_path[128];
+	size_t len;
 
 	env_config_path = getenv("ACCEL_CONFIG_PATH");
 	memset(config_path, 0, sizeof(config_path));
 	if(env_config_path == NULL) {
-		size_t len;
-
-		/* Use timestamp to name the tmparary directory */
-		acapd_debug("%s: Creating tmp dir for package.\n", __func__);
-		tmp_dirname = mkdtemp(template);
-		if (tmp_dirname == NULL) {
-			acapd_perror("Failed to create tmp dir for package:%s.\n",
-			     strerror(errno));
-			return ACAPD_ACCEL_FAILURE;
+		if(pkg->type == ACAPD_ACCEL_PKG_TYPE_TAR_GZ) {
+			acapd_debug("%s: Found .tar.gz package, extracting %s. \n",
+													__func__, pkg->name);
+			tmp_dirname = mkdtemp(template);
+			if (tmp_dirname == NULL) {
+				acapd_perror("Failed to create tmp dir for package:%s.\n",
+														 strerror(errno));
+				return ACAPD_ACCEL_FAILURE;
+			}
+			sprintf(accel->sys_info.tmp_dir, "%s/", tmp_dirname);
+			sprintf(cmd, "tar -C %s -xzf %s", tmp_dirname, pkg->name);
+			ret = system(cmd);
+			if (ret != 0) {
+				acapd_perror("Failed to extract package %s.\n", pkg->name);
+				return ACAPD_ACCEL_FAILURE;
+			}
+			len = sizeof(config_path) - strlen("accel.json") - 1;
+			if (len > strlen(accel->sys_info.tmp_dir)) {
+				len = strlen(accel->sys_info.tmp_dir);
+			} else {
+				acapd_perror("%s: accel config path is too long.\n");
+				return ACAPD_ACCEL_FAILURE;
+			}
 		}
-		sprintf(accel->sys_info.tmp_dir, "%s/", tmp_dirname);
-		pkg = accel->pkg;
-		pkg_name = (char *)pkg;
-		/* TODO: Assuming the package is a tar.gz format */
-		sprintf(cmd, "tar -C %s -xzf %s", tmp_dirname, pkg_name);
-		ret = system(cmd);
-		if (ret != 0) {
-			acapd_perror("Failed to extract package %s.\n", pkg_name);
-			return ACAPD_ACCEL_FAILURE;
-		}
-		len = sizeof(config_path) - strlen("accel.json") - 1;
-		if (len > strlen(accel->sys_info.tmp_dir)) {
+		else if(pkg->type == ACAPD_ACCEL_PKG_TYPE_NONE) {
+			acapd_debug("%s: No need to extract pkg %s \n",__func__,pkg->name);
+			sprintf(accel->sys_info.tmp_dir, "%s/", pkg->name);
 			len = strlen(accel->sys_info.tmp_dir);
-		} else {
-			acapd_perror("%s: accel config path is too long.\n");
+		}
+		else {
+			acapd_perror("%s: unhandled package type for accel %s\n",
+													__func__, pkg->name);
 			return ACAPD_ACCEL_FAILURE;
 		}
 		strncpy(config_path, accel->sys_info.tmp_dir, len);
@@ -135,6 +141,7 @@ int sys_accel_config(acapd_accel_t *accel)
 		}
 		strncpy(config_path, env_config_path, len);
 	}
+
 	parseAccelJson(accel, config_path);
 	if (sys_needs_load_accel(accel) == 0) {
 		for (int i = 0; i < accel->num_ip_devs; i++) {
@@ -415,7 +422,9 @@ int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
 	(void)async;
 	fpga_cfg_id = accel->sys_info.fpga_cfg_id;
 	printf("%s Removing accel %s\n",__func__,accel->sys_info.tmp_dir);
-	if (accel->sys_info.tmp_dir != NULL) {
+	if (accel->sys_info.tmp_dir != NULL && accel->pkg->type ==
+									ACAPD_ACCEL_PKG_TYPE_TAR_GZ) {
+		acapd_debug("%s: Removing tmp dir for .tar.gz\n",__func__);
 		ret = remove_directory(accel->sys_info.tmp_dir);
 		if (ret != 0) {
 			acapd_perror("Failed to remove %s, %s\n",
@@ -441,7 +450,7 @@ int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
 		socket_d[accel->rm_slot] = -1;
 		sprintf(path,"%s%d",SERVER_PATH,accel->rm_slot);
 		unlink(path);
-		printf("%s server %s unlink done\n",__func__,path);
+		acapd_debug("%s server %s unlink done\n",__func__,path);
 	}
 	return ACAPD_ACCEL_SUCCESS;
 }

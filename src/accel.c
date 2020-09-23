@@ -26,7 +26,7 @@ void init_accel(acapd_accel_t *accel, acapd_accel_pkg_hd_t *pkg)
 int acapd_parse_config(acapd_accel_t *accel, const char *shell_config)
 {
 	int ret;
-	
+
 	ret = sys_accel_config(accel);
 	if (ret < 0) {
 		acapd_perror("%s: failed to config accel.\n", __func__);
@@ -45,7 +45,7 @@ int load_full_bitstream(char *base_path)
 	int ret;
 
 	memset(accel, 0, sizeof(*accel));
-	sprintf(accel->sys_info.tmp_dir,"%s",base_path);
+	sprintf(accel->sys_info.tmp_dir,"%s/",base_path);
 	ret = sys_fetch_accel(accel, 0);
 	if (ret != ACAPD_ACCEL_SUCCESS) {
 		acapd_perror("%s: Failed to fetch Full Bitstream.\n",__func__);
@@ -62,8 +62,6 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 	int ret;
 
 	acapd_assert(accel != NULL);
-
-	acapd_debug("%s: config accel.\n", __func__);
 	ret = acapd_parse_config(accel, shell_config);
 	if (ret < 0) {
 		acapd_perror("%s: failed to parse config files.\n", __func__);

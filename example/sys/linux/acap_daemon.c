@@ -9,10 +9,11 @@
 #include <stdlib.h>
 #include <acapd/accel.h>
 #include <acapd/shell.h>
+#include <sys/stat.h>
 
 static int interrupted;
 static acapd_accel_t *active_slots[3];
-char *default_shell = "/home/root/firmware/";
+char *default_shell = "/lib/firmware/xilinx";
 
 struct pss {
 	struct lws_spa *spa;
@@ -28,15 +29,14 @@ enum enum_param_names {
 
 char *find_accel(const char *name, int slot)
 {
-	char dir_path[256];
 	char *accel_path = malloc(sizeof(char)*1024);
 	DIR *d;
 	struct dirent *dir;
+	struct stat info;
 
-	sprintf(dir_path,"/home/root/firmware");
-    d = opendir(dir_path);
+    d = opendir(default_shell);
     if (d == NULL) {
-		printf("Directory %s not found\n",dir_path);
+		acapd_perror("Directory %s not found\n",default_shell);
 	}
 	while((dir = readdir(d)) != NULL) {
 		if (dir->d_type == DT_DIR) {
@@ -44,16 +44,20 @@ char *find_accel(const char *name, int slot)
 				continue;
 			}
 			if(strcmp(dir->d_name, name) == 0){
-				sprintf(accel_path,"/home/root/firmware/%s/%s_slot%d.tar.gz",dir->d_name,dir->d_name,slot);
-				if (access(accel_path, F_OK) == 0){
-					printf("Found accelerator %s\n",accel_path);
+				acapd_debug("Found dir %s in %s\n",name,default_shell);
+				sprintf(accel_path,"%s/%s/%s_slot%d",default_shell,dir->d_name,dir->d_name,slot);
+				if (stat(accel_path,&info) != 0)
+					return NULL;
+				if (info.st_mode & S_IFDIR){
+					acapd_debug("Found accelerator path %s\n",accel_path);
 					return accel_path;
 				}
 				else
-					printf("No %s accel for slot %d found\n",name,slot);
+					acapd_perror("No %s accel for slot %d found\n",name,slot);
 			}
-			else
-				printf("Directory %s not found in %s\n",name,dir_path);
+			else {
+				acapd_debug("Found %s in %s\n",dir->d_name,default_shell);
+			}
 		}
 	}
 	return NULL;
@@ -76,7 +80,7 @@ void getRMInfo()
 			sprintf(line, "%d,%s",i,"None");
 		else {
 			accel = active_slots[i];
-			sprintf(line,"%d,%s",i,(char *)accel->pkg);
+			sprintf(line,"%d,%s",i,accel->pkg->name);
 		}
 		fprintf(fptr,"\n%s",line);	
 	}
@@ -88,6 +92,7 @@ void load_accelerator(const char *accel_name, const char *shell)
 	int i, ret;
 	char *path;
 	acapd_accel_t *accel = malloc(sizeof(acapd_accel_t));
+	acapd_accel_pkg_hd_t *pkg = malloc(sizeof(acapd_accel_pkg_hd_t));
 	FILE *fptr;
 
 	//if (active_slots == NULL)
@@ -106,10 +111,13 @@ void load_accelerator(const char *accel_name, const char *shell)
 				printf("No accel package found for %s slot %d\n",accel_name,i);
 				continue;
 			}
-			init_accel(accel, (acapd_accel_pkg_hd_t *)path);
-			printf("Loading accel %s to slot %d \n", path,i);
+			pkg->name = path;
+			pkg->type = ACAPD_ACCEL_PKG_TYPE_NONE;
+			init_accel(accel, pkg);
+			printf("Loading accel %s to slot %d \n", pkg->name,i);
 			accel->rm_slot = i;
 			/* Set rm_slot before load_accel() so isolation for appropriate slot can be applied*/
+
 			ret = load_accel(accel, shell, 0);
 			if (ret < 0){
 				acapd_perror("%s: Failed to load accel %s\n",__func__,accel_name);

@@ -36,7 +36,7 @@ extern "C" {
 #define ACAPD_ACCEL_INPROGRESS		1
 
 #define ACAPD_ACCEL_PKG_TYPE_NONE	0U
-#define ACAPD_ACCEL_PKG_TYPE_PDI	1U
+#define ACAPD_ACCEL_PKG_TYPE_TAR_GZ	1U
 #define ACAPD_ACCEL_PKG_TYPE_LAST	2U
 
 #include <acapd/dma.h>
@@ -49,7 +49,7 @@ extern "C" {
  */
 typedef struct {
 	uint32_t type; /**< type of package element */
-	char name[128]; /**< name of the package element */
+	char *name; /**< name of the package element */
 	uint64_t size; /**< size of package element */
 	uint32_t is_end; /**< if it is the end of package */
 } acapd_accel_pkg_hd_t;
