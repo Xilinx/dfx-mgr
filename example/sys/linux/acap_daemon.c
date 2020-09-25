@@ -199,12 +199,12 @@ callback_http(struct lws *wsi, enum lws_callback_reasons reason,
 	int n;	
 	switch (reason) {
 	case LWS_CALLBACK_HTTP:
-		printf("server LWS_CALLBACK_HTTP\n");
+		acapd_debug("server LWS_CALLBACK_HTTP\n");
 		requested_uri = (char *)in;
 		break;
 
 	case LWS_CALLBACK_HTTP_BODY:
-		printf("server LWS_CALLBACK_HTTP_BODY\n");
+		acapd_debug("server LWS_CALLBACK_HTTP_BODY\n");
 		if(!pss->spa) {
 			pss->spa = lws_spa_create(wsi, param_names, LWS_ARRAY_SIZE(param_names), 1024, NULL, NULL);
 			if(!pss->spa)
@@ -367,7 +367,7 @@ int main(int argc, const char **argv)
 		goto bail;
 	}
 	ret = load_full_bitstream(default_shell);
-	printf("Succesfully loaded Full bitstream %s (ret:%d)\n",default_shell,ret);
+	printf("Loaded Full bitstream %s (ret:%d)\n",default_shell,ret);
 	while (n >= 0 && !interrupted)
 		n = lws_service(context, 0);
 

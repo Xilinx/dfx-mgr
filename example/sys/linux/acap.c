@@ -25,7 +25,7 @@ callback_http(struct lws *wsi, enum lws_callback_reasons reason,
 	switch (reason) {
 
 	case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
-		printf("CLIENT_CONNECTION_ERROR: %s\n",
+		lwsl_user("CLIENT_CONNECTION_ERROR: %s\n",
 			 in ? (char *)in : "(null)");
 		interrupted = 1;
 		break;
@@ -37,11 +37,11 @@ callback_http(struct lws *wsi, enum lws_callback_reasons reason,
 			lws_callback_on_writable(wsi);
 		}
 		else
-			printf("doing GET flow\n");
+			lwsl_user("doing GET flow\n");
 		break;
 
 	case LWS_CALLBACK_CLIENT_HTTP_WRITEABLE:
-		printf("LWS_CALLBACK_CLIENT_HTTP_WRITEABLE\n");
+		lwsl_user("LWS_CALLBACK_CLIENT_HTTP_WRITEABLE\n");
 		
 		if (lws_http_is_redirected_to_get(wsi))
 			break;
@@ -76,7 +76,7 @@ callback_http(struct lws *wsi, enum lws_callback_reasons reason,
 		break;
 
 	case LWS_CALLBACK_CLOSED_CLIENT_HTTP:
-		printf("LWS_CALLBACK_CLOSED_CLIENT_HTTP\n");
+		lwsl_user("LWS_CALLBACK_CLOSED_CLIENT_HTTP\n");
 		interrupted = 1;
 		lws_cancel_service(lws_get_context(wsi));
 		break;

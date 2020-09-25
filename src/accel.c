@@ -9,6 +9,7 @@
 #include <acapd/device.h>
 #include <acapd/print.h>
 #include <acapd/shell.h>
+#include <libfpga.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,7 +47,7 @@ int load_full_bitstream(char *base_path)
 
 	memset(accel, 0, sizeof(*accel));
 	sprintf(accel->sys_info.tmp_dir,"%s/",base_path);
-	ret = sys_fetch_accel(accel, 0);
+	ret = sys_fetch_accel(accel, XFPGA_NORMAL_EN);
 	if (ret != ACAPD_ACCEL_SUCCESS) {
 		acapd_perror("%s: Failed to fetch Full Bitstream.\n",__func__);
 		return ret;
@@ -88,7 +89,7 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 	/* TODO: Check if the accel is valid */
 	/* For now, for now assume it is always PDI/DTB */
 	if (accel->is_cached == 0) {
-		ret = sys_fetch_accel(accel, 1);
+		ret = sys_fetch_accel(accel, XFPGA_NORMAL_EN);
 		if (ret != ACAPD_ACCEL_SUCCESS) {
 			acapd_perror("%s, failed to fetch partial bistream\n",__func__);
 			return ret;
