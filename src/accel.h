@@ -104,7 +104,6 @@ int remove_accel(acapd_accel_t *accel, unsigned int async);
 int acapd_accel_open_channel(acapd_accel_t *accel);
 int acapd_accel_reset_channel(acapd_accel_t *accel);
 void get_fds(acapd_accel_t *accel, int slot);
-void get_PA(acapd_accel_t *accel);
 void get_shell_fd();
 void get_shell_clock_fd();
 #ifdef ACAPD_INTERNAL
@@ -122,8 +121,7 @@ int sys_close_accel(acapd_accel_t *accel);
 
 int sys_remove_accel(acapd_accel_t *accel, unsigned int async);
 
-void sys_get_fds(acapd_accel_t *accel, int slot);
-void sys_get_PA(acapd_accel_t *accel);
+int sys_get_fds(acapd_accel_t *accel, int slot);
 void sys_get_fd(acapd_accel_t *accel, int fd);
 #endif /* ACAPD_INTERNAL */
 

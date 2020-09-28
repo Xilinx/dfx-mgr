@@ -161,15 +161,6 @@ void getFD(int slot)
 	}
 	get_fds(accel, slot);
 }
-void getPA(int slot)
-{
-	acapd_accel_t *accel = active_slots[slot];
-	if (active_slots == NULL || active_slots[slot] == NULL){
-		printf("%s No Accel in slot %d\n",__func__,slot);
-		return;
-	}
-	get_PA(accel);
-}
 void getShellFD(int slot)
 {
 	acapd_accel_t *accel = active_slots[slot];
@@ -238,10 +229,6 @@ callback_http(struct lws *wsi, enum lws_callback_reasons reason,
 		else if(strcmp(requested_uri,"/getFD") == 0){
 			lwsl_user("Received getFD\n");
 			getFD(atoi(arg));
-		}
-		else if(strcmp(requested_uri,"/getPA") == 0){
-			lwsl_user("Received getPA\n");
-			getPA(atoi(arg));
 		}
 		else if(strcmp(requested_uri,"/getShellFD") == 0){
 			lwsl_user("Received getShellFD\n");

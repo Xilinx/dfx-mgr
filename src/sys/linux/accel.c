@@ -206,84 +206,99 @@ int sys_zocl_alloc_bo(acapd_accel_t *accel)
 	if (accel->drm_fd < 0) {
 		return -1;
 	}
-    
 	struct drm_zocl_create_bo mm2s = {0x4000000, 0xffffffff,
 					DRM_ZOCL_BO_FLAGS_COHERENT | DRM_ZOCL_BO_FLAGS_CMA};
 	struct drm_zocl_create_bo s2mm = {0x4000000, 0xffffffff,
 					DRM_ZOCL_BO_FLAGS_COHERENT | DRM_ZOCL_BO_FLAGS_CMA};
 	struct drm_zocl_create_bo config = {4096, 0xffffffff,
 					DRM_ZOCL_BO_FLAGS_COHERENT | DRM_ZOCL_BO_FLAGS_CMA};
+	struct drm_gem_close closeInfo = {0, 0};
     if (ioctl(accel->drm_fd, DRM_IOCTL_ZOCL_CREATE_BO, &mm2s) < 0) {
 		acapd_perror("%s MM2S DRM_IOCTL_ZOCL_CREATE_BO failed: %s\n",
 												__func__,strerror(errno));
-		return -1;
+		goto err1;
 	}
+	accel->handle[0] = mm2s.handle;
     if (ioctl(accel->drm_fd, DRM_IOCTL_ZOCL_CREATE_BO, &s2mm) < 0) {
 		acapd_perror("%s S2MM DRM_IOCTL_ZOCL_CREATE_BO failed: %s\n",
 												__func__,strerror(errno));
-		return -1;
+		goto err2;;
 	}
+	accel->handle[1] = s2mm.handle;
     if (ioctl(accel->drm_fd, DRM_IOCTL_ZOCL_CREATE_BO, &config) < 0) {
 		acapd_perror("%s Config DRM_IOCTL_ZOCL_CREATE_BO failed: %s\n",
 												__func__,strerror(errno));
-		return -1;
+		goto err3;
 	}
-	
+	accel->handle[2] = config.handle;
 	struct drm_zocl_info_bo mm2sInfo = {mm2s.handle, 0, 0};
 	if (ioctl(accel->drm_fd, DRM_IOCTL_ZOCL_INFO_BO, &mm2sInfo) < 0) {
 		acapd_perror("%s MM2S DRM_IOCTL_ZOCL_INFO_BO failed: %s\n",
 												__func__,strerror(errno));
-		return -1;
+		goto err4;
 	}
     acapd_debug("m2ss BO size %lu paddr 0x%lx\n",mm2sInfo.size, mm2sInfo.paddr);
+	accel->PA[0] = mm2sInfo.paddr;
+	accel->PA[1] = mm2sInfo.size;
 	struct drm_zocl_info_bo s2mmInfo = {s2mm.handle, 0, 0};
     if (ioctl(accel->drm_fd, DRM_IOCTL_ZOCL_INFO_BO, &s2mmInfo) < 0) {
 		acapd_perror("%s S2MM DRM_IOCTL_ZOCL_INFO_BO failed: %s\n",
 												__func__,strerror(errno));
-		return -1;
+		goto err4;
 	}
     acapd_debug("s2mm BO size %lu paddr 0x%lx\n",s2mmInfo.size, s2mmInfo.paddr);
+	accel->PA[2] = s2mmInfo.paddr;
+	accel->PA[3] = s2mmInfo.size;
 	struct drm_zocl_info_bo configInfo = {config.handle, 0, 0};
     if (ioctl(accel->drm_fd, DRM_IOCTL_ZOCL_INFO_BO, &configInfo) < 0) {
 		acapd_perror("%s Config DRM_IOCTL_ZOCL_INFO_BO failed: %s\n",
 												__func__,strerror(errno));
-		return -1;
+		goto err4;
 	}
     acapd_debug("config BO size %lu paddr 0x%lx\n",configInfo.size, configInfo.paddr);
+	accel->PA[4] = configInfo.paddr;
+	accel->PA[5] = configInfo.size;
 
 	struct drm_prime_handle mm2s_h = {mm2s.handle, DRM_RDWR, -1};
 	if (ioctl(accel->drm_fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &mm2s_h) < 0) {
 		acapd_perror("%s MM2S DRM_IOCTL_PRIME_HANDLE_TO_FD failed: %s\n",
 													__func__,strerror(errno));
-		return -1;
+		goto err4;
 	}
+	accel->fd[0] = mm2s_h.fd;
 	struct drm_prime_handle s2mm_h = {s2mm.handle, DRM_RDWR, -1};
 	if (ioctl(accel->drm_fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &s2mm_h) < 0) {
 		acapd_perror("%s S2MM DRM_IOCTL_PRIME_HANDLE_TO_FD failed: %s\n",
 												__func__,strerror(errno));
-		return -1;
+		goto err5;
 	}
+	accel->fd[1] = s2mm_h.fd;
 	struct drm_prime_handle config_h = {config.handle, DRM_RDWR, -1};
 	if (ioctl(accel->drm_fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &config_h) < 0) {
 		acapd_perror("%s S2MM DRM_IOCTL_PRIME_HANDLE_TO_FD failed: %s\n",
 												__func__,strerror(errno));
-		return -1;
+		goto err6;
 	}
-	accel->fd[0] = mm2s_h.fd;
-	accel->fd[1] = s2mm_h.fd;
 	accel->fd[2] = config_h.fd;
-	accel->handle[0] = mm2s.handle;
-	accel->handle[1] = s2mm.handle;
-	accel->handle[2] = config.handle;
-	accel->PA[0] = mm2sInfo.paddr;
-	accel->PA[1] = mm2sInfo.size;
-	accel->PA[2] = s2mmInfo.paddr;
-	accel->PA[3] = s2mmInfo.size;
-	accel->PA[4] = configInfo.paddr;
-	accel->PA[5] = configInfo.size;
 	acapd_debug("%s: MM2S_FD %d S2MM_FD %d config_FD %d slot %d\n",__func__,
 						accel->fd[0], accel->fd[1],accel->fd[2],accel->rm_slot);
 	return 0;
+err6:
+	close(accel->fd[1]);
+err5:	
+	close(accel->fd[0]);
+err4:
+	closeInfo.handle = accel->handle[2];
+	ioctl(accel->drm_fd, DRM_IOCTL_GEM_CLOSE, &closeInfo);
+err3:
+	closeInfo.handle = accel->handle[1];
+	ioctl(accel->drm_fd, DRM_IOCTL_GEM_CLOSE, &closeInfo);
+err2:
+	closeInfo.handle = accel->handle[0];
+	ioctl(accel->drm_fd, DRM_IOCTL_GEM_CLOSE, &closeInfo);
+err1:
+	close(accel->drm_fd);
+	return -1;
 }
 
 int sys_load_accel(acapd_accel_t *accel, unsigned int async, int full_bitstream)
@@ -352,9 +367,7 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async, int full_bitstream)
 	}
 	printf("%s Server started %s (desc %d) ready for client connect.\n",
 									__func__,path,socket_d[accel->rm_slot]);
-
 	return ACAPD_ACCEL_SUCCESS;
-	
 }
 
 int sys_load_accel_post(acapd_accel_t *accel)
@@ -438,15 +451,14 @@ int sys_close_accel(acapd_accel_t *accel)
 		ioctl(accel->drm_fd, DRM_IOCTL_GEM_CLOSE, &closeInfo);
 		closeInfo.handle = accel->handle[1];
 		ioctl(accel->drm_fd, DRM_IOCTL_GEM_CLOSE, &closeInfo);
-		closeInfo.handle = accel->handle[1];
+		closeInfo.handle = accel->handle[2];
 		ioctl(accel->drm_fd, DRM_IOCTL_GEM_CLOSE, &closeInfo);
-		
 	}
 	if(accel->drm_fd > 0){
 		close(accel->drm_fd);
 		close(accel->fd[0]);
 		close(accel->fd[1]);
-		close(accel->fd[1]);
+		close(accel->fd[2]);
 	}
 	return 0;
 }
@@ -476,19 +488,21 @@ int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
 	ret = fpga_cfg_remove(fpga_cfg_id);
 	if (ret != 0) {
 		acapd_perror("Failed to remove accel: %d.\n", ret);
-		return ACAPD_ACCEL_FAILURE;
+		goto out;
 	}
 	ret = fpga_cfg_destroy(fpga_cfg_id);
 	if (ret != 0) {
 		acapd_perror("Failed to destroy accel: %d.\n", ret);
-		return ACAPD_ACCEL_FAILURE;
+		goto out;
 	}
+out:
 	if (socket_d[accel->rm_slot] > 0) {
 		close(socket_d[accel->rm_slot]);
 		socket_d[accel->rm_slot] = -1;
 		sprintf(path,"%s%d",SERVER_PATH,accel->rm_slot);
 		unlink(path);
 		acapd_debug("%s server %s unlink done\n",__func__,path);
+		return ACAPD_ACCEL_FAILURE;
 	}
 	return ACAPD_ACCEL_SUCCESS;
 }
@@ -535,7 +549,7 @@ void sys_send_fd(acapd_accel_t *accel, int fd)
 	printf("%s Send FD succesfull for slot %d\n",__func__, accel->rm_slot);
 }
 
-void sys_send_fds(acapd_accel_t *accel, int *fds, int num_fds)
+int sys_send_fds(acapd_accel_t *accel, int *fds, int num_fds)
 {
 	char dummy = '$';
     struct msghdr msg;
@@ -544,8 +558,9 @@ void sys_send_fds(acapd_accel_t *accel, int *fds, int num_fds)
 	memset(cmsgbuf, '\0',sizeof(cmsgbuf));
 	int socket_d2 = accept(socket_d[accel->rm_slot], NULL, NULL);
     if (socket_d2 < 0){
-		acapd_perror("%s failed to accept() connections for slot %d ret %d",__func__,accel->rm_slot, socket_d2);
-		return;
+		acapd_perror("%s failed to accept() connections for slot %d ret %d",
+												__func__,accel->rm_slot, socket_d2);
+		return -1;
 	}
 	
 	iov.iov_base = &dummy;
@@ -569,25 +584,21 @@ void sys_send_fds(acapd_accel_t *accel, int *fds, int num_fds)
     int ret = sendmsg(socket_d2, &msg, 0);
 
     if (ret == -1) {
-        printf("%s send FD's failed for slot %d with %s\n", __func__,accel->rm_slot, strerror(errno));
-		return;
+        acapd_perror("%s send FD's failed for slot %d with %s\n", __func__,
+												accel->rm_slot, strerror(errno));
+		return -1;
     }
-	printf("%s Send FD's succesful for slot %d\n",__func__, accel->rm_slot);
+	acapd_debug("%s Send FD's succesful for slot %d\n",__func__, accel->rm_slot);
+	ret =  write(socket_d2,&accel->PA,6*sizeof(uint64_t));
+	if (ret == -1) {
+        acapd_perror("%s Failed to send PA for buffers: \n", __func__, strerror(errno));
+		return -1;
+	}
 	//close(socket_d2);
+	return 0;
 }
 
-void sys_get_PA(acapd_accel_t *accel)
-{
-	printf("%s: slot %d mm2s PA %lx size %lx\n",__func__,accel->rm_slot, accel->PA[0],accel->PA[1]);
-	int socket_d2 = accept(socket_d[accel->rm_slot], NULL, NULL);
-    if (socket_d2 < 0){
-		acapd_perror("%s failed to accept() connections ret %d",__func__,socket_d2);
-		return;
-	}
-	write(socket_d2,&accel->PA,6*sizeof(uint64_t));
-	//close(socket_d2);
-}
-void sys_get_fds(acapd_accel_t *accel, int slot)
+int sys_get_fds(acapd_accel_t *accel, int slot)
 {
 	int fd[5];
 
@@ -598,7 +609,7 @@ void sys_get_fds(acapd_accel_t *accel, int slot)
 	fd[4] = accel->ip_dev[2*slot+1].id;
 	acapd_debug("%s Daemon slot %d mm2s %d s2mm %d config %d accel_config %d d_hls %d\n",
 												__func__,slot,fd[0],fd[1],fd[2],fd[3],fd[4]);
-	sys_send_fds(accel, &fd[0], 5);
+	return sys_send_fds(accel, &fd[0], 5);
 }
 
 void sys_get_fd(acapd_accel_t *accel, int fd)

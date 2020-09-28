@@ -148,10 +148,6 @@ int main(int argc, const char **argv)
 		ccinfo.path = "/getFD";
 		arg = option;
 	}
-	else if ((option = lws_cmdline_option(argc, argv, "-getPA"))) {
-		ccinfo.path = "/getPA";
-		arg = option;
-	}
 	else if ((lws_cmdline_option(argc, argv, "-getShellFD"))) {
 		ccinfo.path = "/getShellFD";
 	}

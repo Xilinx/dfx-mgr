@@ -264,11 +264,6 @@ void get_fds(acapd_accel_t *accel, int slot)
 	sys_get_fds(accel, slot);
 }
 
-void get_PA(acapd_accel_t *accel)
-{
-	acapd_assert(accel != NULL);
-	sys_get_PA(accel);
-}
 void get_shell_fd(acapd_accel_t *accel)
 {
 	sys_get_fd(accel, acapd_shell_fd());	
