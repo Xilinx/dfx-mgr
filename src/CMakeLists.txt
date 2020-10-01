@@ -12,6 +12,7 @@ collect (PROJECT_LIB_HEADERS helper.h)
 collect (PROJECT_LIB_HEADERS print.h)
 collect (PROJECT_LIB_HEADERS shell.h)
 collect (PROJECT_LIB_HEADERS shm.h)
+collect (PROJECT_LIB_HEADERS acapdwebsoc.h)
 
 collect (PROJECT_LIB_SOURCES accel.c)
 collect (PROJECT_LIB_SOURCES assert.c)
@@ -19,6 +20,7 @@ collect (PROJECT_LIB_SOURCES dma.c)
 collect (PROJECT_LIB_SOURCES device.c)
 collect (PROJECT_LIB_SOURCES shell.c)
 collect (PROJECT_LIB_SOURCES shm.c)
+collect (PROJECT_LIB_SOURCES acapdwebsoc.c)
 
 add_subdirectory (sys)
 
