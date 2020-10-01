@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dirent.h>
-#include <stdlib.h>
 #include <acapd/accel.h>
 #include <acapd/shell.h>
 #include <sys/stat.h>
@@ -19,13 +18,13 @@ struct pss {
 	struct lws_spa *spa;
 };
 
-static const char * const param_names[] = {
+/*static const char * const param_names[] = {
 	"text1",
 };
 
 enum enum_param_names {
     EPN_TEXT1,
-};
+};*/
 
 char *find_accel(const char *name, int slot)
 {
@@ -87,7 +86,7 @@ void getRMInfo()
 out:
 	fclose(fptr);
 }
-void load_accelerator(const char *accel_name, const char *shell)
+int load_accelerator(const char *accel_name, const char *shell)
 {
 	int i, ret;
 	char *path;
@@ -123,13 +122,14 @@ void load_accelerator(const char *accel_name, const char *shell)
 				acapd_perror("%s: Failed to load accel %s\n",__func__,accel_name);
 				fprintf(fptr,"%d",-1);
 				fclose(fptr);
-				return;
+				return -1;
 			}
 			active_slots[i] = accel;
 			fprintf(fptr,"%d",i);
 			getRMInfo();
 			printf("Loaded accel succesfully \n");
-			break;
+			fclose(fptr);
+			return accel->rm_slot;
 		}
 	}
 	if (i >= 3){
@@ -137,6 +137,7 @@ void load_accelerator(const char *accel_name, const char *shell)
 		fprintf(fptr,"%d",-1);
 	}
 	fclose(fptr);
+	return -1;
 }
 
 void remove_accelerator(int slot)
@@ -154,6 +155,7 @@ void remove_accelerator(int slot)
 }
 void getFD(int slot)
 {
+	printf("%s: received\n",__func__);
 	acapd_accel_t *accel = active_slots[slot];
 	if (active_slots == NULL || active_slots[slot] == NULL){
 		printf("%s No Accel in slot %d\n",__func__,slot);
@@ -180,7 +182,117 @@ void getClockFD(int slot)
 	get_shell_clock_fd(accel);
 }
 
-static char *requested_uri;
+struct msg{
+    char cmd[32];
+    char arg[32];
+};
+struct resp{
+    char data[128];
+    int len;
+};
+#define EXAMPLE_RX_BUFFER_BYTES sizeof(struct msg)
+struct payload
+{
+    unsigned char data[LWS_SEND_BUFFER_PRE_PADDING + EXAMPLE_RX_BUFFER_BYTES + LWS_SEND_BUFFER_POST_PADDING];
+    size_t len;
+} received_payload;
+
+unsigned char buf[LWS_SEND_BUFFER_PRE_PADDING + sizeof(struct resp) + LWS_SEND_BUFFER_POST_PADDING];
+
+static int msgs;
+static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len )
+{
+    struct msg *m = (struct msg*)malloc(sizeof(struct msg));
+    struct resp *r = (struct resp *)&buf[LWS_SEND_BUFFER_PRE_PADDING];
+	int slot;
+
+    switch( reason )
+    {
+		case LWS_CALLBACK_ESTABLISHED:
+			printf("LWS_CALLBACK_ESTABLISHED user %s\n",(char *)user);
+			break;
+
+        case LWS_CALLBACK_RECEIVE:
+            printf("LWS_CALLBACK_RECEIVE len%ld\n",len);
+            memcpy( &received_payload.data[LWS_SEND_BUFFER_PRE_PADDING], in, len );
+            received_payload.len = len;
+            m = (struct msg *)&received_payload.data[LWS_SEND_BUFFER_PRE_PADDING];
+            printf("server received cmd %s arg %s\n",m->cmd,m->arg);
+			msgs++;
+			if(strcmp(m->cmd,"-loadpdi") == 0){
+				lwsl_user("Received %s \n",m->cmd);
+				slot = load_accelerator(m->arg,NULL);
+				sprintf(r->data,"%d",slot);
+				r->len = 1;
+				printf("daemon: load done slot %s len %d\n", r->data, r->len);
+				lws_callback_on_writable_all_protocol( lws_get_context( wsi ), lws_get_protocol( wsi ) );
+			}
+			else if(strcmp(m->cmd,"-remove") == 0){
+				lwsl_user("Received %s slot %s\n",m->cmd,m->arg);
+				r->len = 0;
+				remove_accelerator(atoi(m->arg));
+				lws_callback_on_writable_all_protocol( lws_get_context( wsi ), lws_get_protocol( wsi ) );
+			}
+			else if(strcmp(m->cmd,"-getFD") == 0){
+				lwsl_user("Received %s slot %s\n",m->cmd,m->arg);
+				getFD(atoi(m->arg));
+				sprintf(r->data,"%s","");
+				r->len = 0;
+				lws_callback_on_writable( wsi );
+				lwsl_user("Server recieve done slot %s\n",m->arg);
+			}
+			else if(strcmp(m->cmd,"-getShellFD") == 0){
+				lwsl_user("Received %s slot %s\n",m->cmd,m->arg);
+				sprintf(r->data,"%s","");
+				r->len = 0;
+				getShellFD(atoi(m->arg));
+				lws_callback_on_writable_all_protocol( lws_get_context( wsi ), lws_get_protocol( wsi ) );
+			}
+			else if(strcmp(m->cmd,"-getClockFD") == 0){
+				lwsl_user("Received %s slot %s\n",m->cmd,m->arg);
+				sprintf(r->data,"%s","");
+				r->len = 0;
+				getClockFD(atoi(m->arg));
+				lws_callback_on_writable_all_protocol( lws_get_context( wsi ), lws_get_protocol( wsi ) );
+			}
+			else if(strcmp(m->cmd,"-getRMInfo") == 0){
+				lwsl_user("Received -getRMInfo\n");
+				sprintf(r->data,"%s","");
+				r->len = 0;
+				getRMInfo();
+				lws_callback_on_writable_all_protocol( lws_get_context( wsi ), lws_get_protocol( wsi ) );
+			}
+			else {
+				lwsl_user("cmd not recognized\n");
+				//return -1;
+			}
+            break;
+
+        case LWS_CALLBACK_SERVER_WRITEABLE:
+			if (!msgs)
+				return 0;
+            printf("LWS_CALLBACK_SERVER_WRITEABLE resp->len %d\n",r->len);
+            lws_write( wsi, (unsigned char*)r, sizeof(struct resp), LWS_WRITE_TEXT );
+			msgs--;
+			//return -1;
+            break;
+
+        default:
+            break;
+    }
+
+    return 0;
+}
+
+enum protocols
+{
+    PROTOCOL_HTTP = 0,
+    PROTOCOL_EXAMPLE,
+    PROTOCOL_COUNT
+};
+
+
+/*static char *requested_uri;
 static const char *arg;
 static int
 callback_http(struct lws *wsi, enum lws_callback_reasons reason,
@@ -263,42 +375,26 @@ callback_http(struct lws *wsi, enum lws_callback_reasons reason,
 	}
 
 	return 0;//lws_callback_http_dummy(wsi, reason, user, in, len);
-}
+}*/
 
 static const struct lws_protocols protocols[] = { 
 	// first protocol must always be HTTP handler
   {
-    "http",
-    callback_http,
-    sizeof(struct pss),
-	0, 0 , NULL, 0
+    "http",			/* name */
+    lws_callback_http_dummy,	/* callback */
+    0,				/* per session data */
+	0,				/* max frame size/ rx buffer */
+	0, NULL, 0,
   },
   {
-    NULL, NULL, 0, 0, 0, NULL, 0
-  }
+	"example-protocol",
+	callback_example,
+    0,
+    EXAMPLE_RX_BUFFER_BYTES,
+	0, NULL, 0,
+  },
+  { NULL, NULL, 0, 0, 0, NULL, 0 } /* terminator */
 };
-
-/* override the default mount for /dyn in the URL space */
-
-//static const struct lws_http_mount mount = {
-//	/* .mount_next */		NULL,		/* linked-list "next" */
-//	/* .mountpoint */		"/load",		/* mountpoint URL */
-//	/* .origin */			NULL,	/* protocol */
-//	/* .def */			NULL,
-//	/* .protocol */			"http",
-//	/* .cgienv */			NULL,
-//	/* .extra_mimetypes */		NULL,
-//	/* .interpret */		NULL,
-//	/* .cgi_timeout */		0,
-//	/* .cache_max_age */		0,
-//	/* .auth_mask */		0,
-//	/* .cache_reusable */		0,
-//	/* .cache_revalidate */		0,
-//	/* .cache_intermediaries */	0,
-//	/* .origin_protocol */		LWSMPRO_CALLBACK, /* dynamic */
-//	/* .mountpoint_len */		5,		/* char count */
-//	/* .basic_auth_login_file */	NULL,
-//};
 
 void sigint_handler(int sig)
 {
@@ -336,6 +432,10 @@ int main(int argc, const char **argv)
 	//	       LWS_SERVER_OPTION_EXPLICIT_VHOSTS |
 	//	LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE;
 
+	info.port = 7681;
+	info.protocols = protocols;
+	info.gid = -1;
+	info.uid = -1;
 	context = lws_create_context(&info);
 	if (!context) {
 		lwsl_err("lws init failed\n");
@@ -344,8 +444,6 @@ int main(int argc, const char **argv)
 
 	/* http on 7681 */
 
-	info.port = 7681;
-	info.protocols = protocols;
 	//info.mounts = &mount;
 	info.vhost_name = "localhost";
 

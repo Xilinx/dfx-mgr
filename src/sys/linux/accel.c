@@ -556,13 +556,14 @@ int sys_send_fds(acapd_accel_t *accel, int *fds, int num_fds)
     struct iovec iov;
     char cmsgbuf[CMSG_SPACE(sizeof(int) * num_fds)];
 	memset(cmsgbuf, '\0',sizeof(cmsgbuf));
+	printf("calling accept \n");
 	int socket_d2 = accept(socket_d[accel->rm_slot], NULL, NULL);
     if (socket_d2 < 0){
 		acapd_perror("%s failed to accept() connections for slot %d ret %d",
 												__func__,accel->rm_slot, socket_d2);
 		return -1;
 	}
-	
+	printf("accept done\n");
 	iov.iov_base = &dummy;
     iov.iov_len = sizeof(dummy);
 
@@ -580,15 +581,15 @@ int sys_send_fds(acapd_accel_t *accel, int *fds, int num_fds)
     cmsg->cmsg_len = CMSG_LEN(sizeof(int) * num_fds);
 
 	memcpy((int*) CMSG_DATA(cmsg), fds, sizeof(int)*num_fds);
-
+	printf("calling sendmsg\n");
     int ret = sendmsg(socket_d2, &msg, 0);
-
+	printf("sendmsg done\n");
     if (ret == -1) {
         acapd_perror("%s send FD's failed for slot %d with %s\n", __func__,
 												accel->rm_slot, strerror(errno));
 		return -1;
     }
-	acapd_debug("%s Send FD's succesful for slot %d\n",__func__, accel->rm_slot);
+	acapd_perror("%s Send FD's succesful for slot %d\n",__func__, accel->rm_slot);
 	ret =  write(socket_d2,&accel->PA,6*sizeof(uint64_t));
 	if (ret == -1) {
         acapd_perror("%s Failed to send PA for buffers: \n", __func__, strerror(errno));
@@ -607,7 +608,7 @@ int sys_get_fds(acapd_accel_t *accel, int slot)
 	fd[2] = accel->fd[2];
 	fd[3] = accel->ip_dev[2*slot].id;
 	fd[4] = accel->ip_dev[2*slot+1].id;
-	acapd_debug("%s Daemon slot %d mm2s %d s2mm %d config %d accel_config %d d_hls %d\n",
+	acapd_perror("%s Daemon slot %d mm2s %d s2mm %d config %d accel_config %d d_hls %d\n",
 												__func__,slot,fd[0],fd[1],fd[2],fd[3],fd[4]);
 	return sys_send_fds(accel, &fd[0], 5);
 }
