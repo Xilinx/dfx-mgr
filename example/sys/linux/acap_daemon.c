@@ -76,7 +76,7 @@ void getRMInfo()
 
 	for (i = 0; i < 3; i++) {
 		if(active_slots[i] == NULL)
-			sprintf(line, "%d,%s",i,"None");
+			sprintf(line, "%d,%s",i,"GREY");
 		else {
 			accel = active_slots[i];
 			sprintf(line,"%d,%s",i,accel->pkg->name);
@@ -92,17 +92,12 @@ int load_accelerator(const char *accel_name, const char *shell)
 	char *path;
 	acapd_accel_t *accel = malloc(sizeof(acapd_accel_t));
 	acapd_accel_pkg_hd_t *pkg = malloc(sizeof(acapd_accel_pkg_hd_t));
-	FILE *fptr;
 
 	//if (active_slots == NULL)
 	//{	
 	//	printf("%s allocating active_slots\n",__func__);
 	//	active_slots = calloc(3, sizeof(acapd_accel_t *));
 	//}
-	fptr = fopen("/home/root/slot.txt","w");
-	if (fptr == NULL)
-		acapd_perror("Couldn't create /home/root/slot.txt");
-
 	for (i = 0; i < 3; i++) {
 		if (active_slots[i] == NULL){
 			path = find_accel(accel_name, i);
@@ -113,30 +108,23 @@ int load_accelerator(const char *accel_name, const char *shell)
 			pkg->name = path;
 			pkg->type = ACAPD_ACCEL_PKG_TYPE_NONE;
 			init_accel(accel, pkg);
-			printf("Loading accel %s to slot %d \n", pkg->name,i);
+			acapd_debug("%s: Loading accel %s to slot %d \n", __func__, pkg->name,i);
 			accel->rm_slot = i;
 			/* Set rm_slot before load_accel() so isolation for appropriate slot can be applied*/
 
 			ret = load_accel(accel, shell, 0);
 			if (ret < 0){
 				acapd_perror("%s: Failed to load accel %s\n",__func__,accel_name);
-				fprintf(fptr,"%d",-1);
-				fclose(fptr);
 				return -1;
 			}
 			active_slots[i] = accel;
-			fprintf(fptr,"%d",i);
 			getRMInfo();
 			printf("Loaded accel succesfully \n");
-			fclose(fptr);
 			return accel->rm_slot;
 		}
 	}
-	if (i >= 3){
+	if (i >= 3)
 		printf("Couldn't find empty slot for %s\n",accel_name);
-		fprintf(fptr,"%d",-1);
-	}
-	fclose(fptr);
 	return -1;
 }
 

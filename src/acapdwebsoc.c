@@ -76,10 +76,10 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
             printf("client writing cmd %s arg %s\n",m->cmd,m->arg);
             lws_write( wsi, (unsigned char *)m, sizeof(struct msg), LWS_WRITE_TEXT );
 			if(strcmp(cmd,"-loadpdi")){
-					sleep(2);
+					//sleep(2);
 					interrupted = 1;
 			}else {
-				sleep(1);
+				//sleep(1);
 				msgs_sent++;
 			}
 			printf("LWS_CALLBACK_CLIENT_WRITEABLE done count %d\n",msgs_sent);
@@ -156,7 +156,7 @@ int exchangeCommand(char* path, char* argvalue){
 
     while (!interrupted){
 		//printf("starting lws_service client\n");
-        if(lws_service(context, 0))
+        if(lws_service(context, 15))
             interrupted = 1;
 	}
 

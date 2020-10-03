@@ -206,9 +206,9 @@ int sys_zocl_alloc_bo(acapd_accel_t *accel)
 	if (accel->drm_fd < 0) {
 		return -1;
 	}
-	struct drm_zocl_create_bo mm2s = {0x4000000, 0xffffffff,
+	struct drm_zocl_create_bo mm2s = {0x1000000, 0xffffffff,
 					DRM_ZOCL_BO_FLAGS_COHERENT | DRM_ZOCL_BO_FLAGS_CMA};
-	struct drm_zocl_create_bo s2mm = {0x4000000, 0xffffffff,
+	struct drm_zocl_create_bo s2mm = {0x1000000, 0xffffffff,
 					DRM_ZOCL_BO_FLAGS_COHERENT | DRM_ZOCL_BO_FLAGS_CMA};
 	struct drm_zocl_create_bo config = {4096, 0xffffffff,
 					DRM_ZOCL_BO_FLAGS_COHERENT | DRM_ZOCL_BO_FLAGS_CMA};

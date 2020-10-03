@@ -102,8 +102,9 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 	} else if (ret == ACAPD_ACCEL_INPROGRESS) {
 		accel->status = ACAPD_ACCEL_STATUS_LOADING;
 	} else {
-		acapd_perror("%s: Failed to load partial bitstream\n",__func__);
+		acapd_perror("%s: Failed to load partial bitstream ret %d\n",__func__,ret);
 		accel->load_failure = ret;
+		return ret;
 	}
 	if (accel->status == ACAPD_ACCEL_STATUS_INUSE) {
 		ret = acapd_shell_release_isolation(accel);
