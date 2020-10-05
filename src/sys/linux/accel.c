@@ -130,16 +130,11 @@ int sys_accel_config(acapd_accel_t *accel)
 		strncpy(config_path, accel->sys_info.tmp_dir, len);
 		strcat(config_path, "accel.json");
 	} else {
-		size_t len;
-
-		len = sizeof(config_path) - 1;
-		if (len > strlen(env_config_path)) {
-			len = strlen(env_config_path);
-		} else {
+		if (sizeof(config_path) < strlen(env_config_path)) {
 			acapd_perror("%s: accel config env path is too long.\n");
 			return ACAPD_ACCEL_FAILURE;
 		}
-		strncpy(config_path, env_config_path, len);
+		strncpy(config_path, env_config_path, sizeof(config_path));
 	}
 
 	parseAccelJson(accel, config_path);
@@ -375,6 +370,7 @@ int sys_load_accel_post(acapd_accel_t *accel)
 	acapd_assert(accel != NULL);
 	char cmd[512];
 	char tmpstr[512];
+	int ret;
 
 	sprintf(cmd,"docker run --ulimit memlock=67108864:67108864 --rm -v /usr/lib:/x_usrlib -v /usr/bin/:/xbin/ -v /lib/:/xlib -v %s:%s ",accel->sys_info.tmp_dir,accel->sys_info.tmp_dir);
 	for (int i = 0; i < accel->num_ip_devs; i++) {
@@ -392,8 +388,6 @@ int sys_load_accel_post(acapd_accel_t *accel)
 		strcat(cmd,"--device=/dev/vfio:/dev/vfio ");
 	}
 	for (int i = 0; i < accel->num_chnls; i++) {
-		int ret;
-
 		ret = acapd_generic_device_bind(accel->chnls[i].dev,
 						accel->chnls[i].dev->driver);
 		if (ret != 0) {
@@ -410,14 +404,14 @@ int sys_load_accel_post(acapd_accel_t *accel)
 	}
 	sprintf(tmpstr,"docker load < %s/container.tar",accel->sys_info.tmp_dir);
 	acapd_debug("%s:Loading docker container\n",__func__);
-	system(tmpstr);
+	ret = system(tmpstr);
 
 	sprintf(tmpstr," -e \"ACCEL_CONFIG_PATH=%s/accel.json\"",accel->sys_info.tmp_dir);
 	strcat(cmd, tmpstr);
 	strcat(cmd, " -it container");
 	acapd_debug("%s: docker run cmd: %s\n",__func__,cmd);
-	system(cmd);
-	return 0;
+	ret = system(cmd);
+	return ret;
 }
 
 int sys_close_accel(acapd_accel_t *accel)

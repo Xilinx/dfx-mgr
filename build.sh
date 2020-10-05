@@ -2,9 +2,8 @@
 set -x
 cmake ../ \
 	-DCMAKE_TOOLCHAIN_FILE=versal-linux \
-	-DCMAKE_INCLUDE_PATH="/scratch/workspace/mdgr/acapd/include" \
-	-DCMAKE_LIBRARY_PATH="/scratch/workspace/mdgr/acapd/lib" \
-	-DWITH_EXAMPLE=on \
+	-DCMAKE_INCLUDE_PATH="$(pwd)/../include" \
+	-DCMAKE_LIBRARY_PATH="$(pwd)/../lib" \
 
 if [ $? -ne 0 ]; then
 	exit 255

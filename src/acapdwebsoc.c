@@ -12,6 +12,7 @@
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <acapd/print.h>
 #include "acapdwebsoc.h"
 
 static int interrupted;
@@ -22,7 +23,6 @@ static const char *cmd;
 struct pss {
 	char body_part;
 };
-
 
 struct msg{
     char cmd[32];
@@ -73,7 +73,7 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
             m = (struct msg *)&buf[LWS_SEND_BUFFER_PRE_PADDING];
             sprintf(m->cmd,"%s",cmd);
             sprintf(m->arg,"%s",arg);
-            printf("client writing cmd %s arg %s\n",m->cmd,m->arg);
+            acapd_perror("client writing cmd %s arg %s\n",m->cmd,m->arg);
             lws_write( wsi, (unsigned char *)m, sizeof(struct msg), LWS_WRITE_TEXT );
 			if(strcmp(cmd,"-loadpdi")){
 					//sleep(2);
@@ -82,7 +82,7 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
 				//sleep(1);
 				msgs_sent++;
 			}
-			printf("LWS_CALLBACK_CLIENT_WRITEABLE done count %d\n",msgs_sent);
+			acapd_perror("LWS_CALLBACK_CLIENT_WRITEABLE done count %d\n",msgs_sent);
             break;
         case LWS_CALLBACK_CLOSED:
             printf("LWS_CALLBACK_CLOSED\n");
@@ -175,8 +175,14 @@ int loadpdi(char* pdifilename)
 		return -1;
 }
 
-int removepdi(char* argvalue)
+int removepdi(char* argvalue, fds_t *fds)
 {
+	close(fds->mm2s_fd);
+	close(fds->s2mm_fd);
+	close(fds->config_fd);
+	close(fds->accelconfig_fd);
+	close(fds->dma_hls_fd);
+	printf("***********************closed fd*****\n");
 	return exchangeCommand("-remove", argvalue);
 }
 
@@ -205,44 +211,7 @@ int getClockFD()
 #define BUFFER_LENGTH    250
 #define FALSE              0
 
-#define TXTSRV "server\n"
-#define TXTCLI "client\n"
-
 char *server_paths[] = {"/tmp/server_rm0", "/tmp/server_rm1", "/tmp/server_rm2"};
-
-int sendfd(int socket, int fd) {
-    	char dummy = '$';
-	struct msghdr msg;
-	struct iovec iov;
-
-	char cmsgbuf[CMSG_SPACE(sizeof(int))];
-
-	iov.iov_base = &dummy;
-	iov.iov_len = sizeof(dummy);
-
-	msg.msg_name = NULL;
-	msg.msg_namelen = 0;
-	msg.msg_iov = &iov;
-	msg.msg_iovlen = 1;
-	msg.msg_flags = 0;
-	msg.msg_control = cmsgbuf;
-	msg.msg_controllen = CMSG_LEN(sizeof(int));
-
-	struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
-	cmsg->cmsg_level = SOL_SOCKET;
-	cmsg->cmsg_type = SCM_RIGHTS;
-	cmsg->cmsg_len = CMSG_LEN(sizeof(int));
-
-	*(int*) CMSG_DATA(cmsg) = fd;
-
-	int ret = sendmsg(socket, &msg, 0);
-
-	if (ret == -1) {
-		printf("sendmsg failed with %s", strerror(errno));
-	}
-
-	return ret;
-}
 
 int recvfd(int socket, fds_t *fds) {
 	int len;
@@ -289,8 +258,11 @@ int recvfd(int socket, fds_t *fds) {
 
 void recvPA(int socket, fds_t *fds) {
 	uint64_t arr[6];
-	read(socket, &arr, sizeof(uint64_t)*6);
-	printf("client recvd %lx %lu %lx %lu %lx %lu\n",arr[0],arr[1],arr[2],arr[3],arr[4],arr[5]); 
+	int ret;
+	
+	ret = read(socket, &arr, sizeof(uint64_t)*6);
+	acapd_perror("client(ret %d) recvd %lx %lu %lx %lu %lx %lu\n",ret,
+					arr[0],arr[1],arr[2],arr[3],arr[4],arr[5]); 
 	fds->mm2s_pa     = arr[0];
 	fds->mm2s_size   = arr[1];
 	fds->s2mm_pa     = arr[2];
@@ -329,10 +301,10 @@ int socketGetFd(int slot, fds_t* fds){
 	serveraddr.sun_family = AF_UNIX;
 	strcpy(serveraddr.sun_path, server_paths[slot]);
 	
-	printf("%s\n", server_paths[slot]);
+	acapd_debug("%s\n", server_paths[slot]);
 	while(cfileexists(server_paths[slot]) == 0){
 		sleep(1);
-		printf("##############$$\n");
+		acapd_debug("##############$$\n");
 	}
 
 	rc = connect(sd, (struct sockaddr *)&serveraddr, SUN_LEN(&serveraddr));
@@ -341,7 +313,7 @@ int socketGetFd(int slot, fds_t* fds){
 		perror("connect() failed");
 		return -1;
 	}
-	printf("started client socket\n");
+	acapd_debug("started client socket\n");
 	//fd = recvfd(sd);
 	recvfd(sd, fds);
 	recvPA(sd, fds);
@@ -368,7 +340,7 @@ int socketGetPA(int slot, fds_t* fds){
 		perror("connect() failed");
 		return -1;
 	}
-	printf("started client socket\n");
+	acapd_debug("started client socket\n");
 	//fd = recvfd(sd);
 	recvPA(sd, fds);
      	if (sd != -1)

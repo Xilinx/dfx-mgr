@@ -20,7 +20,7 @@ endforeach()
 
 add_subdirectory (src)
 
-if (WITH_EXAMPLE)
-  add_subdirectory (example)
-endif (WITH_EXAMPLE)
+#if (WITH_EXAMPLE)
+add_subdirectory (example)
+#endif (WITH_EXAMPLE)
 # vim: expandtab:ts=2:sw=2:smartindent

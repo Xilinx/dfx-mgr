@@ -138,16 +138,10 @@ static int acapd_generic_device_get_uio_path(acapd_device_t *dev)
 			int fd;
 			char size_str[32], tmpname[8];
 			size_t size;
-			int len;
 
 			memset(dev->path, 0, sizeof(dev->path));
 			memset(tmpname, 0, sizeof(tmpname));
-			if (strlen(dir->d_name) >= sizeof(tmpname)) {
-				len = sizeof(tmpname) - 1;
-			} else {
-				len = strlen(dir->d_name);
-			}
-			strncpy(tmpname, dir->d_name, len);
+			strcpy(tmpname, dir->d_name);
 			sprintf(dev->path, "/dev/%s", tmpname);
 
 			/* get io region size */

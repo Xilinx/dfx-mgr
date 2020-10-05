@@ -62,7 +62,9 @@ int parseAccelJson(acapd_accel_t *accel, const char *filename)
 	jsonData = (char *)calloc(numBytes, sizeof(char));
 	if (jsonData == NULL)
 		return -1;
-	fread(jsonData, sizeof(char), numBytes, fptr);
+	ret = fread(jsonData, sizeof(char), numBytes, fptr);
+	if (ret < numBytes)
+		acapd_perror("%s: Error reading Accel.json\n",__func__);
 	fclose(fptr);
 	acapd_praw("jsonData read:\n %s\n",jsonData);
 
@@ -201,7 +203,9 @@ int parseShellJson(acapd_shell_t *shell, const char *filename)
 	jsonData = (char *)calloc(numBytes, sizeof(char));
 	if (jsonData == NULL)
 		return -1;
-	fread(jsonData, sizeof(char), numBytes, fptr);
+	ret = fread(jsonData, sizeof(char), numBytes, fptr);
+	if (ret < numBytes)
+		acapd_perror("%s: Error reading Shell.json\n",__func__);
 	fclose(fptr);
 	acapd_debug("jsonData read:\n %s\n",jsonData);
 

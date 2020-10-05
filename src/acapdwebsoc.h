@@ -16,7 +16,7 @@ typedef struct fds{
 //extern int initSocket();
 //extern int finaliseSocket();
 extern int loadpdi(char* pdifilename);
-extern int removepdi(char* argvalue);
+extern int removepdi(char* argvalue, fds_t *fds);
 extern int getFD(char* argvalue);
 extern int getPA(char* argvalue);
 extern int getShellFD();
