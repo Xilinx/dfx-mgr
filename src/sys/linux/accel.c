@@ -95,7 +95,7 @@ int sys_accel_config(acapd_accel_t *accel)
 	if(env_config_path == NULL) {
 		if(pkg->type == ACAPD_ACCEL_PKG_TYPE_TAR_GZ) {
 			acapd_debug("%s: Found .tar.gz package, extracting %s. \n",
-													__func__, pkg->name);
+													__func__, pkg->path);
 			tmp_dirname = mkdtemp(template);
 			if (tmp_dirname == NULL) {
 				acapd_perror("Failed to create tmp dir for package:%s.\n",
@@ -103,10 +103,10 @@ int sys_accel_config(acapd_accel_t *accel)
 				return ACAPD_ACCEL_FAILURE;
 			}
 			sprintf(accel->sys_info.tmp_dir, "%s/", tmp_dirname);
-			sprintf(cmd, "tar -C %s -xzf %s", tmp_dirname, pkg->name);
+			sprintf(cmd, "tar -C %s -xzf %s", tmp_dirname, pkg->path);
 			ret = system(cmd);
 			if (ret != 0) {
-				acapd_perror("Failed to extract package %s.\n", pkg->name);
+				acapd_perror("Failed to extract package %s.\n", pkg->path);
 				return ACAPD_ACCEL_FAILURE;
 			}
 			len = sizeof(config_path) - strlen("accel.json") - 1;
@@ -118,13 +118,13 @@ int sys_accel_config(acapd_accel_t *accel)
 			}
 		}
 		else if(pkg->type == ACAPD_ACCEL_PKG_TYPE_NONE) {
-			acapd_debug("%s: No need to extract pkg %s \n",__func__,pkg->name);
-			sprintf(accel->sys_info.tmp_dir, "%s/", pkg->name);
+			acapd_debug("%s: No need to extract pkg %s \n",__func__,pkg->path);
+			sprintf(accel->sys_info.tmp_dir, "%s/", pkg->path);
 			len = strlen(accel->sys_info.tmp_dir);
 		}
 		else {
 			acapd_perror("%s: unhandled package type for accel %s\n",
-													__func__, pkg->name);
+													__func__, pkg->path);
 			return ACAPD_ACCEL_FAILURE;
 		}
 		strncpy(config_path, accel->sys_info.tmp_dir, len);
@@ -136,7 +136,6 @@ int sys_accel_config(acapd_accel_t *accel)
 		}
 		strncpy(config_path, env_config_path, sizeof(config_path));
 	}
-
 	parseAccelJson(accel, config_path);
 	if (sys_needs_load_accel(accel) == 0) {
 		for (int i = 0; i < accel->num_ip_devs; i++) {
@@ -317,8 +316,8 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async, int full_bitstream)
 		fpga_cfg_destroy(fpga_cfg_id);
 		return ACAPD_ACCEL_FAILURE;
 	}
-	if (full_bitstream) {
-		acapd_debug("%s:Loaded Full bitstream\n",__func__);
+	if (accel->type == FLAT_SHELL || full_bitstream) {
+		acapd_perror("%s:Loaded base design\n",__func__);
 		return ACAPD_ACCEL_SUCCESS;
 	}
 	for (int i = 0; i < accel->num_ip_devs; i++) {
@@ -419,7 +418,7 @@ int sys_close_accel(acapd_accel_t *accel)
 	/* Close devices and free memory */
 	acapd_assert(accel != NULL);
 	for (int i = 0; i < accel->num_chnls; i++) {
-		acapd_debug("%s: closing channel %d.\n", __func__, i);
+		acapd_perror("%s: closing channel %d.\n", __func__, i);
 		acapd_dma_close(&accel->chnls[i]);
 	}
 	if (accel->num_chnls > 0) {
@@ -430,7 +429,7 @@ int sys_close_accel(acapd_accel_t *accel)
 		accel->num_chnls = 0;
 	}
 	for (int i = 0; i < accel->num_ip_devs; i++) {
-		acapd_debug("%s: closing accel ip %d %s.\n", __func__, i, accel->ip_dev[i].dev_name);
+		acapd_perror("%s: closing accel ip %d %s.\n", __func__, i, accel->ip_dev[i].dev_name);
 		acapd_device_close(&accel->ip_dev[i]);
 	}
 	if (accel->num_ip_devs > 0) {
@@ -439,8 +438,8 @@ int sys_close_accel(acapd_accel_t *accel)
 		accel->ip_dev = NULL;
 		accel->num_ip_devs = 0;
 	}
-	if(accel->handle[0]){
-		printf("Close zocl BO handle\n");
+	if(accel->handle[0] > 0){
+		acapd_debug("%s:Close zocl BO handle\n",__func__);
 		struct drm_gem_close closeInfo = {accel->handle[0], 0};
 		ioctl(accel->drm_fd, DRM_IOCTL_GEM_CLOSE, &closeInfo);
 		closeInfo.handle = accel->handle[1];
@@ -449,6 +448,7 @@ int sys_close_accel(acapd_accel_t *accel)
 		ioctl(accel->drm_fd, DRM_IOCTL_GEM_CLOSE, &closeInfo);
 	}
 	if(accel->drm_fd > 0){
+		printf("%s:closing drm\n",__func__);
 		close(accel->drm_fd);
 		close(accel->fd[0]);
 		close(accel->fd[1]);
@@ -465,7 +465,7 @@ int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
 	/* TODO: for now, only synchronous mode is supported */
 	(void)async;
 	fpga_cfg_id = accel->sys_info.fpga_cfg_id;
-	printf("%s Removing accel %s\n",__func__,accel->sys_info.tmp_dir);
+	acapd_debug("%s Removing accel %s\n",__func__,accel->sys_info.tmp_dir);
 	if (accel->sys_info.tmp_dir != NULL && accel->pkg->type ==
 									ACAPD_ACCEL_PKG_TYPE_TAR_GZ) {
 		acapd_debug("%s: Removing tmp dir for .tar.gz\n",__func__);
@@ -550,14 +550,12 @@ int sys_send_fds(acapd_accel_t *accel, int *fds, int num_fds)
     struct iovec iov;
     char cmsgbuf[CMSG_SPACE(sizeof(int) * num_fds)];
 	memset(cmsgbuf, '\0',sizeof(cmsgbuf));
-	printf("calling accept \n");
 	int socket_d2 = accept(socket_d[accel->rm_slot], NULL, NULL);
     if (socket_d2 < 0){
 		acapd_perror("%s failed to accept() connections for slot %d ret %d",
 												__func__,accel->rm_slot, socket_d2);
 		return -1;
 	}
-	printf("accept done\n");
 	iov.iov_base = &dummy;
     iov.iov_len = sizeof(dummy);
 
@@ -575,9 +573,7 @@ int sys_send_fds(acapd_accel_t *accel, int *fds, int num_fds)
     cmsg->cmsg_len = CMSG_LEN(sizeof(int) * num_fds);
 
 	memcpy((int*) CMSG_DATA(cmsg), fds, sizeof(int)*num_fds);
-	printf("calling sendmsg\n");
     int ret = sendmsg(socket_d2, &msg, 0);
-	printf("sendmsg done\n");
     if (ret == -1) {
         acapd_perror("%s send FD's failed for slot %d with %s\n", __func__,
 												accel->rm_slot, strerror(errno));

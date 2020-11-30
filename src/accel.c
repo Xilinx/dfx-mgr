@@ -80,14 +80,15 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 	//	}
 	}
 	/* assert isolation before programming */
-	ret = acapd_shell_assert_isolation(accel);
-	if (ret < 0) {
-		acapd_perror("%s, failed to assert isolaction.\n",
-			     __func__);
-		return ret;
+	if (accel->type == SIHA_SHELL) {
+		ret = acapd_shell_assert_isolation(accel);
+		if (ret < 0) {
+			acapd_perror("%s, failed to assert isolaction.\n",
+										     __func__);
+			return ret;
+		}
 	}
-	/* TODO: Check if the accel is valid */
-	/* For now, for now assume it is always PDI/DTB */
+
 	if (accel->is_cached == 0) {
 		ret = sys_fetch_accel(accel, XFPGA_NORMAL_EN);
 		if (ret != ACAPD_ACCEL_SUCCESS) {
@@ -106,7 +107,7 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 		accel->load_failure = ret;
 		return ret;
 	}
-	if (accel->status == ACAPD_ACCEL_STATUS_INUSE) {
+	if (accel->status == ACAPD_ACCEL_STATUS_INUSE && accel->type == SIHA_SHELL) {
 		ret = acapd_shell_release_isolation(accel);
 		if (ret != 0) {
 			acapd_perror("%s: failed to release isolation.\n",__func__);
@@ -114,7 +115,7 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 		}
 		acapd_debug("%s: releasing isolation done.\n", __func__);
 	}
-	ret = sys_load_accel_post(accel);
+	//ret = sys_load_accel_post(accel);
 	return ret;
 }
 
@@ -141,7 +142,6 @@ int remove_accel(acapd_accel_t *accel, unsigned int async)
 		return ACAPD_ACCEL_INPROGRESS;
 	} else {
 		int ret;
-
 		ret = sys_close_accel(accel);
 		if (ret < 0) {
 			acapd_perror("%s: failed to close accel.\n", __func__);
@@ -153,11 +153,13 @@ int remove_accel(acapd_accel_t *accel, unsigned int async)
 			accel->status = ACAPD_ACCEL_STATUS_UNLOADED;
 			return ACAPD_ACCEL_SUCCESS;
 		} else {
-			ret = acapd_shell_assert_isolation(accel);
-			if (ret < 0) {
-				acapd_perror("%s, failed to assert isolaction.\n",
+			if (accel->type == SIHA_SHELL) {
+				ret = acapd_shell_assert_isolation(accel);
+				if (ret < 0) {
+					acapd_perror("%s, failed to assert isolaction.\n",
 				             __func__);
-				return ret;
+					return ret;
+				}
 			}
 			ret = sys_remove_accel(accel, async);
 			//acapd_shell_put();

@@ -36,31 +36,30 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
     switch( reason )
     {
         case LWS_CALLBACK_CLIENT_ESTABLISHED:
-            printf("LWS_CALLBACK_CLIENT_ESTABLISHED user %s\n",(char *)user);
+            lwsl_debug("LWS_CALLBACK_CLIENT_ESTABLISHED user %s\n",(char *)user);
             lws_callback_on_writable( wsi );
             break;
 
         case LWS_CALLBACK_CLIENT_RECEIVE:
-            printf("LWS_CALLBACK_CLIENT_RECEIVE len %ld\n",len);
+            lwsl_debug("LWS_CALLBACK_CLIENT_RECEIVE len %ld\n",len);
 			msgs_sent--;
             memcpy( &received_payload.data[LWS_SEND_BUFFER_PRE_PADDING], in, len );
             received_payload.len = len;
             r = (struct resp *)&received_payload.data[LWS_SEND_BUFFER_PRE_PADDING];
-            printf("client recieved %s len %d\n",r->data,r->len);
+            lwsl_debug("client recieved %s len %d\n",r->data,r->len);
 			if(!msgs_sent)
 				interrupted = 1;
             /* Handle incomming messages here. */
             break;
 
         case LWS_CALLBACK_CLIENT_WRITEABLE:
-            printf("LWS_CALLBACK_CLIENT_WRITEABLE len %ld\n",len);
+            lwsl_debug("LWS_CALLBACK_CLIENT_WRITEABLE len %ld cmd %s \n",len,cmd);
             unsigned char buf[LWS_SEND_BUFFER_PRE_PADDING + sizeof(struct msg) + LWS_SEND_BUFFER_POST_PADDING];
             //unsigned char *p = &buf[LWS_SEND_BUFFER_PRE_PADDING];
             //size_t n = sprintf( (char *)p, "%u", rand() );
             m = (struct msg *)&buf[LWS_SEND_BUFFER_PRE_PADDING];
             sprintf(m->cmd,"%s",cmd);
             sprintf(m->arg,"%s",arg);
-			printf("client writing cmd %s arg %s\n",m->cmd,m->arg);
             lws_write( wsi, (unsigned char *)m, sizeof(struct msg), LWS_WRITE_TEXT );
 			if(strcmp(cmd,"-loadpdi"))
 				interrupted = 1;
@@ -68,11 +67,11 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
 			msgs_sent++;
             break;
         case LWS_CALLBACK_CLOSED:
-			printf("LWS_CALLBACK_CLOSED\n");
+			lwsl_debug("LWS_CALLBACK_CLOSED\n");
 			interrupted = 1;
 			break;
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
-			lwsl_user("CLIENT_CONNECTION_ERROR: %s\n",
+			lwsl_err("CLIENT_CONNECTION_ERROR: %s\n",
 				 in ? (char *)in : "(null)");
 			interrupted = 1;
             break;
@@ -190,7 +189,7 @@ static struct lws_protocols protocols[] =
 static void
 sigint_handler(int sig)
 {
-	printf("Recieved signal %d\n",sig);
+	lwsl_debug("Recieved signal %d\n",sig);
 	interrupted = 1;
 }
 
@@ -225,33 +224,40 @@ int main(int argc, const char **argv)
 	ccinfo.protocol = protocols[0].name;
 	ccinfo.path = "/";
 	//ccinfo.ssl_connection = LCCSCF_HTTP_MULTIPART_MIME | LCCSCF_ALLOW_SELFSIGNED;	
-	if ((option = lws_cmdline_option(argc, argv, "-loadpdi"))) {
-		cmd = "-loadpdi";
+	if ((option = lws_cmdline_option(argc, argv, "-load"))) {
+		cmd = "-load";
 		arg = option;
 	}
 	else if ((option = lws_cmdline_option(argc, argv, "-remove"))) {
 		cmd = "-remove";
 		arg = option;
 	}
-	else if ((option = lws_cmdline_option(argc, argv, "-getFD"))) {
+	else if ((lws_cmdline_option(argc, argv, "-listPackage"))) {
+		cmd = "-listPackage";
+		arg = "";
+	}
+	/*else if ((option = lws_cmdline_option(argc, argv, "-getFD"))) {
 		cmd = "-getFD";
 		arg = option;
 	}
 	else if ((lws_cmdline_option(argc, argv, "-getShellFD"))) {
 		cmd = "-getShellFD";
+		arg = "";
 	}
 	else if ((lws_cmdline_option(argc, argv, "-getClockFD"))) {
 		cmd = "-getClockFD";
+		arg = "";
 	}
 	else if ((lws_cmdline_option(argc, argv, "-getRMInfo"))) {
 		cmd = "-getRMInfo";
-	}
+		arg = "";
+	}*/
 	else
-		printf("Option not recognized, check again.\n");
+		lwsl_debug("Option not recognized, check again.\n");
 	//ccinfo.method = "POST";
 
 	web_socket = lws_client_connect_via_info(&ccinfo);
-	lwsl_user("http client started\n");
+	lwsl_debug("http client started\n");
 
 	while (!interrupted)
 		if(lws_service(context, 0))

@@ -13,6 +13,8 @@ collect (PROJECT_LIB_HEADERS print.h)
 collect (PROJECT_LIB_HEADERS shell.h)
 collect (PROJECT_LIB_HEADERS shm.h)
 collect (PROJECT_LIB_HEADERS acapdwebsoc.h)
+collect (PROJECT_LIB_HEADERS model.h)
+collect (PROJECT_LIB_HEADERS json-config.h)
 
 collect (PROJECT_LIB_SOURCES accel.c)
 collect (PROJECT_LIB_SOURCES assert.c)

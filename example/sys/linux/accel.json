@@ -36,7 +36,8 @@
 			}]
 	},
 	"AccelHandshakeType": "streamDataFromTrg",
-	"fallbackBehaviour": "None"
+	"fallbackBehaviour": "None",
+	"accel_type": "FLAT_SHELL"
 }
 	
 		

@@ -44,12 +44,18 @@ extern "C" {
 #include <acapd/helper.h>
 #include <acapd/sys/@PROJECT_SYSTEM@/accel.h>
 
+typedef enum shell_type {
+	FLAT_SHELL = 1U,
+	SIHA_SHELL,
+} shell_type_t;
+
 /**
  * @brief accel package information structure
  */
 typedef struct {
 	uint32_t type; /**< type of package element */
-	char *name; /**< name of the package element */
+	char name[128]; /**< name of the package element */
+	char *path; /** path on the filesystem */
 	uint64_t size; /**< size of package element */
 	uint32_t is_end; /**< if it is the end of package */
 } acapd_accel_pkg_hd_t;
@@ -60,7 +66,7 @@ typedef struct {
 typedef struct {
 	acapd_accel_pkg_hd_t *pkg; /**< pointer to the package */
 	acapd_accel_sys_t sys_info; /**< system specific accel information */
-	char * type; /**< type of the accelarator */
+	shell_type_t type; /**< type of the accelarator */
 	unsigned int status; /**< status of the accelarator */
 	unsigned int is_cached; /**< if the accelerator is cached */
 	int load_failure; /**< load failure */
