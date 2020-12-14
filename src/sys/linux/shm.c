@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Xilinx Inc. and Contributors. All rights reserved.
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: MIT
  */
@@ -35,9 +35,8 @@ static int acapd_vfio_alloc_shm(acapd_shm_allocator_t *allocator,
 		acapd_perror("%s: failed to allocate memory from fd %d, %s.\n",
 			     __func__, shm->id, strerror(errno));
 	} else {
-		acapd_debug("%s: allocated memory %p from fd %d, size 0x%x.\n",
-			    __func__, shm->va,
-			    shm->id, size);
+		acapd_debug("%s: allocated memory %p from fd %d.\n",
+			    __func__, shm->va, shm->id);
 	}
 	shm->size = size;
 	return 0;

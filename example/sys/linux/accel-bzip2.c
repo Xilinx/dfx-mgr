@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 #include <acapd/accel.h>
 #include <errno.h>
 #include <getopt.h>

@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 typedef struct fds{
 	int s2mm_fd;
 	int mm2s_fd;
@@ -13,16 +19,12 @@ typedef struct fds{
 
 } fds_t;
 
-//extern int initSocket();
-//extern int finaliseSocket();
 extern int loadpdi(char* pdifilename);
 extern int removepdi(char* argvalue, fds_t *fds);
 extern int getFD(char* argvalue);
 extern int getPA(char* argvalue);
 extern int getShellFD();
 extern int getClockFD();
-//extern int testInit();
-//extern int testFinalise();
 extern int socketGetFd(int slot, fds_t *fds);
 extern int socketGetPA(int slot, fds_t *fds);
 extern int test();

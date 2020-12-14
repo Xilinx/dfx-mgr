@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Xilinx Inc. and Contributors. All rights reserved.
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: MIT
  */
@@ -86,7 +86,7 @@ static int axidma_vfio_dma_transfer(acapd_chnl_t *chnl,
 		return -EINVAL;
 	}
 	if (chnl->dir == ACAPD_DMA_DEV_W) {
-		acapd_debug("%s: data from da 0x%llx to stream.\n",
+		acapd_debug("%s: data from da 0x%lx to stream.\n",
 			    __func__, da);
 		/* write to stream, setup tx DMA */
 		base_va = (void *)((char *)base_va + XAXIDMA_TX_OFFSET);
@@ -107,7 +107,7 @@ static int axidma_vfio_dma_transfer(acapd_chnl_t *chnl,
 			size;
 
 	} else {
-		acapd_debug("%s: data from stream to da 0x%llx.\n",
+		acapd_debug("%s: data from stream to da 0x%lx.\n",
 			    __func__, da);
 		/* read from stream, setup rx DMA */
 		base_va = (void *)((char *)base_va + XAXIDMA_RX_OFFSET);

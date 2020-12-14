@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Xilinx Inc. and Contributors. All rights reserved.
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: MIT
  */
@@ -46,7 +46,7 @@ int parseAccelJson(acapd_accel_t *accel, const char *filename)
 	
 	fptr = fopen(filename, "r");
 	if (fptr == NULL){
-		acapd_perror("%s: Cannot open accel.json, %s\n",__func__,strerror(errno));
+		acapd_debug("%s: Cannot open accel.json, %s\n",__func__,strerror(errno));
 		return -1;
 	}
 	

@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 #include <libwebsockets.h>
 #include <string.h>
 #include <signal.h>
@@ -21,7 +27,7 @@
 
 static int interrupted;
 static acapd_accel_t *active_slots[3];
-char *firmware_path = "/lib/firmware";
+char *firmware_path = "/lib/firmware/xilinx";
 
 struct watch {
     int wd;
@@ -148,7 +154,7 @@ int load_accelerator(const char *accel_name)
 	if(base != NULL && strcmp(base->type,"flat") == 0) {
 		//strcpy(pkg->name, accel_name);
 		sprintf(pkg->name,"%s",accel_name);
-		acapd_perror("loading flat shell design %s\n",pkg->name);
+		acapd_debug("%s:loading flat shell design %s\n",__func__,pkg->name);
 		//pkg->name = base->base_path;
 		pkg->path = base->base_path;
 		pkg->type = ACAPD_ACCEL_PKG_TYPE_NONE;
@@ -550,7 +556,7 @@ void add_base_design(char *path){
 
     for (i = 0; i < 10; i++) {
 		if (base_designs[i].base_path[0] == '\0') {
-			acapd_perror("adding base design %s\n",path);
+			acapd_debug("adding base design %s\n",path);
 			strncpy(base_designs[i].base_path, path, sizeof(base_designs[i].base_path)-1);
 			base_designs[i].base_path[sizeof(base_designs[i].base_path) - 1] = '\0';
 			sprintf(shell_path,"%s/shell.json",base_designs[i].base_path);
@@ -562,7 +568,7 @@ void add_base_design(char *path){
 	}
 }
 void remove_base_design(char *path, char *parent){
-	acapd_perror("%s removing %s parent %s\n",__func__,path,parent);
+	acapd_debug("%s removing %s parent %s\n",__func__,path,parent);
     int i;
     for (i = 0; i < 10; i++) {
 		if (strcmp(base_designs[i].base_path, path) == 0) {
@@ -625,7 +631,7 @@ void *threadFunc()
 				continue;
 			}
 			sprintf(new_dir,"%s/%s", firmware_path, dir->d_name);
-			acapd_perror("Found dir %s\n",new_dir);
+			acapd_debug("Found dir %s\n",new_dir);
 			wd = inotify_add_watch(inotifyFd, new_dir, IN_ALL_EVENTS);
 			if (wd == -1)
 				acapd_perror("%s:inotify_add_watch failed on %s\n",__func__,new_dir);
@@ -633,7 +639,7 @@ void *threadFunc()
 				add_to_watch(wd, new_dir);
 				sprintf(path,"%s/shell.json",new_dir);
 				if (stat(path,&info) != 0){
-					acapd_perror("No shell.json found in %s\n",new_dir);
+					acapd_debug("No shell.json found in %s\n",new_dir);
 				}
 				else
 					add_base_design(new_dir);
@@ -645,10 +651,10 @@ void *threadFunc()
     for (;;) {                                  /* Read events forever */
         numRead = read(inotifyFd, buf, BUF_LEN);
         if (numRead == 0)
-            printf("read() from inotify fd returned 0!");
+            acapd_perror("read() from inotify fd returned 0!");
 
         if (numRead == -1)
-            printf("read");
+            acapd_perror("read() from inotify failed\n");
 
         /* Process all of the events in buffer returned by read() */
 
@@ -677,7 +683,6 @@ void *threadFunc()
             else if((event->mask & IN_DELETE) && (event->mask & IN_ISDIR)) {
                 char * parent = wd_to_pathname(event->wd);
                 sprintf(new_dir,"%s/%s",parent, event->name);
-                printf("removing watch on  %s \n",new_dir);
                 remove_watch(new_dir);
 				remove_base_design(new_dir, parent);
             }
@@ -720,18 +725,17 @@ int main(int argc, const char **argv)
 
 	info.port = 7681;
 	info.protocols = protocols;
-//	info.gid = -1;
-//	info.uid = -1;
+	info.gid = -1;
+	info.uid = -1;
+	info.vhost_name = "localhost";
+	info.options = LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE;
+
 	context = lws_create_context(&info);
 	if (!context) {
 		lwsl_err("lws init failed\n");
 		return 1;
 	}
 
-	/* http on 7681 */
-
-	//info.mounts = &mount;
-	info.vhost_name = "localhost";
 
 	if (!lws_create_vhost(context, &info)) {
 		lwsl_err("Failed to create tls vhost\n");

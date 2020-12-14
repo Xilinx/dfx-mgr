@@ -14,5 +14,3 @@ collect (PROJECT_LIB_SOURCES json-config.c)
 collect (PROJECT_LIB_SOURCES print.c)
 collect (PROJECT_LIB_SOURCES shm.c)
 collect (PROJECT_LIB_SOURCES shell.c)
-
-# vim: expandtab:ts=2:sw=2:smartindent

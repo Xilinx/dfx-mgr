@@ -12,7 +12,7 @@ collect (PROJECT_LIB_HEADERS helper.h)
 collect (PROJECT_LIB_HEADERS print.h)
 collect (PROJECT_LIB_HEADERS shell.h)
 collect (PROJECT_LIB_HEADERS shm.h)
-collect (PROJECT_LIB_HEADERS acapdwebsoc.h)
+collect (PROJECT_LIB_HEADERS lws_client.h)
 collect (PROJECT_LIB_HEADERS model.h)
 collect (PROJECT_LIB_HEADERS json-config.h)
 
@@ -22,7 +22,7 @@ collect (PROJECT_LIB_SOURCES dma.c)
 collect (PROJECT_LIB_SOURCES device.c)
 collect (PROJECT_LIB_SOURCES shell.c)
 collect (PROJECT_LIB_SOURCES shm.c)
-collect (PROJECT_LIB_SOURCES acapdwebsoc.c)
+collect (PROJECT_LIB_SOURCES lws_client.c)
 
 add_subdirectory (sys)
 

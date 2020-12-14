@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Xilinx Inc. and Contributors. All rights reserved.
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: MIT
  */
@@ -165,7 +165,7 @@ int remove_accel(acapd_accel_t *accel, unsigned int async)
 			//acapd_shell_put();
 		}
 		if (ret == ACAPD_ACCEL_SUCCESS) {
-			acapd_debug("%s:Succesfully removed accel\n");
+			acapd_debug("%s:Succesfully removed accel\n",__func__);
 			accel->status = ACAPD_ACCEL_STATUS_UNLOADED;
 		} else if (ret == ACAPD_ACCEL_INPROGRESS) {
 			accel->status = ACAPD_ACCEL_STATUS_UNLOADING;

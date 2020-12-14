@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Xilinx Inc. and Contributors. All rights reserved.
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: MIT
  */
@@ -271,7 +271,7 @@ static void *acapd_vfio_device_attach(acapd_device_t *dev, acapd_shm_t *shm)
 	mmap->da = da;
 	mmap->size = size;
 	acapd_list_add_tail(&vdev->mmaps, &mmap->node);
-	acapd_debug("%s: mmap shm done, 0x%llx, 0x%llx\n", __func__, da, size);
+	acapd_debug("%s: mmap shm done, 0x%lx, 0x%lx\n", __func__, da, size);
 	return shm->va;
 }
 

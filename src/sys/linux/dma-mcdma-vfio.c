@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Xilinx Inc. and Contributors. All rights reserved.
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: MIT
  */
@@ -164,12 +164,12 @@ static int mcdma_vfio_dma_transfer(acapd_chnl_t *chnl,
 		if (((rx_status & MCDMA_HALTED_MASK) && (rx_error != 0)) ||
 									(rx_status & MCDMA_IDLE_MASK))
 		{
-			acapd_debug("%s: MM2S Reset dma engine rx_status 0x%llx rx_err 0x%llx\n",
+			acapd_debug("%s: MM2S Reset dma engine rx_status 0x%x rx_err 0x%x\n",
 													__func__, rx_status, rx_error);
 			*((volatile uint32_t *)((char *)base_va + MM2S_CR)) = MCDMA_RESET_MASK;
 		}
 
-		acapd_perror("%s: MM2S data from memory 0x%llx to stream, config->size %d, offset %d\n",
+		acapd_perror("%s: MM2S data from memory 0x%lx to stream, config->size %d, offset %d\n",
 			    __func__, buf_addr,config->size, offset);
 	
 		//enable the channel
@@ -197,11 +197,11 @@ static int mcdma_vfio_dma_transfer(acapd_chnl_t *chnl,
 		if (((tx_status & MCDMA_HALTED_MASK) && (tx_error != 0)) ||
 									(tx_status & MCDMA_IDLE_MASK))
 		{
-			acapd_debug("%s: S2MM Reset dma engine tx_status 0x%llx tx_err 0x%llx\n",
+			acapd_debug("%s: S2MM Reset dma engine tx_status 0x%x tx_err 0x%x\n",
 													__func__, tx_status, tx_error);
 			*((volatile uint32_t *)((char *)base_va + S2MM_CR)) = MCDMA_RESET_MASK;
 		}
-		acapd_perror("%s: S2MM data from stream to memory 0x%llx.\n",
+		acapd_perror("%s: S2MM data from stream to memory 0x%lx.\n",
 			    __func__, buf_addr);
 
 		//enable the channel

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Xilinx Inc. and Contributors. All rights reserved.
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
  *
  * SPDX-License-Identifier: MIT
  */
@@ -175,7 +175,6 @@ int sys_needs_load_accel(acapd_accel_t *accel)
 		acapd_debug("%s, no need to load.\n", __func__);
 		return 0;
 	} else {
-		acapd_debug("%s, need to load.\n", __func__);
 		return 1;
 	}
 }

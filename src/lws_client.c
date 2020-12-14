@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 #include <libwebsockets.h>
 #include <string.h>
 #include <signal.h>
@@ -13,7 +19,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <acapd/print.h>
-#include "acapdwebsoc.h"
+#include "lws_client.h"
 
 static int interrupted;
 static struct lws *web_socket;
