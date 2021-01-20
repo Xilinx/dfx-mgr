@@ -18,7 +18,7 @@
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <acapd/print.h>
+#include <dfx-mgr/print.h>
 #include "lws_client.h"
 
 static int interrupted;

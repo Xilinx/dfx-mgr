@@ -1,21 +1,16 @@
+/* SPDX-License-Identifier: GPL-2.0 OR Apache-2.0 */
 /*
  * A GEM style CMA backed memory manager for ZynQ based OpenCL accelerators.
  *
- * Copyright (C) 2016-2019 Xilinx, Inc. All rights reserved.
+ * Copyright (C) 2016-2020 Xilinx, Inc. All rights reserved.
  *
  * Authors:
  *    Sonal Santan <sonal.santan@xilinx.com>
  *    Umang Parekh <umang.parekh@xilinx.com>
  *    Min Ma       <min.ma@xilinx.com>
  *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * This file is dual-licensed; you may select either the GNU General Public
+ * License version 2 or Apache License, Version 2.0.
  */
 
 /**
@@ -76,7 +71,7 @@
 #include <libdrm/drm.h>
 #include <libdrm/drm_mode.h>
 #else
-#include <drm/drm_mode.h>
+#include <uapi/drm/drm_mode.h>
 #endif /* !__KERNEL__ */
 
 /*
@@ -115,6 +110,16 @@ enum drm_zocl_ops {
 	DRM_ZOCL_INFO_CU,
 	/* Open/Close context */
 	DRM_ZOCL_CTX,
+	/* Error injection */
+	DRM_ZOCL_ERROR_INJECT,
+	/* Request/Release AIE partition */
+	DRM_ZOCL_AIE_FD,
+	/* Reset AIE Array */
+	DRM_ZOCL_AIE_RESET,
+	/* Get the aie info command */
+	DRM_ZOCL_AIE_GETCMD,
+	/* Put the aie info command */
+	DRM_ZOCL_AIE_PUTCMD,
 	DRM_ZOCL_NUM_IOCTLS
 };
 
@@ -290,6 +295,16 @@ struct drm_zocl_ctx {
 	enum drm_zocl_ctx_code op;
 };
 
+struct drm_zocl_aie_fd {
+	uint32_t partition_id;
+	uint32_t uid;
+	int fd;
+};
+
+struct drm_zocl_aie_reset {
+	uint32_t partition_id;
+};
+
 /**
  * Opcodes for the embedded scheduler provided by the client to the driver
  */
@@ -330,21 +345,56 @@ struct drm_zocl_execbuf {
 enum drm_zocl_axlf_flags {
 	DRM_ZOCL_PLATFORM_BASE		= 0,
 	DRM_ZOCL_PLATFORM_PR		= (1 << 0),
+	DRM_ZOCL_PLATFORM_FLAT		= (1 << 1),
+};
+
+/**
+ * struct argument_info - Kernel argument information
+ *
+ * @name:	argument name
+ * @offset:	argument offset in CU
+ * @size:	argument size in bytes
+ * @dir:	input or output argument for a CU
+ */
+struct argument_info {
+	char		name[32];
+	uint32_t	offset;
+	uint32_t	size;
+	uint32_t	dir;
+};
+
+/**
+ * struct kernel_info - Kernel information
+ *
+ * @name:	kernel name
+ * @anums:	number of argument
+ * @args:	argument array
+ */
+struct kernel_info {
+	char                     name[64];
+	int		         anums;
+	struct argument_info	 args[];
 };
 
 /**
  * struct drm_zocl_axlf - Read xclbin (AXLF) device image and map CUs (experimental)
  * used with DRM_IOCTL_ZOCL_READ_AXLF ioctl
  *
- * @axlf  : Pointer to xclbin (AXLF) object
+ * @za_xclbin_ptr: Pointer to xclbin (AXLF) object
+ * @za_flags:   platform flags
+ * @za_ksize:	size of kernels in bytes
+ * @za_kernels:	pointer of argument array
  **/
 struct drm_zocl_axlf {
 	struct axlf 	*za_xclbin_ptr;
-	uint32_t 	za_flags;
+	uint32_t         za_flags;
+	int	             za_ksize;
+	char			*za_kernels;
 };
 
 #define	ZOCL_MAX_NAME_LENGTH		32
 #define	ZOCL_MAX_PATH_LENGTH		255
+#define AIE_INFO_SIZE			4096
 
 /**
  * struct drm_zocl_sk_getcmd - Get the soft kernel command  (experimental)
@@ -364,6 +414,24 @@ struct drm_zocl_sk_getcmd {
 	size_t		size;
 	uint64_t	paddr;
 	char		name[ZOCL_MAX_NAME_LENGTH];
+};
+
+enum aie_info_code {
+	GRAPH_STATUS = 1,
+};
+
+/**
+ * struct drm_zocl_aie_cmd - Get the aie command
+ * used with DRM_IOCTL_ZOCL_AIE_GETCMD and DRM_IOCTL_ZOCL_AIE_PUTCMD ioctl
+ *
+ * @opcode       : opcode for the Aie Command Packet
+ * @size         : size in bytes of info data
+ * @info         : information to transfer
+ */
+struct drm_zocl_aie_cmd {
+	uint32_t	opcode;
+	uint32_t	size;
+	char		info[AIE_INFO_SIZE];
 };
 
 /**
@@ -395,6 +463,20 @@ enum drm_zocl_scu_state {
 struct drm_zocl_sk_report {
 	uint32_t		cu_idx;
 	enum drm_zocl_scu_state	cu_state;
+};
+
+enum drm_zocl_err_ops {
+	ZOCL_ERROR_OP_INJECT = 0,
+	ZOCL_ERROR_OP_CLEAR_ALL
+};
+
+struct drm_zocl_error_inject {
+	enum drm_zocl_err_ops	err_ops;
+	uint16_t		err_num;
+	uint16_t		err_driver;
+	uint16_t		err_severity;
+	uint16_t		err_module;
+	uint16_t		err_class;
 };
 
 #define DRM_IOCTL_ZOCL_CREATE_BO       DRM_IOWR(DRM_COMMAND_BASE + \
@@ -431,4 +513,14 @@ struct drm_zocl_sk_report {
                                        DRM_ZOCL_INFO_CU, struct drm_zocl_info_cu)
 #define DRM_IOCTL_ZOCL_CTX             DRM_IOWR(DRM_COMMAND_BASE + \
                                        DRM_ZOCL_CTX, struct drm_zocl_ctx)
+#define DRM_IOCTL_ZOCL_ERROR_INJECT    DRM_IOWR(DRM_COMMAND_BASE + \
+                                       DRM_ZOCL_ERROR_INJECT, struct drm_zocl_error_inject)
+#define DRM_IOCTL_ZOCL_AIE_FD          DRM_IOWR(DRM_COMMAND_BASE + \
+                                       DRM_ZOCL_AIE_FD, struct drm_zocl_aie_fd)
+#define DRM_IOCTL_ZOCL_AIE_RESET       DRM_IOWR(DRM_COMMAND_BASE + \
+                                       DRM_ZOCL_AIE_RESET, struct drm_zocl_aie_reset)
+#define DRM_IOCTL_ZOCL_AIE_GETCMD      DRM_IOWR(DRM_COMMAND_BASE + \
+                                       DRM_ZOCL_AIE_GETCMD, struct drm_zocl_aie_cmd)
+#define DRM_IOCTL_ZOCL_AIE_PUTCMD      DRM_IOWR(DRM_COMMAND_BASE + \
+                                       DRM_ZOCL_AIE_PUTCMD, struct drm_zocl_aie_cmd)
 #endif

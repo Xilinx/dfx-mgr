@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <acapd/accel.h>
+#include <dfx-mgr/accel.h>
 #include <errno.h>
 #include <getopt.h>
 #include <stdio.h>

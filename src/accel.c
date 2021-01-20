@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <acapd/accel.h>
-#include <acapd/assert.h>
-#include <acapd/device.h>
-#include <acapd/print.h>
-#include <acapd/shell.h>
-#include <libfpga.h>
+#include <dfx-mgr/accel.h>
+#include <dfx-mgr/assert.h>
+#include <dfx-mgr/device.h>
+#include <dfx-mgr/print.h>
+#include <dfx-mgr/shell.h>
+#include <libdfx.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -47,7 +47,7 @@ int load_full_bitstream(char *base_path)
 
 	memset(accel, 0, sizeof(*accel));
 	sprintf(accel->sys_info.tmp_dir,"%s/",base_path);
-	ret = sys_fetch_accel(accel, XFPGA_NORMAL_EN);
+	ret = sys_fetch_accel(accel, DFX_NORMAL_EN);
 	if (ret != ACAPD_ACCEL_SUCCESS) {
 		acapd_perror("%s: Failed to fetch Full Bitstream.\n",__func__);
 		return ret;
@@ -90,7 +90,7 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 	}
 
 	if (accel->is_cached == 0) {
-		ret = sys_fetch_accel(accel, XFPGA_NORMAL_EN);
+		ret = sys_fetch_accel(accel, DFX_NORMAL_EN);
 		if (ret != ACAPD_ACCEL_SUCCESS) {
 			acapd_perror("%s, failed to fetch partial bistream\n",__func__);
 			return ret;

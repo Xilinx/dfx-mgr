@@ -19,7 +19,7 @@ extern "C" {
 /** \defgroup shell SHELL Interfaces
  *  @{ */
 
-#include <acapd/accel.h>
+#include <dfx-mgr/accel.h>
 
 typedef struct acapd_shell_regs {
 	uint32_t *offset;

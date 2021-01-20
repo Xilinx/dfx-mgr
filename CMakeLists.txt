@@ -7,7 +7,7 @@ list (APPEND CMAKE_MODULE_PATH
       "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
       "${CMAKE_CURRENT_SOURCE_DIR}/cmake/platforms")
 
-project (acapd C ASM)
+project (dfx-mgr C ASM)
 
 include (CheckIncludeFiles)
 include (CheckCSourceCompiles)

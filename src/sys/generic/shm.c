@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <acapd/print.h>
-#include <acapd/shm.h>
+#include <dfx-mgr/print.h>
+#include <dfx-mgr/shm.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>

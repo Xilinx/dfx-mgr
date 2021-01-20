@@ -21,9 +21,9 @@ extern "C" {
 
 #include <stdint.h>
 #include <stdlib.h>
-#include <acapd/device.h>
-#include <acapd/print.h>
-#include <acapd/helper.h>
+#include <dfx-mgr/device.h>
+#include <dfx-mgr/print.h>
+#include <dfx-mgr/helper.h>
 /**
  * @brief ACAPD DMA transaction direction
  */
@@ -146,7 +146,7 @@ int acapd_create_dma_channel(const char *name, acapd_device_t *dev,
 			     acapd_dir_t dir, acapd_chnl_t *chnl);
 int acapd_destroy_dma_channel(acapd_chnl_t *chnl);
 
-#include <acapd/sys/@PROJECT_SYSTEM@/dma.h>
+#include <dfx-mgr/sys/@PROJECT_SYSTEM@/dma.h>
 
 /** @} */
 

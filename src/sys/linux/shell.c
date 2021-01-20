@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <acapd/shell.h>
-#include <acapd/device.h>
-#include <acapd/assert.h>
+#include <dfx-mgr/shell.h>
+#include <dfx-mgr/device.h>
+#include <dfx-mgr/assert.h>
 #include <errno.h>
 #include "json-config.h"
 #include <stdio.h>

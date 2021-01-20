@@ -39,10 +39,10 @@ extern "C" {
 #define ACAPD_ACCEL_PKG_TYPE_TAR_GZ	1U
 #define ACAPD_ACCEL_PKG_TYPE_LAST	2U
 
-#include <acapd/dma.h>
-#include <acapd/device.h>
-#include <acapd/helper.h>
-#include <acapd/sys/@PROJECT_SYSTEM@/accel.h>
+#include <dfx-mgr/dma.h>
+#include <dfx-mgr/device.h>
+#include <dfx-mgr/helper.h>
+#include <dfx-mgr/sys/@PROJECT_SYSTEM@/accel.h>
 
 typedef enum shell_type {
 	FLAT_SHELL = 1U,

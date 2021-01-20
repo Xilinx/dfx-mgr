@@ -4,14 +4,14 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <acapd/accel.h>
-#include <acapd/assert.h>
-#include <acapd/print.h>
+#include <dfx-mgr/accel.h>
+#include <dfx-mgr/assert.h>
+#include <dfx-mgr/print.h>
 #include <errno.h>
 #include <dirent.h>
 #include <ftw.h>
 #include <fcntl.h>
-#include <libfpga.h>
+#include <libdfx.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -184,7 +184,7 @@ int sys_fetch_accel(acapd_accel_t *accel, int flags)
 	int ret;
 
 	acapd_assert(accel != NULL);
-	ret = fpga_cfg_init(accel->sys_info.tmp_dir, 0, flags);
+	ret = dfx_cfg_init(accel->sys_info.tmp_dir, 0, flags);
 	if (ret < 0) {
 		acapd_perror("%s: Failed to initialize fpga config, %d.\n",__func__, ret);
 		return ACAPD_ACCEL_FAILURE;
@@ -308,11 +308,11 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async, int full_bitstream)
 		return ACAPD_ACCEL_FAILURE;
 	}
 	fpga_cfg_id = accel->sys_info.fpga_cfg_id;
-	ret = fpga_cfg_load(fpga_cfg_id);
+	ret = dfx_cfg_load(fpga_cfg_id);
 	if (ret != 0) {
 		acapd_perror("Failed to load fpga config: %d\n",
 		     fpga_cfg_id);
-		fpga_cfg_destroy(fpga_cfg_id);
+		dfx_cfg_destroy(fpga_cfg_id);
 		return ACAPD_ACCEL_FAILURE;
 	}
 	if (accel->type == FLAT_SHELL || full_bitstream) {
@@ -478,12 +478,12 @@ int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
 		acapd_perror("Invalid fpga cfg id: %d.\n", fpga_cfg_id);
 		return ACAPD_ACCEL_FAILURE;
 	};
-	ret = fpga_cfg_remove(fpga_cfg_id);
+	ret = dfx_cfg_remove(fpga_cfg_id);
 	if (ret != 0) {
 		acapd_perror("Failed to remove accel: %d.\n", ret);
 		goto out;
 	}
-	ret = fpga_cfg_destroy(fpga_cfg_id);
+	ret = dfx_cfg_destroy(fpga_cfg_id);
 	if (ret != 0) {
 		acapd_perror("Failed to destroy accel: %d.\n", ret);
 		goto out;

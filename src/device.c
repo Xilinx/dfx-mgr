@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <acapd/assert.h>
-#include <acapd/device.h>
-#include <acapd/print.h>
-#include <acapd/shm.h>
+#include <dfx-mgr/assert.h>
+#include <dfx-mgr/device.h>
+#include <dfx-mgr/print.h>
+#include <dfx-mgr/shm.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>

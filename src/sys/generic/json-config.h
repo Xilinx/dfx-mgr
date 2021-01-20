@@ -13,8 +13,8 @@
 #ifndef _ACAPD_GENERIC_JSON_CONFIG_H
 #define _ACAPD_GENERIC_JSON_CONFIG_H
 
-#include <acapd/accel.h>
-#include <acapd/shell.h>
+#include <dfx-mgr/accel.h>
+#include <dfx-mgr/shell.h>
 
 int parseAccelJson(acapd_accel_t *accel, const char *config, size_t csize);
 

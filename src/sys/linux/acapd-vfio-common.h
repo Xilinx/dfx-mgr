@@ -15,8 +15,8 @@
 extern "C" {
 #endif
 
-#include <acapd/device.h>
-#include <acapd/helper.h>
+#include <dfx-mgr/device.h>
+#include <dfx-mgr/helper.h>
 
 typedef struct acapd_vfio_mmap {
 	void *va; /**< logical address */

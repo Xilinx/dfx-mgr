@@ -16,9 +16,9 @@
 extern "C" {
 #endif
 
-#include <acapd/accel.h>
-#include <acapd/helper.h>
-#include <acapd/dma.h>
+#include <dfx-mgr/accel.h>
+#include <dfx-mgr/helper.h>
+#include <dfx-mgr/dma.h>
 #include <stdint.h>
 
 typedef struct acapd_shm acapd_shm_t;

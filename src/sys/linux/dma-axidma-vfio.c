@@ -4,15 +4,14 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <acapd/dma.h>
-#include <acapd/assert.h>
-#include <acapd/print.h>
-#include <acapd/shm.h>
+#include <dfx-mgr/dma.h>
+#include <dfx-mgr/assert.h>
+#include <dfx-mgr/print.h>
+#include <dfx-mgr/shm.h>
 #include <errno.h>
 #include <dirent.h>
 #include <ftw.h>
 #include <fcntl.h>
-#include <libfpga.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

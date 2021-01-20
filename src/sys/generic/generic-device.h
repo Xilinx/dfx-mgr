@@ -15,7 +15,7 @@
 extern "C" {
 #endif
 
-#include <acapd/device.h>
+#include <dfx-mgr/device.h>
 
 extern acapd_device_ops_t sys_generic_dev_ops;
 #endif /* _ACAPD_GENERIC_DEVICE_H */

@@ -13,9 +13,9 @@
 #ifndef _ACAPD_LINUX_JSON_CONFIG_H
 #define _ACAPD_LINUX_JSON_CONFIG_H
 
-#include <acapd/accel.h>
-#include <acapd/shell.h>
-#include <acapd/model.h>
+#include <dfx-mgr/accel.h>
+#include <dfx-mgr/shell.h>
+#include <dfx-mgr/model.h>
 
 int parseAccelJson(acapd_accel_t *accel, char *filename);
 

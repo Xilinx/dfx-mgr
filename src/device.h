@@ -16,7 +16,7 @@
 extern "C" {
 #endif
 
-#include <acapd/helper.h>
+#include <dfx-mgr/helper.h>
 #include <stddef.h>
 #include <stdint.h>
 

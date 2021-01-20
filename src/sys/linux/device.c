@@ -4,16 +4,15 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <acapd/accel.h>
-#include <acapd/assert.h>
-#include <acapd/print.h>
+#include <dfx-mgr/accel.h>
+#include <dfx-mgr/assert.h>
+#include <dfx-mgr/print.h>
 #include "acapd-vfio-common.h"
 #include <errno.h>
 #include <dirent.h>
 #include <ftw.h>
 #include <fcntl.h>
 #include "generic-device.h"
-#include <libfpga.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
