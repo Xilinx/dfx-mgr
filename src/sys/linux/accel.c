@@ -316,7 +316,7 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async, int full_bitstream)
 		return ACAPD_ACCEL_FAILURE;
 	}
 	if (accel->type == FLAT_SHELL || full_bitstream) {
-		acapd_perror("%s:Loaded base design\n",__func__);
+		printf("Succesfully loaded base design.\n");
 		return ACAPD_ACCEL_SUCCESS;
 	}
 	for (int i = 0; i < accel->num_ip_devs; i++) {

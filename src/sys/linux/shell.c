@@ -30,18 +30,14 @@ int sys_shell_config(acapd_shell_t *shell, const char *config)
 	if (config == NULL || access(config, F_OK) != 0) {
 		config = "./shell.json";
 	}
-	if (access(config, F_OK) != 0) {
-		acapd_perror("%s: No shell .json is found. Please set ACAPD_SHELL_CONFIG.\n",
-			     __func__);
-		return -EINVAL;
+	if (access(config, F_OK) == 0) {
+		ret = parseShellJson(shell, config);
+		if (ret < 0) {
+			acapd_perror("%s: failed to parse Shell json %s.\n",
+					 __func__, config);
+			return ACAPD_ACCEL_FAILURE;
+		}
 	}
-	ret = parseShellJson(shell, config);
-	if (ret < 0) {
-		acapd_perror("%s: failed to parse Shell json %s.\n",
-			     __func__, config);
-		return ACAPD_ACCEL_FAILURE;
-	} else {
-		return ACAPD_ACCEL_SUCCESS;
-	}
+	return ACAPD_ACCEL_SUCCESS;
 }
 

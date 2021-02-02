@@ -215,7 +215,6 @@ int parseShellJson(acapd_shell_t *shell, const char *filename)
 	if (ret < numBytes)
 		acapd_perror("%s: Error reading Shell.json\n",__func__);
 	fclose(fptr);
-	acapd_debug("jsonData read:\n %s\n",jsonData);
 
 	jsmn_init(&parser);
 	ret = jsmn_parse(&parser, jsonData, numBytes, token, sizeof(token)/sizeof(token[0]));

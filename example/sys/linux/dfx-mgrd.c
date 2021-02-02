@@ -66,7 +66,7 @@ struct basePLDesign *findBaseDesign(const char *name){
 			}
 			if(strcmp(dir->d_name, name) == 0){
 				sprintf(base_path,"%s/%s", firmware_path, dir->d_name);
-				for (i = 0; i < 10; i++) {
+				for (i = 0; i < MAX_WATCH; i++) {
 					if (strcmp(base_designs[i].base_path, base_path) ==0) {
 						acapd_debug("%s:found base %s\n",__func__,base_designs[i].base_path);
 						return &base_designs[i];
@@ -146,16 +146,17 @@ int load_accelerator(const char *accel_name)
 	acapd_accel_t *accel = malloc(sizeof(acapd_accel_t));
 	acapd_accel_pkg_hd_t *pkg = malloc(sizeof(acapd_accel_pkg_hd_t));
 	struct basePLDesign *base = findBaseDesign(accel_name);
-	
-	if(base != NULL)
+
+	if(base == NULL) {
+		acapd_perror("No package found for %s\n",accel_name);
+		return -1;
+	} else
 		sprintf(shell_path,"%s/shell.json",base->base_path);
 
 	/* Flat shell designs which don't have any slot */
-	if(base != NULL && strcmp(base->type,"flat") == 0) {
-		//strcpy(pkg->name, accel_name);
+	if(base != NULL && strcmp(base->type,"XRT_FLAT") == 0) {
 		sprintf(pkg->name,"%s",accel_name);
-		acapd_debug("%s:loading flat shell design %s\n",__func__,pkg->name);
-		//pkg->name = base->base_path;
+		acapd_debug("%s:loading xrt flat shell design %s\n",__func__,pkg->name);
 		pkg->path = base->base_path;
 		pkg->type = ACAPD_ACCEL_PKG_TYPE_NONE;
 		init_accel(accel, pkg);
@@ -171,7 +172,7 @@ int load_accelerator(const char *accel_name)
 		return 0;	
 	}
 	/* For SIHA slotted architecture */
-	else {
+	else if(base != NULL && strcmp(base->type,"SLOTTED") == 0) {
 		for (i = 0; i < 3; i++) {
 		if (active_slots[i] == NULL){
 			path = get_accel_path(accel_name, i);
@@ -199,7 +200,10 @@ int load_accelerator(const char *accel_name)
 		}
 		}
 		if (i >= 3)
-			printf("Couldn't find empty slot for %s\n",accel_name);
+			acapd_perror("Couldn't find empty slot for %s\n",accel_name);
+	}
+	else {
+		acapd_perror("Not a valid accelerator package type.\n");
 	}
 	return -1;
 }
@@ -250,8 +254,8 @@ void getClockFD(int slot)
 }
 void listAccelerators(){
     int i;
-	printf("Accelerator,\t Type,\t Active\n");
-    for (i = 0; i < 10; i++) {
+	printf("Accelerator,\t Type,\t\t Active\n");
+    for (i = 0; i < MAX_WATCH; i++) {
 		if (base_designs[i].base_path[0] != '\0') {
 			printf("%s\t\t,%s\t\t,%d\n",&base_designs[i].base_path[strlen(firmware_path)+1],base_designs[i].type,
 												base_designs[i].active);
@@ -493,7 +497,7 @@ void sigint_handler(int sig)
       //  printf("cookie =%4d; ", i->cookie);
 
 //    printf("mask = ");
-    /*if (i->mask & IN_ACCESS)        printf("IN_ACCESS ");
+/*    if (i->mask & IN_ACCESS)        printf("IN_ACCESS ");
     if (i->mask & IN_ATTRIB)        printf("IN_ATTRIB ");
     if (i->mask & IN_CLOSE_NOWRITE) printf("IN_CLOSE_NOWRITE ");
     if (i->mask & IN_CLOSE_WRITE)   printf("IN_CLOSE_WRITE ");
@@ -510,11 +514,11 @@ void sigint_handler(int sig)
     if (i->mask & IN_Q_OVERFLOW)    printf("IN_Q_OVERFLOW ");
     if (i->mask & IN_UNMOUNT)       printf("IN_UNMOUNT ");
     printf("\n");
-	*/
+	
 
-//   if (i->len > 0){}
-   //     printf("        name = %s\n", i->name);
-//}
+   if (i->len > 0){}
+        printf("        name = %s\n", i->name);
+}*/
 
 void add_to_watch(int wd, char *pathname)
 {
@@ -553,15 +557,25 @@ void remove_watch(char *path)
 void add_base_design(char *path){
     int i;
 	char shell_path[600];
+	struct stat info;
 
-    for (i = 0; i < 10; i++) {
+    for (i = 0; i < MAX_WATCH; i++) {
 		if (base_designs[i].base_path[0] == '\0') {
 			acapd_debug("adding base design %s\n",path);
 			strncpy(base_designs[i].base_path, path, sizeof(base_designs[i].base_path)-1);
 			base_designs[i].base_path[sizeof(base_designs[i].base_path) - 1] = '\0';
 			sprintf(shell_path,"%s/shell.json",base_designs[i].base_path);
-			initBaseDesign(&base_designs[i], shell_path);
-			base_designs[i].slots = (struct pl_slot*)malloc(sizeof(struct pl_slot) * base_designs[i].num_slots);
+
+			/* If no shell.json provided, treat it as flat shell design */
+			if (stat(shell_path,&info) != 0){
+				base_designs[i].num_slots = 0;
+				strncpy(base_designs[i].type,"XRT_FLAT", sizeof(base_designs[i].type)-1);
+	            base_designs[i].type[sizeof(base_designs[i].type)-1] = '\0';
+			}
+			else {
+				initBaseDesign(&base_designs[i], shell_path);
+				base_designs[i].slots = (struct pl_slot*)malloc(sizeof(struct pl_slot) * base_designs[i].num_slots);
+			}
 			base_designs[i].active = 0;
 			return;
 		}
@@ -570,7 +584,7 @@ void add_base_design(char *path){
 void remove_base_design(char *path){
 	acapd_debug("%s removing %s\n",__func__,path);
     int i;
-    for (i = 0; i < 10; i++) {
+    for (i = 0; i < MAX_WATCH; i++) {
 		if (strcmp(base_designs[i].base_path, path) == 0) {
 			base_designs[i].base_path[0] = '\0';
 			base_designs[i].num_slots = 0;
@@ -589,21 +603,21 @@ void *threadFunc()
     char buf[BUF_LEN] __attribute__ ((aligned(8)));
     ssize_t numRead;
     char *p;
-    char new_dir[512], path[540];
+    char new_dir[512];
     struct inotify_event *event;
 	DIR *d;
 	struct dirent *dir;
-	struct stat info;
+	int new_dir_create = 0;
 	
     active_watch = (struct watch *)malloc(MAX_WATCH * sizeof(struct watch));
-    base_designs = (struct basePLDesign *)malloc(10 * sizeof(struct basePLDesign));
+    base_designs = (struct basePLDesign *)malloc(MAX_WATCH * sizeof(struct basePLDesign));
 
     for(j = 0; j < MAX_WATCH; j++) {
         active_watch[j].wd = -1;
         active_watch[j].path[0] = '\0';
     }
 
-    for(j = 0; j < 10; j++) {
+    for(j = 0; j < MAX_WATCH; j++) {
         base_designs[j].base_path[0] = '\0';
 	}
     inotifyFd = inotify_init();                 /* Create inotify instance */
@@ -637,18 +651,13 @@ void *threadFunc()
 				acapd_perror("%s:inotify_add_watch failed on %s\n",__func__,new_dir);
 			else {
 				add_to_watch(wd, new_dir);
-				sprintf(path,"%s/shell.json",new_dir);
-				if (stat(path,&info) != 0){
-					acapd_debug("No shell.json found in %s\n",new_dir);
-				}
-				else
-					add_base_design(new_dir);
+				add_base_design(new_dir);
 			}
 		}
 	}
 
 	/* Listen for new updates in firmware path*/
-    for (;;) {                                  /* Read events forever */
+    for (;;) {
         numRead = read(inotifyFd, buf, BUF_LEN);
         if (numRead == 0)
             acapd_perror("read() from inotify fd returned 0!");
@@ -671,17 +680,15 @@ void *threadFunc()
 						printf("inotify_add_watch failed on %s\n",new_dir);
 					else
 						add_to_watch(wd, new_dir);
-				}
-				/* Shell.json might not be ready when you get notification for dir,
-				/ so wait until you get notif for the file itself. */
-
-				if(strcmp(event->name,"shell.json") == 0 && 
-													(event->mask & IN_CLOSE_WRITE)){
-					char * parent = wd_to_pathname(event->wd);
-					add_base_design(parent);
+					new_dir_create = 1;
 				}
             }
-            else if((event->mask & IN_DELETE) && (event->mask & IN_ISDIR)) {
+            else if((event->mask & IN_ATTRIB) && (event->mask & IN_ISDIR) &&
+																new_dir_create) {
+				add_base_design(new_dir);
+				new_dir_create = 0;
+            }
+			else if((event->mask & IN_DELETE) && (event->mask & IN_ISDIR)) {
                 char * parent = wd_to_pathname(event->wd);
                 sprintf(new_dir,"%s/%s",parent, event->name);
 				acapd_debug("%s:removing watch on  %s \n",__func__,new_dir);
@@ -691,12 +698,12 @@ void *threadFunc()
             else if((event->mask & IN_MOVED_FROM) && (event->mask & IN_ISDIR)) {
                 char * parent = wd_to_pathname(event->wd);
                 sprintf(new_dir,"%s/%s",parent, event->name);
-                               remove_base_design(new_dir);
+                remove_base_design(new_dir);
             }
             else if((event->mask & IN_MOVED_TO) && (event->mask & IN_ISDIR)) {
                 char * parent = wd_to_pathname(event->wd);
                 sprintf(new_dir,"%s/%s",parent, event->name);
-                               add_base_design(new_dir);
+				add_base_design(new_dir);
 			}
 
             p += sizeof(struct inotify_event) + event->len;
