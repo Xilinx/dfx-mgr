@@ -138,6 +138,35 @@ void getRMInfo()
 out:
 	fclose(fptr);
 }
+
+void update_env(char *path)
+{
+	DIR *FD;
+	struct dirent *dir;
+	int len, ret;
+	char *str;
+	char cmd[128];
+
+	FD = opendir(path);
+	if (FD) {
+		while ((dir = readdir(FD)) != NULL) {
+			len = strlen(dir->d_name);
+            if (len > 7) {
+                if (!strcmp(dir->d_name + (len - 7), ".xclbin") ||
+						!strcmp(dir->d_name + (len - 7), ".XCLBIN")) {
+                    str = (char *) calloc((len + strlen(path) + 1),
+													sizeof(char));
+                    sprintf(str, "%s/%s",path,dir->d_name);
+					sprintf(cmd,"echo \"firmware: %s\" > /etc/vart.conf",str);
+					ret = system(cmd);
+					if (ret)
+						acapd_perror("Write to /etc/vart.conf failed\n");
+				}
+			}
+		}
+	}
+}
+
 int load_accelerator(const char *accel_name)
 {
 	int i, ret;
@@ -169,6 +198,7 @@ int load_accelerator(const char *accel_name)
 		}
 		base->active = 1;
 		active_slots[0] = accel;
+		update_env(pkg->path);
 		return 0;	
 	}
 	/* For SIHA slotted architecture */
