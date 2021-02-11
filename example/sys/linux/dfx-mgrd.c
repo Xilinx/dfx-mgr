@@ -22,7 +22,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 
-#define WATCH_PATH_MAX 256
+#define WATCH_PATH_LEN 256
 #define MAX_WATCH 50
 
 static int interrupted;
@@ -31,7 +31,7 @@ char *firmware_path = "/lib/firmware/xilinx";
 
 struct watch {
     int wd;
-    char path[WATCH_PATH_MAX];
+    char path[WATCH_PATH_LEN];
 };
 
 struct watch *active_watch = NULL;
@@ -561,7 +561,7 @@ void add_to_watch(int wd, char *pathname)
         if (active_watch[i].wd == -1) {
             //printf("adding watch to list %s\n",pathname);
             active_watch[i].wd = wd;
-            strncpy(active_watch[i].path, pathname, WATCH_PATH_MAX);
+            strncpy(active_watch[i].path, pathname, WATCH_PATH_LEN -1);
             return;
         }
     }
