@@ -261,10 +261,14 @@ void *acapd_accel_get_reg_va(acapd_accel_t *accel, const char *name)
 	return dev->va;
 }
 
-void get_fds(acapd_accel_t *accel, int slot)
+void allocateBuffer(uint64_t size, int socketd)
 {
-	acapd_assert(accel != NULL);
-	sys_get_fds(accel, slot);
+	acapd_assert(size);
+	sys_alloc_buffer(size, socketd);
+}
+void freeBuffer(uint64_t pa)
+{
+	sys_free_buffer(pa);
 }
 
 void get_shell_fd(acapd_accel_t *accel)

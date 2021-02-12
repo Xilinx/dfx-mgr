@@ -60,6 +60,15 @@ typedef struct {
 	uint32_t is_end; /**< if it is the end of package */
 } acapd_accel_pkg_hd_t;
 
+typedef struct {
+    int socket_d; /* stream socket desc*/
+    int drm_fd;
+    int fd;
+    uint32_t handle;
+    uint64_t PA;
+} acapd_buffer_t;
+
+
 /**
  * @brief accel structure
  */
@@ -76,11 +85,6 @@ typedef struct {
 	int rm_slot; /**< Reconfiguration module slot */
 	int num_chnls;	/**< number of channels */
 	acapd_chnl_t *chnls; /**< list of channels */
-	int socket_d; /* stream socket desc*/
-	int drm_fd;
-	int fd[3]; /* MM2S,S2MM,config buffer fd's */
-	uint32_t handle[3];
-	uint64_t PA[6];
 } acapd_accel_t;
 
 acapd_accel_pkg_hd_t *acapd_alloc_pkg(size_t size);
@@ -103,13 +107,12 @@ int acapd_accel_wait_for_data_ready(acapd_accel_t *accel);
 
 void *acapd_accel_get_reg_va(acapd_accel_t *accel, const char *name);
 
-/*
- * TODO: Do we want stop accel for accel swapping?
- */
 int remove_accel(acapd_accel_t *accel, unsigned int async);
 int acapd_accel_open_channel(acapd_accel_t *accel);
 int acapd_accel_reset_channel(acapd_accel_t *accel);
 void get_fds(acapd_accel_t *accel, int slot);
+void allocateBuffer(uint64_t size, int socketd);
+void freeBuffer(uint64_t pa);
 void get_shell_fd();
 void get_shell_clock_fd();
 #ifdef ACAPD_INTERNAL
@@ -126,8 +129,8 @@ int sys_load_accel_post(acapd_accel_t *accel);
 int sys_close_accel(acapd_accel_t *accel);
 
 int sys_remove_accel(acapd_accel_t *accel, unsigned int async);
-
-int sys_get_fds(acapd_accel_t *accel, int slot);
+int sys_alloc_buffer(uint64_t size, int socketd);
+int sys_free_buffer(uint64_t pa);
 void sys_get_fd(acapd_accel_t *accel, int fd);
 #endif /* ACAPD_INTERNAL */
 

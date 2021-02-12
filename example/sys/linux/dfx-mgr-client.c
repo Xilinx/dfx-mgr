@@ -246,6 +246,18 @@ int main(int argc, const char **argv)
 		cmd = "-listPackage";
 		arg = "";
 	}
+	else if ((option = lws_cmdline_option(argc, argv, "-allocBuffer"))) {
+		cmd = "-allocBuffer";
+		arg = option;
+	}
+	else if ((option = lws_cmdline_option(argc, argv, "-freeBuffer"))) {
+		cmd = "-freeBuffer";
+		arg = option;
+	}
+	else if ((lws_cmdline_option(argc, argv, "-getRMInfo"))) {
+		cmd = "-getRMInfo";
+		arg = "";
+	}
 	else if (lws_cmdline_option(argc, argv, "-h") ||
 				lws_cmdline_option(argc, argv, "--help")) {
 		printf("Usage dfx-mgr-client COMMAND\n");
@@ -253,25 +265,10 @@ int main(int argc, const char **argv)
 		printf("listPackage\t\t List locally downloaded accelerator package\n");
 		printf("load <arg>\t\t Load the provided accelerator packaged\n");
 		printf("remove\t\t\t Unload the programmed package\n");
+		printf("allocBuffer <size> \t\t Allocate buffer of size and return its DMA fd and pa\n");
+		printf("freeBuffer <pa> \t\t free buffer with physical address pa in decimal\n");
 		return 0;
-		
 	}
-	/*else if ((option = lws_cmdline_option(argc, argv, "-getFD"))) {
-		cmd = "-getFD";
-		arg = option;
-	}
-	else if ((lws_cmdline_option(argc, argv, "-getShellFD"))) {
-		cmd = "-getShellFD";
-		arg = "";
-	}
-	else if ((lws_cmdline_option(argc, argv, "-getClockFD"))) {
-		cmd = "-getClockFD";
-		arg = "";
-	}
-	else if ((lws_cmdline_option(argc, argv, "-getRMInfo"))) {
-		cmd = "-getRMInfo";
-		arg = "";
-	}*/
 	else {
 		printf("Option not recognized, Try again.\n");
 		return 0;

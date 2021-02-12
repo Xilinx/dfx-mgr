@@ -41,8 +41,8 @@ int parseAccelJson(acapd_accel_t *accel, const char *filename)
 	int ret,i;
 	char *jsonData;
 	char *dma_ops;
-	acapd_device_t *dma_dev;
 	uint32_t buff_size = 0;
+	acapd_device_t *dma_dev;
 	
 	fptr = fopen(filename, "r");
 	if (fptr == NULL){
@@ -336,6 +336,9 @@ int initBaseDesign(struct basePLDesign *base, const char *shell_path)
 		}
 		if (jsoneq(jsonData, &token[i],"num_slots") == 0) {
 			base->num_slots = strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 10);
+		}
+		if (jsoneq(jsonData, &token[i],"uid") == 0) {
+			base->uid = strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 10);
 		}
 	}
 	return 0;
