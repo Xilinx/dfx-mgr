@@ -22,7 +22,7 @@
 #include <fcntl.h>
 #include <pthread.h>
 
-#define WATCH_PATH_MAX 256
+#define WATCH_PATH_LEN 256
 #define MAX_WATCH 50
 
 static int interrupted;
@@ -31,7 +31,7 @@ char *firmware_path = "/lib/firmware/xilinx";
 
 struct watch {
     int wd;
-    char path[WATCH_PATH_MAX];
+    char path[WATCH_PATH_LEN];
 };
 
 struct watch *active_watch = NULL;
@@ -184,6 +184,10 @@ int load_accelerator(const char *accel_name)
 
 	/* Flat shell designs which don't have any slot */
 	if(base != NULL && strcmp(base->type,"XRT_FLAT") == 0) {
+		if (active_slots[0] != NULL) {
+			printf("Remove previously loaded accelerator, no empty slot\n");
+			return -1;
+		}
 		sprintf(pkg->name,"%s",accel_name);
 		acapd_debug("%s:loading xrt flat shell design %s\n",__func__,pkg->name);
 		pkg->path = base->base_path;
@@ -243,11 +247,11 @@ void remove_accelerator(int slot)
 	acapd_accel_t *accel = active_slots[slot];
 	struct basePLDesign *base;
 	if (active_slots == NULL || active_slots[slot] == NULL){
-		acapd_perror("%s No Accel in slot %d\n",__func__,slot);
+		acapd_perror("No Accel in slot %d\n",slot);
 		return;
 	}
 	base = findBaseDesign(accel->pkg->name);
-	printf("%s: removing accel %s path %s\n",__func__,accel->pkg->name, accel->pkg->path);
+	printf("Removing accel %s \n",accel->pkg->path);
     remove_accel(accel, 0);
 	free(accel);
 	active_slots[slot] = NULL;
@@ -284,10 +288,10 @@ void getClockFD(int slot)
 }
 void listAccelerators(){
     int i;
-	printf("Accelerator,\t Type,\t\t Active\n");
+	printf("%50s%15s%10s\n","Accelerator","Type","Active");
     for (i = 0; i < MAX_WATCH; i++) {
 		if (base_designs[i].base_path[0] != '\0') {
-			printf("%s\t\t,%s\t\t,%d\n",&base_designs[i].base_path[strlen(firmware_path)+1],base_designs[i].type,
+			printf("%50s%15s%10d\n",&base_designs[i].base_path[strlen(firmware_path)+1],base_designs[i].type,
 												base_designs[i].active);
 		}
 	}
@@ -557,7 +561,7 @@ void add_to_watch(int wd, char *pathname)
         if (active_watch[i].wd == -1) {
             //printf("adding watch to list %s\n",pathname);
             active_watch[i].wd = wd;
-            strncpy(active_watch[i].path, pathname, WATCH_PATH_MAX);
+            strncpy(active_watch[i].path, pathname, WATCH_PATH_LEN -1);
             return;
         }
     }
