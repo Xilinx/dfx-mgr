@@ -200,6 +200,7 @@ int load_accelerator(const char *accel_name)
 			base->active = 0;
 			return -1;
 		}
+		acapd_print("Loaded %s successfully\n",pkg->name);
 		base->active = 1;
 		active_slots[0] = accel;
 		update_env(pkg->path);
@@ -229,7 +230,7 @@ int load_accelerator(const char *accel_name)
 			}
 			active_slots[i] = accel;
 			getRMInfo();
-			acapd_perror("%s:Loaded %s succesfully\n",__func__,pkg->name);
+			acapd_perror("%s:Loaded %s successfully\n",__func__,pkg->name);
 			return accel->rm_slot;
 		}
 		}
