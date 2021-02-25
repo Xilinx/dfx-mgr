@@ -1,5 +1,5 @@
 #include "metadata.h"
-#include "debug.h"
+#include "layer0/debug.h"
 #include "abstractGraph.h"
 #include "graphClient.h"
 #include <string.h>
@@ -8,18 +8,27 @@
 
 int softgFFT(void* inData, int inDataSize, void* inConfig, int inConfigSize, void* outData, int outDataSize){
         INFO("FALLBACK CALLED !!\n");
+	_unused(inConfig);
+	_unused(inConfigSize);
+	_unused(outDataSize);
         memcpy(outData, inData, inDataSize);
         return 0;
 }
 
 int softgFIR(void* inData, int inDataSize, void* inConfig, int inConfigSize, void* outData, int outDataSize){
         INFO("FALLBACK CALLED !!\n");
+	_unused(inConfig);
+	_unused(inConfigSize);
+	_unused(outDataSize);
         memcpy(outData, inData, inDataSize);
         return 0;
 }
 
 int softgAES128(void* inData, int inDataSize, void* inConfig, int inConfigSize, void* outData, int outDataSize){
         INFO("FALLBACK CALLED !!\n");
+	_unused(inConfig);
+	_unused(inConfigSize);
+	_unused(outDataSize);
         memcpy(outData, inData, inDataSize);
         return 0;
 }
@@ -44,9 +53,9 @@ Element_t* addElement(Element_t** headElement, Element_t* nextElement){
 
 int delElement(Element_t** element){
 	//INFO("\n"); 
-	BuffNode_t *tElement = *element;
-	BuffNode_t *headElement = tElement->head;
-	BuffNode_t *tailElement = tElement->tail;
+	Element_t *tElement = *element;
+	Element_t *headElement = tElement->head;
+	Element_t *tailElement = tElement->tail;
 	
 	if(headElement != NULL){
 		headElement->tail = tailElement;
@@ -357,6 +366,7 @@ int abstractGraphFinalise(AbstractGraph_t *graph){
 
 int abstractGraphServerConfig(Element_t **GraphList, char* json, int len){
 	char json2[1024*4];
+	_unused(len);
 	AbstractGraph_t *graph = malloc(sizeof(AbstractGraph_t));
         Element_t* element = (Element_t *) malloc(sizeof(Element_t));
         //printf("%s\n", json);
@@ -366,7 +376,7 @@ int abstractGraphServerConfig(Element_t **GraphList, char* json, int len){
         element->node =  graph;
         element->head = NULL;
         element->tail = NULL;
-        addElement(&(GraphList), element);
+        addElement(GraphList, element);
         //printf("%s\n", json2);
 	return 0;
 }

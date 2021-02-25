@@ -2,11 +2,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "sihaHLSdm.h"
-#include "utils.h"
-#include "dm.h"
-#include "xrtbuffer.h"
-#include "uio.h"
-#include "debug.h"
+#include "../utils.h"
+#include "../dm.h"
+#include "../xrtbuffer.h"
+#include "../uio.h"
+#include "../debug.h"
 
 
 int sihahls_config(void* dmconfig_a, Accel_t *accel){ //volatile uint8_t* base){

@@ -1,6 +1,6 @@
-#include "uio.h"
-#include "xrtbuffer.h"
-#include "dm.h"
+#include "layer0/uio.h"
+#include "layer0/xrtbuffer.h"
+#include "layer0/dm.h"
 
 #define DDR_BASED 0
 #define PL_BASED  1

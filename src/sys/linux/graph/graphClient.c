@@ -17,7 +17,7 @@
 #include <sys/select.h>
 #include <sys/stat.h>
 #include "graphServer.h"
-#include "debug.h"
+#include "layer0/debug.h"
 
 struct message message;
 int sock_fd;

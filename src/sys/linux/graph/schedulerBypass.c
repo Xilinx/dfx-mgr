@@ -2,8 +2,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "utils.h"
-#include "debug.h"
+#include "layer0/utils.h"
+#include "layer0/debug.h"
 #include "graph.h"
 #include "scheduler.h"
 int printTransaction(Schedule_t *schedule){
@@ -97,6 +97,7 @@ void *bypass_Task(void* carg){
 					if(dependent){
 						dbuffNode = schedule->dependency->dependentLinks[
                                                 	schedule->dependency->linkCount - 1]->buffNode;
+						_unused(dbuffNode);
 					}
 					if(accelNode->currentTransactionIndex == 0)
 					{
@@ -253,7 +254,7 @@ int SchedulerInit(AcapGraph_t *acapGraph){
         *(scheduler->ResponseQueue) = (queue_t) { malloc(sizeof(void*)*1000), 1000, 0, 0, 0,
                                       PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, PTHREAD_COND_INITIALIZER };
         
-        pthread_create(scheduler->thread    , NULL, scheduler_Task, acapGraph);
+        pthread_create(scheduler->thread    , NULL, bypass_Task, acapGraph);
         return 0;
 }
 

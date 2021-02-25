@@ -70,3 +70,4 @@ extern int abstractGraph2Json(AbstractGraph_t *graph, char* json);
 extern int abstractGraphConfig(AbstractGraph_t *graph);
 extern int abstractGraphServerConfig(Element_t **GraphList, char* json, int len);
 extern int abstractGraphFinalise(AbstractGraph_t *graph);
+extern Element_t* addElement(Element_t** headElement, Element_t* nextElement);

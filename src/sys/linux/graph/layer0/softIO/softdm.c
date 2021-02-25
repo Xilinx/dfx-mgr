@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include "softdm.h"
-#include "utils.h"
-#include "dm.h"
-#include "xrtbuffer.h"
-#include "uio.h"
-#include "debug.h"
+#include "../utils.h"
+#include "../dm.h"
+#include "../xrtbuffer.h"
+#include "../uio.h"
+#include "../debug.h"
 
 
 int soft_config(void* dmconfig_a, Accel_t *accel){ //, volatile uint8_t* base){
@@ -19,15 +19,18 @@ int soft_config(void* dmconfig_a, Accel_t *accel){ //, volatile uint8_t* base){
 
 int soft_MM2SStatus(void* dmconfig_a){
 	//INFO("\n");
+	_unused(dmconfig_a);
 	return 0;
 }
 
 int soft_S2MMStatus(void* dmconfig_a){
 	//INFO("\n");
+	_unused(dmconfig_a);
 	return 0;
 }
 
 int soft_MM2SData(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t size, uint8_t tid){
+	_unused(tid);
 	//INFO("\n");
 	//INFO("%p\n", data->ptr);
 	//INFO("%p\n", (uint32_t*)((uint8_t*)data->ptr + offset));
@@ -52,22 +55,28 @@ int soft_S2MMData(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t si
 int soft_S2MMDone(void* dmconfig_a, Buffer_t* data){
 	//INFO("\n");
 	//INFO("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
+	_unused(dmconfig_a);
+	_unused(data);
 	return 1;
 }
 
 int soft_MM2SDone(void* dmconfig_a, Buffer_t* data){
 	//INFO("\n");
 	//INFO("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
+	_unused(dmconfig_a);
+	_unused(data);
 	return 1;
 }
 
 int soft_MM2SAck(void* dmconfig_a){
 	//INFO("\n");
+	_unused(dmconfig_a);
 	return 0;
 }
 
 int soft_S2MMAck(void* dmconfig_a){
 	//INFO("\n");
+	_unused(dmconfig_a);
 	return 0;
 }
 

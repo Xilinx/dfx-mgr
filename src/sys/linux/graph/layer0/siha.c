@@ -16,7 +16,7 @@
 #include "debug.h"
 #include "xrtbuffer.h"
 #include "uio.h"
-#include "acapd/acapdwebsoc.h"
+//#include "acapd/acapdwebsoc.h"
 
 static plDevices_t* pldevices=NULL; 
 static Buffers_t* buffers=NULL; 
@@ -49,11 +49,12 @@ int SIHAInitAccel(int slot, char * accel){
 	//FILE *fp;
 	//size_t len = 0;
 	int status;
+	_unused(accel);
 	//ssize_t read;
 	//char* line;
-	fds_t fds;
+	//@@//fds_t fds;
 	//INFO("%s\n", accel);
-	slotNum[slot] = loadpdi(accel);
+	//@@//slotNum[slot] = loadpdi(accel);
 	//INFO("%s\n", accel);
 	//INFO("############ %d %d ###################\n", slot, slotNum[slot]);
 	//if (status < 0) return status;
@@ -69,11 +70,11 @@ int SIHAInitAccel(int slot, char * accel){
 	}
 	sprintf(slotStr[slot], "%d", slotNum[slot]);
 
-	status = getFD(slotStr[slot]);
-	if (status < 0) return status;
+	//@@//status = getFD(slotStr[slot]);
+	//@@//if (status < 0) return status;
 	//INFO("############ getFD ###################\n");
-	status = socketGetFd(slotNum[slot], &fds);
-	if (status < 0) return status;
+	//@@//status = socketGetFd(slotNum[slot], &fds);
+	//@@//if (status < 0) return status;
         /*INFO("s2mm_fd        : %d\n", fds.s2mm_fd);
         INFO("mm2s_fd        : %d\n", fds.mm2s_fd);
         INFO("config_fd      : %d\n", fds.config_fd);
@@ -94,25 +95,25 @@ int SIHAInitAccel(int slot, char * accel){
 	if(!pldevices) pldevices = (plDevices_t*) malloc(sizeof(plDevices_t));
 	if(!buffers) buffers   = (Buffers_t*) malloc(sizeof(Buffers_t));
 
-	buffers->config_size[slot] = fds.config_size;
-	buffers->S2MM_size[slot]   = fds.s2mm_size;
-	buffers->MM2S_size[slot]   = fds.mm2s_size;
+	//@@//buffers->config_size[slot] = fds.config_size;
+	//@@//buffers->S2MM_size[slot]   = fds.s2mm_size;
+	//@@//buffers->MM2S_size[slot]   = fds.mm2s_size;
 
-	buffers->config_fd[slot]   = fds.config_fd;
-	buffers->S2MM_fd[slot]     = fds.s2mm_fd;
-	buffers->MM2S_fd[slot]     = fds.mm2s_fd;
+	//@@//buffers->config_fd[slot]   = fds.config_fd;
+	//@@//buffers->S2MM_fd[slot]     = fds.s2mm_fd;
+	//@@//buffers->MM2S_fd[slot]     = fds.mm2s_fd;
 	
-	buffers->config_paddr[slot]= fds.config_pa;
-	buffers->S2MM_paddr[slot]  = fds.s2mm_pa;
-	buffers->MM2S_paddr[slot]  = fds.mm2s_pa;
+	//@@//buffers->config_paddr[slot]= fds.config_pa;
+	//@@//buffers->S2MM_paddr[slot]  = fds.s2mm_pa;
+	//@@//buffers->MM2S_paddr[slot]  = fds.mm2s_pa;
 	
 	mapBuffer(buffers->config_fd[slot], buffers->config_size[slot], &buffers->config_ptr[slot]);
 	mapBuffer(buffers->S2MM_fd[slot],   buffers->S2MM_size[slot],   &buffers->S2MM_ptr[slot]);
 	mapBuffer(buffers->MM2S_fd[slot],   buffers->MM2S_size[slot],   &buffers->MM2S_ptr[slot]);
 	//INFO("%p %d\n", buffers->config_ptr[slot], slot);
 	printBuffer(buffers, slot);
-	pldevices->AccelConfig_fd[slot] = fds.accelconfig_fd;
-	pldevices->dma_hls_fd[slot] = fds.dma_hls_fd;
+	//@@//pldevices->AccelConfig_fd[slot] = fds.accelconfig_fd;
+	//@@//pldevices->dma_hls_fd[slot] = fds.dma_hls_fd;
 	pldevices->slot[slot] = slotNum[slot];
 	//INFO("#######################################\n");
 	status = mapPlDevicesAccel(pldevices, slot);
@@ -209,12 +210,12 @@ int SIHAStopAccel(int slot){
 int SIHAFinaliseAccel(int slot){
         INFO("\n");
 	int r0, r1, r2;	
-	fds_t fds;
-	fds.config_fd = buffers->config_fd[slot];
-	fds.s2mm_fd   = buffers->S2MM_fd[slot];
-	fds.mm2s_fd   = buffers->MM2S_fd[slot];
-	fds.accelconfig_fd = pldevices->AccelConfig_fd[slot];
-	fds.dma_hls_fd     = pldevices->dma_hls_fd[slot];
+	//@@//fds_t fds;
+	//@@//fds.config_fd = buffers->config_fd[slot];
+	//@@//fds.s2mm_fd   = buffers->S2MM_fd[slot];
+	//@@//fds.mm2s_fd   = buffers->MM2S_fd[slot];
+	//@@//fds.accelconfig_fd = pldevices->AccelConfig_fd[slot];
+	//@@//fds.dma_hls_fd     = pldevices->dma_hls_fd[slot];
 	/*switch(slot){
 		case 0:
 			fds.accelconfig_fd = pldevices->AccelConfig_0_fd;
@@ -237,9 +238,9 @@ int SIHAFinaliseAccel(int slot){
 	//munmap(buffers->MM2S_ptr[slot], buffers->MM2S_size[slot]);
 	printf("%d, %d, %d\n", r0, r1, r2);
 	printf("Unmapped Buffers !!\n");
-	unmapPlDevicesAccel(pldevices, slot);
-	printf("Unmapped Devices !!\n");
-	removepdi(slotStr[slot], &fds); //, slotStr[slot]);
+	//@@//unmapPlDevicesAccel(pldevices, slot);
+	//@@//printf("Unmapped Devices !!\n");
+	//@@//removepdi(slotStr[slot], &fds); //, slotStr[slot]);
 	return 0;
 }
 
@@ -258,6 +259,7 @@ int SIHAFinalise(int slot){
 
 int SIHAConfig(int slot, uint32_t* config, int size, int tid){
         INFO("\n");
+	_unused(tid);
 	memcpy(buffers->config_ptr[slot], (uint8_t*)config, size);
 	printf("%lx : %lx\n", buffers->S2MM_paddr[slot], buffers->MM2S_paddr[slot]);
 	//MM2SData(slot, buffers->config_paddr[slot], size, tid);
@@ -270,12 +272,15 @@ int SIHAConfig(int slot, uint32_t* config, int size, int tid){
 }
 
 int SIHALoopFile(char* filename){
+	_unused(filename);
         INFO("\n");
 	return 0;
 }
 
 int SIHAExchangeFile(char* infile, char* outfile){
         INFO("\n");
+	_unused(infile);
+	_unused(outfile);
 	return 0;
 }
 

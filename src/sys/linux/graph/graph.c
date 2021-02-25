@@ -4,15 +4,14 @@
 #include <stdint.h>
 #include <time.h>
 #include <unistd.h>
-#include "sihaHLS/sihaHLSdm.h"
-#include "softIO/softdm.h"
-#include "fallback/fallback.h"
+#include "layer0/sihaHLS/sihaHLSdm.h"
+#include "layer0/softIO/softdm.h"
+#include "layer0/fallback/fallback.h"
 //#include "dm.h"
 #include "graph.h"
-#include "utils.h"
-//#include "slotManager.h"
-#include "debug.h"
-#include "siha.h"
+#include "layer0/utils.h"
+#include "layer0/debug.h"
+#include "layer0/siha.h"
 #include "scheduler.h"
 
 
@@ -107,6 +106,7 @@ AccelNode_t* addAccelNode(AccelNode_t **accelNode, AccelNode_t *nextAccel){
 			nextAccel->accel.status = 0;
 			sihahls_register(nextAccel->accel.datamover);
 			sihahls_DMConfig_t* dmconfig = (sihahls_DMConfig_t*)nextAccel->accel.datamover->dmstruct;
+			_unused(dmconfig);
 			nextAccel->accel.datamover->config(nextAccel->accel.datamover->dmstruct, &(nextAccel->accel));
 			//TaskInit(nextAccel->accel.datamover);
 		}
@@ -426,7 +426,7 @@ int delSchedule(Schedule_t** schedule, Schedule_t** scheduleHead){
 
 int printSchedule(Schedule_t* schedule){
 	INFO("\n"); 
-	char json[1000];
+	//char json[1000];
 	if(schedule != NULL){
 		while(1){
 			//printDepend(schedule->dependency);
@@ -544,7 +544,7 @@ int updateBuffers(AcapGraph_t* graph, Link_t* linkHead){
 		}
 		else if(buffers == NULL){
 			//INFO("%p\n", buffers);
-			allocateBuffer(graph->drmfd, link->buffNode->buffer.size, 
+			xrt_allocateBuffer(graph->drmfd, link->buffNode->buffer.size, 
 				&link->buffNode->buffer.handle, &link->buffNode->buffer.ptr, 
 				&link->buffNode->buffer.phyAddr);
 		}
@@ -646,7 +646,7 @@ int printDepend(DependencyList_t* dependency){
 
 int printDependency(DependencyList_t* dependency){
 	INFO("\n"); 
-	char json[1000];
+	//char json[1000];
 	if(dependency != NULL){
 		while(1){
 			//printDepend(dependency);
@@ -660,7 +660,7 @@ int printDependency(DependencyList_t* dependency){
 }
 
 int updateDepend(DependencyList_t** dependencyHead, Link_t* linkHead){
-        char json[1000];
+        //char json[1000];
 	Link_t* link = linkHead;
 	DependencyList_t* dependency;
 	DependencyList_t* cDependency = *dependencyHead;
@@ -703,7 +703,7 @@ int updateDepend(DependencyList_t** dependencyHead, Link_t* linkHead){
 }
 
 int updateDependency(DependencyList_t** dependencyHead, Link_t* linkHead){
-        char json[1000];
+        //char json[1000];
 	Link_t* link = linkHead;
 	DependencyList_t* dependency;
 	while(link != NULL){
@@ -873,6 +873,7 @@ int acapGraphResetLinks(AcapGraph_t *acapGraph){
 	while(acapGraph->linkHead != NULL){
 		delLink(&(acapGraph->linkHead));
 	}
+	return 0;
 }
 
 int acapGraphFinalise(AcapGraph_t *acapGraph){

@@ -2,8 +2,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include "utils.h"
-#include "debug.h"
+#include "layer0/utils.h"
+#include "layer0/debug.h"
 #include "graph.h"
 #include "scheduler.h"
 int printTransaction(Schedule_t *schedule){
@@ -99,6 +99,7 @@ void *scheduler_Task(void* carg){
 					if(dependent){
 						dbuffNode = schedule->dependency->dependentLinks[
                                                 	schedule->dependency->linkCount - 1]->buffNode;
+						_unused(dbuffNode);
 					}
 					printTransaction(schedule);
 					if(accelNode->currentTransactionIndex == 0)
