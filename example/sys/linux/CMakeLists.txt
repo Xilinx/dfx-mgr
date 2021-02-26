@@ -1,3 +1,5 @@
+add_subdirectory (graph)
+
 collector_list  (_list PROJECT_INC_DIRS)
 include_directories (${_list} ${CMAKE_CURRENT_SOURCE_DIR})
 

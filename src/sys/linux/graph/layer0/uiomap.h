@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ */
 #define DEV_clk_wiz "/dev/uio10"
 #define DEV_SIHA_Manager "/dev/uio11"
 //#define DEV_AccelConfig_0 "/dev/uio4"

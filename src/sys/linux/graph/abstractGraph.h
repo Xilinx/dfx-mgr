@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ */
 typedef struct AbstractBuffNode AbstractBuffNode_t;
 typedef struct AbstractAccelNode AbstractAccelNode_t;
 typedef struct AbstractLink AbstractLink_t;

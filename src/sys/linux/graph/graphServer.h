@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ */
 #include <stdint.h>
 
 #define GRAPH_SOCKET       "/tmp/graph-server.socket"

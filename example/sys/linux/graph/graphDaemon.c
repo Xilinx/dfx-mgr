@@ -1,7 +1,7 @@
-/* 
- *    Graph-server.c: 
+/*
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
  *
- *
+ * SPDX-License-Identifier: MIT
  */
 
 #include <sys/types.h>
@@ -15,10 +15,11 @@
 #include <stdbool.h>
 #include <sys/select.h>
 #include <sys/stat.h>
-#include "graphServer.h"
-#include "graphClient.h"
-#include "abstractGraph.h"
-#include "layer0/debug.h"
+#include <dfx-mgr/sys/linux/graph/graphServer.h>
+#include <dfx-mgr/sys/linux/graph/graphClient.h>
+#include <dfx-mgr/sys/linux/graph/abstractGraph.h>
+#include <dfx-mgr/sys/linux/graph/layer0/debug.h>
+
 
 #define MAX_CLIENTS 200
 

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ */
 typedef struct dm dm_t;
 typedef struct Buffer Buffer_t;
 typedef struct Accel  Accel_t;

@@ -1,13 +1,18 @@
+/*
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ */
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "utils.h"
-#include "debug.h"
+#include <dfx-mgr/sys/linux/graph/layer0/utils.h>
+#include <dfx-mgr/sys/linux/graph/layer0/debug.h>
 #include <unistd.h>
 //#include "metadata.h"
-#include "graph.h"
-#include "abstractGraph.h"
+#include <dfx-mgr/sys/linux/graph/graph.h>
+#include <dfx-mgr/sys/linux/graph/abstractGraph.h>
 
 uint32_t buff[] = {
 	0xcca5a729, 0x4b276e90, 0x9a57a7e7, 0xd0bfe1c7,
@@ -35,18 +40,27 @@ uint32_t keybuff[] = {
 
 int softFFT(void* inData, int inDataSize, void* inConfig, int inConfigSize, void* outData, int outDataSize){
 	INFO("FALLBACK CALLED !!\n");
+	_unused(inConfig);
+	_unused(inConfigSize);
+	_unused(outDataSize);
 	memcpy(outData, inData, inDataSize);
 	return 0;
 }
 
 int softFIR(void* inData, int inDataSize, void* inConfig, int inConfigSize, void* outData, int outDataSize){
 	INFO("FALLBACK CALLED !!\n");
+	_unused(inConfig);
+	_unused(inConfigSize);
+	_unused(outDataSize);
 	memcpy(outData, inData, inDataSize);
 	return 0;
 }
 
 int softAES128(void* inData, int inDataSize, void* inConfig, int inConfigSize, void* outData, int outDataSize){
 	INFO("FALLBACK CALLED !!\n");
+	_unused(inConfig);
+	_unused(inConfigSize);
+	_unused(outDataSize);
 	memcpy(outData, inData, inDataSize);
 	return 0;
 }
@@ -331,8 +345,9 @@ int case6(){
 	INFO("TEST1: CMA buffer with single PL Accelerator\n");
 	uint8_t *p0 = (uint8_t*) malloc(64*1024*1024);
 	uint8_t *p1 = (uint8_t*) malloc(64*1024*1024);
-	char json[4*1024];
-
+	
+	_unused(p0);
+	_unused(p1);
 	AbstractGraph_t *acapGraph = graphInit();
         AbstractAccelNode_t *accelNode0 = addInputNode(acapGraph, 64*1024*1024);
         AbstractAccelNode_t *accelNode1 = addAcceleratorNode(acapGraph, "fir_compiler");
