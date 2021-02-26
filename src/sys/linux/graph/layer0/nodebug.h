@@ -1,3 +1,0 @@
-#define INFO(...) \
-    fprintf(stderr, " ");
-
