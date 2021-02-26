@@ -1,10 +1,7 @@
 #include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #include "metadata.h"
-#include "layer0/debug.h"
+#include "debug.h"
 #define JSMN_PARENT_LINKS
-#define JSMN_HEADER
 #include "jsmn.h"
 #include "abstractGraph.h"
 //#include "uio.h"
@@ -80,7 +77,7 @@ int json2interrm(Json_t* json, Metadata_t *metadata){
 		}
 		
 		if (jsoneq(json->data, &t[i], "Address") == 0) {
-			sscanf(json->data + t[i + 1].start, "0x%lx", &(metadata->interRM.address));
+			sscanf(json->data + t[i + 1].start, "0x%x", &(metadata->interRM.address));
 			i++;
 		}
 	}
@@ -115,25 +112,25 @@ int json2metadata(Json_t* json, Metadata_t *metadata){
 		else if (jsoneq(json->data, &t[i], "Input_Data_Block_Size") == 0) {
 			//printf("%.*s\n", t[i + 1].end - t[i + 1].start,
 			//	json->data + t[i + 1].start);
-			sscanf(json->data + t[i + 1].start, "0x%lx", &(metadata->Input_Data_Block_Size));
+			sscanf(json->data + t[i + 1].start, "0x%x", &(metadata->Input_Data_Block_Size));
 			i++;
 		}
 		else if (jsoneq(json->data, &t[i], "Output_Data_Block_Size") == 0) {
 			//printf("%.*s\n", t[i + 1].end - t[i + 1].start,
 			//	json->data + t[i + 1].start);
-			sscanf(json->data + t[i + 1].start, "0x%lx", &(metadata->Output_Data_Block_Size));
+			sscanf(json->data + t[i + 1].start, "0x%x", &(metadata->Output_Data_Block_Size));
 			i++;
 		}
 		else if (jsoneq(json->data, &t[i], "Input_Channel_Count") == 0) {
 			//printf("%.*s\n", t[i + 1].end - t[i + 1].start,
 			//	json->data + t[i + 1].start);
-			sscanf(json->data + t[i + 1].start, "%hhd", &(metadata->Input_Channel_Count));
+			sscanf(json->data + t[i + 1].start, "%d", &(metadata->Input_Channel_Count));
 			i++;
 		}
 		else if (jsoneq(json->data, &t[i], "Output_Channel_Count") == 0) {
 			//printf("%.*s\n", t[i + 1].end - t[i + 1].start,
 			//	json->data + t[i + 1].start);
-			sscanf(json->data + t[i + 1].start, "%hhd", &(metadata->Output_Channel_Count));
+			sscanf(json->data + t[i + 1].start, "%d", &(metadata->Output_Channel_Count));
 			i++;
 		}
 		else if (jsoneq(json->data, &t[i], "Inter_RM") == 0) {
@@ -148,25 +145,25 @@ int json2metadata(Json_t* json, Metadata_t *metadata){
 		else if (jsoneq(json->data, &t[i], "Config_Buffer_Size") == 0) {
 			//printf("%.*s\n", t[i + 1].end - t[i + 1].start,
 			//	json->data + t[i + 1].start);
-			sscanf(json->data + t[i + 1].start, "0x%lx", &(metadata->Config_Buffer_Size));
+			sscanf(json->data + t[i + 1].start, "0x%x", &(metadata->Config_Buffer_Size));
 			i++;
 		}
 		else if (jsoneq(json->data, &t[i], "Input_Buffer_Size") == 0) {
 			//printf("%.*s\n", t[i + 1].end - t[i + 1].start,
 			//	json->data + t[i + 1].start);
-			sscanf(json->data + t[i + 1].start, "0x%lx", &(metadata->Input_Buffer_Size));
+			sscanf(json->data + t[i + 1].start, "0x%x", &(metadata->Input_Buffer_Size));
 			i++;
 		}
 		else if (jsoneq(json->data, &t[i], "Output_Buffer_Size") == 0) {
 			//printf("%.*s\n", t[i + 1].end - t[i + 1].start,
 			//	json->data + t[i + 1].start);
-			sscanf(json->data + t[i + 1].start, "0x%lx", &(metadata->Output_Buffer_Size));
+			sscanf(json->data + t[i + 1].start, "0x%x", &(metadata->Output_Buffer_Size));
 			i++;
 		}
 		else if (jsoneq(json->data, &t[i], "Throughput") == 0) {
 			//printf("%.*s\n", t[i + 1].end - t[i + 1].start,
 			//	json->data + t[i + 1].start);
-			sscanf(json->data + t[i + 1].start, "%ld", &(metadata->Throughput));
+			sscanf(json->data + t[i + 1].start, "%d", &(metadata->Throughput));
 			i++;
 		}
 		else if (jsoneq(json->data, &t[i], "DMA_type") == 0) {
@@ -207,11 +204,11 @@ int json2device(Json_t* json, Metadata_t *metadata, int index){
 			i++;
 		}
 		else if (jsoneq(json->data, &t[i], "reg_base") == 0) {
-			sscanf(json->data + t[i + 1].start, "0x%lx", &(metadata->plDevices[index].base));
+			sscanf(json->data + t[i + 1].start, "0x%x", &(metadata->plDevices[index].base));
 			i++;
 		}
 		else if (jsoneq(json->data, &t[i], "reg_size") == 0) {
-			sscanf(json->data + t[i + 1].start, "%ld", &(metadata->plDevices[index].size));
+			sscanf(json->data + t[i + 1].start, "%d", &(metadata->plDevices[index].size));
 			i++;
 		}
 	}
@@ -297,8 +294,7 @@ int file2json(char* filename, Json_t *json){
 	fseek(f, 0, SEEK_SET);
 	
 	json->data = malloc(json->size + 1);
-	int len = fread(json->data, json->size, 1, f);
-	_unused(len);
+	fread(json->data, json->size, 1, f);
 	fclose(f);
 	json->data[json->size] = 0;
 	INFO("%s\n", json->data);
@@ -313,33 +309,31 @@ int printMeta(Metadata_t *metadata){
 
 	INFOP("interRM :\n");
 	INFOP("\tcompatible : %d\n", metadata->interRM.compatible);
-	INFOP("\taddress : %lx\n", metadata->interRM.address);
+	INFOP("\taddress : %x\n", metadata->interRM.address);
 
 	for(int i = 0; i < metadata->plDevices_Count; i ++){
 		INFOP("plDevice :\n");
 		INFOP("\tname : %s\n", metadata->plDevices[i].name);
-		INFOP("\tbase : %lx\n", metadata->plDevices[i].base);
-		INFOP("\tsize : %lx\n", metadata->plDevices[i].size);
+		INFOP("\tbase : %x\n", metadata->plDevices[i].base);
+		INFOP("\tsize : %x\n", metadata->plDevices[i].size);
 		INFOP("\ttype : %d\n", metadata->plDevices[i].type);
 	}
 
-	INFOP("Input_Data_Block_Size : %lx\n", metadata->Input_Data_Block_Size);
-	INFOP("Output_Data_Block_Size: %lx\n", metadata->Output_Data_Block_Size);
+	INFOP("Input_Data_Block_Size : %x\n", metadata->Input_Data_Block_Size);
+	INFOP("Output_Data_Block_Size: %x\n", metadata->Output_Data_Block_Size);
 	INFOP("Input_Channel_Count : %d\n", metadata->Input_Channel_Count);
 	INFOP("Output_Channel_Count : %d\n", metadata->Output_Channel_Count);
-	INFOP("Config_Buffer_Size : %lx\n", metadata->Config_Buffer_Size);
-	INFOP("Input_Buffer_Size : %lx\n", metadata->Input_Buffer_Size);
-	INFOP("Output_Buffer_Size : %lx\n", metadata->Output_Buffer_Size);
-	INFOP("Throughput : %ld\n", metadata->Throughput);
+	INFOP("Config_Buffer_Size : %x\n", metadata->Config_Buffer_Size);
+	INFOP("Input_Buffer_Size : %x\n", metadata->Input_Buffer_Size);
+	INFOP("Output_Buffer_Size : %x\n", metadata->Output_Buffer_Size);
+	INFOP("Throughput : %d\n", metadata->Throughput);
 	INFOP("DMA_type : %d\n", metadata->DMA_type);
 	INFOP("Accel_Handshake_Type : %d\n", metadata->Accel_Handshake_Type);
 	return 0;
 }
 
 int json2accelNode(Json_t* json, AbstractGraph_t *graph, int index){
-	_unused(json);	
-	_unused(graph);	
-	_unused(index);	
+	
 	return 0;
 }
 int json2accelNodes(Json_t* json, AbstractGraph_t *graph){
@@ -376,7 +370,6 @@ int json2buffNodes(Json_t* json, AbstractGraph_t *graph){
 	jsmn_parser p;
 	jsmntok_t t[128];
 	jsmn_init(&p);
-	_unused(graph);
 	int r = jsmn_parse(&p, json->data, json->size, t, sizeof(t) / sizeof(t[0]));
 	if (r < 0) {
 		printf("Failed to parse JSON: %d\n", r);
@@ -407,7 +400,6 @@ int json2links(Json_t* json, AbstractGraph_t *graph){
 	jsmn_parser p;
 	jsmntok_t t[128];
 	jsmn_init(&p);
-	_unused(graph);
 	int r = jsmn_parse(&p, json->data, json->size, t, sizeof(t) / sizeof(t[0]));
 	if (r < 0) {
 		printf("Failed to parse JSON: %d\n", r);
@@ -467,7 +459,7 @@ int graphParser(char* jsonStr, AbstractGraph_t *graph){
 			i++;
 		}
 		else if (jsoneq(json->data, &t[i], "type") == 0) {
-			sscanf(json->data + t[i + 1].start, "%hhd", &(graph->type));
+			sscanf(json->data + t[i + 1].start, "%d", &(graph->type));
 			printf("type: %d\n", graph->type);
 			i++;
 		}
@@ -498,7 +490,7 @@ int graphParser(char* jsonStr, AbstractGraph_t *graph){
 							}
 							else if (jsoneq(json->data, &t[i + j + k], "type") == 0) {
 								sscanf(json->data + t[i + j + k + 1].start, 
-									"%hhd", &(accelNode->type));
+									"%d", &(accelNode->type));
 							}
 							else if (jsoneq(json->data, &t[i + j + k], "name") == 0) {
 								sprintf(accelNode->name, "%.*s", 
@@ -550,7 +542,7 @@ int graphParser(char* jsonStr, AbstractGraph_t *graph){
 							}
 							else if (jsoneq(json->data, &t[i + j + k], "type") == 0) {
 								sscanf(json->data + t[i + j + k + 1].start, 
-									"%hhd", &(buffNode->type));
+									"%d", &(buffNode->type));
 							}
 							else if (jsoneq(json->data, &t[i + j + k], "name") == 0) {
 								sprintf(buffNode->name, "%.*s", 
@@ -605,14 +597,14 @@ int graphParser(char* jsonStr, AbstractGraph_t *graph){
 							}
 							else if (jsoneq(json->data, &t[i + j + k],
 									"accelNode") == 0) {
-								uint32_t nodeid;
+								int nodeid;
 								Element_t *accelElement = graph->accelNodeHead;
 								sscanf(json->data + t[i + j + k + 1].start, 
 									"%d", &(nodeid)); //link->accelNode));
 								//printf("nodeid : %d\n", nodeid);
 								while(accelElement != NULL){
 									if (((AbstractAccelNode_t*)accelElement->node)->id == nodeid){
-										link->accelNode = (AbstractAccelNode_t*)accelElement;
+										link->accelNode = accelElement;
 										break;
 									}
 									accelElement = accelElement->tail;
@@ -620,14 +612,14 @@ int graphParser(char* jsonStr, AbstractGraph_t *graph){
 							}
 							else if (jsoneq(json->data, &t[i + j + k],
 									"buffNode") == 0) {
-								uint32_t nodeid;
+								int nodeid;
 								Element_t *buffElement = graph->buffNodeHead;
 								sscanf(json->data + t[i + j + k + 1].start, 
 									"%d", &(nodeid)); //link->accelNode));
 								//printf("nodeid : %d\n", nodeid);
 								while(buffElement != NULL){
 									if (((AbstractBuffNode_t*)buffElement->node)->id == nodeid){
-										link->buffNode = (AbstractBuffNode_t*)buffElement;
+										link->buffNode = buffElement;
 										break;
 									}
 									buffElement = buffElement->tail;
@@ -636,12 +628,12 @@ int graphParser(char* jsonStr, AbstractGraph_t *graph){
 							else if (jsoneq(json->data, &t[i + j + k],
 									"type") == 0) {
 								sscanf(json->data + t[i + j + k + 1].start, 
-									"%hhd", &(link->type));
+									"%d", &(link->type));
 							}
 							else if (jsoneq(json->data, &t[i + j + k],
 									"transactionIndex") == 0) {
 								sscanf(json->data + t[i + j + k + 1].start, 
-									"%hhd", &(link->transactionIndex));
+									"%d", &(link->transactionIndex));
 							}
 							else if (jsoneq(json->data, &t[i + j + k],
 									"transactionSize") == 0) {
@@ -656,7 +648,7 @@ int graphParser(char* jsonStr, AbstractGraph_t *graph){
 							else if (jsoneq(json->data, &t[i + j + k],
 									"channel") == 0) {
 								sscanf(json->data + t[i + j + k + 1].start, 
-									"%hhd", &(link->channel));
+									"%d", &(link->channel));
 							}
 						}
 						else{

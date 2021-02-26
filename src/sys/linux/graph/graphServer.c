@@ -18,7 +18,7 @@
 #include "graphServer.h"
 #include "graphClient.h"
 #include "abstractGraph.h"
-#include "layer0/debug.h"
+#include "debug.h"
 
 #define MAX_CLIENTS 200
 
@@ -36,8 +36,6 @@ void error (char *msg)
 int main (int argc, char **argv)
 {
 	ssize_t size;
-	_unused(argc);
-	_unused(argv);
 	printf ("Graph-server: Hello, World!\n");
 	// initialize the complaint queue
 	tail = NULL;
@@ -98,7 +96,7 @@ int main (int argc, char **argv)
 				{
 					memset (&recv_message, '\0', sizeof (struct message));
 					ssize_t numbytes = read (fd, &recv_message, sizeof (struct message));
-					INFO("%ld\n", numbytes);
+					INFO("%d\n", numbytes);
 					INFO("%d\n", recv_message.id);
 					if (numbytes == -1)
 						error ("read");

@@ -9,13 +9,13 @@
 #include <stdio.h>
 #include "uio.h"
 #include "xrtbuffer.h"
-#include "debug.h"
+#include "nodebug.h"
 
 //static plDevices pldevices;
 //static Buffers buffers;
 //static int slot = 0;
 
-int xrt_allocateBuffer(int fd, int size, int* handle, uint8_t** ptr, unsigned long* paddr){ 
+int allocateBuffer(int fd, int size, int* handle, uint8_t** ptr, unsigned long* paddr){ 
 	struct drm_zocl_create_bo info1 = {size, 0xffffffff, DRM_ZOCL_BO_FLAGS_COHERENT | DRM_ZOCL_BO_FLAGS_CMA};
 	int result = ioctl(fd, DRM_IOCTL_ZOCL_CREATE_BO, &info1);
 	*handle = info1.handle;
@@ -54,7 +54,6 @@ int mapBuffer(int fd, int size, uint8_t** ptr){
 }
 int unmapBuffer(int fd, int size, uint8_t** ptr){
 	munmap(*ptr, size);
-	_unused(fd);
 	//close(fd);
 	return 0;
 }
@@ -68,19 +67,19 @@ int initXrtBuffer(int slot, Buffers_t* buffers){
 			return -1;
 		}
 	}
-	status = xrt_allocateBuffer(buffers->fd, buffers->config_size[slot], &buffers->config_handle[slot],
+	status = allocateBuffer(buffers->fd, buffers->config_size[slot], &buffers->config_handle[slot],
 		       	&buffers->config_ptr[slot], &buffers->config_paddr[slot]);
         if(status < 0){
 		printf( "error @ config allocation\n");
 		return status;
 	}
-	status = xrt_allocateBuffer(buffers->fd, buffers->S2MM_size[slot], &buffers->S2MM_handle[slot],
+	status = allocateBuffer(buffers->fd, buffers->S2MM_size[slot], &buffers->S2MM_handle[slot],
 			&buffers->S2MM_ptr[slot], &buffers->S2MM_paddr[slot]);
         if(status < 0){
 		printf( "error @ S2MM allocation\n");
 		return status;
 	}
-	status = xrt_allocateBuffer(buffers->fd, buffers->MM2S_size[slot], &buffers->MM2S_handle[slot],
+	status = allocateBuffer(buffers->fd, buffers->MM2S_size[slot], &buffers->MM2S_handle[slot],
 			&buffers->MM2S_ptr[slot], &buffers->MM2S_paddr[slot]);
         if(status < 0){
 		printf( "error @ MM2S allocation\n");
@@ -106,8 +105,6 @@ int printBuffer(Buffers_t* buffers, int slot){
 	INFO("Buffers->config_ptr[slot] : %p\n", buffers->config_ptr[slot]);
 	INFO("Buffers->S2MM_ptr[slot]   : %p\n", buffers->S2MM_ptr[slot]);
 	INFO("Buffers->MM2S_ptr[slot]   : %p\n", buffers->MM2S_ptr[slot]);
-	_unused(buffers);
-	_unused(slot);
 	return 0;
 }
 
