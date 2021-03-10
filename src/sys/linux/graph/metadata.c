@@ -439,7 +439,8 @@ int json2links(Json_t* json, AbstractGraph_t *graph){
 	return 0;
 }
 
-int graphParser(char* jsonStr, AbstractGraph_t *graph){
+int graphParser(char* jsonStr, AbstractGraph_t **graph){
+	AbstractGraph_t *tgraph = *graph;
 	Json_t* json = malloc(sizeof(Json_t));
 	jsmn_parser p;
 	jsmntok_t t[1024]; /* We expect no more than 128 tokens */
@@ -449,31 +450,28 @@ int graphParser(char* jsonStr, AbstractGraph_t *graph){
 	strcpy(json->data, jsonStr);
 	int r = jsmn_parse(&p, json->data, json->size, t, sizeof(t) / sizeof(t[0]));
 	if (r < 0) {
-		printf("Failed to parse JSON: %d\n", r);
+		INFO("Failed to parse JSON: %d\n", r);
 		return 1;
 	}
-
+	
 	/* Assume the top-level element is an object */
 	if (r < 1 || t[0].type != JSMN_OBJECT) {
-		printf("Object expected\n");
+		INFO("Object expected\n");
 		return 1;
 	}
 	for (int i = 1; i < r; i++) {
-		//printf("%d : %d\n", i, t[i].parent);
 		if (t[i].parent != 0) {
-			//printf("@@ %.*s\n", t[t[i].parent].end - t[t[i].parent].start,
-			//	json->data + t[t[i].parent].start);
                         continue; 
                 }
 
 		if (jsoneq(json->data, &t[i], "id") == 0) {
-			sscanf(json->data + t[i + 1].start, "%d", &(graph->id));
-			printf("id: %d\n", graph->id);
+			sscanf(json->data + t[i + 1].start, "%d", &(tgraph->id));
+			//INFO("id: %d\n", tgraph->id);
 			i++;
 		}
 		else if (jsoneq(json->data, &t[i], "type") == 0) {
-			sscanf(json->data + t[i + 1].start, "%hhd", &(graph->type));
-			printf("type: %d\n", graph->type);
+			sscanf(json->data + t[i + 1].start, "%hhd", &(tgraph->type));
+			//INFO("type: %d\n", tgraph->type);
 			i++;
 		}
 		else if (jsoneq(json->data, &t[i], "accelNode") == 0) {
@@ -491,10 +489,10 @@ int graphParser(char* jsonStr, AbstractGraph_t *graph){
 					AbstractAccelNode_t *accelNode = malloc(sizeof(AbstractAccelNode_t));
 					Element_t* element = (Element_t *) malloc(sizeof(Element_t));
         				element->node =  accelNode; 
-        				graph->accelNodeID ++;
+        				tgraph->accelNodeID ++;
        					element->head = NULL;
 				        element->tail = NULL;
-       					addElement(&(graph->accelNodeHead), element);
+       					addElement(&(tgraph->accelNodeHead), element);
 					for (int k = 0; k < objectElementCount; k++) {
 						if (t[i + j + k].parent == object) {
 							if (jsoneq(json->data, &t[i + j + k], "id") == 0) {
@@ -543,10 +541,10 @@ int graphParser(char* jsonStr, AbstractGraph_t *graph){
 					AbstractBuffNode_t *buffNode = malloc(sizeof(AbstractBuffNode_t));
 					Element_t* element = (Element_t *) malloc(sizeof(Element_t));
         				element->node =  buffNode; 
-        				graph->buffNodeID ++;
+        				tgraph->buffNodeID ++;
        					element->head = NULL;
 				        element->tail = NULL;
-       					addElement(&(graph->buffNodeHead), element);
+       					addElement(&(tgraph->buffNodeHead), element);
 					for (int k = 0; k < objectElementCount; k++) {
 						if (t[i + j + k].parent == object) {
 							if (jsoneq(json->data, &t[i + j + k], "id") == 0) {
@@ -597,10 +595,10 @@ int graphParser(char* jsonStr, AbstractGraph_t *graph){
 					AbstractLink_t *link = malloc(sizeof(AbstractLink_t));
 					Element_t* element = (Element_t *) malloc(sizeof(Element_t));
         				element->node =  link; 
-        				graph->linkID ++;
+        				tgraph->linkID ++;
        					element->head = NULL;
 				        element->tail = NULL;
-       					addElement(&(graph->linkHead), element);
+       					addElement(&(tgraph->linkHead), element);
 					for (int k = 0; k < objectElementCount; k++) {
 						if (t[i + j + k].parent == object) {
 							if (jsoneq(json->data, &t[i + j + k],
@@ -611,7 +609,7 @@ int graphParser(char* jsonStr, AbstractGraph_t *graph){
 							else if (jsoneq(json->data, &t[i + j + k],
 									"accelNode") == 0) {
 								uint32_t nodeid;
-								Element_t *accelElement = graph->accelNodeHead;
+								Element_t *accelElement = tgraph->accelNodeHead;
 								sscanf(json->data + t[i + j + k + 1].start, 
 									"%d", &(nodeid)); //link->accelNode));
 								//printf("nodeid : %d\n", nodeid);
@@ -626,7 +624,7 @@ int graphParser(char* jsonStr, AbstractGraph_t *graph){
 							else if (jsoneq(json->data, &t[i + j + k],
 									"buffNode") == 0) {
 								uint32_t nodeid;
-								Element_t *buffElement = graph->buffNodeHead;
+								Element_t *buffElement = tgraph->buffNodeHead;
 								sscanf(json->data + t[i + j + k + 1].start, 
 									"%d", &(nodeid)); //link->accelNode));
 								//printf("nodeid : %d\n", nodeid);
@@ -681,3 +679,37 @@ int graphParser(char* jsonStr, AbstractGraph_t *graph){
 	return 0;	
 }
 
+
+
+int graphIDParser(char* jsonStr){
+	int id;
+	Json_t* json = malloc(sizeof(Json_t));
+	jsmn_parser p;
+	jsmntok_t t[1024]; /* We expect no more than 128 tokens */
+	jsmn_init(&p);
+	json->size = strlen(jsonStr);
+	json->data = malloc(json->size + 1);
+	strcpy(json->data, jsonStr);
+	int r = jsmn_parse(&p, json->data, json->size, t, sizeof(t) / sizeof(t[0]));
+	if (r < 0) {
+		INFO("Failed to parse JSON: %d\n", r);
+		return 1;
+	}
+	
+	/* Assume the top-level element is an object */
+	if (r < 1 || t[0].type != JSMN_OBJECT) {
+		INFO("Object expected\n");
+		return 1;
+	}
+	for (int i = 1; i < r; i++) {
+		if (t[i].parent != 0) {
+                        continue; 
+                }
+
+		if (jsoneq(json->data, &t[i], "id") == 0) {
+			sscanf(json->data + t[i + 1].start, "%d", &(id));
+			break;
+		}
+	}
+	return id;
+}

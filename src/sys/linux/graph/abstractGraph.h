@@ -9,6 +9,8 @@ typedef struct AbstractLink AbstractLink_t;
 typedef struct AbstractGraph AbstractGraph_t;
 typedef struct Element Element_t;
 typedef struct graphSocket graphSocket_t;
+typedef struct AccelNode AccelNode_t;
+typedef struct BuffNode BuffNode_t;
 
 struct Element{
 	void* node;
@@ -21,6 +23,11 @@ struct AbstractAccelNode{
         char name[256];
         uint32_t size;
         uint32_t id;
+        int fd;    	// File descriptor from ACAPD
+        int handle;	// Buffer XRT Handeler
+        uint8_t* ptr;	// Buffer Ptr
+        unsigned long phyAddr; // Buffer Physical Address
+	AccelNode_t *node;
         //int SchedulerBypassFlag;
 };
 
@@ -29,6 +36,7 @@ struct AbstractBuffNode{
         char name[256];
         uint32_t size;
         uint32_t id;
+	BuffNode_t *node;
 };
 
 struct AbstractLink{
@@ -46,6 +54,7 @@ struct AbstractGraph{
         uint32_t id;
         uint8_t type;
 	graphSocket_t *gs;
+	int xrt_fd;
         Element_t *accelNodeHead;
         Element_t *buffNodeHead;
         Element_t *linkHead;
@@ -73,6 +82,8 @@ extern AbstractLink_t *addInBuffer(AbstractGraph_t *graph, AbstractAccelNode_t *
 
 extern int abstractGraph2Json(AbstractGraph_t *graph, char* json);
 extern int abstractGraphConfig(AbstractGraph_t *graph);
-extern int abstractGraphServerConfig(Element_t **GraphList, char* json, int len);
+extern int abstractGraphServerConfig(Element_t **GraphList, char* json, int len, int *fd);
 extern int abstractGraphFinalise(AbstractGraph_t *graph);
 extern Element_t* addElement(Element_t** headElement, Element_t* nextElement);
+extern int abstractGraphServerFinalise(Element_t **GraphList, char* json);
+extern Element_t *searchGraphById(Element_t **GraphList, uint32_t id);

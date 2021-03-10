@@ -22,10 +22,11 @@
 
 #define MAX_CLIENTS 200
 
-
+#define HEADERSIZE 24
 struct message {
 	uint32_t id;
 	uint32_t size;
+	uint32_t fdcount;
 	char data [4*1024];
 };
 

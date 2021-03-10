@@ -549,9 +549,10 @@ int updateBuffers(AcapGraph_t* graph, Link_t* linkHead){
 		}
 		else if(buffers == NULL){
 			//INFO("%p\n", buffers);
+			int tmpfd;
 			xrt_allocateBuffer(graph->drmfd, link->buffNode->buffer.size, 
 				&link->buffNode->buffer.handle, &link->buffNode->buffer.ptr, 
-				&link->buffNode->buffer.phyAddr);
+				&link->buffNode->buffer.phyAddr, &tmpfd);
 		}
 		if(link->tail != NULL){
 			updateBuffers(graph, link->tail);

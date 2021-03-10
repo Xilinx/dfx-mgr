@@ -64,4 +64,5 @@ extern int file2json(char* filename, Json_t *json);
 typedef struct AbstractGraph AbstractGraph_t;
 typedef struct Element Element_t;
 
-extern int graphParser(char* jsonStr, AbstractGraph_t *graph);
+extern int graphParser(char* jsonStr, AbstractGraph_t **graph);
+extern int graphIDParser(char* jsonStr);

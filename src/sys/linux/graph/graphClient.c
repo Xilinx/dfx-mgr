@@ -33,14 +33,14 @@ struct graphSocket {
 };
 
 ssize_t
-sock_fd_write(int sock, void *buf, ssize_t buflen, int fd)
+sock_fd_write(int sock, void *buf, ssize_t buflen, int *fd, int fdcount)
 {
     ssize_t     size;
     struct msghdr   msg;
     struct iovec    iov;
     union {
         struct cmsghdr  cmsghdr;
-        char        control[CMSG_SPACE(sizeof (int))];
+        char        control[CMSG_SPACE(sizeof (int) * fdcount)];
     } cmsgu;
     struct cmsghdr  *cmsg;
 
@@ -52,7 +52,7 @@ sock_fd_write(int sock, void *buf, ssize_t buflen, int fd)
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;
 
-    if (fd != -1) {
+    if (fd[0] != -1) {
         msg.msg_control = cmsgu.control;
         msg.msg_controllen = sizeof(cmsgu.control);
 
@@ -61,8 +61,9 @@ sock_fd_write(int sock, void *buf, ssize_t buflen, int fd)
         cmsg->cmsg_level = SOL_SOCKET;
         cmsg->cmsg_type = SCM_RIGHTS;
 
-        printf ("passing fd %d\n", fd);
-        *((int *) CMSG_DATA(cmsg)) = fd;
+        //printf ("passing fd %d\n", fd);
+        //*((int *) CMSG_DATA(cmsg)) = fd;
+        memcpy(CMSG_DATA(cmsg), fd, fdcount * sizeof(int));
     } else {
         msg.msg_control = NULL;
         msg.msg_controllen = 0;
@@ -77,21 +78,18 @@ sock_fd_write(int sock, void *buf, ssize_t buflen, int fd)
 }
 
 ssize_t
-sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd)
+sock_fd_read(int sock, struct message *buf, int *fd, int *fdcount)
 {
-    ssize_t     size;
-
-    if (fd) {
+	ssize_t     size = 0;
         struct msghdr   msg;
         struct iovec    iov;
         union {
             struct cmsghdr  cmsghdr;
-            char        control[CMSG_SPACE(sizeof (int))];
+            char        control[CMSG_SPACE(sizeof (int) * 2)];
         } cmsgu;
         struct cmsghdr  *cmsg;
-
         iov.iov_base = buf;
-        iov.iov_len = bufsize;
+        //iov.iov_len = 1024*4;
 
         msg.msg_name = NULL;
         msg.msg_namelen = 0;
@@ -104,7 +102,11 @@ sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd)
             perror ("recvmsg");
             exit(1);
         }
+	INFO("@@ size = %ld\n", size);
+	*fdcount = buf->fdcount;
+	INFO("@@ fdcount = %d\n", *fdcount);
         cmsg = CMSG_FIRSTHDR(&msg);
+	INFO("@@ cmsg_len = %ld\n", cmsg->cmsg_len);
         if (cmsg && cmsg->cmsg_len == CMSG_LEN(sizeof(int))) {
             if (cmsg->cmsg_level != SOL_SOCKET) {
                 fprintf (stderr, "invalid cmsg_level %d\n",
@@ -117,17 +119,13 @@ sock_fd_read(int sock, void *buf, ssize_t bufsize, int *fd)
                 exit(1);
             }
 
-            *fd = *((int *) CMSG_DATA(cmsg));
-            printf ("received fd %d\n", *fd);
-        } else
-            *fd = -1;
-    } else {
-        size = read (sock, buf, bufsize);
-        if (size < 0) {
-            perror("read");
-            exit(1);
-        }
-    }
+            memcpy(fd, CMSG_DATA(cmsg), *fdcount);
+	    //for(int i = 0; i < *fdcount; i ++){
+		INFO("fd = %d\n", fd[0]);
+		INFO("fd = %d\n", fd[1]);
+		//	}
+            //printf ("received fd %d\n", *fd);
+   }
     return size;
 }
 
@@ -143,22 +141,20 @@ int graphClientInit(struct graphSocket* gs){
 	return 0;
 }
 
-int graphClientSubmit(struct graphSocket* gs, char* json, int size){
+int graphClientSubmit(struct graphSocket* gs, char* json, int size, int *fd){
 	struct message send_message, recv_message;
 	send_message.id = GRAPH_INIT;
 	send_message.size = size;
+	send_message.fdcount = 0;
 	memcpy(send_message.data, json, size);
-	printf("%s\n", send_message.data);
-	if (write (gs->sock_fd, &send_message, sizeof(uint32_t) * 2 + send_message.size) == -1)
+	if (write (gs->sock_fd, &send_message, HEADERSIZE + send_message.size) == -1)
 		error ("write");
 	memset (&recv_message, '\0', sizeof(struct message));
-	char buf[16];
-	int fd;
-	size = sock_fd_read(gs->sock_fd, buf, sizeof(buf), &fd);
+	int fdcount = 0;
+	size = sock_fd_read(gs->sock_fd, &recv_message, fd, &fdcount);
 	if (size <= 0)
 		return -1;
 	printf ("read %d\n", size);
-	printf ("%s\n", buf);
 	//if (fd != -1) {
 	//	write(fd, "####hello, world\n", 13);
 	//	close(fd);
@@ -192,20 +188,21 @@ int graphClientSubmit(struct graphSocket* gs, char* json, int size){
 }*/
 int graphClientFinalise(struct graphSocket* gs, char* json, int size){
 	struct message send_message, recv_message;
+	memset (&send_message, '\0', sizeof(struct message));
 	send_message.id = GRAPH_FINALISE;
 	send_message.size = size;
+	send_message.fdcount = 0;
 	memcpy(send_message.data, json, size);
-	printf("%s\n", send_message.data);
-	if (write (gs->sock_fd, &send_message, sizeof(uint32_t) * 2 + send_message.size) == -1)
+	INFO("%s\n", send_message.data);
+	if (write (gs->sock_fd, &send_message, HEADERSIZE + send_message.size) == -1)
 		error ("write");
 	memset (&recv_message, '\0', sizeof(struct message));
-	char buf[16];
-	int fd;
-	size = sock_fd_read(gs->sock_fd, buf, sizeof(buf), &fd);
+	int fd[25];
+	int fdcount;
+	size = sock_fd_read(gs->sock_fd, &recv_message, fd, &fdcount);
 	if (size <= 0)
 		return -1;
 	printf ("read %d\n", size);
-	printf ("%s\n", buf);
 	//if (fd != -1) {
 	//	write(fd, "####hello, world\n", 13);
 	//	close(fd);
@@ -215,54 +212,4 @@ int graphClientFinalise(struct graphSocket* gs, char* json, int size){
 	return 0;
 }
 
-//int main (int argc, char **argv)
-//{
-//	struct graphSocket gs;
-//	char json[]="Hello world !!\n";
-//	graphClientInit(&gs);
-//	graphClientSubmit(&gs, json, strlen(json));
-	//int option;
-	//bool over = false;
 
-	//while (!over) {
-	//option = get_input ();
-	//message.id = GRAPH_INIT;
-	// send request to server
-	//if (write (gs.sock_fd, &message, sizeof (struct message)) == -1)
-	//	error ("write");
-	//memset (&message, '\0', sizeof (struct message));
-	// receive response from server
-	//if (read (gs.sock_fd, &message, sizeof (struct message)) == -1)
-	//	error ("read");
-
-	// process server response 
-	//switch (message.id) {
-		/*case COMPLAINT_ADDED: 
-			printf ("\nComplaint for Apartment id: %s has been added.\n\n", message.apartment_id);
-			break;
-	
-		case NEXT_COMPLAINT: 
-			printf ("\nCOMPLAINT\n\tApartment id: %s\n\tRemarks: %s\n\n", message.apartment_id, message.remarks);
-			break;
-
-		case NO_MORE_COMPLAINTS: 
-			printf ("\nNo more complaints\n\n");
-			break;
-
-		case NO_COMPLAINT4THIS_APT: 
-			printf ("\nThere is no existing Complaint for Apartment id: %s.\n\n", message.apartment_id);
-			break;
-
-		case COMPLAINT_DELETED: 
-			printf ("\nComplaint for Apartment id: %s has been deleted.\n\n", message.apartment_id);
-			break;
-
-		case QUIT: over = true;
-			break;*/
-
-	//	default: printf ("\nUnrecongnized message from server\n\n");
-	//}
-	//}
-
-//	exit (EXIT_SUCCESS);
-//}

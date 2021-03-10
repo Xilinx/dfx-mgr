@@ -120,76 +120,37 @@ int main (int argc, char **argv)
 							case GRAPH_INIT:
 								printf("### GRAPH INIT ###\n");
 								//printf ("recieved %s\n", recv_message.data);
-								abstractGraphServerConfig(&GraphList, 
-									recv_message.data, recv_message.size);
+								int buff_fd[25];
+								int buff_fd_cnt = abstractGraphServerConfig(&GraphList, 
+									recv_message.data, recv_message.size, buff_fd);
 
+								//INFO("%d\n", buff_fd_cnt);
+								for (int i = 0; i < buff_fd_cnt; i++){
+									INFO("%d\n", buff_fd[i]);
+								}
 								send_message.id = GRAPH_INIT_DONE;
-								size = sock_fd_write(fd, "Hello hh", 8, 1);
+								send_message.fdcount = buff_fd_cnt;
+								send_message.size = 0;
+								size = sock_fd_write(fd, &send_message, 
+											HEADERSIZE + send_message.size,
+											buff_fd, buff_fd_cnt);
 								printf ("wrote %ld\n", size);
 								break;
 							case GRAPH_FINALISE:
 								printf("### GRAPH FINALISE ###\n");
+								INFO("%s\n", recv_message.data);
+								INFO("%p\n", GraphList);	
+								int id = abstractGraphServerFinalise(&GraphList, recv_message.data);
+								_unused(id);
 								memcpy(send_message.data, recv_message.data, 
 									recv_message.size);
 								send_message.size = recv_message.size;
 								send_message.id = GRAPH_FINALISE_DONE;
-								if (write (fd, &send_message, sizeof(uint32_t) * 2 + 
+								
+								if (write (fd, &send_message, HEADERSIZE + 
 									send_message.size) == -1)
 									error ("write");
 								break;
-							/*case LOG_COMPLAINT:
-							add_to_complaint_q (recv_message.apartment_id, recv_message.remarks, send_message.apartment_id);
-							send_message.message_id = COMPLAINT_ADDED;
-							if (write (fd, &send_message, sizeof (struct message)) == -1)
-							error ("write");
-							break;
-
-							case GIVE_ME_A_COMPLAINT: 
-							if (give_next_complaint (send_message.apartment_id, send_message.remarks) == -1) {
-							// error: No more complaints
-							send_message.message_id = NO_MORE_COMPLAINTS;
-							if (write (fd, &send_message, sizeof (struct message)) == -1)
-							error ("write");
-							}
-							else
-							{
-							send_message.message_id = NEXT_COMPLAINT;
-							if (write (fd, &send_message, sizeof (struct message)) == -1)
-							error ("write");
-
-							}
-							break;
-
-							case GIVE_COMPLAINT4APT:
-							if (give_complaint (recv_message.apartment_id, send_message.apartment_id, send_message.remarks) == -1) {
-							// no complaint for this apartment
-							send_message.message_id = NO_COMPLAINT4THIS_APT;
-							if (write (fd, &send_message, sizeof (struct message)) == -1)
-							error ("write");
-							}
-							else
-							{
-							send_message.message_id = NEXT_COMPLAINT;
-							if (write (fd, &send_message, sizeof (struct message)) == -1)
-							error ("write");
-							}
-							break;
-
-							case RESOLVE_COMPLAINT:
-							if (del_complaint (recv_message.apartment_id, send_message.apartment_id) == -1) {
-							// error: No complaint found for this apartment
-							send_message.message_id = NO_COMPLAINT4THIS_APT;
-							if (write (fd, &send_message, sizeof (struct message)) == -1)
-							error ("write");
-							}
-							else
-							{
-							// complaint deleted
-							send_message.message_id = COMPLAINT_DELETED;
-							if (write (fd, &send_message, sizeof (struct message)) == -1)
-							error ("write");
-							}
-							break;*/
 
 							case QUIT:
 								if (close (fd) == -1)
@@ -201,10 +162,10 @@ int main (int argc, char **argv)
 						}
 					}
 				}
-			} // if (fd == ...
-		} // for
-	} // while (1)
+			} 
+		} 
+	} 
     exit (EXIT_SUCCESS);
-} // main
+}
 
 

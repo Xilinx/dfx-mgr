@@ -22,6 +22,8 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#define JSMN_PARENT_LINKS
 #include <jsmn.h>
 
 static int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
