@@ -29,8 +29,7 @@
 #define SERVER_PATH     "/tmp/dfx-mgrd_socket"
 
 static int interrupted, socket_d;
-static acapd_accel_t *active_slots[3];
-char *firmware_path = "/lib/firmware/xilinx";
+//static acapd_accel_t *active_slots[3];
 
 struct watch {
     int wd;
@@ -71,47 +70,12 @@ struct basePLDesign *findBaseDesign(const char *name){
 	return NULL;
 }
 
-char *get_accel_path(const char *name, int slot)
-{
-	char *accel_path = malloc(sizeof(char)*1024);
-	DIR *d;
-	struct dirent *dir;
-	struct stat info;
-
-    d = opendir(firmware_path);
-    if (d == NULL) {
-		acapd_perror("Directory %s not found\n",firmware_path);
-	}
-	while((dir = readdir(d)) != NULL) {
-		if (dir->d_type == DT_DIR) {
-			if (strlen(dir->d_name) > 64) {
-				continue;
-			}
-			if(strcmp(dir->d_name, name) == 0){
-				acapd_debug("Found dir %s in %s\n",name,firmware_path);
-				sprintf(accel_path,"%s/%s/%s_slot%d", firmware_path, dir->d_name, dir->d_name,slot);
-				if (stat(accel_path,&info) != 0)
-					return NULL;
-				if (info.st_mode & S_IFDIR){
-					acapd_debug("Found accelerator path %s\n",accel_path);
-					return accel_path;
-				}
-				else
-					acapd_perror("No %s accel for slot %d found\n",name,slot);
-			}
-			else {
-				acapd_debug("Found %s in %s\n",dir->d_name,firmware_path);
-			}
-		}
-	}
-	return NULL;
-}
 void getRMInfo()
 {
 	FILE *fptr;
 	int i;
 	char line[512];
-	acapd_accel_t *accel;
+	struct basePLDesign *base = platform.active_base;
 
 	fptr = fopen("/home/root/rm_info.txt","w");
 	if (fptr == NULL){
@@ -119,13 +83,15 @@ void getRMInfo()
 		goto out;
 	}
 
-	for (i = 0; i < 3; i++) {
-		if(active_slots[i] == NULL)
+	if(base == NULL) {
+		acapd_perror("No design currently loaded");
+		return ;
+	}
+	for (i = 0; i < base->num_slots; i++){
+		if (base->slots[i] == NULL)
 			sprintf(line, "%d,%s",i,"GREY");
-		else {
-			accel = active_slots[i];
-			sprintf(line,"%d,%s",i,accel->pkg->path);
-		}
+		else
+			sprintf(line,"%d,%s",i, base->slots[i]->accel->pkg->name);
 		fprintf(fptr,"\n%s",line);	
 	}
 out:
@@ -188,6 +154,9 @@ int load_accelerator(const char *accel_name)
 
 	/* Flat shell designs which don't have any slot */
 	if(base != NULL && !strcmp(base->type,"XRT_FLAT") && accel_info != NULL) {
+		if (base->slots == NULL)
+			base->slots = (slot_info_t **)malloc(sizeof(slot_info_t *) * base->num_slots);
+
 		if (base->slots[0] != NULL) {
 			printf("Remove previously loaded accelerator, no empty slot\n");
 			return -1;
@@ -204,6 +173,7 @@ int load_accelerator(const char *accel_name)
 			base->active = 0;
 			goto out;
 		}
+		base->fpga_cfg_id = accel->sys_info.fpga_cfg_id;
 		base->active = 1;
 		base->slots[0] = slot;
 
@@ -229,26 +199,26 @@ int load_accelerator(const char *accel_name)
 				base->active = 0;
 				goto out;
 			}
+			base->fpga_cfg_id = accel->sys_info.fpga_cfg_id;
 			base->active = 1;
 			base->slots = (slot_info_t **)malloc(sizeof(slot_info_t *) * base->num_slots);
 			for (i = 0; i < base->num_slots; i++)
 				base->slots[i] = NULL;
 			platform.active_base = base;
-			acapd_print("Loaded %s successfully\n",base->name);
+			acapd_print("Loaded %s successfully.\n",base->name);
 		}
 		else if(strcmp(platform.active_base->base_path, accel_info->parent_path)) {
 			acapd_perror("Active base design doesn't match this accel base\n");
-			return -1;
+			goto out;
 		}
 		for (i = 0; i < base->num_slots; i++) {
-			printf("Finding empty slot for %s i %d \n",accel_name,i);
+			acapd_debug("Finding empty slot for %s i %d \n",accel_name,i);
 			if (base->slots[i] == NULL){
 				sprintf(path,"%s/%s_slot%d", accel_info->path, accel_info->name,i);
 				strcpy(pkg->name, accel_name);
 				pkg->path = path;
 				pkg->type = ACAPD_ACCEL_PKG_TYPE_NONE;
 				init_accel(accel, pkg);
-				acapd_perror("%s: Loading accel %s to slot %d \n", __func__, pkg->name,i);
 				/* Set rm_slot before load_accel() so isolation for appropriate slot can be applied*/
 				accel->rm_slot = i;
 				accel->type = SIHA_SHELL;
@@ -259,7 +229,7 @@ int load_accelerator(const char *accel_name)
 				goto out;
 				}
 				base->slots[i] = slot;
-				acapd_print("Loaded %s successfully\n",pkg->name);
+				acapd_print("Loaded %s successfully to slot %d\n",pkg->name,i);
 				return i;
 			}
 		}
@@ -275,34 +245,38 @@ out:
 	free(pkg);
 	return -1;
 }
-
 void remove_accelerator(int slot)
 {
 	struct basePLDesign *base = platform.active_base;
 	int i;
-
 	acapd_accel_t *accel;
+
 	if (base == NULL || base->slots[slot] == NULL){
 		acapd_perror("%s No Accel in slot %d\n",__func__,slot);
 		return;
 	}
 	accel = base->slots[slot]->accel;
 	acapd_print("Removing accel %s from slot %d\n",accel->pkg->name,slot);
+
     remove_accel(accel, 0);
 	free(accel);
 	base->slots[slot] = NULL;
+	
+	//check if base design needs to be removed
 	for (i = 0; i < base->num_slots; i++){
 		if (base->slots[i] != NULL) break;
 	}
 	if (i == base->num_slots){
 		acapd_print("All slots for base %s are empty.\n",base->name);
+		remove_base(base->fpga_cfg_id);
+		free(base->slots);
 		base->active = 0;
 		platform.active_base = NULL;
 	}
 }
 void allocBuffer(uint64_t size)
 {
-	printf("%s: allocating buffer of size %lu\n",__func__,size);
+	acapd_print("%s: allocating buffer of size %lu\n",__func__,size);
 	allocateBuffer(size, socket_d);
 }
 void freeBuff(uint64_t pa)
@@ -310,35 +284,81 @@ void freeBuff(uint64_t pa)
 	printf("%s: free buffer PA %lu\n",__func__,pa);
 	freeBuffer(pa);
 }
+void getFDs(int slot)
+{
+	struct basePLDesign *base = platform.active_base;
+	if(base == NULL){
+		acapd_perror("No active design\n");
+		return;
+	}
+	acapd_accel_t *accel = base->slots[slot]->accel;
+	if (accel == NULL){
+		acapd_perror("%s No Accel in slot %d\n",__func__,slot);
+		return;
+	}
+	get_fds(accel, slot, socket_d);
+}
 
 void getShellFD(int slot)
 {
-	acapd_accel_t *accel = active_slots[slot];
-	if (active_slots == NULL || active_slots[slot] == NULL){
+	struct basePLDesign *base = platform.active_base;
+	if(base == NULL){
+		acapd_perror("No active design\n");
+		return;
+	}
+	acapd_accel_t *accel = base->slots[slot]->accel;
+	if (accel == NULL){
 		acapd_perror("%s No Accel in slot %d\n",__func__,slot);
 		return;
 	}
-	get_shell_fd(accel);
+	get_shell_fd(accel, socket_d);
 }
 void getClockFD(int slot)
 {
-	acapd_accel_t *accel = active_slots[slot];
-	if (active_slots == NULL || active_slots[slot] == NULL){
+	struct basePLDesign *base = platform.active_base;
+	if(base == NULL){
+		acapd_perror("No active design\n");
+		return;
+	}
+	acapd_accel_t *accel = base->slots[slot]->accel;
+	if (accel == NULL){
 		acapd_perror("%s No Accel in slot %d\n",__func__,slot);
 		return;
 	}
-	get_shell_clock_fd(accel);
+	get_shell_clock_fd(accel, socket_d);
 }
 void listAccelerators()
 {
-    int i,j;
-	printf("%32s%15s%10s%10s\n","Accelerator","Type","#slots","Active");
+    int i,j, slot;
+	char msg[256];
+	printf("%32s%32s%15s%10s%20s\n\n","Accelerator","Base","Type","#slots","Active_slot");
     for (i = 0; i < MAX_WATCH; i++) {
 		if (base_designs[i].base_path[0] != '\0') {
-			printf("%32s%15s%10d%10d\n",base_designs[i].name,base_designs[i].type,base_designs[i].num_slots, base_designs[i].active);
 			for (j = 0; j < 10; j++) {
 				if (base_designs[i].accel_list[j].path[0] != '\0') {
-					printf("%32s\n",base_designs[i].accel_list[j].name);
+					if (base_designs[i].active) {
+						char active_slots[20] = "";
+						char tmp[4];
+						for(slot = 0; slot < base_designs[i].num_slots; slot++) {
+							if( base_designs[i].slots[slot] != NULL && !strcmp(base_designs[i].slots[slot]->accel->pkg->name,
+																				base_designs[i].accel_list[j].name)){
+									sprintf(tmp,"%d,",base_designs[i].slots[slot]->accel->rm_slot);
+									strcat(active_slots,tmp);
+							}
+						}
+						if (strcmp(active_slots, ""))	
+							sprintf(msg,"%32s%32s%15s%10d%20s",base_designs[i].accel_list[j].name, base_designs[i].name,
+																base_designs[i].type, base_designs[i].num_slots,active_slots); 
+						else
+							sprintf(msg,"%32s%32s%15s%10d%20d",base_designs[i].accel_list[j].name,base_designs[i].name,
+													base_designs[i].type,base_designs[i].num_slots,-1);
+						printf("%s\n",msg);
+					}
+					else {
+						sprintf(msg,"%32s%32s%15s%10d%20d",base_designs[i].accel_list[j].name,base_designs[i].name,
+												base_designs[i].type,base_designs[i].num_slots,-1);
+						printf("%s\n",msg);
+					}
 				}
 			}
 		}
@@ -349,7 +369,7 @@ struct msg{
     char arg[128];
 };
 struct resp{
-    char data[128];
+    char data[4096];
     int len;
 };
 #define EXAMPLE_RX_BUFFER_BYTES sizeof(struct msg)
@@ -382,7 +402,7 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
             acapd_debug("server received cmd %s arg %s\n",m->cmd,m->arg);
 			msgs++;
 			if(strcmp(m->cmd,"-load") == 0){
-				lwsl_user("Received %s \n",m->cmd);
+				lwsl_debug("Received %s \n",m->cmd);
 				slot = load_accelerator(m->arg);
 				sprintf(r->data,"%d",slot);
 				r->len = 1;
@@ -407,7 +427,7 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
 				freeBuff(atoi(m->arg));
 				sprintf(r->data,"%s","");
 				r->len = 0;
-				lws_callback_on_writable( wsi );
+				lws_callback_on_writable(wsi);
 			}
 			else if(strcmp(m->cmd,"-getShellFD") == 0){
 				lwsl_debug("Received %s slot %s\n",m->cmd,m->arg);
@@ -423,12 +443,12 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
 				getClockFD(atoi(m->arg));
 				lws_callback_on_writable_all_protocol( lws_get_context( wsi ), lws_get_protocol( wsi ) );
 			}
-			else if(strcmp(m->cmd,"-getRMInfo") == 0){
-				lwsl_debug("Received -getRMInfo\n");
+			else if(strcmp(m->cmd,"-getFDs") == 0){
+				lwsl_debug("Received %s slot %s\n",m->cmd,m->arg);
 				sprintf(r->data,"%s","");
 				r->len = 0;
-				getRMInfo();
-				lws_callback_on_writable_all_protocol( lws_get_context( wsi ), lws_get_protocol( wsi ) );
+				getFDs(atoi(m->arg));
+				lws_callback_on_writable(wsi);
 			}
 			else if(strcmp(m->cmd,"-listPackage") == 0){
 				lwsl_debug("Received -listPackage\n");
@@ -567,7 +587,7 @@ void parse_packages(struct basePLDesign *base, char *path)
 	printf("parsing packages in base %s\n",path);
     d = opendir(path);
     if (d == NULL) {
-		acapd_perror("Directory %s not found\n",firmware_path);
+		acapd_perror("Directory %s not found\n",FIRMWARE_PATH);
 	}
 	
 	while((dir = readdir(d)) != NULL) {
@@ -633,7 +653,7 @@ void add_base_design(char *name, char *path, char *parent, int wd)
 	char shell_path[600];
 	struct stat info;
 
-	if (strcmp(parent,firmware_path)) {
+	if (strcmp(parent,FIRMWARE_PATH)) {
 		printf("Add accel %s to base %s\n",name,parent);
 		add_accel_to_base(name, path, parent);
 		return;
@@ -671,7 +691,7 @@ void add_base_design(char *name, char *path, char *parent, int wd)
 void remove_base_design(char *name,char *path,char *parent){
     int i, j;
 
-	if (strcmp(parent,firmware_path)) {
+	if (strcmp(parent,FIRMWARE_PATH)) {
 		printf("Removing accel %s from base %s\n",name,parent);
 		for (i = 0; i < MAX_WATCH; i++) {
 			if (!strcmp(base_designs[i].base_path,parent)) {
@@ -695,7 +715,7 @@ void remove_base_design(char *name,char *path,char *parent){
 			printf("Removing base desing %s \n",path);
 			base_designs[i].base_path[0] = '\0';
 			base_designs[i].num_slots = 0;
-			free(base_designs[i].slots);
+			//free(base_designs[i].slots);
 			base_designs[i].active = 0;
 			base_designs[i].wd = -1;
 			return;
@@ -736,17 +756,17 @@ void *threadFunc()
 
     /* For each command-line argument, add a watch for all events */
 
-    wd = inotify_add_watch(inotifyFd, firmware_path, IN_ALL_EVENTS);
+    wd = inotify_add_watch(inotifyFd, FIRMWARE_PATH, IN_ALL_EVENTS);
     if (wd == -1) {
-		acapd_perror("%s:%s not found, can't add inotify watch\n",__func__,firmware_path);
+		acapd_perror("%s:%s not found, can't add inotify watch\n",__func__,FIRMWARE_PATH);
 		exit(EXIT_SUCCESS);
 	}
-    add_to_watch(wd,firmware_path);
+    add_to_watch(wd,FIRMWARE_PATH);
 
 	/* Add already existing packages to inotify */
-    d = opendir(firmware_path);
+    d = opendir(FIRMWARE_PATH);
     if (d == NULL) {
-		acapd_perror("Directory %s not found\n",firmware_path);
+		acapd_perror("Directory %s not found\n",FIRMWARE_PATH);
 	}
 	while((dir = readdir(d)) != NULL) {
 		if (dir->d_type == DT_DIR) {
@@ -754,14 +774,14 @@ void *threadFunc()
 							strcmp(dir->d_name,"..") == 0) {
 				continue;
 			}
-			sprintf(new_dir,"%s/%s", firmware_path, dir->d_name);
+			sprintf(new_dir,"%s/%s", FIRMWARE_PATH, dir->d_name);
 			acapd_perror("Found dir %s\n",new_dir);
 			wd = inotify_add_watch(inotifyFd, new_dir, IN_ALL_EVENTS);
 			if (wd == -1)
 				acapd_perror("%s:inotify_add_watch failed on %s\n",__func__,new_dir);
 			else {
 				add_to_watch(wd, new_dir);
-				add_base_design(dir->d_name, new_dir, firmware_path, wd);
+				add_base_design(dir->d_name, new_dir, FIRMWARE_PATH, wd);
 			}
 		}
 	}
@@ -827,7 +847,10 @@ void *threadFunc()
 }
 void socket_fd_setup()
 {
-   struct sockaddr_un serveraddr;
+	struct sockaddr_un serveraddr;
+
+	if (access(SERVER_PATH, F_OK) == 0) 
+		unlink(SERVER_PATH);
 
     socket_d = socket(AF_UNIX, SOCK_STREAM, 0);
     if (socket_d < 0) {

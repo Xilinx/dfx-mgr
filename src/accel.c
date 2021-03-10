@@ -9,11 +9,14 @@
 #include <dfx-mgr/device.h>
 #include <dfx-mgr/print.h>
 #include <dfx-mgr/shell.h>
+#include <sys/stat.h>
 #include <libdfx.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <dirent.h>
+#include <fcntl.h>
 
 void init_accel(acapd_accel_t *accel, acapd_accel_pkg_hd_t *pkg)
 {
@@ -40,23 +43,6 @@ int acapd_parse_config(acapd_accel_t *accel, const char *shell_config)
 	}
 	return ret;
 }
-int load_full_bitstream(char *base_path)
-{
-	acapd_accel_t *accel = malloc(sizeof(acapd_accel_t));;
-	int ret;
-
-	memset(accel, 0, sizeof(*accel));
-	sprintf(accel->sys_info.tmp_dir,"%s/",base_path);
-	ret = sys_fetch_accel(accel, DFX_NORMAL_EN);
-	if (ret != ACAPD_ACCEL_SUCCESS) {
-		acapd_perror("%s: Failed to fetch Full Bitstream.\n",__func__);
-		return ret;
-	}
-	ret = sys_load_accel(accel, 0, 1);
-	if (ret < 0)
-		acapd_perror("%s: Error loading full bitstream\n",__func__);
-	return ret;
-}
 
 int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int async)
 {
@@ -72,12 +58,6 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 	if (ret == 0) {
 		acapd_debug("%s: no need to load accel.\n", __func__);
 		return 0;
-	//} else {
-	//	ret = acapd_shell_get(shell_config);
-	//	if (ret < 0) {
-	//		acapd_perror("%s: failed to get shell.\n", __func__);
-	//		return ACAPD_ACCEL_FAILURE;
-	//	}
 	}
 	/* assert isolation before programming */
 	if (accel->type == SIHA_SHELL) {
@@ -97,7 +77,7 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 		}
 		accel->is_cached = 1;
 	}
-	ret = sys_load_accel(accel, async, 0);
+	ret = sys_load_accel(accel, async);
 	if (ret == ACAPD_ACCEL_SUCCESS) {
 		accel->status = ACAPD_ACCEL_STATUS_INUSE;
 	} else if (ret == ACAPD_ACCEL_INPROGRESS) {
@@ -129,6 +109,14 @@ int accel_load_status(acapd_accel_t *accel)
 	} else {
 		return ACAPD_ACCEL_SUCCESS;
 	}
+}
+int remove_base(int fpga_cfg_id)
+{
+	if (fpga_cfg_id <= 0) {
+		acapd_perror("Invalid fpga cfg id: %d.\n", fpga_cfg_id);
+		return -1;
+	}
+	return sys_remove_base(fpga_cfg_id);
 }
 
 int remove_accel(acapd_accel_t *accel, unsigned int async)
@@ -162,7 +150,6 @@ int remove_accel(acapd_accel_t *accel, unsigned int async)
 				}
 			}
 			ret = sys_remove_accel(accel, async);
-			//acapd_shell_put();
 		}
 		if (ret == ACAPD_ACCEL_SUCCESS) {
 			acapd_debug("%s:Succesfully removed accel\n",__func__);
@@ -270,13 +257,97 @@ void freeBuffer(uint64_t pa)
 {
 	sys_free_buffer(pa);
 }
-
-void get_shell_fd(acapd_accel_t *accel)
+void get_fds(acapd_accel_t *accel, int slot, int socket){
+	acapd_assert(accel != NULL);
+	sys_get_fds(accel, slot, socket);
+}
+void get_shell_fd(acapd_accel_t *accel, int socket)
 {
-	sys_get_fd(accel, acapd_shell_fd());	
+	acapd_print("slot %d\n",accel->rm_slot);
+	sys_get_fd(accel, acapd_shell_fd(),socket);	
 }
 
-void get_shell_clock_fd(acapd_accel_t *accel)
+void get_shell_clock_fd(acapd_accel_t *accel, int socket)
 {
-	sys_get_fd(accel, acapd_shell_clock_fd());
+	acapd_print("slot %d\n",accel->rm_slot);
+	sys_get_fd(accel, acapd_shell_clock_fd(),socket);
+}
+
+char *get_accel_path(const char *name)
+{
+    char *base_path = malloc(sizeof(char)*1024);
+    char *slot_path = malloc(sizeof(char)*1024);
+    char *accel_path = malloc(sizeof(char)*1024);
+    DIR *d, *base_d,*accel_d;
+    struct dirent *dir, *base_dir,*accel_dir;
+    struct stat info;
+
+    d = opendir(FIRMWARE_PATH);
+    if (d == NULL) {
+        acapd_perror("Directory %s not found\n",FIRMWARE_PATH);
+    }
+    while((dir = readdir(d)) != NULL) {
+        if (dir->d_type == DT_DIR) {
+            sprintf(base_path,"%s/%s", FIRMWARE_PATH, dir->d_name);
+			base_d = opendir(base_path);
+			while((base_dir = readdir(base_d)) != NULL) {
+				if (base_dir->d_type == DT_DIR && !strcmp(base_dir->d_name, name)) {
+					sprintf(accel_path,"%s/%s", base_path, base_dir->d_name);
+					accel_d = opendir(accel_path);
+					while((accel_dir = readdir(accel_d)) != NULL) {
+						if (!strcmp(accel_dir->d_name, ".") || !strcmp(accel_dir->d_name, ".."))
+							continue;
+						if (accel_dir->d_type == DT_DIR) {
+							sprintf(slot_path,"%s/%s", accel_path, accel_dir->d_name);
+							if (stat(slot_path,&info) != 0)
+								return NULL;
+							if (info.st_mode & S_IFDIR){
+								acapd_debug("Reading accel.json from %s\n",slot_path);
+								goto out;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+    return NULL;
+out:
+	free(base_path);
+	free(accel_path);
+	return slot_path;
+}
+
+char * getAccelMetadata(char *package_name){
+	char *filename = malloc(sizeof(char)*1024);
+	char *path;
+	FILE *fptr;
+    long numBytes;
+	char *jsonData;
+	int ret;
+
+	path = get_accel_path(package_name);
+	if (path == NULL) {
+		acapd_perror("No accel.json found for %s\n",package_name);
+		return NULL;
+	}
+	sprintf(filename,"%s/accel.json",path);
+	fptr = fopen(filename, "r");
+    if (fptr == NULL){
+        acapd_debug("%s: Cannot open accel.json, %s\n",__func__,strerror(errno));
+        return NULL;
+    }
+	fseek(fptr, 0L, SEEK_END);
+    numBytes = ftell(fptr);
+    fseek(fptr, 0L, SEEK_SET);
+
+    jsonData = (char *)calloc(numBytes, sizeof(char));
+    if (jsonData == NULL)
+        return NULL;
+    ret = fread(jsonData, sizeof(char), numBytes, fptr);
+    if (ret < numBytes)
+        acapd_perror("%s: Error reading Accel.json\n",__func__);
+    fclose(fptr);
+
+	return jsonData;
 }
