@@ -11,6 +11,7 @@ typedef struct Element Element_t;
 typedef struct graphSocket graphSocket_t;
 typedef struct AccelNode AccelNode_t;
 typedef struct BuffNode BuffNode_t;
+typedef struct JobScheduler JobScheduler_t; 
 
 struct Element{
 	void* node;
@@ -82,8 +83,8 @@ extern AbstractLink_t *addInBuffer(AbstractGraph_t *graph, AbstractAccelNode_t *
 
 extern int abstractGraph2Json(AbstractGraph_t *graph, char* json);
 extern int abstractGraphConfig(AbstractGraph_t *graph);
-extern int abstractGraphServerConfig(Element_t **GraphList, char* json, int len, int *fd);
 extern int abstractGraphFinalise(AbstractGraph_t *graph);
 extern Element_t* addElement(Element_t** headElement, Element_t* nextElement);
-extern int abstractGraphServerFinalise(Element_t **GraphList, char* json);
-extern Element_t *searchGraphById(Element_t **GraphList, uint32_t id);
+extern Element_t *searchGraphById(Element_t** headElement, uint32_t id);
+extern int abstractGraphServerConfig(JobScheduler_t *scheduler, char* json, int len, int* fd);
+extern int abstractGraphServerFinalise(JobScheduler_t *scheduler, char* json);

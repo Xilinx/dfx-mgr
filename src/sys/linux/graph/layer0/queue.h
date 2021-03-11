@@ -9,7 +9,8 @@
 #define QUEUE_INITIALIZER(buffer) { buffer, sizeof(buffer) / sizeof(buffer[0]), 0, 0, 0, PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, PTHREAD_COND_INITIALIZER }
 
 
-typedef struct queue
+typedef struct queue queue_t; 
+struct queue
 {
     void **buffer;
     int capacity;
@@ -19,7 +20,7 @@ typedef struct queue
     pthread_mutex_t mutex;
     pthread_cond_t cond_full;
     pthread_cond_t cond_empty;
-} queue_t;
+};
 
 typedef struct biQueue
 {

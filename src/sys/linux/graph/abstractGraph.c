@@ -6,6 +6,7 @@
 #include "metadata.h"
 #include <time.h>
 #include "layer0/debug.h"
+#include "jobScheduler.h"
 #include "abstractGraph.h"
 #include "graphClient.h"
 #include <string.h>
@@ -41,11 +42,12 @@ int softgAES128(void* inData, int inDataSize, void* inConfig, int inConfigSize, 
 }
 
 Element_t* addElement(Element_t** headElement, Element_t* nextElement){
+	INFO("%p\n", headElement);
 	Element_t *head = *headElement;
-	//INFO("@%p\n", head);
+	INFO("@%p\n", head);
 	if(head != NULL){
 		while(head->tail != NULL){
-			//INFO("$%p %p=>\n", head, head->tail);
+			INFO("$%p %p=>\n", head, head->tail);
 			head = head->tail;
 		}
 		head->tail = nextElement;
@@ -54,7 +56,7 @@ Element_t* addElement(Element_t** headElement, Element_t* nextElement){
 	else{
 		*headElement = nextElement;
 	}
-	//INFO("%p\n", nextElement);
+	INFO("%p\n", nextElement);
 	return nextElement;
 }
 
@@ -406,7 +408,7 @@ int allocateIOBuffers(AbstractGraph_t *graph, int* fd){
 	return fdcnt;
 }
 
-int abstractGraphServerConfig(Element_t **GraphList, char* json, int len, int* fd){
+int abstractGraphServerConfig(JobScheduler_t *scheduler, char* json, int len, int* fd){
 	char json2[1024*4];
 	_unused(len);
 	int status;
@@ -420,11 +422,15 @@ int abstractGraphServerConfig(Element_t **GraphList, char* json, int len, int* f
 	}
 	abstractGraph2Json(graph, json2);
 	fdcnt = allocateIOBuffers(graph, fd);
-
+	INFO("\n");
         element->node =  graph;
+	INFO("\n");
         element->head = NULL;
+	INFO("\n");
         element->tail = NULL;
-        addElement(GraphList, element);
+	INFO("%p\n", scheduler->graphList);
+        addElement(&(scheduler->graphList), element);
+	INFO("\n");
 	return fdcnt;
 }
 
@@ -444,9 +450,9 @@ Element_t *searchGraphById(Element_t **GraphList, uint32_t id){
 	return graph;
 }
 
-int abstractGraphServerFinalise(Element_t **GraphList, char* json){
+int abstractGraphServerFinalise(JobScheduler_t *scheduler, char* json){
 	int id = graphIDParser(json);
-	Element_t *graphNode = searchGraphById(GraphList, id);
+	Element_t *graphNode = searchGraphById(&(scheduler->graphList), id);
 	AbstractGraph_t *graph = (AbstractGraph_t *)graphNode->node;
 	printf("abstractGraphFinalise\n");
         while(graph->linkHead != NULL){
@@ -466,6 +472,6 @@ int abstractGraphServerFinalise(Element_t **GraphList, char* json){
         }
 	free(graph);
 	graph = NULL;
-	delElement(GraphList, graphNode);
+	delElement(&(scheduler->graphList), graphNode);
 	return 0;
 }

@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include <dfx-mgr/sys/linux/graph/graphServer.h>
 #include <dfx-mgr/sys/linux/graph/graphClient.h>
+#include <dfx-mgr/sys/linux/graph/jobScheduler.h>
 #include <dfx-mgr/sys/linux/graph/abstractGraph.h>
 #include <dfx-mgr/sys/linux/graph/layer0/debug.h>
 
@@ -42,7 +43,7 @@ int main (int argc, char **argv)
 	printf ("Graph-server: Hello, World!\n");
 	// initialize the complaint queue
 	tail = NULL;
-	Element_t *GraphList = NULL;
+	JobScheduler_t *scheduler = jobSchedulerInit();
 
 	// create a unix domain socket, GRAPH_SOCKET
 	// unlink, if already exists
@@ -121,7 +122,7 @@ int main (int argc, char **argv)
 								printf("### GRAPH INIT ###\n");
 								//printf ("recieved %s\n", recv_message.data);
 								int buff_fd[25];
-								int buff_fd_cnt = abstractGraphServerConfig(&GraphList, 
+								int buff_fd_cnt = abstractGraphServerConfig(scheduler, 
 									recv_message.data, recv_message.size, buff_fd);
 
 								//INFO("%d\n", buff_fd_cnt);
@@ -139,8 +140,8 @@ int main (int argc, char **argv)
 							case GRAPH_FINALISE:
 								printf("### GRAPH FINALISE ###\n");
 								INFO("%s\n", recv_message.data);
-								INFO("%p\n", GraphList);	
-								int id = abstractGraphServerFinalise(&GraphList, recv_message.data);
+								INFO("%p\n", scheduler);	
+								int id = abstractGraphServerFinalise(scheduler, recv_message.data);
 								_unused(id);
 								memcpy(send_message.data, recv_message.data, 
 									recv_message.size);
