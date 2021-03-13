@@ -23,7 +23,7 @@ struct msg{
     char arg[32];
 };
 struct resp{
-    char data[128];
+    char data[4096];
     int len;
 };
 static int msgs_sent;
@@ -254,19 +254,36 @@ int main(int argc, const char **argv)
 		cmd = "-freeBuffer";
 		arg = option;
 	}
+	else if ((option = lws_cmdline_option(argc, argv, "-getFDs"))) {
+		cmd = "-getFDs";
+		arg = option;
+	}
 	else if ((lws_cmdline_option(argc, argv, "-getRMInfo"))) {
 		cmd = "-getRMInfo";
 		arg = "";
 	}
+	else if ((lws_cmdline_option(argc, argv, "-getShellFD"))) {
+		cmd = "-getShellFD";
+		arg = "";
+	}
+	else if ((lws_cmdline_option(argc, argv, "-getClockFD"))) {
+		cmd = "-getClockFD";
+		arg = "";
+	}
+
 	else if (lws_cmdline_option(argc, argv, "-h") ||
 				lws_cmdline_option(argc, argv, "--help")) {
 		printf("Usage dfx-mgr-client COMMAND\n");
 		printf("Commmands\n");
-		printf("listPackage\t\t List locally downloaded accelerator package\n");
-		printf("load <arg>\t\t Load the provided accelerator packaged\n");
-		printf("remove\t\t\t Unload the programmed package\n");
-		printf("allocBuffer <size> \t\t Allocate buffer of size and return its DMA fd and pa\n");
-		printf("freeBuffer <pa> \t\t free buffer with physical address pa in decimal\n");
+		printf("-listPackage\t\t List locally downloaded accelerator package\n");
+		printf("-load <accel_name>\t\t Load the provided accelerator packaged\n");
+		printf("-remove <accel_name>\t\t\t Unload package previously programmed\n");
+		printf("-allocBuffer <size> \t\t Allocate buffer of size and return its DMA fd and pa\n");
+		printf("-freeBuffer <pa> \t\t free buffer with physical address pa in decimal\n");
+		printf("-getFDs <slot#> \t\t Send ip device FD's over socket\n");
+		printf("-getRMInfo \n");
+		printf("-getShellFD \n");
+		printf("-getClockFD \n");
 		return 0;
 	}
 	else {

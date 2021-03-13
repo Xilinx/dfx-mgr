@@ -32,6 +32,7 @@ typedef struct {
 
 struct basePLDesign {
 	int uid;
+	int fpga_cfg_id;
 	char name[64];
 	char base_path[512];
 	char parent_path[512];

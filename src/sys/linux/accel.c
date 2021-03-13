@@ -193,14 +193,14 @@ int sys_fetch_accel(acapd_accel_t *accel, int flags)
 	return ACAPD_ACCEL_SUCCESS;
 }
 
-int sys_load_accel(acapd_accel_t *accel, unsigned int async, int full_bitstream)
+int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 {
 	int ret;
 	int fpga_cfg_id;
 	(void)async;
 
 	acapd_assert(accel != NULL);
-	if (accel->is_cached == 0 && !full_bitstream) {
+	if (accel->is_cached == 0) {
 		acapd_perror("%s: accel is not cached.\n");
 		return ACAPD_ACCEL_FAILURE;
 	}
@@ -212,8 +212,8 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async, int full_bitstream)
 		dfx_cfg_destroy(fpga_cfg_id);
 		return ACAPD_ACCEL_FAILURE;
 	}
-	if (accel->type == FLAT_SHELL || full_bitstream) {
-		printf("Succesfully loaded base design.\n");
+	if (accel->type == FLAT_SHELL) {
+		acapd_print("Successfully loaded base design.\n");
 		return ACAPD_ACCEL_SUCCESS;
 	}
 	for (int i = 0; i < accel->num_ip_devs; i++) {
@@ -304,6 +304,22 @@ int sys_close_accel(acapd_accel_t *accel)
 	}
 	return 0;
 }
+int sys_remove_base(int fpga_cfg_id)
+{
+	int ret;
+
+	ret = dfx_cfg_remove(fpga_cfg_id);
+	if (ret != 0) {
+		acapd_perror("Failed to remove accel: %d.\n", ret);
+		return -1;
+	}
+	ret = dfx_cfg_destroy(fpga_cfg_id);
+	if (ret != 0) {
+		acapd_perror("Failed to destroy accel: %d.\n", ret);
+		return -1;
+	}
+	return 0;
+}
 
 int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
 {
@@ -325,7 +341,7 @@ int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
 	if (fpga_cfg_id <= 0) {
 		acapd_perror("Invalid fpga cfg id: %d.\n", fpga_cfg_id);
 		return ACAPD_ACCEL_FAILURE;
-	};
+	}
 	ret = dfx_cfg_remove(fpga_cfg_id);
 	if (ret != 0) {
 		acapd_perror("Failed to remove accel: %d.\n", ret);
@@ -339,28 +355,58 @@ int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
 out:
 	return ACAPD_ACCEL_SUCCESS;
 }
-int sys_get_fds(acapd_accel_t *accel, int slot)
+int sys_send_fds(acapd_accel_t *accel, int *fds, int num_fds, int socket)
 {
-//	int fd[5];
-//
-//	fd[0] = accel->fd[0];
-//	fd[1] = accel->fd[1];
-//	fd[2] = accel->fd[2];
-//	fd[3] = accel->ip_dev[2*slot].id;
-//	fd[4] = accel->ip_dev[2*slot+1].id;
-//	acapd_perror("%s Daemon slot %d mm2s %d s2mm %d config %d accel_config %d d_hls %d\n",
-//												__func__,slot,fd[0],fd[1],fd[2],fd[3],fd[4]);
-//	return sys_send_fds(accel, &fd[0], 5);
-printf("%d %d\n",slot,accel->rm_slot);
-return 0;
-}
+	char dummy = '$';
+    struct msghdr msg;
+    struct iovec iov;
+    char cmsgbuf[CMSG_SPACE(sizeof(int)*num_fds)];
+	memset(cmsgbuf, '\0',sizeof(cmsgbuf));
+	int socket_d2 = accept(socket, NULL, NULL);
+    if (socket_d2 < 0){
+		acapd_perror("%s failed to accept() connections ret %d",
+                                            __func__, socket_d2);
+		return -1;
+	}
+	iov.iov_base = &dummy;
+    iov.iov_len = sizeof(dummy);
 
-void sys_get_fd(acapd_accel_t *accel, int fd)
+	msg.msg_name = NULL;
+    msg.msg_namelen = 0;
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    msg.msg_flags = 0;
+    msg.msg_control = cmsgbuf;
+    msg.msg_controllen = sizeof(cmsgbuf);
+
+    struct cmsghdr* cmsg = CMSG_FIRSTHDR(&msg);
+    cmsg->cmsg_level = SOL_SOCKET;
+    cmsg->cmsg_type = SCM_RIGHTS;
+    cmsg->cmsg_len = CMSG_LEN(sizeof(int)*num_fds);
+
+	memcpy((int*) CMSG_DATA(cmsg), fds, sizeof(int)*num_fds);
+    int ret = sendmsg(socket_d2, &msg, 0);
+    if (ret == -1) {
+		acapd_perror("%s send ip device FD's failed for slot %d\n",
+											__func__,accel->rm_slot);
+		return -1;
+	}
+	return 0;
+}
+int sys_get_fds(acapd_accel_t *accel, int slot, int socket)
 {
-//	sys_send_fd(accel, fd);
-printf("fd%d %d\n",fd,accel->rm_slot);
-}
+	int fd[2];
 
+	fd[0] = accel->ip_dev[2*slot].id;
+	fd[1] = accel->ip_dev[2*slot+1].id;
+	acapd_perror("%s Daemon slot %d accel_config %d d_hls %d\n",
+												__func__,slot,fd[0],fd[1]);
+	return sys_send_fds(accel, &fd[0], 2, socket);
+}
+void sys_get_fd(acapd_accel_t *accel, int fd, int socket)
+{
+	sys_send_fds(accel, &fd, 1, socket);
+}
 int sys_send_fd_pa(acapd_buffer_t *buff)
 {
 	char dummy = '$';
