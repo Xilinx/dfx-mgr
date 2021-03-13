@@ -13,6 +13,11 @@ typedef struct AccelNode AccelNode_t;
 typedef struct BuffNode BuffNode_t;
 typedef struct JobScheduler JobScheduler_t; 
 
+#define AGRAPH_INIT		0XC0
+#define AGRAPH_SCHEDULED	0XC1
+#define AGRAPH_EXECUTING	0XC2
+#define AGRAPH_COMPLETED	0XC3
+
 struct Element{
 	void* node;
         struct Element *head;
@@ -28,6 +33,7 @@ struct AbstractAccelNode{
         int handle;	// Buffer XRT Handeler
         uint8_t* ptr;	// Buffer Ptr
         unsigned long phyAddr; // Buffer Physical Address
+	uint32_t semaphore; 
 	AccelNode_t *node;
         //int SchedulerBypassFlag;
 };
@@ -54,6 +60,8 @@ struct AbstractLink{
 struct AbstractGraph{
         uint32_t id;
         uint8_t type;
+        uint8_t state;
+        uint32_t accelCount;
 	graphSocket_t *gs;
 	int xrt_fd;
         Element_t *accelNodeHead;

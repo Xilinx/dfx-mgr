@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include "layer0/utils.h"
 #include "layer0/debug.h"
+#include "layer0/queue.h"
 #include "graph.h"
 #include "scheduler.h"
 int printTransaction(Schedule_t *schedule){

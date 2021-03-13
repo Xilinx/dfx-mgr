@@ -3,10 +3,12 @@
  *
  * SPDX-License-Identifier: MIT
  */
-#include "queue.h"
+//#include "queue.h"
+#include <pthread.h>
 
 typedef struct Buffer Buffer_t;
 typedef struct Accel  Accel_t;
+typedef struct queue queue_t; 
 
 typedef int (*CONFIG)(void*, Accel_t *accel); //volatile uint8_t*);
 typedef int (*MM2SSTATUS)(void*);

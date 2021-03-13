@@ -1,3 +1,4 @@
+#include <pthread.h>
 
 typedef struct JobScheduler JobScheduler_t; 
 typedef struct JobQueueBuffer JobQueueBuffer_t; 
@@ -17,3 +18,4 @@ struct JobQueueBuffer{
 };
 
 extern JobScheduler_t * jobSchedulerInit();
+extern int jobSchedulerSubmit(JobScheduler_t *scheduler, Element_t *graphElement);

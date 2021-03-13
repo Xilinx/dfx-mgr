@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 #include <sys/un.h>
-
+#include <sys/types.h>
 typedef struct graphSocket graphSocket_t;
 struct graphSocket {
         int sock_fd;

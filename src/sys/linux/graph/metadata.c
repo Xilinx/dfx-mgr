@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "metadata.h"
+#include "graph.h"
 #include "layer0/debug.h"
 #define JSMN_PARENT_LINKS
 #define JSMN_HEADER
@@ -502,6 +503,9 @@ int graphParser(char* jsonStr, AbstractGraph_t **graph){
 							else if (jsoneq(json->data, &t[i + j + k], "type") == 0) {
 								sscanf(json->data + t[i + j + k + 1].start, 
 									"%hhd", &(accelNode->type));
+								if(accelNode->type == HW_NODE){
+									tgraph->accelCount ++;
+								}
 							}
 							else if (jsoneq(json->data, &t[i + j + k], "name") == 0) {
 								sprintf(accelNode->name, "%.*s", 
@@ -511,6 +515,10 @@ int graphParser(char* jsonStr, AbstractGraph_t **graph){
 							else if (jsoneq(json->data, &t[i + j + k], "size") == 0) {
 								sscanf(json->data + t[i + j + k + 1].start, 
 									"%d", &(accelNode->size));
+							}
+							else if (jsoneq(json->data, &t[i + j + k], "semaphore") == 0) {
+								sscanf(json->data + t[i + j + k + 1].start, 
+									"%d", &(accelNode->semaphore));
 							}
 						}
 						else{

@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: MIT
  */
 #include <stdint.h>
-#include "graph.h"
 
 typedef struct Fallback Fallback_t;
 typedef struct InterRM InterRM_t;

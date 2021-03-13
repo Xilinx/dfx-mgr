@@ -52,12 +52,22 @@ int xrt_allocateBuffer(int drm_fd, int size, int* handle, uint8_t** ptr, unsigne
 	struct drm_prime_handle bo_h = {info1.handle, DRM_RDWR, -1};
 	if (ioctl(drm_fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &bo_h) < 0) {
 		//acapd_perror("%s:DRM_IOCTL_PRIME_HANDLE_TO_FD failed: %s\n",
-                  //                                 __func__,strerror(errno));
+                //                                 __func__,strerror(errno));
 		return -1;
 	}
 
 	*fd = bo_h.fd;
 	return 0;
+}
+
+int xrt_deallocateBuffer(int drm_fd, int handle){
+        struct drm_gem_close closeInfo = {handle, 0};
+        int result = ioctl(drm_fd, DRM_IOCTL_GEM_CLOSE, &closeInfo);
+        if(result < 0){
+                printf( "error @ close handle\n");
+                return result;
+        }
+        return 0;
 }
 
 int mapBuffer(int fd, int size, uint8_t** ptr){

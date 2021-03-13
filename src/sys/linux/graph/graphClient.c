@@ -197,9 +197,7 @@ int graphClientFinalise(struct graphSocket* gs, char* json, int size){
 	if (write (gs->sock_fd, &send_message, HEADERSIZE + send_message.size) == -1)
 		error ("write");
 	memset (&recv_message, '\0', sizeof(struct message));
-	int fd[25];
-	int fdcount;
-	size = sock_fd_read(gs->sock_fd, &recv_message, fd, &fdcount);
+	size = read (gs->sock_fd, &recv_message, sizeof (struct message));
 	if (size <= 0)
 		return -1;
 	printf ("read %d\n", size);

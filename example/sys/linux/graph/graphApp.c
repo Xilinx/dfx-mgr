@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <dfx-mgr/sys/linux/graph/layer0/utils.h>
 #include <dfx-mgr/sys/linux/graph/layer0/debug.h>
+//#include <dfx-mgr/sys/linux/graph/layer0/uio.h>
 #include <unistd.h>
 //#include "metadata.h"
 #include <dfx-mgr/sys/linux/graph/graph.h>
@@ -384,6 +385,8 @@ int case6(){
         //acapGraphSchedule(acapGraph);
 	//printhex((uint32_t*)p1, 0x50);
         //graphFinalise(acapGraph);
+									
+	sleep(5);
 	abstractGraphFinalise(acapGraph);
 	return 0;
 }

@@ -9,8 +9,10 @@
 #include "jobScheduler.h"
 #include "abstractGraph.h"
 #include "graphClient.h"
+#include "graph.h"
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <sys/socket.h>
 #include <fcntl.h>
 
@@ -42,12 +44,9 @@ int softgAES128(void* inData, int inDataSize, void* inConfig, int inConfigSize, 
 }
 
 Element_t* addElement(Element_t** headElement, Element_t* nextElement){
-	INFO("%p\n", headElement);
 	Element_t *head = *headElement;
-	INFO("@%p\n", head);
 	if(head != NULL){
 		while(head->tail != NULL){
-			INFO("$%p %p=>\n", head, head->tail);
 			head = head->tail;
 		}
 		head->tail = nextElement;
@@ -56,7 +55,6 @@ Element_t* addElement(Element_t** headElement, Element_t* nextElement){
 	else{
 		*headElement = nextElement;
 	}
-	INFO("%p\n", nextElement);
 	return nextElement;
 }
 
@@ -77,9 +75,6 @@ int delElement(Element_t** elementList, Element_t* element){
 	return 0;
 }
 
-//AcapGraph_t* graphInit(){
-//	return acapGraphInit();
-//}
 AbstractGraph_t* graphInit(){//uint8_t schedulerBypassFlag){
 	srand(time(NULL));
 	AbstractGraph_t * graph = malloc(sizeof(AbstractGraph_t));
@@ -91,6 +86,7 @@ AbstractGraph_t* graphInit(){//uint8_t schedulerBypassFlag){
         graph->accelNodeID = 0;
         graph->buffNodeID = 0;
         graph->linkID = 0;
+	graph->accelCount = 0;
 	return graph;
 }
 
@@ -172,6 +168,7 @@ AbstractAccelNode_t* createNode(uint32_t id, uint32_t type, uint32_t size, char*
         node->type = type;
         strcpy(node->name, name);
         node->size = size;
+	node->semaphore = rand(); 
 	return node;
 }
 
@@ -180,7 +177,7 @@ int printAccelNode(AbstractAccelNode_t *node, char * json){
 	//printf("type: %d\n", node->type);
 	//printf("name: %s\n", node->name);
 	//printf("size: %d\n", node->size);
-	return sprintf(json, "{\"id\": %d, \"type\": %d, \"name\": \"%s\", \"size\": %d}", node->id, node->type, node->name, node->size);
+	return sprintf(json, "{\"id\": %d, \"type\": %d, \"name\": \"%s\", \"size\": %d, \"semaphore\": %d}", node->id, node->type, node->name, node->size, node->semaphore);
 }
 
 AbstractBuffNode_t* createBNode(uint32_t id, uint32_t type, uint32_t size, char* name){
@@ -241,6 +238,7 @@ AbstractAccelNode_t* addAcceleratorNode(AbstractGraph_t *graph, char *name){
 	Element_t* element = (Element_t *) malloc(sizeof(Element_t));
 	element->node =  createNode(graph->accelNodeID, HW_NODE, 0, name);
 	graph->accelNodeID ++;
+	graph->accelCount ++;
         element->head = NULL;
         element->tail = NULL;
 	addElement(&(graph->accelNodeHead), element);
@@ -283,28 +281,21 @@ AbstractLink_t *addInBuffer(AbstractGraph_t *graph, AbstractAccelNode_t *accelNo
 int abstractGraph2Json(AbstractGraph_t *graph, char* json){
 	int len = 0;
         uint32_t id = graph->id;
-	//INFO("%d\n", id);
         uint8_t type = graph->type;
-	//INFO("%d\n", type);
         Element_t *accelNodeHead = graph->accelNodeHead, *accelNode;
         Element_t *buffNodeHead = graph->buffNodeHead, *buffNode;
         Element_t *linkHead = graph->linkHead, *link;
-	//INFO("\n");
 	len += sprintf(json + len, "{\"id\": %d, \"type\": %x,\n", id, type);
 	accelNode = accelNodeHead;
 	len += sprintf(json + len, "\"accelNode\": [\n");
-	//INFO("%p\n", accelNode);
 	while(accelNode != NULL){
-	//INFO("\n");
 		len += printAccelNode(accelNode->node, json + len);
 		if(accelNode->tail){
 			len += sprintf(json + len, ",\n");
 		}
 		accelNode = accelNode->tail;
-	//INFO("\n");
 	}
 	len += sprintf(json + len, "],\n");
-	//INFO("\n");
 
 	buffNode = buffNodeHead;
 	len += sprintf(json + len, "\"buffNode\": [\n");
@@ -337,10 +328,10 @@ int abstractGraphConfig(AbstractGraph_t *graph){
 	int len;
 	int fd[25];
 	graph->gs = malloc(sizeof(graphSocket_t));	
-	INFO("\n");
+	//INFO("\n");
 	len = abstractGraph2Json(graph, json);
         graphClientInit(graph->gs);
-	INFO("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
+//	INFO("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
         graphClientSubmit(graph->gs, json, len, fd);
 	
 	return 0;
@@ -376,9 +367,8 @@ int abstractGraphFinalise(AbstractGraph_t *graph){
 
 int allocateIOBuffers(AbstractGraph_t *graph, int* fd){
 	int status;
-	INFO("graph ID: %d\n", graph->id);
+	//INFO("graph ID: %d\n", graph->id);
 	int fdcnt = 0;
-	char response[1000];
 
 	if(!graph->xrt_fd){
 		graph->xrt_fd = open("/dev/dri/renderD128",  O_RDWR);
@@ -398,14 +388,31 @@ int allocateIOBuffers(AbstractGraph_t *graph, int* fd){
 			}
 			fd[fdcnt] = node->fd;
 			fdcnt ++;
-			_unused(fd);
-			_unused(response);
 			INFO("io allocated : size = %d handle = %d ptr = %p paddr = %lx\n", 
 				node->size, node->handle, node->ptr, node->phyAddr);
 		}
 		element = element->tail;
 	}
 	return fdcnt;
+}
+
+int deallocateIOBuffers(AbstractGraph_t *graph){
+	int status;
+	INFO("graph ID: %d\n", graph->id);
+	Element_t *element	= graph->accelNodeHead;
+	while (element != NULL){
+		AbstractAccelNode_t *node = element->node;
+		if(node->type == IN_NODE || node->type == OUT_NODE){
+			status = xrt_deallocateBuffer(graph->xrt_fd, node->handle);
+      			if(status < 0){
+				printf( "error @ config deallocation\n");
+				return status;
+			}
+			INFO("io deallocated");
+		}
+		element = element->tail;
+	}
+	return 0;
 }
 
 int abstractGraphServerConfig(JobScheduler_t *scheduler, char* json, int len, int* fd){
@@ -420,17 +427,19 @@ int abstractGraphServerConfig(JobScheduler_t *scheduler, char* json, int len, in
 		INFO("Error Occured !!");
 		return 1;
 	}
+	graph->state = AGRAPH_INIT;	
 	abstractGraph2Json(graph, json2);
 	fdcnt = allocateIOBuffers(graph, fd);
-	INFO("\n");
         element->node =  graph;
-	INFO("\n");
         element->head = NULL;
-	INFO("\n");
         element->tail = NULL;
-	INFO("%p\n", scheduler->graphList);
-        addElement(&(scheduler->graphList), element);
-	INFO("\n");
+	if(scheduler->graphList == NULL){
+		scheduler->graphList = element;
+	}
+	else{
+        	addElement(&(scheduler->graphList), element);
+	}
+	jobSchedulerSubmit(scheduler, element);
 	return fdcnt;
 }
 
@@ -446,7 +455,7 @@ Element_t *searchGraphById(Element_t **GraphList, uint32_t id){
 			graphElement = graphElement->tail;
 		}
 		else break;
-	}	
+	}
 	return graph;
 }
 
@@ -455,6 +464,7 @@ int abstractGraphServerFinalise(JobScheduler_t *scheduler, char* json){
 	Element_t *graphNode = searchGraphById(&(scheduler->graphList), id);
 	AbstractGraph_t *graph = (AbstractGraph_t *)graphNode->node;
 	printf("abstractGraphFinalise\n");
+	deallocateIOBuffers(graph);
         while(graph->linkHead != NULL){
 		free((AbstractLink_t *)graph->linkHead->node);
 		graph->linkHead->node = NULL;

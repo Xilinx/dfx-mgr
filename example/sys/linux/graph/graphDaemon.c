@@ -40,7 +40,6 @@ int main (int argc, char **argv)
 	ssize_t size;
 	_unused(argc);
 	_unused(argv);
-	printf ("Graph-server: Hello, World!\n");
 	// initialize the complaint queue
 	tail = NULL;
 	JobScheduler_t *scheduler = jobSchedulerInit();
@@ -78,6 +77,7 @@ int main (int argc, char **argv)
 
 	printf ("Graph-server: Waiting for a message from a client.\n");
 	while (1) {
+		INFO("While :\n");
 		readfds = fds;
 		// monitor readfds for readiness for reading
 		if (select (fdmax + 1, &readfds, NULL, NULL, NULL) == -1)
@@ -100,8 +100,6 @@ int main (int argc, char **argv)
 				{
 					memset (&recv_message, '\0', sizeof (struct message));
 					ssize_t numbytes = read (fd, &recv_message, sizeof (struct message));
-					INFO("%ld\n", numbytes);
-					INFO("%d\n", recv_message.id);
 					if (numbytes == -1)
 						error ("read");
 					else if (numbytes == 0) {
@@ -115,7 +113,6 @@ int main (int argc, char **argv)
                    			{
 						// data from client
 						memset (&send_message, '\0', sizeof (struct message));
-						INFO("%d\n", recv_message.id);
 						switch (recv_message.id) {
 
 							case GRAPH_INIT:
@@ -141,8 +138,7 @@ int main (int argc, char **argv)
 								printf("### GRAPH FINALISE ###\n");
 								INFO("%s\n", recv_message.data);
 								INFO("%p\n", scheduler);	
-								int id = abstractGraphServerFinalise(scheduler, recv_message.data);
-								_unused(id);
+								abstractGraphServerFinalise(scheduler, recv_message.data);
 								memcpy(send_message.data, recv_message.data, 
 									recv_message.size);
 								send_message.size = recv_message.size;
@@ -151,6 +147,8 @@ int main (int argc, char **argv)
 								if (write (fd, &send_message, HEADERSIZE + 
 									send_message.size) == -1)
 									error ("write");
+								
+								printf("### GRAPH FINALISE ###\n");
 								break;
 
 							case QUIT:
