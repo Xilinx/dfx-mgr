@@ -105,7 +105,8 @@ void *jobScheduler_Task(void* carg){
 									NULL, //metadata->fallback.lib,
                                                        			metadata->interRM.compatible, 
 									0); //SchedulerBypassFlag);
- 									break;
+								INFO("%p\n", abstractAccel);
+ 								break;
 							case IN_NODE:
 								abstractAccel->node = acapAddInputNode(currentGraph,
 									abstractAccel->ptr, abstractAccel->size,
@@ -119,6 +120,48 @@ void *jobScheduler_Task(void* carg){
 							
 						}
 						accelElement = accelElement->tail;
+					}
+					Element_t* buffElement = graph->buffNodeHead;
+					while(buffElement != NULL){
+						AbstractBuffNode_t *abstractBuff =
+							(AbstractBuffNode_t *) buffElement->node;	
+						INFO("%d\n", abstractBuff->id);
+						INFO("####################### Assign Buffers\n");
+						abstractBuff->node = acapAddBuffNode(currentGraph, 
+											abstractBuff->size, 
+											abstractBuff->name, 
+											abstractBuff->type);
+						buffElement = buffElement->tail;
+					}
+					Element_t* linkElement = graph->linkHead;
+					while(linkElement != NULL){
+						AbstractLink_t *abstractLink =
+							(AbstractLink_t *) linkElement->node;	
+						INFO("%d\n", abstractLink->id);
+						INFO("%d\n", abstractLink->transactionIndex);
+						INFO("####################### Assign Links\n");
+						INFO("%p\n", abstractLink->accelNode);
+						//INFO("%p\n", abstractLink->buffNode);
+						INFO("%s\n", abstractLink->accelNode->name);
+						if(abstractLink->type){
+							 abstractLink->node = acapAddOutputBuffer(currentGraph, 
+									abstractLink->accelNode->node, 
+									abstractLink->buffNode->node, 
+									abstractLink->offset, 
+									abstractLink->transactionSize, 
+									abstractLink->transactionIndex, 
+									abstractLink->channel);
+						}
+						else{
+							 abstractLink->node = acapAddInputBuffer(currentGraph, 
+									abstractLink->accelNode->node, 
+									abstractLink->buffNode->node, 
+									abstractLink->offset, 
+									abstractLink->transactionSize, 
+									abstractLink->transactionIndex, 
+									abstractLink->channel);
+						}
+						linkElement = linkElement->tail;
 					}
 					graph->state = AGRAPH_EXECUTING;
 				}

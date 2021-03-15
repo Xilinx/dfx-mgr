@@ -283,19 +283,25 @@ void freeBuff(uint64_t pa)
 	printf("%s: free buffer PA %lu\n",__func__,pa);
 	freeBuffer(pa);
 }
-void dfx_getFDs(int slot)
+int dfx_getFDs(int slot, int *fd)
 {
 	struct basePLDesign *base = platform.active_base;
 	if(base == NULL){
 		acapd_perror("No active design\n");
-		return;
+		return -1;
 	}
 	acapd_accel_t *accel = base->slots[slot]->accel;
 	if (accel == NULL){
 		acapd_perror("%s No Accel in slot %d\n",__func__,slot);
-		return;
+		return -1;
 	}
-	get_fds(accel, slot, socket_d);
+
+	fd[0] = accel->ip_dev[2*slot].id;
+	fd[1] = accel->ip_dev[2*slot+1].id;
+	acapd_perror("%s Daemon slot %d accel_config %d d_hls %d\n",
+			__func__,slot,fd[0],fd[1]);	
+	//get_fds(accel, slot, socket_d);
+	return 0;
 }
 
 void dfx_getShellFD(int slot)

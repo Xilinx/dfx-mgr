@@ -511,6 +511,7 @@ int graphParser(char* jsonStr, AbstractGraph_t **graph){
 								sprintf(accelNode->name, "%.*s", 
 									t[i + j + k + 1].end - t[i + j + k + 1].start,
 									json->data + t[i + j + k + 1].start);
+							INFO(" %s\n", accelNode->name);
 							}
 							else if (jsoneq(json->data, &t[i + j + k], "size") == 0) {
 								sscanf(json->data + t[i + j + k + 1].start, 
@@ -624,6 +625,7 @@ int graphParser(char* jsonStr, AbstractGraph_t **graph){
 								while(accelElement != NULL){
 									if (((AbstractAccelNode_t*)accelElement->node)->id == nodeid){
 										link->accelNode = (AbstractAccelNode_t*)accelElement;
+										INFO(" %s\n", link->accelNode->name);
 										break;
 									}
 									accelElement = accelElement->tail;

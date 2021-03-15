@@ -116,7 +116,7 @@ int main (int argc, char **argv)
 						switch (recv_message.id) {
 
 							case GRAPH_INIT:
-								printf("### GRAPH INIT ###\n");
+								INFO("### GRAPH INIT ###\n");
 								//printf ("recieved %s\n", recv_message.data);
 								int buff_fd[25];
 								int buff_fd_cnt = abstractGraphServerConfig(scheduler, 

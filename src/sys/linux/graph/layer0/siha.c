@@ -224,7 +224,7 @@ int SIHAStopAccel(int slot){
 
 int SIHAFinaliseAccel(int slot){
         INFO("\n");
-	int r0, r1, r2;	
+	//int r0, r1;	
 	//@@//fds_t fds;
 	//@@//fds.config_fd = buffers->config_fd[slot];
 	//@@//fds.s2mm_fd   = buffers->S2MM_fd[slot];
@@ -245,17 +245,17 @@ int SIHAFinaliseAccel(int slot){
 			fds.dma_hls_fd     = pldevices->dma_hls_2_fd;
 			break;
 	}*/
-	r0 = unmapBuffer(buffers->config_fd[slot], buffers->config_size[slot], &buffers->config_ptr[slot]);
-	r1 = unmapBuffer(buffers->S2MM_fd[slot], buffers->S2MM_size[slot], &buffers->S2MM_ptr[slot]);
-	r2 = unmapBuffer(buffers->MM2S_fd[slot], buffers->MM2S_size[slot], &buffers->MM2S_ptr[slot]);
+	//r0 = unmapBuffer(buffers->config_fd[slot], buffers->config_size[slot], &buffers->config_ptr[slot]);
+	//r1 = unmapBuffer(buffers->S2MM_fd[slot], buffers->S2MM_size[slot], &buffers->S2MM_ptr[slot]);
+	//r2 = unmapBuffer(buffers->MM2S_fd[slot], buffers->MM2S_size[slot], &buffers->MM2S_ptr[slot]);
 	//munmap(buffers->config_ptr[slot], buffers->config_size[slot]);
 	//munmap(buffers->S2MM_ptr[slot], buffers->S2MM_size[slot]);
 	//munmap(buffers->MM2S_ptr[slot], buffers->MM2S_size[slot]);
-	printf("%d, %d, %d\n", r0, r1, r2);
-	printf("Unmapped Buffers !!\n");
-	//@@//unmapPlDevicesAccel(pldevices, slot);
-	//@@//printf("Unmapped Devices !!\n");
-	//@@//removepdi(slotStr[slot], &fds); //, slotStr[slot]);
+	//printf("%d, %d, %d\n", r0, r1, r2);
+	//printf("Unmapped Buffers !!\n");
+	unmapPlDevicesAccel(pldevices, slot);
+	printf("Unmapped Devices !!\n");
+	remove_accelerator(slotNum[slot]);
 	return 0;
 }
 

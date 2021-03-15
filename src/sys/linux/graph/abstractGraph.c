@@ -422,6 +422,7 @@ int abstractGraphServerConfig(JobScheduler_t *scheduler, char* json, int len, in
 	int fdcnt;
 	AbstractGraph_t *graph = malloc(sizeof(AbstractGraph_t));
         Element_t* element = (Element_t *) malloc(sizeof(Element_t));
+	INFO("!!!!!!!!!!!!!!!!!!\n");
 	status = graphParser(json, &graph);
 	if(status == 1){
 		INFO("Error Occured !!");

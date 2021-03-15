@@ -200,7 +200,7 @@ int printAccelNodesInfo(AccelNode_t *accelNode, char* json){
 }
 
 BuffNode_t* createBuffNode(int size, char *name, int type){
-	//INFO("\n"); 
+	INFO("\n"); 
 	BuffNode_t *nextBuff = (BuffNode_t *) malloc(sizeof(BuffNode_t));
 	nextBuff->head = NULL;
 	nextBuff->tail = NULL;
@@ -465,7 +465,7 @@ int printSchedule(Schedule_t* schedule){
 
 Link_t* addInputBuffer(AccelNode_t *accelNode, BuffNode_t *buffNode,
                        int offset, int transactionSize, int transactionIndex, int channel){
-	//INFO("\n"); 
+	INFO("\n"); 
 	Link_t* link = (Link_t *) malloc(sizeof(Link_t));
 	link->accelNode = accelNode;
 	link->buffNode  = buffNode;
@@ -490,7 +490,7 @@ Link_t* addInputBuffer(AccelNode_t *accelNode, BuffNode_t *buffNode,
 	
 Link_t* addOutputBuffer(AccelNode_t *accelNode, BuffNode_t *buffNode,
                         int offset, int transactionSize, int transactionIndex, int channel){
-	//INFO("\n"); 
+	INFO("\n"); 
 	Link_t* link = (Link_t *) malloc(sizeof(Link_t));
 	link->accelNode = accelNode;
 	link->buffNode  = buffNode;
@@ -504,11 +504,14 @@ Link_t* addOutputBuffer(AccelNode_t *accelNode, BuffNode_t *buffNode,
 	link->type      = 1;
 	link->head = NULL;
 	link->tail = NULL;
+	INFO("\n");
+	INFO("%p\n", accelNode); //->accel.InterRMCompatible); 
 	if(accelNode->accel.InterRMCompatible == INTER_RM_COMPATIBLE){
 		buffNode->buffer.InterRMCompatible += 1;
 		buffNode->buffer.srcSlot = accelNode->accel.slot;
 		//buffNode->buffer.sincSlot = accelNode->accel.slot;
 	}
+	INFO("\n"); 
 	return link;
 }
 
@@ -809,7 +812,7 @@ BuffNode_t* acapAddBuffNode(AcapGraph_t *acapGraph, int size, char *name, int ty
 
 Link_t *acapAddOutputBuffer(AcapGraph_t *acapGraph, AccelNode_t *accelNode, BuffNode_t *buffNode,
 			    int offset, int transactionSize, int transactionIndex, int channel){
-	//INFO("\n"); 
+	INFO("\n"); 
 	Link_t *link = addOutputBuffer(accelNode, buffNode, offset, transactionSize, transactionIndex, channel);
 	addLink(&(acapGraph->linkHead), link);
 	return link;
@@ -817,7 +820,7 @@ Link_t *acapAddOutputBuffer(AcapGraph_t *acapGraph, AccelNode_t *accelNode, Buff
 
 Link_t *acapAddInputBuffer(AcapGraph_t *acapGraph, AccelNode_t *accelNode, BuffNode_t *buffNode,
 			   int offset, int transactionSize, int transactionIndex, int channel){
-	//INFO("\n"); 
+	INFO("\n"); 
 	Link_t *link = addInputBuffer(accelNode, buffNode, offset, transactionSize, transactionIndex, channel);
 	addLink(&(acapGraph->linkHead), link);
 	return link;

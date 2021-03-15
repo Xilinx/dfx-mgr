@@ -11,6 +11,7 @@ typedef struct Element Element_t;
 typedef struct graphSocket graphSocket_t;
 typedef struct AccelNode AccelNode_t;
 typedef struct BuffNode BuffNode_t;
+typedef struct Link Link_t;
 typedef struct JobScheduler JobScheduler_t; 
 
 #define AGRAPH_INIT		0XC0
@@ -55,6 +56,7 @@ struct AbstractLink{
         uint32_t offset;
         uint8_t channel;
         uint32_t id;
+	Link_t *node;
 };
 
 struct AbstractGraph{
