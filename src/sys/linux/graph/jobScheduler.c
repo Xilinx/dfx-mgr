@@ -14,6 +14,7 @@
 //#include "graph.h"
 #include "layer0/queue.h"
 #include "layer0/debug.h"
+#include "layer0/dfx-mgrd.h"
 //#include "layer0/uio.h"
 #include "metadata.h"
 
@@ -132,7 +133,7 @@ void *jobScheduler_Task(void* carg){
 JobScheduler_t * jobSchedulerInit(){
         //INFO("\n");
         JobScheduler_t *scheduler = malloc(sizeof(JobScheduler_t));
-
+	dfx_init();
         scheduler->graphList = NULL;
 	//INFO("%p\n", scheduler->graphList);
         scheduler->CommandQueue  = malloc(sizeof(queue_t));

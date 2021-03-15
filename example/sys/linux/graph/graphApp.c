@@ -351,9 +351,9 @@ int case6(){
 	_unused(p1);
 	AbstractGraph_t *acapGraph = graphInit();
         AbstractAccelNode_t *accelNode0 = addInputNode(acapGraph, 64*1024*1024);
+        AbstractAccelNode_t *accelNode3 = addAcceleratorNode(acapGraph, "aes128encdec");
         AbstractAccelNode_t *accelNode1 = addAcceleratorNode(acapGraph, "fir_compiler");
         AbstractAccelNode_t *accelNode2 = addAcceleratorNode(acapGraph, "FFT4"); //, ENABLE_SCHEDULER);
-        AbstractAccelNode_t *accelNode3 = addAcceleratorNode(acapGraph, "aes128encdec");
         AbstractAccelNode_t *accelNode4 = addOutputNode(acapGraph, 64*1024*1024);
 
 	AbstractBuffNode_t *buffNode0 = addBuffer(acapGraph, 16*1024*1024, DDR_BASED);

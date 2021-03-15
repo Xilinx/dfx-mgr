@@ -13,6 +13,7 @@ collect (PROJECT_LIB_HEADERS nodebug.h)
 collect (PROJECT_LIB_HEADERS uio.h)
 collect (PROJECT_LIB_HEADERS siha.h)
 collect (PROJECT_LIB_HEADERS utils.h)
+collect (PROJECT_LIB_HEADERS dfx-mgrd.h)
 
 collect (PROJECT_LIB_SOURCES queue.c)
 collect (PROJECT_LIB_SOURCES xrtbuffer.c)
@@ -21,4 +22,5 @@ collect (PROJECT_LIB_SOURCES siha.c)
 collect (PROJECT_LIB_SOURCES uio.c)
 collect (PROJECT_LIB_SOURCES utils.c)
 collect (PROJECT_LIB_SOURCES shellDriver.c)
+collect (PROJECT_LIB_SOURCES dfx-mgrd.c)
 

@@ -16,11 +16,13 @@
 #include "dm.h"
 #include "shellDriver.h"
 #include <stdio.h>
+#include "dfx-mgrd.h"
 #include "siha.h"
 #include "utils.h"
 #include "debug.h"
 #include "xrtbuffer.h"
 #include "uio.h"
+#include <dfx-mgr/print.h>
 //#include "acapd/acapdwebsoc.h"
 
 static plDevices_t* pldevices=NULL; 
@@ -50,16 +52,22 @@ plDevices_t* SIHAGetPLDevices(){
 }
 
 int SIHAInitAccel(int slot, char * accel){
-        //INFO("\n");
+        INFO("\n");
 	//FILE *fp;
 	//size_t len = 0;
 	int status;
+	int fd[2];
 	_unused(accel);
 	//ssize_t read;
 	//char* line;
-	//@@//fds_t fds;
+	//fds_t fds;
 	//INFO("%s\n", accel);
 	//@@//slotNum[slot] = loadpdi(accel);
+	//listAccelerators();
+	INFO("loading Accel: %s\n", accel);
+
+	slotNum[slot] = load_accelerator(accel);
+	INFO("loadded at slot: %d\n", slotNum[slot]);
 	//INFO("%s\n", accel);
 	//INFO("############ %d %d ###################\n", slot, slotNum[slot]);
 	//if (status < 0) return status;
@@ -75,30 +83,32 @@ int SIHAInitAccel(int slot, char * accel){
 	}
 	sprintf(slotStr[slot], "%d", slotNum[slot]);
 
-	//@@//status = getFD(slotStr[slot]);
-	//@@//if (status < 0) return status;
+	status = dfx_getFDs(slotNum[slot], fd);
+	if (status < 0) return status;
+	//fds->accelconfig_fd = fd[0];
+	//fds->dma_hls_fd = fd[1];
 	//INFO("############ getFD ###################\n");
 	//@@//status = socketGetFd(slotNum[slot], &fds);
 	//@@//if (status < 0) return status;
-        /*INFO("s2mm_fd        : %d\n", fds.s2mm_fd);
-        INFO("mm2s_fd        : %d\n", fds.mm2s_fd);
-        INFO("config_fd      : %d\n", fds.config_fd);
-        INFO("accelconfig_fd : %d\n", fds.accelconfig_fd);
-        INFO("dma_hls_fd     : %d\n", fds.dma_hls_fd);
+        //INFO("s2mm_fd        : %d\n", fds.s2mm_fd);
+        //INFO("mm2s_fd        : %d\n", fds.mm2s_fd);
+        //INFO("config_fd      : %d\n", fds.config_fd);
+        INFO("accelconfig_fd : %d\n", fd[0]); //s.accelconfiig_fd);
+        INFO("dma_hls_fd     : %d\n", fd[1]); ///s.dma_hls_fd);
         //status = getPA(slotStr[slot]);
 	//if (status < 0) return status;
 	INFO("############ getPA ###################\n");
 
         //status = socketGetPA(slotNum[slot], &fds);
 	//if (status < 0) return status;
-        INFO("mm2s_pa        : %lx\n", fds.mm2s_pa);
-	INFO("mm2s_size      : %lx\n", fds.mm2s_size);
-        INFO("s2mm_pa        : %lx\n", fds.s2mm_pa);
-	INFO("s2mm_size      : %lx\n", fds.s2mm_size);
-	INFO("config_pa      : %lx\n", fds.config_pa);
-	*/
+        //INFO("mm2s_pa        : %lx\n", fds.mm2s_pa);
+	//INFO("mm2s_size      : %lx\n", fds.mm2s_size);
+        //INFO("s2mm_pa        : %lx\n", fds.s2mm_pa);
+	//INFO("s2mm_size      : %lx\n", fds.s2mm_size);
+	//INFO("config_pa      : %lx\n", fds.config_pa);
+	
 	if(!pldevices) pldevices = (plDevices_t*) malloc(sizeof(plDevices_t));
-	if(!buffers) buffers   = (Buffers_t*) malloc(sizeof(Buffers_t));
+	//if(!buffers) buffers   = (Buffers_t*) malloc(sizeof(Buffers_t));
 
 	//@@//buffers->config_size[slot] = fds.config_size;
 	//@@//buffers->S2MM_size[slot]   = fds.s2mm_size;
@@ -112,18 +122,18 @@ int SIHAInitAccel(int slot, char * accel){
 	//@@//buffers->S2MM_paddr[slot]  = fds.s2mm_pa;
 	//@@//buffers->MM2S_paddr[slot]  = fds.mm2s_pa;
 	
-	mapBuffer(buffers->config_fd[slot], buffers->config_size[slot], &buffers->config_ptr[slot]);
-	mapBuffer(buffers->S2MM_fd[slot],   buffers->S2MM_size[slot],   &buffers->S2MM_ptr[slot]);
-	mapBuffer(buffers->MM2S_fd[slot],   buffers->MM2S_size[slot],   &buffers->MM2S_ptr[slot]);
+	//mapBuffer(buffers->config_fd[slot], buffers->config_size[slot], &buffers->config_ptr[slot]);
+	//mapBuffer(buffers->S2MM_fd[slot],   buffers->S2MM_size[slot],   &buffers->S2MM_ptr[slot]);
+	//mapBuffer(buffers->MM2S_fd[slot],   buffers->MM2S_size[slot],   &buffers->MM2S_ptr[slot]);
 	//INFO("%p %d\n", buffers->config_ptr[slot], slot);
-	printBuffer(buffers, slot);
-	//@@//pldevices->AccelConfig_fd[slot] = fds.accelconfig_fd;
-	//@@//pldevices->dma_hls_fd[slot] = fds.dma_hls_fd;
+	//printBuffer(buffers, slot);
+	pldevices->AccelConfig_fd[slot] = fd[0]; //s.accelconfig_fd;
+	pldevices->dma_hls_fd[slot] = fd[1]; //s.dma_hls_fd;
 	pldevices->slot[slot] = slotNum[slot];
 	//INFO("#######################################\n");
 	status = mapPlDevicesAccel(pldevices, slot);
 	if (status < 0){
-		printf("mapPlDevices Failed !!\n");
+		INFO("mapPlDevices Failed !!\n");
 		return -1;
 	}
 	return 0;
