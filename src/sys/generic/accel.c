@@ -7,9 +7,9 @@
 #include <dfx-mgr/accel.h>
 #include <dfx-mgr/assert.h>
 #include <dfx-mgr/print.h>
+#include <dfx-mgr/json-config.h>
 #include <errno.h>
 #include <fcntl.h>
-#include "json-config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

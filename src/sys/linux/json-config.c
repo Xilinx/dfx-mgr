@@ -10,6 +10,7 @@
 #include <dfx-mgr/print.h>
 #include <dfx-mgr/shell.h>
 #include <dfx-mgr/model.h>
+#include <dfx-mgr/json-config.h>
 #include <errno.h>
 #include <dirent.h>
 #include <ftw.h>
@@ -32,7 +33,7 @@ static int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
   return -1;
 }
 
-int parseAccelJson(acapd_accel_t *accel, const char *filename)
+int parseAccelJson(acapd_accel_t *accel, char *filename)
 {
 	FILE *fptr;
 	long numBytes;
@@ -341,3 +342,50 @@ int initBaseDesign(struct basePLDesign *base, const char *shell_path)
 	return 0;
 }
 
+void parse_config(char *config_path, struct daemon_config *config)
+{
+    FILE *fptr;
+    long numBytes;
+    jsmn_parser parser;
+    jsmntok_t token[128];
+    int ret,i;
+    char *jsonData;
+
+	memset(config, 0, sizeof(struct daemon_config));
+    fptr = fopen(config_path, "r");
+    if (fptr == NULL){
+        acapd_perror("%s: could not open %s err %s \n",__func__,config_path,strerror(errno));
+        return;
+    }
+    fseek(fptr, 0L, SEEK_END);
+    numBytes = ftell(fptr);
+    fseek(fptr, 0L, SEEK_SET);
+
+    jsonData = (char *)calloc(numBytes, sizeof(char));
+    if (jsonData == NULL){
+        acapd_perror("%s: calloc failed\n",__func__);
+        return;
+    }
+    ret = fread(jsonData, sizeof(char), numBytes, fptr);
+    if (ret < numBytes)
+        acapd_perror("%s: Error reading %s\n",__func__,config_path);
+    fclose(fptr);
+
+    jsmn_init(&parser);
+    ret = jsmn_parse(&parser, jsonData, numBytes, token, sizeof(token)/sizeof(token[0]));
+    if (ret < 0){
+        acapd_perror("Failed to parse %s: %d\n",config_path, ret);
+    }
+    for(i=1; i < ret; i++){
+        if (token[i].type == JSMN_OBJECT)
+            continue;
+        if (jsoneq(jsonData, &token[i],"default_accel") == 0) {
+			char *filename = strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start);
+			if ((fptr = fopen(filename, "r")) == NULL)
+				return;
+			ret = fscanf(fptr,"%s",config->defaul_accel_name);
+			fclose(fptr);
+        }
+    }
+	return;
+}

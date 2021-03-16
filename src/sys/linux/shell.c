@@ -7,8 +7,8 @@
 #include <dfx-mgr/shell.h>
 #include <dfx-mgr/device.h>
 #include <dfx-mgr/assert.h>
+#include <dfx-mgr/json-config.h>
 #include <errno.h>
-#include "json-config.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

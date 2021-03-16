@@ -21,6 +21,7 @@
 #include <sys/inotify.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <semaphore.h>
 
 #define WATCH_PATH_LEN 256
 #define MAX_WATCH 50
@@ -28,6 +29,9 @@
 static int interrupted;
 static acapd_accel_t *active_slots[3];
 char *firmware_path = "/lib/firmware/xilinx";
+char *config_path = "/etc/dfx-mgrd/daemon.conf";
+
+sem_t mutex;
 
 struct watch {
     int wd;
@@ -690,6 +694,8 @@ void *threadFunc()
 			}
 		}
 	}
+	/* Done parsing on target accelerators, now load a default one if present in config file */
+	sem_post(&mutex);
 
 	/* Listen for new updates in firmware path*/
     for (;;) {
@@ -752,9 +758,9 @@ int main(int argc, const char **argv)
 {
 	struct lws_context_creation_info info;
 	struct lws_context *context;
+	struct daemon_config config;
 	pthread_t t;
 	const char *p;
-	//int ret;
 
 	int n = 0, logs = LLL_ERR | LLL_WARN
 			/* for LLL_ verbosity above NOTICE to be built into lws,
@@ -796,9 +802,12 @@ int main(int argc, const char **argv)
 		lwsl_err("Failed to create tls vhost\n");
 		goto bail;
 	}
+	sem_init(&mutex, 0, 0);
 	pthread_create(&t, NULL,threadFunc, NULL);
-	//ret = load_full_bitstream(firmware_path);
-	//printf("Loaded Full bitstream %s (ret:%d)\n",firmware_path , ret);
+	sem_wait(&mutex);
+	parse_config(config_path, &config);
+	if (config.defaul_accel_name != NULL && strcmp(config.defaul_accel_name, "") != 0)
+		load_accelerator(config.defaul_accel_name);
 	while (n >= 0 && !interrupted)
 		n = lws_service(context, 0);
 

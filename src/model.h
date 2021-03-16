@@ -39,6 +39,10 @@ struct platform {
 	struct pl_config* PL;	
 };
 
+struct daemon_config {
+	char defaul_accel_name[64];
+};
+
 #ifdef __cplusplus
 }
 #endif

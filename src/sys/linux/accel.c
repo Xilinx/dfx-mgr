@@ -7,6 +7,7 @@
 #include <dfx-mgr/accel.h>
 #include <dfx-mgr/assert.h>
 #include <dfx-mgr/print.h>
+#include <dfx-mgr/json-config.h>
 #include <errno.h>
 #include <dirent.h>
 #include <ftw.h>
@@ -25,7 +26,6 @@
 #include "accel.h"
 #include "zynq_ioctl.h"
 #include "generic-device.h"
-#include "json-config.h"
 
 #define DTBO_ROOT_DIR "/sys/kernel/config/device-tree/overlays"
 #define SERVER_PATH     "/tmp/server_rm"

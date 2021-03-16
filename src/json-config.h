@@ -22,4 +22,5 @@ int parseAccelJson(acapd_accel_t *accel, char *filename);
 int parseShellJson(acapd_shell_t *shell, const char *filename);
 
 int initBaseDesign(struct basePLDesign *base, const char *shell_path);
+void parse_config(char *config_path, struct daemon_config *config);
 #endif /* _ACAPD_LINUX_JSON_CONFIG_H */

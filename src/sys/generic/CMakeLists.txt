@@ -1,7 +1,6 @@
 collect (PROJECT_LIB_HEADERS accel.h)
 collect (PROJECT_LIB_HEADERS dma.h)
 collect (PROJECT_LIB_HEADERS generic-device.h)
-collect (PROJECT_LIB_HEADERS json-config.h)
 
 collect (PROJECT_LIB_SOURCES accel.c)
 collect (PROJECT_LIB_SOURCES dma-axidma.c)
