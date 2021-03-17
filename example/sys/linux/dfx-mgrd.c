@@ -215,6 +215,10 @@ int load_accelerator(const char *accel_name)
 			acapd_debug("Finding empty slot for %s i %d \n",accel_name,i);
 			if (base->slots[i] == NULL){
 				sprintf(path,"%s/%s_slot%d", accel_info->path, accel_info->name,i);
+				if (access(path,F_OK) != 0){
+					printf("No accel found for %s slot %d\n",accel_info->name,i);
+					continue;
+				}
 				strcpy(pkg->name, accel_name);
 				pkg->path = path;
 				pkg->type = ACAPD_ACCEL_PKG_TYPE_NONE;
@@ -584,7 +588,6 @@ void parse_packages(struct basePLDesign *base, char *path)
     char new_dir[512];
 	int i,wd;
 
-	printf("parsing packages in base %s\n",path);
     d = opendir(path);
     if (d == NULL) {
 		acapd_perror("Directory %s not found\n",FIRMWARE_PATH);
@@ -604,7 +607,6 @@ void parse_packages(struct basePLDesign *base, char *path)
             else {
 				for (i=0; i < 10; i++) {
 					if (base->accel_list[i].path[0] == '\0') {
-						printf("Adding accel %s i %d\n",new_dir, i);
 						strcpy(base->accel_list[i].name, dir->d_name);
 						base->accel_list[i].name[sizeof(base->accel_list[i].name) - 1] = '\0';
 						strcpy(base->accel_list[i].path, new_dir);
@@ -630,8 +632,10 @@ void add_accel_to_base(char *name, char *path, char *parent_path)
                 acapd_perror("%s:inotify_add_watch failed on %s\n",__func__,path);
             else {
 				for (j = 0; j < 10; j++) {
+					if (!strcmp(base_designs[i].accel_list[j].path, path)) {
+						return;
+					}
 					if (base_designs[i].accel_list[j].path[0] == '\0') {
-						printf("Adding accel %s j %d\n",path, j);
 						strcpy(base_designs[i].accel_list[j].name, name);
 						base_designs[i].accel_list[j].name[sizeof(base_designs[i].accel_list[j].name) - 1] = '\0';
 						strcpy(base_designs[i].accel_list[j].path, path);
