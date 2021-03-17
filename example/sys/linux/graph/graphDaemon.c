@@ -77,7 +77,7 @@ int main (int argc, char **argv)
 
 	printf ("Graph-server: Waiting for a message from a client.\n");
 	while (1) {
-		INFO("While :\n");
+		//INFO("While :\n");
 		readfds = fds;
 		// monitor readfds for readiness for reading
 		if (select (fdmax + 1, &readfds, NULL, NULL, NULL) == -1)
@@ -132,12 +132,13 @@ int main (int argc, char **argv)
 								size = sock_fd_write(fd, &send_message, 
 											HEADERSIZE + send_message.size,
 											buff_fd, buff_fd_cnt);
+    								//exit (EXIT_SUCCESS);
 								printf ("wrote %ld\n", size);
 								break;
 							case GRAPH_FINALISE:
 								printf("### GRAPH FINALISE ###\n");
-								INFO("%s\n", recv_message.data);
-								INFO("%p\n", scheduler);	
+								//INFO("%s\n", recv_message.data);
+								//INFO("%p\n", scheduler);	
 								abstractGraphServerFinalise(scheduler, recv_message.data);
 								memcpy(send_message.data, recv_message.data, 
 									recv_message.size);

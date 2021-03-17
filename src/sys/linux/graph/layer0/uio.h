@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 #include <stdint.h>
+#include <semaphore.h>
 typedef struct dm dm_t;
 
 struct plDevices{
@@ -56,6 +57,7 @@ struct Accel{
         uint8_t* confBuffer;
         uint8_t* softBuffer;
         uint64_t softBufferSize;
+	sem_t* semptr;
         uint64_t status;
         dm_t* datamover;
 };

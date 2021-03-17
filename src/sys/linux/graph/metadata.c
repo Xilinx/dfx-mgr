@@ -72,11 +72,11 @@ int json2interrm(Json_t* json, Metadata_t *metadata){
 	}
 	for (int i = 1; i < r; i++) {
 		if (jsoneq(json->data, &t[i], "Compatible") == 0) {
-			INFO("%.*s\n", t[i + 1].end - t[i + 1].start,
-				json->data + t[i + 1].start);
-			INFO("################# %d\n", strcmp(json->data + t[i + 1].start, "True"));
+			//INFO("%.*s\n", t[i + 1].end - t[i + 1].start,
+			//	json->data + t[i + 1].start);
+			//INFO("################# %d\n", strcmp(json->data + t[i + 1].start, "True"));
 			if (strcmp(json->data + t[i + 1].start, "True") > 0){
-				INFO("################# %d\n", strcmp(json->data + t[i + 1].start, "True"));
+				//INFO("################# %d\n", strcmp(json->data + t[i + 1].start, "True"));
 				metadata->interRM.compatible = INTER_RM_COMPATIBLE;
 			}
 			else{
@@ -508,10 +508,10 @@ int graphParser(char* jsonStr, AbstractGraph_t **graph){
 								}
 							}
 							else if (jsoneq(json->data, &t[i + j + k], "name") == 0) {
+								memset(accelNode->name, '\0', 256);
 								sprintf(accelNode->name, "%.*s", 
 									t[i + j + k + 1].end - t[i + j + k + 1].start,
 									json->data + t[i + j + k + 1].start);
-							INFO(" %s\n", accelNode->name);
 							}
 							else if (jsoneq(json->data, &t[i + j + k], "size") == 0) {
 								sscanf(json->data + t[i + j + k + 1].start, 
@@ -565,6 +565,7 @@ int graphParser(char* jsonStr, AbstractGraph_t **graph){
 									"%hhd", &(buffNode->type));
 							}
 							else if (jsoneq(json->data, &t[i + j + k], "name") == 0) {
+								memset(buffNode->name, '\0', 256);
 								sprintf(buffNode->name, "%.*s", 
 									t[i + j + k + 1].end - t[i + j + k + 1].start,
 									json->data + t[i + j + k + 1].start);
@@ -622,10 +623,12 @@ int graphParser(char* jsonStr, AbstractGraph_t **graph){
 								sscanf(json->data + t[i + j + k + 1].start, 
 									"%d", &(nodeid)); //link->accelNode));
 								//printf("nodeid : %d\n", nodeid);
+								//INFO(" %d\n", nodeid);
 								while(accelElement != NULL){
+									//INFO("# %d\n", ((AbstractAccelNode_t*)accelElement->node)->id);
 									if (((AbstractAccelNode_t*)accelElement->node)->id == nodeid){
-										link->accelNode = (AbstractAccelNode_t*)accelElement;
-										INFO(" %s\n", link->accelNode->name);
+										link->accelNode = (AbstractAccelNode_t*)accelElement->node;
+										//INFO("### %s\n", link->accelNode->name);
 										break;
 									}
 									accelElement = accelElement->tail;
@@ -640,7 +643,7 @@ int graphParser(char* jsonStr, AbstractGraph_t **graph){
 								//printf("nodeid : %d\n", nodeid);
 								while(buffElement != NULL){
 									if (((AbstractBuffNode_t*)buffElement->node)->id == nodeid){
-										link->buffNode = (AbstractBuffNode_t*)buffElement;
+										link->buffNode = (AbstractBuffNode_t*)buffElement->node;
 										break;
 									}
 									buffElement = buffElement->tail;

@@ -72,7 +72,7 @@ int xrt_deallocateBuffer(int drm_fd, int handle){
 
 int mapBuffer(int fd, int size, uint8_t** ptr){
 	*ptr = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-	INFO("%p \n", *ptr);
+	//INFO("%p \n", *ptr);
 	return 0;
 }
 int unmapBuffer(int fd, int size, uint8_t** ptr){

@@ -13,8 +13,8 @@ typedef struct queue queue_t;
 typedef int (*CONFIG)(void*, Accel_t *accel); //volatile uint8_t*);
 typedef int (*MM2SSTATUS)(void*);
 typedef int (*S2MMSTATUS)(void*);
-typedef int (*MM2SDATA)(void*, Buffer_t*, uint64_t, uint64_t, uint8_t);
-typedef int (*S2MMDATA)(void*, Buffer_t*, uint64_t, uint64_t);
+typedef int (*MM2SDATA)(void*, Buffer_t*, uint64_t, uint64_t, uint8_t, uint8_t);
+typedef int (*S2MMDATA)(void*, Buffer_t*, uint64_t, uint64_t, uint8_t);
 typedef int (*S2MMDONE)(void*, Buffer_t*);
 typedef int (*MM2SDONE)(void*, Buffer_t*);
 

@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: MIT
  */
+#include <semaphore.h>
 typedef struct AbstractBuffNode AbstractBuffNode_t;
 typedef struct AbstractAccelNode AbstractAccelNode_t;
 typedef struct AbstractLink AbstractLink_t;
@@ -35,6 +36,7 @@ struct AbstractAccelNode{
         uint8_t* ptr;	// Buffer Ptr
         unsigned long phyAddr; // Buffer Physical Address
 	uint32_t semaphore; 
+	sem_t* semptr;
 	AccelNode_t *node;
         //int SchedulerBypassFlag;
 };
@@ -98,3 +100,4 @@ extern Element_t* addElement(Element_t** headElement, Element_t* nextElement);
 extern Element_t *searchGraphById(Element_t** headElement, uint32_t id);
 extern int abstractGraphServerConfig(JobScheduler_t *scheduler, char* json, int len, int* fd);
 extern int abstractGraphServerFinalise(JobScheduler_t *scheduler, char* json);
+extern int reallocateIOBuffers(AbstractGraph_t *graph, int* fd, int fdcount);

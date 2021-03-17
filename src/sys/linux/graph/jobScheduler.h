@@ -19,3 +19,4 @@ struct JobQueueBuffer{
 
 extern JobScheduler_t * jobSchedulerInit();
 extern int jobSchedulerSubmit(JobScheduler_t *scheduler, Element_t *graphElement);
+extern int jobSchedulerRemove(JobScheduler_t *scheduler, Element_t *graphElement);

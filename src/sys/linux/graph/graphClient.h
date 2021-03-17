@@ -12,7 +12,7 @@ struct graphSocket {
 };
 
 extern int graphClientInit(struct graphSocket* gs);
-extern int graphClientSubmit(struct graphSocket* gs, char* json, int size, int *fd);
+extern int graphClientSubmit(struct graphSocket* gs, char* json, int size, int *fd, int *fdcount);
 //extern int graphClientFinalise(struct graphSocket* gs, int id);
 extern int graphClientFinalise(struct graphSocket* gs, char* json, int size);
 extern ssize_t sock_fd_write(int sock, void *buf, ssize_t buflen, int *fd, int fdcount);

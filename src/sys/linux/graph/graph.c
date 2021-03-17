@@ -42,7 +42,7 @@ AccelNode_t* createAccelNode(char *name, int inDmaType,
 }
 
 AccelNode_t* addAccelNode(AccelNode_t **accelNode, AccelNode_t *nextAccel){
-	INFO("\n"); 
+	//INFO("\n"); 
 	int index = -1;
 	AccelNode_t *accel = *accelNode;
 	if(accel != NULL){
@@ -69,13 +69,14 @@ AccelNode_t* addAccelNode(AccelNode_t **accelNode, AccelNode_t *nextAccel){
 		nextAccel->accel.datamover = malloc(sizeof(dm_t));
 		nextAccel->accel.status = 0;
 		soft_register(nextAccel->accel.datamover);
+		//INFO("%p\n", nextAccel->accel.semptr);
                 nextAccel->accel.datamover->config(nextAccel->accel.datamover->dmstruct, &(nextAccel->accel)); 
                 ///TaskInit(nextAccel->accel.datamover);
 
 	}
 
 	else if(nextAccel->accel.type == SW_NODE){
-		INFO("SW NODE SELECTED\n");
+		//INFO("SW NODE SELECTED\n");
 		nextAccel->accel.inHardware = 0;
                 nextAccel->accel.datamover = malloc(sizeof(dm_t));
                 nextAccel->accel.status = 0;
@@ -100,7 +101,7 @@ AccelNode_t* addAccelNode(AccelNode_t **accelNode, AccelNode_t *nextAccel){
 		}
 		else{
 			nextAccel->accel.inHardware = 1;
-			INFO("$$$\n");
+			//INFO("$$$\n");
 			plDevices_t* pldevices = SIHAGetPLDevices();
 			nextAccel->accel.AccelConfig_fd = pldevices->AccelConfig_fd[nextAccel->accel.index];
 			nextAccel->accel.dma_hls_fd = pldevices->dma_hls_fd[nextAccel->accel.index];
@@ -200,7 +201,7 @@ int printAccelNodesInfo(AccelNode_t *accelNode, char* json){
 }
 
 BuffNode_t* createBuffNode(int size, char *name, int type){
-	INFO("\n"); 
+	//INFO("\n"); 
 	BuffNode_t *nextBuff = (BuffNode_t *) malloc(sizeof(BuffNode_t));
 	nextBuff->head = NULL;
 	nextBuff->tail = NULL;
@@ -330,6 +331,7 @@ int delLink(Link_t** link){
 		tailLink->head = headLink;
 	}
 	free(tLink);
+	
 	return 0;
 }
 
@@ -380,13 +382,15 @@ int printLinksInfo(Link_t *link, char* json){
 	return len;
 }
 
-Schedule_t* createSchedule(DependencyList_t *dependency, int offset, int size){ //, BuffNode_t *dependentBuffNode){
+Schedule_t* createSchedule(DependencyList_t *dependency, int offset, int size, int first, int last){ //, BuffNode_t *dependentBuffNode){
 	//INFO("\n"); 
 	Schedule_t* schedule = (Schedule_t *) malloc(sizeof(Schedule_t));
 	schedule->dependency = dependency;
 	schedule->size = size;
 	schedule->offset = offset;
 	schedule->status = 0;
+	schedule->first = first;
+	schedule->last = last;
 	//schedule->dependentBuffNode = dependentBuffNode;
 	schedule->head = NULL;
 	schedule->tail = NULL;
@@ -430,7 +434,7 @@ int delSchedule(Schedule_t** schedule, Schedule_t** scheduleHead){
 }
 
 int printSchedule(Schedule_t* schedule){
-	INFO("\n"); 
+	//INFO("\n"); 
 	//char json[1000];
 	if(schedule != NULL){
 		while(1){
@@ -452,7 +456,7 @@ int printSchedule(Schedule_t* schedule){
 			//		schedule->dependentBuffNode->buffer.index);
 			//}
 			//else{
-				INFOP("\n"); 
+				INFOP("\tfirst: %d last: %d\n", schedule->first, schedule->last); 
 			//}
 			if(schedule->tail != NULL){
 				schedule = schedule->tail;
@@ -465,7 +469,7 @@ int printSchedule(Schedule_t* schedule){
 
 Link_t* addInputBuffer(AccelNode_t *accelNode, BuffNode_t *buffNode,
                        int offset, int transactionSize, int transactionIndex, int channel){
-	INFO("\n"); 
+	//INFO("\n"); 
 	Link_t* link = (Link_t *) malloc(sizeof(Link_t));
 	link->accelNode = accelNode;
 	link->buffNode  = buffNode;
@@ -490,7 +494,7 @@ Link_t* addInputBuffer(AccelNode_t *accelNode, BuffNode_t *buffNode,
 	
 Link_t* addOutputBuffer(AccelNode_t *accelNode, BuffNode_t *buffNode,
                         int offset, int transactionSize, int transactionIndex, int channel){
-	INFO("\n"); 
+	//INFO("\n"); 
 	Link_t* link = (Link_t *) malloc(sizeof(Link_t));
 	link->accelNode = accelNode;
 	link->buffNode  = buffNode;
@@ -504,14 +508,14 @@ Link_t* addOutputBuffer(AccelNode_t *accelNode, BuffNode_t *buffNode,
 	link->type      = 1;
 	link->head = NULL;
 	link->tail = NULL;
-	INFO("\n");
-	INFO("%p\n", accelNode); //->accel.InterRMCompatible); 
+	//INFO("\n");
+//	INFO("%p\n", accelNode); //->accel.InterRMCompatible); 
 	if(accelNode->accel.InterRMCompatible == INTER_RM_COMPATIBLE){
 		buffNode->buffer.InterRMCompatible += 1;
 		buffNode->buffer.srcSlot = accelNode->accel.slot;
 		//buffNode->buffer.sincSlot = accelNode->accel.slot;
 	}
-	INFO("\n"); 
+	//INFO("\n"); 
 	return link;
 }
 
@@ -520,14 +524,11 @@ int updateBuffers(AcapGraph_t* graph, Link_t* linkHead){
 	Buffers_t* buffers = SIHAGetBuffers();
 	//INFO("%p\n", buffers);
 	if (link != NULL){
-		INFO("%x\n", link->transactionIndex);
-		//INFO("%d \n", link->buffNode->buffer.index);
-		//INFO("%p %d %d\n", buffers, link->type, link->buffNode->buffer.fd)
 		if(link->buffNode->buffer.type == PL_BASED && link->buffNode->buffer.InterRMCompatible == 2){
 		}
 		else if(buffers != NULL && link->type == 0 && link->buffNode->buffer.fd == 0 && link->accelNode->accel.inHardware){
-			INFO("%s %d %p\n", link->accelNode->accel.name, link->accelNode->accel.index, link->tail);
-			INFO("%x : %x\n", link->buffNode->buffer.size, buffers->MM2S_size[link->accelNode->accel.index]);
+			//INFO("%s %d %p\n", link->accelNode->accel.name, link->accelNode->accel.index, link->tail);
+			//INFO("%x : %x\n", link->buffNode->buffer.size, buffers->MM2S_size[link->accelNode->accel.index]);
 			if(link->buffNode->buffer.size == buffers->MM2S_size[link->accelNode->accel.index]){
 				link->buffNode->buffer.fd      = buffers->MM2S_fd    [link->accelNode->accel.index];
 				link->buffNode->buffer.size    = buffers->MM2S_size  [link->accelNode->accel.index];
@@ -548,7 +549,7 @@ int updateBuffers(AcapGraph_t* graph, Link_t* linkHead){
 			link->buffNode->buffer.writectr[1] = 0;
 			link->buffNode->buffer.status = EMPTY;
                         link->buffNode->readStatus = 0;
-			INFO("%s%d %d %d %p %lx\n", link->buffNode->buffer.name, link->buffNode->buffer.index, link->buffNode->buffer.fd, link->buffNode->buffer.size, link->buffNode->buffer.ptr, link->buffNode->buffer.phyAddr);
+			//INFO("%s%d %d %d %p %lx\n", link->buffNode->buffer.name, link->buffNode->buffer.index, link->buffNode->buffer.fd, link->buffNode->buffer.size, link->buffNode->buffer.ptr, link->buffNode->buffer.phyAddr);
 		}
 		else if(buffers == NULL){
 			//INFO("%p\n", buffers);
@@ -573,7 +574,7 @@ int updateBuffersPass2(Link_t* linkHead){
 		if(link->buffNode->buffer.type == PL_BASED && link->buffNode->buffer.InterRMCompatible == 2){
 		}
 		else if(buffers != NULL && link->buffNode->buffer.fd == 0){
-			INFO("%s %d %p\n", link->accelNode->accel.name, link->accelNode->accel.index, link->tail);
+			//INFO("%s %d %p\n", link->accelNode->accel.name, link->accelNode->accel.index, link->tail);
 
 			link->buffNode->buffer.fd      = buffers->S2MM_fd    [link->accelNode->accel.index];
 			link->buffNode->buffer.size    = buffers->S2MM_size  [link->accelNode->accel.index];
@@ -587,7 +588,7 @@ int updateBuffersPass2(Link_t* linkHead){
                         link->buffNode->buffer.status = EMPTY;
                         link->buffNode->readStatus = 0;
 
-			INFO("%s%d %d %d %p %lx\n", link->buffNode->buffer.name, link->buffNode->buffer.index, link->buffNode->buffer.fd, link->buffNode->buffer.size, link->buffNode->buffer.ptr, link->buffNode->buffer.phyAddr);
+			//INFO("%s%d %d %d %p %lx\n", link->buffNode->buffer.name, link->buffNode->buffer.index, link->buffNode->buffer.fd, link->buffNode->buffer.size, link->buffNode->buffer.ptr, link->buffNode->buffer.phyAddr);
 		}
 		if(link->tail != NULL){
 			updateBuffersPass2(link->tail);
@@ -644,17 +645,17 @@ int printDepend(DependencyList_t* dependency){
 	char json[1000];
 	if(dependency != NULL){
 		printLinkInfo(dependency->link, json);
-		INFO("link : %s\n",json);
+		//INFO("link : %s\n",json);
 		for(int i=0; i < dependency->linkCount; i++){
 			printLinkInfo(dependency->dependentLinks[i], json);
-			INFO("depends on : %s\n",json);
+			//INFO("depends on : %s\n",json);
 		}
 	}
 	return 0;
 }
 
 int printDependency(DependencyList_t* dependency){
-	INFO("\n"); 
+	//INFO("\n"); 
 	//char json[1000];
 	if(dependency != NULL){
 		while(1){
@@ -730,7 +731,7 @@ int updateDependency(DependencyList_t** dependencyHead, Link_t* linkHead){
 int graphSchedule(Schedule_t** scheduleHead, DependencyList_t* dependencyHead){
 	DependencyList_t* cDependency = dependencyHead;
 	Schedule_t* tSchedule;
-	int tSize;
+	int tSize, first, last;
 	int pending = 0;
 	//for(int i = 0; i < 3; i++){//)while(1){
 	while(1){
@@ -744,8 +745,21 @@ int graphSchedule(Schedule_t** scheduleHead, DependencyList_t* dependencyHead){
 			}
 			//INFO("%x %x %x\n", tSize, cDependency->link->transactionSize, cDependency->link->totalTransactionScheduled);
 			if(tSize > 0){
+				if(cDependency->link->totalTransactionScheduled <= 0){
+					first = 1;
+				}
+				else{
+					first = 0;
+				}
 				cDependency->link->totalTransactionScheduled += tSize;
-				tSchedule = createSchedule(cDependency, cDependency->link->offset, tSize);
+				if(cDependency->link->transactionSize -
+			              cDependency->link->totalTransactionScheduled <= 0){
+					last = 1;
+				}
+				else{
+					last = 0;
+				}
+				tSchedule = createSchedule(cDependency, cDependency->link->offset, tSize, first, last);
 				addSchedule(scheduleHead, tSchedule);
 				pending += tSize;
 				//INFO("======== > Scheduled\n");
@@ -766,7 +780,7 @@ int graphSchedule(Schedule_t** scheduleHead, DependencyList_t* dependencyHead){
 //################################################################################
 
 AccelNode_t* acapAddAccelNode(AcapGraph_t *acapGraph, char *name, int dmaType, FALLBACKFUNCTION fallbackfunction, int InterRMCompatible, int SchedulerBypassFlag){
-	INFO("%d %p %d\n", dmaType, fallbackfunction, InterRMCompatible); 
+	//INFO("%d %p %d\n", dmaType, fallbackfunction, InterRMCompatible); 
 	AccelNode_t *nextAccel = createAccelNode(name, dmaType, dmaType, fallbackfunction, InterRMCompatible, SchedulerBypassFlag);
 	nextAccel->accel.type = HW_NODE;	
 	return addAccelNode(&(acapGraph->accelNodeHead), nextAccel);
@@ -786,21 +800,23 @@ int forceFallback(AccelNode_t *accelNode){
 	return 0;
 }
 
-AccelNode_t* acapAddInputNode(AcapGraph_t *acapGraph, uint8_t *buff, int size, int SchedulerBypassFlag){
+AccelNode_t* acapAddInputNode(AcapGraph_t *acapGraph, uint8_t *buff, int size, int SchedulerBypassFlag, sem_t* semptr){
 	//INFO("\n"); 
 	AccelNode_t *nextAccel = createAccelNode("Input", NONE, NONE, NULL, 0, SchedulerBypassFlag);
 	nextAccel->accel.type = IN_NODE;	
 	nextAccel->accel.softBuffer = buff;	
 	nextAccel->accel.softBufferSize = size;	
+	nextAccel->accel.semptr = semptr;	
 	return addAccelNode(&(acapGraph->accelNodeHead), nextAccel);
 }
 
-AccelNode_t* acapAddOutputNode(AcapGraph_t *acapGraph, uint8_t *buff, int size, int SchedulerBypassFlag){
+AccelNode_t* acapAddOutputNode(AcapGraph_t *acapGraph, uint8_t *buff, int size, int SchedulerBypassFlag, sem_t* semptr){
 	//INFO("\n"); 
 	AccelNode_t *nextAccel = createAccelNode("Output", NONE, NONE, NULL, 0, SchedulerBypassFlag);
 	nextAccel->accel.type = OUT_NODE;	
 	nextAccel->accel.softBuffer = buff;	
 	nextAccel->accel.softBufferSize = size;	
+	nextAccel->accel.semptr = semptr;	
 	return addAccelNode(&(acapGraph->accelNodeHead), nextAccel);
 }
 
@@ -812,7 +828,7 @@ BuffNode_t* acapAddBuffNode(AcapGraph_t *acapGraph, int size, char *name, int ty
 
 Link_t *acapAddOutputBuffer(AcapGraph_t *acapGraph, AccelNode_t *accelNode, BuffNode_t *buffNode,
 			    int offset, int transactionSize, int transactionIndex, int channel){
-	INFO("\n"); 
+	//INFO("\n"); 
 	Link_t *link = addOutputBuffer(accelNode, buffNode, offset, transactionSize, transactionIndex, channel);
 	addLink(&(acapGraph->linkHead), link);
 	return link;
@@ -820,7 +836,7 @@ Link_t *acapAddOutputBuffer(AcapGraph_t *acapGraph, AccelNode_t *accelNode, Buff
 
 Link_t *acapAddInputBuffer(AcapGraph_t *acapGraph, AccelNode_t *accelNode, BuffNode_t *buffNode,
 			   int offset, int transactionSize, int transactionIndex, int channel){
-	INFO("\n"); 
+	//INFO("\n"); 
 	Link_t *link = addInputBuffer(accelNode, buffNode, offset, transactionSize, transactionIndex, channel);
 	addLink(&(acapGraph->linkHead), link);
 	return link;
@@ -829,7 +845,7 @@ Link_t *acapAddInputBuffer(AcapGraph_t *acapGraph, AccelNode_t *accelNode, BuffN
 int acapGraphToJson(AcapGraph_t *acapGraph){
 	char *json = (char*) malloc(sizeof(char)*0x4000);
 	int len = 0;
-	INFO("\n"); 
+	//INFO("\n"); 
 	FILE *fp;
 	fp = fopen("/home/root/plgraph.json", "w");
 	len += printAccelNodesInfo(acapGraph->accelNodeHead, json + len);
@@ -842,7 +858,7 @@ int acapGraphToJson(AcapGraph_t *acapGraph){
 }
 
 int acapGraphConfig(AcapGraph_t *acapGraph){
-	INFO("\n"); 
+	//INFO("\n"); 
 	//acapGraphToJson(acapGraph);
 	updateBuffers(acapGraph, acapGraph->linkHead);
 	//acapGraphToJson(acapGraph);
@@ -853,7 +869,7 @@ int acapGraphConfig(AcapGraph_t *acapGraph){
 }
 
 int acapGraphSchedule(AcapGraph_t *acapGraph){
-	INFO("\n"); 
+	//INFO("\n"); 
 	graphSchedule(&(acapGraph->scheduleHead), acapGraph->dependencyHead);
 	SchedulerTrigger(acapGraph);
 	SchedulerCompletion(acapGraph);
@@ -861,7 +877,7 @@ int acapGraphSchedule(AcapGraph_t *acapGraph){
 }
 
 AcapGraph_t* acapGraphInit(){
-	INFO("\n"); 
+	//INFO("\n"); 
 	srand(time(NULL));
 	AcapGraph_t*graph = malloc(sizeof(AcapGraph_t));
 	SchedulerInit(graph);
@@ -886,21 +902,26 @@ int acapGraphResetLinks(AcapGraph_t *acapGraph){
 }
 
 int acapGraphFinalise(AcapGraph_t *acapGraph){
-	INFO("\n"); 
+	//INFO("\n"); 
 	SchedulerFinalise(acapGraph);
 	while(acapGraph->linkHead != NULL){
 		delLink(&(acapGraph->linkHead));
 	}
+	acapGraph->linkHead = NULL; 
 	while(acapGraph->buffNodeHead != NULL){
 		delBuffNode(&(acapGraph->buffNodeHead));
 	}
+	acapGraph->buffNodeHead = NULL; 
 	while(acapGraph->accelNodeHead != NULL){
 		delAccelNode(&(acapGraph->accelNodeHead));
 	}
+	acapGraph->accelNodeHead = NULL; 
 	while(acapGraph->dependencyHead != NULL){
 		delDependency(&(acapGraph->dependencyHead));
 	}
+	acapGraph->dependencyHead = NULL; 
 	//nacapGraphToJson(acapGraph);
 	free(acapGraph);
+	acapGraph = NULL;
 	return 0;
 }

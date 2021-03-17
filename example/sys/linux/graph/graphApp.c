@@ -378,16 +378,19 @@ int case6(){
 	//acapGraphToJson(acapGraph);*/
 	//abstractGraph2Json(acapGraph, json);
 	abstractGraphConfig(acapGraph);
-	//for(int i=0; i < 1024; i++){
-	//	p0[i] = i;
-	//}
-	//printhex((uint32_t*)p0, 0x50);
-        //acapGraphSchedule(acapGraph);
-	//printhex((uint32_t*)p1, 0x50);
+	for(int i=0; i < 1024; i++){
+		accelNode0->ptr[i] = i;
+	}
+        sem_post(accelNode0->semptr);
+	sem_wait(accelNode4->semptr);
+	printhex((uint32_t*)accelNode0->ptr, 0x50);
+	printhex((uint32_t*)accelNode4->ptr, 0x50);
         //graphFinalise(acapGraph);
-									
+	//if (sem_post(semptr) < 0) report_and_exit("sem_post");
+								
 	sleep(5);
 	abstractGraphFinalise(acapGraph);
+	//sem_close(semptr);
 	return 0;
 }
 /*

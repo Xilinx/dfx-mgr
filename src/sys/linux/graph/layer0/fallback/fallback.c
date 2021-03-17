@@ -46,9 +46,10 @@ int fallback_S2MMStatus(void* dmconfig_a){
 	return 0;
 }
 
-int fallback_MM2SData(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t size, uint8_t tid){
+int fallback_MM2SData(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t size, uint8_t firstLast, uint8_t tid){
 	INFO("\n");
 	_unused(offset);
+	_unused(firstLast);
 	fallback_DMConfig_t* dmconfig = (fallback_DMConfig_t*)dmconfig_a;
 	dmconfig->InputChannelReq[tid] = data->ptr;
 	dmconfig->InputChannelSize[tid] = size;
@@ -77,9 +78,10 @@ int fallback_MM2SData(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_
 	return 0;
 }
 
-int fallback_S2MMData(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t size){
+int fallback_S2MMData(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t size, uint8_t firstLast){
 	INFO("\n");
 	_unused(offset);
+	_unused(firstLast);
 	fallback_DMConfig_t* dmconfig = (fallback_DMConfig_t*)dmconfig_a;
 	dmconfig->OutputChannelReq[0] = data->ptr;
 	dmconfig->OutputChannelSize[0] = size;

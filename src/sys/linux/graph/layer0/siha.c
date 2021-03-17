@@ -52,7 +52,7 @@ plDevices_t* SIHAGetPLDevices(){
 }
 
 int SIHAInitAccel(int slot, char * accel){
-        INFO("\n");
+        //INFO("\n");
 	//FILE *fp;
 	//size_t len = 0;
 	int status;
@@ -64,10 +64,10 @@ int SIHAInitAccel(int slot, char * accel){
 	//INFO("%s\n", accel);
 	//@@//slotNum[slot] = loadpdi(accel);
 	//listAccelerators();
-	INFO("loading Accel: %s\n", accel);
+	//INFO("loading Accel: %s\n", accel);
 
 	slotNum[slot] = load_accelerator(accel);
-	INFO("loadded at slot: %d\n", slotNum[slot]);
+	//INFO("loadded at slot: %d\n", slotNum[slot]);
 	//INFO("%s\n", accel);
 	//INFO("############ %d %d ###################\n", slot, slotNum[slot]);
 	//if (status < 0) return status;
@@ -93,11 +93,11 @@ int SIHAInitAccel(int slot, char * accel){
         //INFO("s2mm_fd        : %d\n", fds.s2mm_fd);
         //INFO("mm2s_fd        : %d\n", fds.mm2s_fd);
         //INFO("config_fd      : %d\n", fds.config_fd);
-        INFO("accelconfig_fd : %d\n", fd[0]); //s.accelconfiig_fd);
-        INFO("dma_hls_fd     : %d\n", fd[1]); ///s.dma_hls_fd);
+        //INFO("accelconfig_fd : %d\n", fd[0]); //s.accelconfiig_fd);
+        //INFO("dma_hls_fd     : %d\n", fd[1]); ///s.dma_hls_fd);
         //status = getPA(slotStr[slot]);
 	//if (status < 0) return status;
-	INFO("############ getPA ###################\n");
+	//INFO("############ getPA ###################\n");
 
         //status = socketGetPA(slotNum[slot], &fds);
 	//if (status < 0) return status;
@@ -182,7 +182,7 @@ int SIHAInit(int configSize, int MM2SSize, int S2MMSize, int slot){
 }
 
 int SIHAStartAccel(int slot){
-        INFO("\n");
+       // INFO("\n");
 	uint8_t* AccelConfig;
 	printf("%d\n", slot);
 	AccelConfig = pldevices->AccelConfig[slot];
@@ -204,7 +204,7 @@ int SIHAStartAccel(int slot){
 }
 
 int SIHAStopAccel(int slot){
-        INFO("\n");
+        //INFO("\n");
 	uint8_t* AccelConfig;
 	AccelConfig = pldevices->AccelConfig[slot];
 	/*switch(slot){
@@ -223,7 +223,7 @@ int SIHAStopAccel(int slot){
 }
 
 int SIHAFinaliseAccel(int slot){
-        INFO("\n");
+        //INFO("\n");
 	//int r0, r1;	
 	//@@//fds_t fds;
 	//@@//fds.config_fd = buffers->config_fd[slot];
@@ -261,7 +261,7 @@ int SIHAFinaliseAccel(int slot){
 
 
 int SIHAFinalise(int slot){
-        INFO("\n");
+        //INFO("\n");
 	int status;
 	finalisePlDevices(pldevices, slot);
 	status = finaliseXrtBuffer(slot, buffers);
@@ -273,7 +273,7 @@ int SIHAFinalise(int slot){
 }
 
 int SIHAConfig(int slot, uint32_t* config, int size, int tid){
-        INFO("\n");
+        //INFO("\n");
 	_unused(tid);
 	memcpy(buffers->config_ptr[slot], (uint8_t*)config, size);
 	printf("%lx : %lx\n", buffers->S2MM_paddr[slot], buffers->MM2S_paddr[slot]);
@@ -288,19 +288,19 @@ int SIHAConfig(int slot, uint32_t* config, int size, int tid){
 
 int SIHALoopFile(char* filename){
 	_unused(filename);
-        INFO("\n");
+        //INFO("\n");
 	return 0;
 }
 
 int SIHAExchangeFile(char* infile, char* outfile){
-        INFO("\n");
+        //INFO("\n");
 	_unused(infile);
 	_unused(outfile);
 	return 0;
 }
 
 int SIHAExchangeBuffer(int slot, uint32_t* inbuff, uint32_t* outbuff, int insize, int outsize){
-        INFO("\n");
+        //INFO("\n");
 	struct timespec start, finish;
 	double elapsedTime;
 	memcpy(buffers->MM2S_ptr[slot], (uint8_t*)inbuff, insize);

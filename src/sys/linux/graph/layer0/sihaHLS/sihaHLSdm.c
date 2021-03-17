@@ -16,7 +16,7 @@
 
 int sihahls_config(void* dmconfig_a, Accel_t *accel){ //volatile uint8_t* base){
 	sihahls_DMConfig_t* dmconfig = (sihahls_DMConfig_t*)dmconfig_a;
-	INFO("\n");
+	//INFO("\n");
 	dmconfig->s2mm_baseAddr  = accel->dma_hls + S2MM;
         dmconfig->s2mm_APCR      = dmconfig->s2mm_baseAddr + APCR;
         dmconfig->s2mm_GIER      = dmconfig->s2mm_baseAddr + GIER; 
@@ -161,7 +161,8 @@ int sihahls_S2MMData(void* dmconfig_a, uint64_t data, uint64_t size){
 	return 0;
 }
 
-int sihahls_MM2SData_B(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t size, uint8_t tid){
+int sihahls_MM2SData_B(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t size, uint8_t firstLast, uint8_t tid){
+	_unused(firstLast);
 	//INFO("%x %d\n", size, tid);
 	//INFO("%p\n", data->ptr);
         //printhex((uint32_t*)((uint8_t*)data->ptr + offset), size);
@@ -189,7 +190,8 @@ int sihahls_MM2SData_B(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64
 	return 0;
 }
 
-int sihahls_S2MMData_B(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t size){
+int sihahls_S2MMData_B(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t size, uint8_t firstLast){
+	_unused(firstLast);
 	sihahls_DMConfig_t* dmconfig = (sihahls_DMConfig_t*)dmconfig_a;
 	if (dmconfig->start == 0){
 		sihahls_start(dmconfig_a);
@@ -238,7 +240,7 @@ int sihahls_MM2SDone(void* dmconfig_a, Buffer_t* data){
 }
 
 int sihahls_MM2SAck(void* dmconfig_a){
-	INFO("\n");
+	//INFO("\n");
 	sihahls_DMConfig_t* dmconfig = (sihahls_DMConfig_t*)dmconfig_a;
 	int status;
 	status = *(uint32_t*)(dmconfig->mm2s_IISR);
@@ -247,7 +249,7 @@ int sihahls_MM2SAck(void* dmconfig_a){
 }
 
 int sihahls_S2MMAck(void* dmconfig_a){
-	INFO("\n");
+	//INFO("\n");
 	sihahls_DMConfig_t* dmconfig = (sihahls_DMConfig_t*)dmconfig_a;
 	int status;
 	status = *(uint32_t*)(dmconfig->s2mm_IISR);
@@ -256,7 +258,7 @@ int sihahls_S2MMAck(void* dmconfig_a){
 }
 
 int sihahls_register(dm_t *datamover){
-	INFO("\n");
+	//INFO("\n");
 	datamover->dmstruct = (void*) malloc(sizeof(sihahls_DMConfig_t));
         datamover->config     = sihahls_config;
         datamover->S2MMStatus = sihahls_S2MMStatus;
@@ -269,7 +271,7 @@ int sihahls_register(dm_t *datamover){
 }
 
 int sihahls_unregister(dm_t *datamover){
-	INFO("\n");
+	//INFO("\n");
 	free(datamover->dmstruct);
 	return 0;
 }

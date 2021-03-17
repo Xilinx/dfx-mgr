@@ -6,6 +6,7 @@
 #include "layer0/uio.h"
 #include "layer0/xrtbuffer.h"
 #include "layer0/dm.h"
+#include <semaphore.h>
 
 #define DDR_BASED 0
 #define PL_BASED  1
@@ -90,6 +91,8 @@ struct Schedule{
 	int size;
 	int offset;
 	int status;
+	int last;
+	int first;
         //BuffNode_t *dependentBuffNode[10];// Reference to connected buffer
 	//int buffCount;
 	struct Schedule *head;
@@ -141,8 +144,8 @@ extern Link_t* addOutputBuffer(AccelNode_t *accelNode, BuffNode_t *buffNode,
 #define ENABLE_SCHEDULER 1
 AccelNode_t* acapAddAccelNode(AcapGraph_t *acapGraph, char *name, int dmaType, FALLBACKFUNCTION fallbackfunction, int InterRMCompatible, int SchedulerBypassFlag);
 AccelNode_t* acapAddAccelNodeForceFallback(AcapGraph_t *acapGraph, char *name, int dmaType, FALLBACKFUNCTION fallbackfunction, int InterRMCompatible, int SchedulerBypassFlag);
-AccelNode_t* acapAddInputNode(AcapGraph_t *acapGraph, uint8_t *buff, int size, int SchedulerBypassFlag);
-AccelNode_t* acapAddOutputNode(AcapGraph_t *acapGraph, uint8_t *buff, int size, int SchedulerBypassFlag);
+extern AccelNode_t* acapAddInputNode(AcapGraph_t *acapGraph, uint8_t *buff, int size, int SchedulerBypassFlag, sem_t* semptr);
+extern AccelNode_t* acapAddOutputNode(AcapGraph_t *acapGraph, uint8_t *buff, int size, int SchedulerBypassFlag, sem_t* semptr);
 BuffNode_t* acapAddBuffNode(AcapGraph_t *acapGraph, int size, char *name, int type);
 Link_t *acapAddOutputBuffer(AcapGraph_t *acapGraph, AccelNode_t *accelNode, BuffNode_t *buffNode, 
 			    int offset, int transactionSize, int transactionIndex, int channel);

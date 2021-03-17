@@ -53,7 +53,7 @@ int printTransaction(Schedule_t *schedule){
 }
 
 void *scheduler_Task(void* carg){
-	INFO("\n");
+	//INFO("\n");
 	AcapGraph_t *acapGraph = carg;
 	Scheduler_t *scheduler = acapGraph->scheduler; 
         queue_t *commandQueue = scheduler->CommandQueue;
@@ -68,17 +68,24 @@ void *scheduler_Task(void* carg){
                         commandQueueBuffer = queue_dequeue(commandQueue);
                         switch (commandQueueBuffer->type){
                                 case SCHEDULER_COMPLETION:
-					INFO("processing SCHEDULER_COMPLETION\n");
+					//INFO("processing SCHEDULER_COMPLETION\n");
                                 	responseQueueBuffer = malloc(sizeof(ScQueueBuffer_t));
                                 	responseQueueBuffer->type = SCHEDULER_COMPLETION;
                                 	queue_enqueue(responseQueue, responseQueueBuffer);
                                         break;
                                 case SCHEDULER_TASKEND:
-					INFO("processing TASKEND\n");
+					//INFO("processing TASKEND\n");
                                         return NULL;
                                         break;
+				case SCHEDULER_STATUS:
+					//INFO("Status Requested\n");
+                                	responseQueueBuffer = malloc(sizeof(ScQueueBuffer_t));
+                                	responseQueueBuffer->type = SCHEDULER_STATUS;
+                                	responseQueueBuffer->busy = busy;
+                                	queue_enqueue(responseQueue, responseQueueBuffer);
+					break;
                                 case SCHEDULER_TRIGGER:
-					INFO("processing TRIGGER\n");
+					//INFO("processing TRIGGER\n");
         				busy = 1;
         				enableScheduler = 1;
                                         break;
@@ -87,7 +94,7 @@ void *scheduler_Task(void* carg){
                         }
                 }
                 if(enableScheduler){
-			INFO("/\\/\\/\\/\\/\\/\\/\\/\\/")
+			//INFO("/\\/\\/\\/\\/\\/\\/\\/\\/")
 			Schedule_t *schedule = acapGraph->scheduleHead;
 			if(schedule != NULL){
             			while(1){
@@ -107,7 +114,7 @@ void *scheduler_Task(void* carg){
                                                 	schedule->dependency->linkCount - 1]->buffNode;
 						_unused(dbuffNode);
 					}
-					printTransaction(schedule);
+					//printTransaction(schedule);
 					if(accelNode->currentTransactionIndex == 0)
 					{
 					accelNode->currentTransactionIndex = transactionIndex; 
@@ -126,8 +133,8 @@ void *scheduler_Task(void* carg){
 							accelNode->S2MMStatus = 1;
 							buffNode->status = 1;
 							schedule->status = 1;
-							printTransaction(schedule);
-							INFO("Transaction Scheduled \n");
+							//printTransaction(schedule);
+							//INFO("Transaction Scheduled \n");
 							break;
 						}
 						else if(schedule->status == 1 && 
@@ -143,10 +150,11 @@ void *scheduler_Task(void* carg){
 								accelNode->accel.datamover->dmstruct,
 								&buffNode->buffer,
 								schedule->offset,
-								schedule->size
+								schedule->size,
+								schedule->first
 							); 
-							printTransaction(schedule);
-							INFO("Transaction Triggered #\n");
+							//printTransaction(schedule);
+							//INFO("Transaction Triggered #\n");
 						}
 						else if(schedule->status == 1 &&
 							buffNode->status == 2 &&
@@ -162,8 +170,8 @@ void *scheduler_Task(void* carg){
 								buffNode->status = 3;
 								accelNode->S2MMStatus = 0;
 								accelNode->currentTransactionIndex = 0; 
-								printTransaction(schedule);
-								INFO("Transaction Done \n");
+								//printTransaction(schedule);
+								//INFO("Transaction Done \n");
 								delSchedule(&schedule, &(acapGraph->scheduleHead));
 								continue;
 							}
@@ -186,8 +194,8 @@ void *scheduler_Task(void* carg){
 							){
 							accelNode->MM2SStatus = 1;
 							schedule->status = 1;
-							printTransaction(schedule);
-							INFO("Transaction Scheduled \n");
+							//printTransaction(schedule);
+							//INFO("Transaction Scheduled \n");
 							break;
 						}
 						else if(schedule->status == 1 && 
@@ -205,10 +213,11 @@ void *scheduler_Task(void* carg){
 								&buffNode->buffer,
 								schedule->offset,
 								schedule->size,
+								schedule->last,
 								schedule->dependency->link->channel
 							); 
-							printTransaction(schedule);
-							INFO("Transaction Triggered #\n");
+							//printTransaction(schedule);
+							//INFO("Transaction Triggered #\n");
 						}
 						else if(schedule->status == 1 && 
 							(buffNode->status == 3) &&
@@ -228,8 +237,8 @@ void *scheduler_Task(void* carg){
 								}
 								accelNode->MM2SStatus = 0;
 								accelNode->currentTransactionIndex = 0; 
-								printTransaction(schedule);
-								INFO("Transaction Done \n");
+								//printTransaction(schedule);
+								//INFO("Transaction Done \n");
 								delSchedule(&schedule, &(acapGraph->scheduleHead));
 								continue;
 							}
@@ -244,7 +253,7 @@ void *scheduler_Task(void* carg){
                 		}
         		}else{
         			busy = 0;
-				INFO("Scheduler Done !!\n");
+				//INFO("Scheduler Done !!\n");
 			}
 		}
         }
@@ -252,7 +261,7 @@ void *scheduler_Task(void* carg){
 }
 
 int SchedulerInit(AcapGraph_t *acapGraph){
-	INFO("\n");
+	//INFO("\n");
 	Scheduler_t *scheduler = malloc(sizeof(Scheduler_t));
 	acapGraph->scheduler = scheduler;
 
@@ -268,7 +277,7 @@ int SchedulerInit(AcapGraph_t *acapGraph){
 }
 
 int TaskEnd(Scheduler_t *scheduler){
-        INFO("\n");
+        //INFO("\n");
 	ScQueueBuffer_t *CommandBuff;
         CommandBuff = malloc(sizeof(ScQueueBuffer_t));
         CommandBuff->type = SCHEDULER_TASKEND;
@@ -277,7 +286,7 @@ int TaskEnd(Scheduler_t *scheduler){
 }
 
 int SchedulerFinalise(AcapGraph_t *acapGraph){
-        INFO("\n");
+        //INFO("\n");
 	Scheduler_t *scheduler = acapGraph->scheduler;
 	TaskEnd(scheduler);
         pthread_join(scheduler->thread[0], NULL);
@@ -305,6 +314,23 @@ int SchedulerCompletion(AcapGraph_t *acapGraph){
                //if(queue_size(datamover->S2MMResponseQueue) > 0){
                 responseQueueBuffer = queue_dequeue(acapGraph->scheduler->ResponseQueue);
                 if(responseQueueBuffer->type == SCHEDULER_COMPLETION) break;
+                //}
+        }
+        return 0;
+}
+        
+int SchedulerStatus(AcapGraph_t *acapGraph){
+        //INFO("\n");
+        ScQueueBuffer_t *responseQueueBuffer, *commandBuff;
+        commandBuff = malloc(sizeof(ScQueueBuffer_t));
+        commandBuff->type = SCHEDULER_STATUS;
+        queue_enqueue(acapGraph->scheduler->CommandQueue, commandBuff);
+        while(1){
+        	//INFO("%d\n",queue_size(datamover->S2MMResponseQueue))
+               //if(queue_size(datamover->S2MMResponseQueue) > 0){
+                responseQueueBuffer = queue_dequeue(acapGraph->scheduler->ResponseQueue);
+                if(responseQueueBuffer->type == SCHEDULER_STATUS)
+			return responseQueueBuffer->busy;
                 //}
         }
         return 0;
