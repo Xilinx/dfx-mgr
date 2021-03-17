@@ -65,8 +65,9 @@ int SIHAInitAccel(int slot, char * accel){
 	//@@//slotNum[slot] = loadpdi(accel);
 	//listAccelerators();
 	//INFO("loading Accel: %s\n", accel);
-
+	INFO("######################### Before Load Accel ###################\n");
 	slotNum[slot] = load_accelerator(accel);
+	INFO("######################### After Load Accel ###################\n");
 	//INFO("loadded at slot: %d\n", slotNum[slot]);
 	//INFO("%s\n", accel);
 	//INFO("############ %d %d ###################\n", slot, slotNum[slot]);

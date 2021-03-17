@@ -101,3 +101,4 @@ extern Element_t *searchGraphById(Element_t** headElement, uint32_t id);
 extern int abstractGraphServerConfig(JobScheduler_t *scheduler, char* json, int len, int* fd);
 extern int abstractGraphServerFinalise(JobScheduler_t *scheduler, char* json);
 extern int reallocateIOBuffers(AbstractGraph_t *graph, int* fd, int fdcount);
+extern int appFinaliseIPBuffers(AbstractGraph_t *graph);

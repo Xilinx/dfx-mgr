@@ -91,6 +91,7 @@ void *jobScheduler_Task(void* carg){
 						//INFO("%d\n", abstractAccel->id);
 						switch(abstractAccel->type){
 							case HW_NODE:
+								INFO("#####################\n");
        								if(strcmp(abstractAccel->name, "FFT4")){
         							        strcpy(jsonfile, 
 										"/media/test/home/root/accel.json");
@@ -105,12 +106,13 @@ void *jobScheduler_Task(void* carg){
         							}
  								file2json(jsonfile, json);
         							json2meta(json, metadata);
-        							printMeta(metadata);
+        							//printMeta(metadata);
 								abstractAccel->node = acapAddAccelNode(currentGraph,
 									abstractAccel->name, metadata->DMA_type,
 									NULL, //metadata->fallback.lib,
                                                        			metadata->interRM.compatible, 
 									0); //SchedulerBypassFlag);
+								INFO("#####################\n");
  								break;
 							case IN_NODE:
 								abstractAccel->node = acapAddInputNode(currentGraph,

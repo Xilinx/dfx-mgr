@@ -77,8 +77,8 @@ int mapBuffer(int fd, int size, uint8_t** ptr){
 }
 int unmapBuffer(int fd, int size, uint8_t** ptr){
 	munmap(*ptr, size);
-	_unused(fd);
-	//close(fd);
+	*ptr = NULL;
+	close(fd);
 	return 0;
 }
 

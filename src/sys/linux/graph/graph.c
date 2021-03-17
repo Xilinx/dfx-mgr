@@ -25,7 +25,7 @@
 AccelNode_t* createAccelNode(char *name, int inDmaType, 
 				int outDmaType, FALLBACKFUNCTION fallbackfunction,
 				int InterRMCompatible, int SchedulerBypassFlag){
-	//INFO("\n"); 
+	INFO("\n"); 
 	AccelNode_t *nextAccel = (AccelNode_t *) malloc(sizeof(AccelNode_t));
 	strcpy(nextAccel->accel.name, name);
 	nextAccel->accel.inDmaType = inDmaType;
@@ -38,11 +38,12 @@ AccelNode_t* createAccelNode(char *name, int inDmaType,
 	nextAccel->currentTransactionIndex = 0;
 	nextAccel->head = NULL;
 	nextAccel->tail = NULL;
+	INFO("\n"); 
 	return nextAccel;
 }
 
 AccelNode_t* addAccelNode(AccelNode_t **accelNode, AccelNode_t *nextAccel){
-	//INFO("\n"); 
+	INFO("\n"); 
 	int index = -1;
 	AccelNode_t *accel = *accelNode;
 	if(accel != NULL){
@@ -87,7 +88,7 @@ AccelNode_t* addAccelNode(AccelNode_t **accelNode, AccelNode_t *nextAccel){
 	}
 
 	else if(nextAccel->accel.type == HW_NODE){
-		//INFO("%d, %s\n", nextAccel->accel.index, nextAccel->accel.name);
+		INFO("%d, %s\n", nextAccel->accel.index, nextAccel->accel.name);
 		int status = SIHAInitAccel(nextAccel->accel.index, nextAccel->accel.name);
 		if(status < 0){
 			nextAccel->accel.inHardware = 0;
@@ -101,7 +102,7 @@ AccelNode_t* addAccelNode(AccelNode_t **accelNode, AccelNode_t *nextAccel){
 		}
 		else{
 			nextAccel->accel.inHardware = 1;
-			//INFO("$$$\n");
+			INFO("$$$\n");
 			plDevices_t* pldevices = SIHAGetPLDevices();
 			nextAccel->accel.AccelConfig_fd = pldevices->AccelConfig_fd[nextAccel->accel.index];
 			nextAccel->accel.dma_hls_fd = pldevices->dma_hls_fd[nextAccel->accel.index];
@@ -123,7 +124,7 @@ AccelNode_t* addAccelNode(AccelNode_t **accelNode, AccelNode_t *nextAccel){
 }
 
 int delAccelNode(AccelNode_t** accelNode){
-	//INFO("\n"); 
+	INFO("\n"); 
 	AccelNode_t *tAccelNode = *accelNode;
 	AccelNode_t *headAccel = tAccelNode->head;
 	AccelNode_t *tailAccel = tAccelNode->tail;
@@ -153,6 +154,7 @@ int delAccelNode(AccelNode_t** accelNode){
 			sihahls_unregister(tAccelNode->accel.datamover);
 			free(tAccelNode->accel.datamover);
 			SIHAFinaliseAccel(tAccelNode->accel.index);
+			INFO("############\n");
 		}
 		else {
 			//TaskFinalise(tAccelNode->accel.datamover);

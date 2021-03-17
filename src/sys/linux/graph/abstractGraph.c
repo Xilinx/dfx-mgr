@@ -350,20 +350,44 @@ int abstractGraphFinalise(AbstractGraph_t *graph){
 	len = sprintf(json, "{\"id\": %d}", graph->id);
 	//INFO("%d %s\n", len, json);
         graphClientFinalise(graph->gs, json, len);
-	return 0;
-	printf("abstractGraphFinalise\n");
+	appFinaliseIPBuffers(graph);
+	//printf("abstractGraphFinalise\n");
+	
         while(graph->linkHead != NULL){
-		free((AbstractLink_t *)graph->linkHead->node);
-		delElement(&(graph->linkHead), graph->linkHead);
+                free((AbstractLink_t *)graph->linkHead->node);
+                graph->linkHead->node = NULL;
+                delElement(&(graph->linkHead), graph->linkHead);
         }
         while(graph->buffNodeHead != NULL){
-		free((AbstractBuffNode_t *)graph->buffNodeHead->node);
-		delElement(&(graph->buffNodeHead), graph->buffNodeHead);
+                free((AbstractBuffNode_t *)graph->buffNodeHead->node);
+                graph->buffNodeHead->node = NULL;
+                delElement(&(graph->buffNodeHead), graph->buffNodeHead);
         }
         while(graph->accelNodeHead != NULL){
-		free((AbstractAccelNode_t *)graph->accelNodeHead->node);
-		delElement(&(graph->accelNodeHead), graph->accelNodeHead);
+                free((AbstractAccelNode_t *)graph->accelNodeHead->node);
+                graph->accelNodeHead->node = NULL;
+                delElement(&(graph->accelNodeHead), graph->accelNodeHead);
         }
+        free(graph);
+	return 0;
+}
+
+int appFinaliseIPBuffers(AbstractGraph_t *graph){
+	Element_t *element	= graph->accelNodeHead;
+	while (element != NULL){
+		AbstractAccelNode_t *node = element->node;
+		if(node->type == IN_NODE || node->type == OUT_NODE){
+			char SemaphoreName[100];
+			memset(SemaphoreName, '\0', 100);
+			sprintf(SemaphoreName, "%d", node->semaphore);
+			unmapBuffer(node->fd, node->size, &node->ptr);
+			sem_close(node->semptr);
+			sem_unlink(SemaphoreName);
+			node->semptr = NULL;	
+		}
+		element = element->tail;
+
+	}
 	return 0;
 }
 
@@ -448,6 +472,12 @@ int deallocateIOBuffers(AbstractGraph_t *graph){
 	while (element != NULL){
 		AbstractAccelNode_t *node = element->node;
 		if(node->type == IN_NODE || node->type == OUT_NODE){
+			char SemaphoreName[100];
+			memset(SemaphoreName, '\0', 100);
+			sprintf(SemaphoreName, "%d", node->semaphore);
+			sem_close(node->semptr);
+			sem_unlink(SemaphoreName);
+                        unmapBuffer(node->fd, node->size, &node->ptr);
 			status = xrt_deallocateBuffer(graph->xrt_fd, node->handle);
       			if(status < 0){
 				printf( "error @ config deallocation\n");
@@ -473,6 +503,7 @@ int abstractGraphServerConfig(JobScheduler_t *scheduler, char* json, int len, in
 		INFO("Error Occured !!");
 		return 1;
 	}
+	INFO("\n");
 	graph->state = AGRAPH_INIT;	
 	abstractGraph2Json(graph, json2);
 	fdcnt = allocateIOBuffers(graph, fd);
