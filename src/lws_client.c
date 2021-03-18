@@ -192,17 +192,17 @@ int removepdi(char* argvalue, fds_t *fds)
 	return exchangeCommand("-remove", argvalue);
 }
 
-int getFD(char* argvalue)
+int clientFD(char* argvalue)
 {
 	return exchangeCommand("-getFD", argvalue);
 }
 
-int getShellFD()
+int clientShellFD()
 {
 	return exchangeCommand("-getShellFD", "");
 }
 
-int getClockFD()
+int clientClockFD()
 {
 	return exchangeCommand("-getClockFD", "");
 }
