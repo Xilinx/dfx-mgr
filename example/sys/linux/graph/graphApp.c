@@ -382,8 +382,8 @@ int case6(){
 		accelNode0->ptr[i] = i;
 	}
         sem_post(accelNode0->semptr);
-	//sem_wait(accelNode4->semptr);
-	sleep(5);
+	sem_wait(accelNode4->semptr);
+	//sleep(5);
 	printhex((uint32_t*)accelNode0->ptr, 0x50);
 	printhex((uint32_t*)accelNode4->ptr, 0x50);
         //graphFinalise(acapGraph);

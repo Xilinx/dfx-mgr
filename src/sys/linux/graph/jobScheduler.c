@@ -130,7 +130,7 @@ void *jobScheduler_Task(void* carg){
 						}
 						accelElement = accelElement->tail;
 					}
-					/*Element_t* buffElement = graph->buffNodeHead;
+					Element_t* buffElement = graph->buffNodeHead;
 					while(buffElement != NULL){
 						AbstractBuffNode_t *abstractBuff =
 							(AbstractBuffNode_t *) buffElement->node;	
@@ -171,9 +171,9 @@ void *jobScheduler_Task(void* carg){
 									abstractLink->channel);
 						}
 						linkElement = linkElement->tail;
-					}*/
-					//acapGraphConfig(currentGraph);
-        				//acapGraphSchedule(currentGraph);
+					}
+					acapGraphConfig(currentGraph);
+        				acapGraphSchedule(currentGraph);
 					acapGraphFinalise(currentGraph);
 					currentGraph = NULL;
 					graph->state = AGRAPH_INIT;

@@ -282,6 +282,7 @@ int abstractGraph2Json(AbstractGraph_t *graph, char* json){
 	int len = 0;
         uint32_t id = graph->id;
         uint8_t type = graph->type;
+	INFO("\n");
         Element_t *accelNodeHead = graph->accelNodeHead, *accelNode;
         Element_t *buffNodeHead = graph->buffNodeHead, *buffNode;
         Element_t *linkHead = graph->linkHead, *link;
@@ -332,6 +333,7 @@ int abstractGraphConfig(AbstractGraph_t *graph){
 	//INFO("\n");
 	len = abstractGraph2Json(graph, json);
         graphClientInit(graph->gs);
+	INFO("%s\n", json);
 //	INFO("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
         graphClientSubmit(graph->gs, json, len, fd, &fdcount);
 	//for(int i = 0; i < fdcount; i++){
@@ -561,5 +563,17 @@ int abstractGraphServerFinalise(JobScheduler_t *scheduler, char* json){
 	free(graph);
 	graph = NULL;
 	delElement(&(scheduler->graphList), graphNode);
+	return 0;
+}
+
+int Data2IO(AbstractAccelNode_t *node, uint8_t *ptr, int size){
+	memcpy(node->ptr, ptr, size);
+        sem_post(node->semptr);
+	return 0;
+}
+
+int IO2Data(AbstractAccelNode_t *node, uint8_t *ptr, int size){
+        sem_wait(node->semptr);
+	memcpy(ptr, node->ptr, size);
 	return 0;
 }
