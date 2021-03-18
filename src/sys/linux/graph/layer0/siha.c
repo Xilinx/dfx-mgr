@@ -16,13 +16,14 @@
 #include "dm.h"
 #include "shellDriver.h"
 #include <stdio.h>
-#include "dfx-mgrd.h"
+//#include "dfx-mgrd.h"
 #include "siha.h"
 #include "utils.h"
 #include "debug.h"
 #include "xrtbuffer.h"
 #include "uio.h"
 #include <dfx-mgr/print.h>
+#include <dfx-mgr/daemon_helper.h>
 //#include "acapd/acapdwebsoc.h"
 
 static plDevices_t* pldevices=NULL; 

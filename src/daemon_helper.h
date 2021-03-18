@@ -17,18 +17,20 @@ extern "C" {
 
 #define WATCH_PATH_LEN 256
 #define MAX_WATCH 50
-static int socket_d;
+//static int socket_d;
 
 int load_accelerator(const char *accel_name);
 void remove_accelerator(int slot);
 void allocBuffer(uint64_t size);
 void freeBuff(uint64_t pa);
 void getFDs(int slot);
+int dfx_getFDs(int slot, int *fd);
 void getShellFD(int slot);
 void getClockFD(int slot);
 void listAccelerators();
 void getRMInfo();
 void *threadFunc();
+int dfx_init();
 #ifdef __cplusplus
 }
 #endif

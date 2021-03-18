@@ -27,6 +27,7 @@
 
 #define SERVER_PATH     "/tmp/dfx-mgrd_socket"
 
+static int socket_d;
 static int interrupted;;
 
 struct pss {
@@ -215,8 +216,8 @@ void socket_fd_setup()
         acapd_perror("%s socket listen() failed\n",__func__);
         //return ACAPD_ACCEL_FAILURE;
     }
-    printf("Server started %s ready for client connect.\n",
-                                    __func__,SERVER_PATH);
+    printf("%s Server started %s ready for client connect.\n",
+                                    __func__, SERVER_PATH);
 }
 
 int main(int argc, const char **argv)
