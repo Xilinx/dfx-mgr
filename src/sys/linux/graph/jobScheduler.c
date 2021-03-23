@@ -49,7 +49,7 @@ void *jobScheduler_Task(void* carg){
                         commandQueueBuffer = queue_dequeue(commandQueue);
                         switch (commandQueueBuffer->type){
                                 case GRAPH_SUBMIT:
-                                        //INFO("processing GRAPH_SUBMIT\n");
+                                        INFO("processing GRAPH_SUBMIT\n");
         				graphList = scheduler->graphList;
 					graphElement = searchGraphById(&graphList, commandQueueBuffer->id);
         				graph = (AbstractGraph_t *)(graphElement->node);
@@ -60,15 +60,15 @@ void *jobScheduler_Task(void* carg){
                                         queue_enqueue(responseQueue, responseQueueBuffer);
                                         break;
                                 case GRAPH_FINISH:
-                                        //INFO("processing GRAPH_FINISH\n");
-				//	graphElement = searchGraphById(&graphList, commandQueueBuffer->id);
-        			//	graph = (AbstractGraph_t *)(graphElement->node);
+                                        INFO("processing GRAPH_FINISH\n");
+					graphElement = searchGraphById(&graphList, commandQueueBuffer->id);
+        				graph = (AbstractGraph_t *)(graphElement->node);
 				//	graph->state = AGRAPH_SCHEDULED;
 				//	INFO("AGRAPH_SCHEDULED");
-                                  //      responseQueueBuffer = malloc(sizeof(JobQueueBuffer_t));
-                                //        responseQueueBuffer->type = GRAPH_SUBMIT_FINISH;
-                                 //       queue_enqueue(responseQueue, responseQueueBuffer);
-                                //        break;
+                                        responseQueueBuffer = malloc(sizeof(JobQueueBuffer_t));
+                                        responseQueueBuffer->type = GRAPH_FINISH_DONE;
+                                        queue_enqueue(responseQueue, responseQueueBuffer);
+                                        break;
                                 default:
                                         break;
                         }
@@ -78,117 +78,116 @@ void *jobScheduler_Task(void* carg){
 			graphElement = graphList;
 			while(graphElement){
         			graph = (AbstractGraph_t *)(graphElement->node);
-				switch (graph->state){
-				case AGRAPH_SCHEDULED:
-					if(currentGraph != NULL){ 
-						break;
-					}
-					currentGraph = acapGraphInit();
-					//INFO("no of accelerators in this graph are: %d\n", graph->accelCount);
-					Element_t* accelElement = graph->accelNodeHead;
-					while(accelElement != NULL){
-						AbstractAccelNode_t *abstractAccel =
-							(AbstractAccelNode_t *) accelElement->node;	
-						//INFO("%d\n", abstractAccel->id);
-						switch(abstractAccel->type){
-							case HW_NODE:
-								INFO("#####################\n");
-       								if(strcmp(abstractAccel->name, "FFT4")){
-        							        strcpy(jsonfile, 
-										"/media/test/home/root/accel.json");
-        							}
-       								else if(strcmp(abstractAccel->name, "aes128encdec")){
-                							strcpy(jsonfile, 
-										"/media/test/home/root/accel.json");
-        							}
-        							else if(strcmp(abstractAccel->name, "fir_compiler")){
-             								strcpy(jsonfile, 
-										"/media/test/home/root/accel.json");
-        							}
- 								file2json(jsonfile, json);
-        							json2meta(json, metadata);
-        							//printMeta(metadata);
-								abstractAccel->node = acapAddAccelNode(currentGraph,
-									abstractAccel->name, metadata->DMA_type,
-									NULL, //metadata->fallback.lib,
-                                                       			metadata->interRM.compatible, 
-									0); //SchedulerBypassFlag);
-								INFO("#####################\n");
- 								break;
-							case IN_NODE:
-								abstractAccel->node = acapAddInputNode(currentGraph,
-									abstractAccel->ptr, abstractAccel->size,
-									0, abstractAccel->semptr); //SchedulerBypassFlag); 
-								break;
-							case OUT_NODE: 
-								abstractAccel->node = acapAddOutputNode(currentGraph,
-									abstractAccel->ptr, abstractAccel->size,
-									0, abstractAccel->semptr); //SchedulerBypassFlag); 
-								abstractAccel->node->accel.semptr = abstractAccel->semptr;
-								break;
-							
+				if (graph != NULL){
+					switch (graph->state){
+					case AGRAPH_SCHEDULED:
+						if(currentGraph != NULL){ 
+							break;
 						}
-						accelElement = accelElement->tail;
-					}
-					Element_t* buffElement = graph->buffNodeHead;
-					while(buffElement != NULL){
-						AbstractBuffNode_t *abstractBuff =
-							(AbstractBuffNode_t *) buffElement->node;	
-						//INFO("%d\n", abstractBuff->id);
-						//INFO("####################### Assign Buffers\n");
-						abstractBuff->node = acapAddBuffNode(currentGraph, 
+						currentGraph = acapGraphInit();
+						//INFO("no of accelerators in this graph are: %d\n", graph->accelCount);
+						Element_t* accelElement = graph->accelNodeHead;
+						while(accelElement != NULL){
+							AbstractAccelNode_t *abstractAccel =
+								(AbstractAccelNode_t *) accelElement->node;	
+							//INFO("%d\n", abstractAccel->id);
+							switch(abstractAccel->type){
+								case HW_NODE:
+									//INFO("#####################\n");
+	       								if(strcmp(abstractAccel->name, "FFT4")){
+        								        strcpy(jsonfile, 
+											"/media/test/home/root/accel.json");
+        								}
+       									else if(strcmp(abstractAccel->name, "aes128encdec")){
+                								strcpy(jsonfile, 
+											"/media/test/home/root/accel.json");
+	        							}
+        								else if(strcmp(abstractAccel->name, "fir_compiler")){
+             									strcpy(jsonfile, 
+										"/media/test/home/root/accel.json");
+        								}
+ 									file2json(jsonfile, json);
+        								json2meta(json, metadata);
+        								//printMeta(metadata);
+									abstractAccel->node = acapAddAccelNode(currentGraph,
+										abstractAccel->name, metadata->DMA_type,
+										NULL, //metadata->fallback.lib,
+                                                	       			metadata->interRM.compatible, 
+										0); //SchedulerBypassFlag);
+									//INFO("#####################\n");
+ 									break;
+								case IN_NODE:
+									abstractAccel->node = acapAddInputNode(currentGraph,
+										abstractAccel->ptr, abstractAccel->size,
+										0, abstractAccel->semptr); //SchedulerBypassFlag); 
+									break;
+								case OUT_NODE: 
+									abstractAccel->node = acapAddOutputNode(currentGraph,
+										abstractAccel->ptr, abstractAccel->size,
+										0, abstractAccel->semptr); //SchedulerBypassFlag); 
+									//abstractAccel->node->accel.semptr = abstractAccel->semptr;
+									break;
+							
+							}
+							accelElement = accelElement->tail;
+						}
+						Element_t* buffElement = graph->buffNodeHead;
+						while(buffElement != NULL){
+							AbstractBuffNode_t *abstractBuff =
+								(AbstractBuffNode_t *) buffElement->node;	
+							//INFO("%d\n", abstractBuff->id);
+							//INFO("####################### Assign Buffers\n");
+							abstractBuff->node = acapAddBuffNode(currentGraph, 
 											abstractBuff->size, 
 											abstractBuff->name, 
 											abstractBuff->type);
-						buffElement = buffElement->tail;
-					}
-					Element_t* linkElement = graph->linkHead;
-					while(linkElement != NULL){
-						AbstractLink_t *abstractLink =
-							(AbstractLink_t *) linkElement->node;	
-						//INFO("%d\n", abstractLink->id);
-						//INFO("%d\n", abstractLink->transactionIndex);
-						//INFO("####################### Assign Links\n");
-						//INFO("%p\n", abstractLink->accelNode);
-						//INFO("%p\n", abstractLink->buffNode);
-						//INFO("%s\n", abstractLink->accelNode->name);
-						if(abstractLink->type){
-							 abstractLink->node = acapAddOutputBuffer(currentGraph, 
-									abstractLink->accelNode->node, 
-									abstractLink->buffNode->node, 
-									abstractLink->offset, 
-									abstractLink->transactionSize, 
-									abstractLink->transactionIndex, 
-									abstractLink->channel);
+							buffElement = buffElement->tail;
 						}
-						else{
-							 abstractLink->node = acapAddInputBuffer(currentGraph, 
-									abstractLink->accelNode->node, 
-									abstractLink->buffNode->node, 
-									abstractLink->offset, 
-									abstractLink->transactionSize, 
-									abstractLink->transactionIndex, 
-									abstractLink->channel);
+						Element_t* linkElement = graph->linkHead;
+						while(linkElement != NULL){
+							AbstractLink_t *abstractLink =
+								(AbstractLink_t *) linkElement->node;	
+							if(abstractLink->type){
+								 abstractLink->node = acapAddOutputBuffer(currentGraph, 
+										abstractLink->accelNode->node, 
+										abstractLink->buffNode->node, 
+										abstractLink->offset, 
+										abstractLink->transactionSize, 
+										abstractLink->transactionIndex, 
+										abstractLink->channel);
+							}	
+							else{
+								 abstractLink->node = acapAddInputBuffer(currentGraph, 
+										abstractLink->accelNode->node, 
+										abstractLink->buffNode->node, 
+										abstractLink->offset, 
+										abstractLink->transactionSize, 
+										abstractLink->transactionIndex, 
+										abstractLink->channel);
+							}
+							linkElement = linkElement->tail;
 						}
-						linkElement = linkElement->tail;
-					}
-					acapGraphConfig(currentGraph);
-        				acapGraphSchedule(currentGraph);
-					acapGraphFinalise(currentGraph);
-					currentGraph = NULL;
-					graph->state = AGRAPH_INIT;
-					break;
-				/*case AGRAPH_EXECUTING:
-					if(currentGraph != NULL){
+						acapGraphConfig(currentGraph);
+						acapGraphToJson(currentGraph);
+        					acapGraphSchedule(currentGraph);
+						//INFO("#### @0 acapGraphFinalise #####\n");
 						acapGraphFinalise(currentGraph);
-						graph->state = AGRAPH_INIT;	
+						//INFO("#### @1 acapGraphFinalise #####\n");
+						currentGraph = NULL;
+						graph->state = AGRAPH_INIT;
+						break;
+					/*case AGRAPH_EXECUTING:
+						if(currentGraph != NULL){
+							acapGraphFinalise(currentGraph);
+							graph->state = AGRAPH_INIT;	
+						}
+						break;
+					}*/
+					case AGRAPH_INIT:
+						break;
 					}
-					break;
-				}*/
-				case AGRAPH_INIT:
-					break;
+					graphElement = graphElement->tail;				
 				}
-				graphElement = graphElement->tail;				
 			}
 		}
 	
@@ -233,15 +232,15 @@ int jobSchedulerRemove(JobScheduler_t *scheduler, Element_t *graphElement){
         AbstractGraph_t *graph = (AbstractGraph_t *)(graphElement->node);
 	_unused(graph);
 	_unused(scheduler);
-        /*INFO("Submitting Graph with ID: %d\n", graph->id);
+        //INFO("Submitting Graph with ID: %d\n", graph->id);
         JobQueueBuffer_t *commandBuff, *responseBuff;
         commandBuff = malloc(sizeof(JobQueueBuffer_t));
-        commandBuff->type = GRAPH_SUBMIT;
+        commandBuff->type = GRAPH_FINISH;
         commandBuff->id = graph->id;
         queue_enqueue(scheduler->CommandQueue, commandBuff);
 	while(1){
                 responseBuff = (JobQueueBuffer_t *)queue_dequeue(scheduler->ResponseQueue);
-                if(responseBuff->type == GRAPH_SUBMIT_DONE) break;
-        }*/
+                if(responseBuff->type == GRAPH_FINISH_DONE) break;
+        }
         return 0;
 }

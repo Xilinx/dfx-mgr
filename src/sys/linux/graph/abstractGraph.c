@@ -282,7 +282,7 @@ int abstractGraph2Json(AbstractGraph_t *graph, char* json){
 	int len = 0;
         uint32_t id = graph->id;
         uint8_t type = graph->type;
-	INFO("\n");
+	//INFO("\n");
         Element_t *accelNodeHead = graph->accelNodeHead, *accelNode;
         Element_t *buffNodeHead = graph->buffNodeHead, *buffNode;
         Element_t *linkHead = graph->linkHead, *link;
@@ -329,13 +329,21 @@ int abstractGraphConfig(AbstractGraph_t *graph){
 	int len;
 	int fd[25];
 	int fdcount = 0;
+	int status;
 	graph->gs = malloc(sizeof(graphSocket_t));	
 	//INFO("\n");
 	len = abstractGraph2Json(graph, json);
-        graphClientInit(graph->gs);
-	INFO("%s\n", json);
+        status = graphClientInit(graph->gs);
+	if(status < 0){
+		return -1;
+	}
+	//INFO("\n");
 //	INFO("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
-        graphClientSubmit(graph->gs, json, len, fd, &fdcount);
+        status = graphClientSubmit(graph->gs, json, len, fd, &fdcount);
+	if (status < 0){
+		return -1;
+	}
+	//INFO("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n");
 	//for(int i = 0; i < fdcount; i++){
 	//	INFO("%d\n",fd[i]);
 	//}
@@ -382,10 +390,11 @@ int appFinaliseIPBuffers(AbstractGraph_t *graph){
 			char SemaphoreName[100];
 			memset(SemaphoreName, '\0', 100);
 			sprintf(SemaphoreName, "%d", node->semaphore);
-			unmapBuffer(node->fd, node->size, &node->ptr);
 			sem_close(node->semptr);
 			sem_unlink(SemaphoreName);
 			node->semptr = NULL;	
+			//INFO("unmapBuffer fd : %d size: %d ptr: %p\n", node->fd, node->size, &node->ptr);
+			unmapBuffer(node->fd, node->size, &node->ptr);
 		}
 		element = element->tail;
 
@@ -479,6 +488,8 @@ int deallocateIOBuffers(AbstractGraph_t *graph){
 			sprintf(SemaphoreName, "%d", node->semaphore);
 			sem_close(node->semptr);
 			sem_unlink(SemaphoreName);
+			node->semptr = NULL;	
+		//	INFO("unmapBuffer fd : %d size: %d ptr: %p\n", node->fd, node->size, &node->ptr);
                         unmapBuffer(node->fd, node->size, &node->ptr);
 			status = xrt_deallocateBuffer(graph->xrt_fd, node->handle);
       			if(status < 0){
@@ -497,7 +508,8 @@ int abstractGraphServerConfig(JobScheduler_t *scheduler, char* json, int len, in
 	_unused(len);
 	int status;
 	int fdcnt;
-	INFO("%p\n", scheduler->graphList);
+	//INFO("%s\n", json);
+	//INFO("%p\n", scheduler->graphList);
 	AbstractGraph_t *graph = malloc(sizeof(AbstractGraph_t));
         Element_t* element = (Element_t *) malloc(sizeof(Element_t));
 	status = graphParser(json, &graph);
@@ -505,7 +517,7 @@ int abstractGraphServerConfig(JobScheduler_t *scheduler, char* json, int len, in
 		INFO("Error Occured !!");
 		return 1;
 	}
-	INFO("\n");
+	//INFO("\n");
 	graph->state = AGRAPH_INIT;	
 	abstractGraph2Json(graph, json2);
 	fdcnt = allocateIOBuffers(graph, fd);

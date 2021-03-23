@@ -20,13 +20,21 @@
 #include <dfx-mgr/sys/linux/graph/jobScheduler.h>
 #include <dfx-mgr/sys/linux/graph/abstractGraph.h>
 #include <dfx-mgr/sys/linux/graph/layer0/debug.h>
+#include <signal.h>
 
+static volatile int interrupted = 0;
+
+void intHandler(int dummy) {
+	_unused(dummy);
+	INFO("ctrl+c ... \n");
+	interrupted = 1;
+	exit(0);
+}
 
 #define MAX_CLIENTS 200
 
-struct element *tail;
 
-struct message recv_message, send_message;
+//struct message recv_message, send_message;
 
 void error (char *msg)
 {
@@ -37,11 +45,12 @@ void error (char *msg)
 
 int main (int argc, char **argv)
 {
+	struct message recv_message, send_message;
 	ssize_t size;
+	signal(SIGINT, intHandler);
 	_unused(argc);
 	_unused(argv);
 	// initialize the complaint queue
-	tail = NULL;
 	JobScheduler_t *scheduler = jobSchedulerInit();
 
 	// create a unix domain socket, GRAPH_SOCKET
@@ -85,8 +94,10 @@ int main (int argc, char **argv)
         
 		// Some sockets are ready. Examine readfds
 		for (int fd = 0; fd < (fdmax + 1); fd++) {
+			//INFO("!!!!\n");
 			if (FD_ISSET (fd, &readfds)) {  // fd is ready for reading 
 				if (fd == listener) {  // request for new connection
+					//INFO("!!!!\n");
 					int fd_new;
 					if ((fd_new = accept (listener, NULL, NULL)) == -1)
 						error ("accept");
@@ -98,6 +109,7 @@ int main (int argc, char **argv)
 				}
 				else  // data from an existing connection, receive it
 				{
+					//INFO("!!!!\n");
 					memset (&recv_message, '\0', sizeof (struct message));
 					ssize_t numbytes = read (fd, &recv_message, sizeof (struct message));
 					if (numbytes == -1)
@@ -117,15 +129,16 @@ int main (int argc, char **argv)
 
 							case GRAPH_INIT:
 								INFO("### GRAPH INIT ###\n");
-								//printf ("recieved %s\n", recv_message.data);
+								printf ("recieved %s\n", recv_message.data);
 								int buff_fd[25];
-								int buff_fd_cnt = abstractGraphServerConfig(scheduler, 
+								int buff_fd_cnt = 0;
+								buff_fd_cnt = abstractGraphServerConfig(scheduler, 
 									recv_message.data, recv_message.size, buff_fd);
 
-								//INFO("%d\n", buff_fd_cnt);
-								for (int i = 0; i < buff_fd_cnt; i++){
-									INFO("%d\n", buff_fd[i]);
-								}
+								INFO("%d\n", buff_fd_cnt);
+							//	for (int i = 0; i < buff_fd_cnt; i++){
+							//		INFO("%d\n", buff_fd[i]);
+							//	}
 								send_message.id = GRAPH_INIT_DONE;
 								send_message.fdcount = buff_fd_cnt;
 								send_message.size = 0;
