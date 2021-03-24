@@ -104,7 +104,7 @@ void *jobScheduler_Task(void* carg){
 	        							}
         								else if(strcmp(abstractAccel->name, "fir_compiler")){
              									strcpy(jsonfile, 
-										"/media/test/home/root/accel.json");
+											"/media/test/home/root/accel.json");
         								}
  									file2json(jsonfile, json);
         								json2meta(json, metadata);
@@ -170,9 +170,7 @@ void *jobScheduler_Task(void* carg){
 						acapGraphConfig(currentGraph);
 						acapGraphToJson(currentGraph);
         					acapGraphSchedule(currentGraph);
-						//INFO("#### @0 acapGraphFinalise #####\n");
 						acapGraphFinalise(currentGraph);
-						//INFO("#### @1 acapGraphFinalise #####\n");
 						currentGraph = NULL;
 						graph->state = AGRAPH_INIT;
 						break;

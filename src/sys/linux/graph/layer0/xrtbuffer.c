@@ -32,12 +32,6 @@ int xrt_allocateBuffer(int drm_fd, int size, int* handle, uint8_t** ptr, unsigne
 		return result;
 	}
 
-	//struct drm_prime_handle mm2s_h = {mm2s.handle, DRM_RDWR, -1};
-	//result = ioctl(drm_fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &mm2s_h);
-	//if (result) {
-	//		acapd_perror("%s MM2S DRM_IOCTL_PRIME_HANDLE_TO_FD failed\n",__func__);
-	//}	
-
 	struct drm_zocl_map_bo mapInfo1 = {info1.handle, 0, 0};
 	result = ioctl(drm_fd, DRM_IOCTL_ZOCL_MAP_BO, &mapInfo1);
 	if(result < 0){
@@ -48,25 +42,29 @@ int xrt_allocateBuffer(int drm_fd, int size, int* handle, uint8_t** ptr, unsigne
 	*ptr = mmap(0, info1.size, PROT_READ | PROT_WRITE, MAP_SHARED, drm_fd, mapInfo1.offset);
 	*paddr = infoInfo1.paddr;
 	printf("%lx\n", infoInfo1.paddr);
-
+	
 	struct drm_prime_handle bo_h = {info1.handle, DRM_RDWR, -1};
 	if (ioctl(drm_fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &bo_h) < 0) {
-		//acapd_perror("%s:DRM_IOCTL_PRIME_HANDLE_TO_FD failed: %s\n",
-                //                                 __func__,strerror(errno));
+		printf("%s:DRM_IOCTL_PRIME_HANDLE_TO_FD failed:\n",
+                                                 __func__);
 		return -1;
 	}
+	INFO("\n");
 
 	*fd = bo_h.fd;
 	return 0;
 }
 
-int xrt_deallocateBuffer(int drm_fd, int handle){
-        struct drm_gem_close closeInfo = {handle, 0};
+int xrt_deallocateBuffer(int drm_fd, int *handle){
+        struct drm_gem_close closeInfo = {0, 0};
+	closeInfo.handle = *handle;
         int result = ioctl(drm_fd, DRM_IOCTL_GEM_CLOSE, &closeInfo);
         if(result < 0){
                 printf( "error @ close handle\n");
                 return result;
         }
+	*handle = -1;
+	INFO("%d\n", result);
         return 0;
 }
 

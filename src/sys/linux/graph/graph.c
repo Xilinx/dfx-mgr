@@ -255,7 +255,7 @@ BuffNode_t* addBuffNode(BuffNode_t** buffNode, BuffNode_t* nextBuff){
 	return nextBuff;
 }
 
-int delBuffNode(BuffNode_t** buffNode){
+int delBuffNode(BuffNode_t** buffNode, int drm_fd){
 	//INFO("\n"); 
 	BuffNode_t *tBuffNode = *buffNode;
 	BuffNode_t *headBuff = tBuffNode->head;
@@ -268,6 +268,14 @@ int delBuffNode(BuffNode_t** buffNode){
 	}
 	if(tailBuff != NULL){
 		tailBuff->head = headBuff;
+	}
+	if(tBuffNode->buffer.handle){
+		INFO("deallocate Buffer handle: %d\n", tBuffNode->buffer.handle);
+		close(tBuffNode->buffer.fd);
+		tBuffNode->buffer.ptr = NULL;
+		tBuffNode->buffer.phyAddr = 0;
+		tBuffNode->buffer.size = 0;
+		xrt_deallocateBuffer(drm_fd, &tBuffNode->buffer.handle);	
 	}
 	free(tBuffNode);
 	return 0;
@@ -524,9 +532,10 @@ Link_t* addOutputBuffer(AccelNode_t *accelNode, BuffNode_t *buffNode,
 int updateBuffers(AcapGraph_t* graph, Link_t* linkHead){
 	Link_t* link = linkHead;
 	Buffers_t* buffers = SIHAGetBuffers();
-	//INFO("%p\n", buffers);
+	INFO("%p\n", buffers);
 	if (link != NULL){
 		if(link->buffNode->buffer.type == PL_BASED && link->buffNode->buffer.InterRMCompatible == 2){
+			INFO("Buffer Type PL_BASED and InterRMCompatible is enabled\n");
 		}
 		else if(buffers != NULL && link->type == 0 && link->buffNode->buffer.fd == 0 && link->accelNode->accel.inHardware){
 			//INFO("%s %d %p\n", link->accelNode->accel.name, link->accelNode->accel.index, link->tail);
@@ -555,10 +564,10 @@ int updateBuffers(AcapGraph_t* graph, Link_t* linkHead){
 		}
 		else if(buffers == NULL){
 			//INFO("%p\n", buffers);
-			int tmpfd;
+			//int tmpfd;
 			xrt_allocateBuffer(graph->drmfd, link->buffNode->buffer.size, 
 				&link->buffNode->buffer.handle, &link->buffNode->buffer.ptr, 
-				&link->buffNode->buffer.phyAddr, &tmpfd);
+				&link->buffNode->buffer.phyAddr, &link->buffNode->buffer.fd);
 		}
 		if(link->tail != NULL){
 			updateBuffers(graph, link->tail);
@@ -912,7 +921,7 @@ int acapGraphFinalise(AcapGraph_t *acapGraph){
 	}
 	acapGraph->linkHead = NULL; 
 	while(acapGraph->buffNodeHead != NULL){
-		delBuffNode(&(acapGraph->buffNodeHead));
+		delBuffNode(&(acapGraph->buffNodeHead), acapGraph->drmfd);
 	}
 	acapGraph->buffNodeHead = NULL; 
 	while(acapGraph->accelNodeHead != NULL){

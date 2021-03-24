@@ -12,7 +12,7 @@
 #include "layer0/queue.h"
 #include "graph.h"
 #include "scheduler.h"
-int printTransaction(Schedule_t *schedule){
+int printTransaction(Schedule_t *schedule, char* message){
 	if(schedule){
 		int dependent = schedule->dependency->linkCount;
 		AccelNode_t *accelNode = schedule->dependency->link->accelNode;
@@ -47,7 +47,7 @@ int printTransaction(Schedule_t *schedule){
 				dbuffNode->status,
 				interRMCompatible);
 		}
-		INFOP("\n");
+		INFOP(" %s\n", message);
 	}
 	return 0;
 }
@@ -94,7 +94,6 @@ void *scheduler_Task(void* carg){
                         }
                 }
                 if(enableScheduler){
-			//INFO("/\\/\\/\\/\\/\\/\\/\\/\\/")
 			Schedule_t *schedule = acapGraph->scheduleHead;
 			if(schedule != NULL){
             			while(1){
@@ -133,8 +132,7 @@ void *scheduler_Task(void* carg){
 							accelNode->S2MMStatus = 1;
 							buffNode->status = 1;
 							schedule->status = 1;
-							//printTransaction(schedule);
-							//INFO("Transaction Scheduled \n");
+							printTransaction(schedule, "Transaction Scheduled");
 							break;
 						}
 						else if(schedule->status == 1 && 
@@ -153,8 +151,7 @@ void *scheduler_Task(void* carg){
 								schedule->size,
 								schedule->first
 							); 
-							//printTransaction(schedule);
-							//INFO("Transaction Triggered #\n");
+							printTransaction(schedule, "Transaction Triggered");
 						}
 						else if(schedule->status == 1 &&
 							buffNode->status == 2 &&
@@ -170,8 +167,7 @@ void *scheduler_Task(void* carg){
 								buffNode->status = 3;
 								accelNode->S2MMStatus = 0;
 								accelNode->currentTransactionIndex = 0; 
-								//printTransaction(schedule);
-								//INFO("Transaction Done \n");
+								printTransaction(schedule, "Transaction Done");
 								delSchedule(&schedule, &(acapGraph->scheduleHead));
 								continue;
 							}
@@ -194,8 +190,7 @@ void *scheduler_Task(void* carg){
 							){
 							accelNode->MM2SStatus = 1;
 							schedule->status = 1;
-							//printTransaction(schedule);
-							//INFO("Transaction Scheduled \n");
+							printTransaction(schedule, "Transaction Scheduled");
 							break;
 						}
 						else if(schedule->status == 1 && 
@@ -216,8 +211,7 @@ void *scheduler_Task(void* carg){
 								schedule->last,
 								schedule->dependency->link->channel
 							); 
-							//printTransaction(schedule);
-							//INFO("Transaction Triggered #\n");
+							printTransaction(schedule, "Transaction Triggered");
 						}
 						else if(schedule->status == 1 && 
 							(buffNode->status == 3) &&
@@ -237,8 +231,7 @@ void *scheduler_Task(void* carg){
 								}
 								accelNode->MM2SStatus = 0;
 								accelNode->currentTransactionIndex = 0; 
-								//printTransaction(schedule);
-								//INFO("Transaction Done \n");
+								printTransaction(schedule, "Transaction Done");
 								delSchedule(&schedule, &(acapGraph->scheduleHead));
 								continue;
 							}

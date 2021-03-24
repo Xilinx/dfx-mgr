@@ -218,6 +218,8 @@ int sihahls_S2MMDone(void* dmconfig_a, Buffer_t* data){
 	int status, res;
 	status = *(uint32_t*)(uint32_t*)(dmconfig->s2mm_APCR);
 	res = ((status >> AP_DONE) | (status >> AP_IDLE)) & 0x1;
+	//INFO("%x, %x\n", res, status);
+	//INFO("\n");
 	if(res){
 		data->writeStatus += 1;
 	}
@@ -229,6 +231,7 @@ int sihahls_MM2SDone(void* dmconfig_a, Buffer_t* data){
 	int status, res;
 	status = *(uint32_t*)(uint32_t*)(dmconfig->mm2s_APCR);
 	res = ((status >> AP_DONE) | (status >> AP_IDLE)) & 0x1;
+	//INFO("%x, %x\n", res, status);
 	if(res){
 		data->readStatus += 1;
 	        if(data->readStatus == 2*data->readerCount){

@@ -14,6 +14,7 @@
 //#include "metadata.h"
 #include <dfx-mgr/sys/linux/graph/graph.h>
 #include <dfx-mgr/sys/linux/graph/abstractGraph.h>
+#include <fcntl.h>
 
 uint32_t buff[] = {
 	0xcca5a729, 0x4b276e90, 0x9a57a7e7, 0xd0bfe1c7,
@@ -79,8 +80,11 @@ int case0(){
 	for(int i=0; i < 1024; i++){
 		accelNode0->ptr[i] = i;
 	}
-	printhex((uint32_t*)accelNode0->ptr, 0x50);
-	printhex((uint32_t*)accelNode1->ptr, 0x50);
+        sem_post(accelNode0->semptr);
+	sem_wait(accelNode1->semptr);
+	
+	//printhex((uint32_t*)accelNode0->ptr, 0x50);
+	//printhex((uint32_t*)accelNode1->ptr, 0x50);
 								
 	abstractGraphFinalise(acapGraph);
 	return 0;
@@ -152,58 +156,61 @@ int case2(){
 	abstractGraphFinalise(acapGraph);
 	return 0;
 }
-/*
+
 int case3(){
-	INFO("TEST2: \n");
-	uint8_t *p0 = (uint8_t*) malloc(32*1024*1024);
-	uint8_t *p1 = (uint8_t*) malloc(32*1024*1024);
-	uint8_t *p2 = (uint8_t*) malloc(32*1024*1024);
-
-	AcapGraph_t *acapGraph = acapGraphInit();
-        AccelNode_t *accelNode0 = acapAddInputNode(acapGraph, p0, 32*1024*1024, ENABLE_SCHEDULER);
-        AccelNode_t *accelNode1 = acapAddAccelNode(acapGraph, "fir_compiler", HLS_MULTICHANNEL_DMA, NULL,
-							INTER_RM_NOT_COMPATIBLE, ENABLE_SCHEDULER);
-        AccelNode_t *accelNode2 = acapAddAccelNode(acapGraph, "FFT4", HLS_MULTICHANNEL_DMA, softFFT,
-							INTER_RM_NOT_COMPATIBLE, ENABLE_SCHEDULER);
-        AccelNode_t *accelNode3 = acapAddAccelNode(acapGraph, "aes128encdec", HLS_MULTICHANNEL_DMA, softFFT,
-							INTER_RM_NOT_COMPATIBLE, ENABLE_SCHEDULER);
-        AccelNode_t *accelNode4 = acapAddOutputNode(acapGraph, p1, 32*1024*1024, ENABLE_SCHEDULER);
-        AccelNode_t *accelNode5 = acapAddOutputNode(acapGraph, p2, 32*1024*1024, ENABLE_SCHEDULER);
+	int status;
+	INFO("TEST3: Test Accel Chain\n");
 	
-	BuffNode_t *buffNode0 = acapAddBuffNode(acapGraph, 16*1024*1024, "Buffer", DDR_BASED);
-        BuffNode_t *buffNode1 = acapAddBuffNode(acapGraph, 16*1024*1024, "Buffer", DDR_BASED);
-        BuffNode_t *buffNode2 = acapAddBuffNode(acapGraph, 16*1024*1024, "Buffer", DDR_BASED);
-        BuffNode_t *buffNode3 = acapAddBuffNode(acapGraph, 16*1024*1024, "Buffer", DDR_BASED);
-	
-	acapAddOutputBuffer(acapGraph, accelNode0, buffNode0, 0x00, 32*1024*1024, 1, 0);
-	
-	acapAddInputBuffer (acapGraph, accelNode1, buffNode0, 0x00, 32*1024*1024, 2, 0);
-        acapAddOutputBuffer(acapGraph, accelNode1, buffNode1, 0x00, 32*1024*1024, 2, 0);
+	AbstractGraph_t *acapGraph = graphInit();
         
-	acapAddInputBuffer (acapGraph, accelNode2, buffNode0, 0x00, 32*1024*1024, 3, 0);
-        acapAddOutputBuffer(acapGraph, accelNode2, buffNode2, 0x00, 32*1024*1024, 3, 0);
+	AbstractAccelNode_t *accelNode0 = addInputNode(acapGraph, 32*1024*1024);
+        AbstractAccelNode_t *accelNode1 = addAcceleratorNode(acapGraph, "fir_compiler");
+        AbstractAccelNode_t *accelNode2 = addAcceleratorNode(acapGraph, "FFT4");
+        AbstractAccelNode_t *accelNode3 = addAcceleratorNode(acapGraph, "aes128encdec");
+        AbstractAccelNode_t *accelNode4 = addOutputNode(acapGraph, 32*1024*1024);
+        AbstractAccelNode_t *accelNode5 = addOutputNode(acapGraph, 32*1024*1024);
+	
+	AbstractBuffNode_t *buffNode0 = addBuffer(acapGraph, 16*1024*1024, DDR_BASED);
+        AbstractBuffNode_t *buffNode1 = addBuffer(acapGraph, 16*1024*1024, DDR_BASED);
+        AbstractBuffNode_t *buffNode2 = addBuffer(acapGraph, 16*1024*1024, DDR_BASED);
+        AbstractBuffNode_t *buffNode3 = addBuffer(acapGraph, 16*1024*1024, DDR_BASED);
+	
+	addOutBuffer(acapGraph, accelNode0, buffNode0, 0x00, 32*1024*1024, 1, 0);
+	
+	addInBuffer (acapGraph, accelNode1, buffNode0, 0x00, 32*1024*1024, 2, 0);
+        addOutBuffer(acapGraph, accelNode1, buffNode1, 0x00, 32*1024*1024, 2, 0);
+        
+	addInBuffer (acapGraph, accelNode2, buffNode0, 0x00, 32*1024*1024, 3, 0);
+        addOutBuffer(acapGraph, accelNode2, buffNode2, 0x00, 32*1024*1024, 3, 0);
 
-        acapAddInputBuffer (acapGraph, accelNode3, buffNode1, 0x00, 32*1024*1024, 4, 0);
-        acapAddOutputBuffer(acapGraph, accelNode3, buffNode3, 0x00, 32*1024*1024, 4, 0);
+        addInBuffer (acapGraph, accelNode3, buffNode1, 0x00, 32*1024*1024, 4, 0);
+        addOutBuffer(acapGraph, accelNode3, buffNode3, 0x00, 32*1024*1024, 4, 0);
 	
-	acapAddInputBuffer (acapGraph, accelNode4, buffNode2, 0x00, 32*1024*1024, 5, 0);
+	addInBuffer (acapGraph, accelNode4, buffNode2, 0x00, 32*1024*1024, 5, 0);
 
-	acapAddInputBuffer (acapGraph, accelNode5, buffNode3, 0x00, 32*1024*1024, 6, 0);
+	addInBuffer (acapGraph, accelNode5, buffNode3, 0x00, 32*1024*1024, 6, 0);
 	
-	acapGraphToJson(acapGraph);
-        acapGraphConfig(acapGraph);
-	acapGraphToJson(acapGraph);
-	
-	for(int i=0; i < 1024; i++){
-		p0[i] = i;
+	status = abstractGraphConfig(acapGraph);
+	if(status < 0){
+		printf("Seems like GraphDaemon not running ...!!\n");
+		return -1;
 	}
-	printhex((uint32_t*)p0, 0x50);
-        acapGraphSchedule(acapGraph);
-	printhex((uint32_t*)p1, 0x50);
-	printhex((uint32_t*)p2, 0x50);
-        acapGraphFinalise(acapGraph);
+	for(int i=0; i < 1024; i++){
+		accelNode0->ptr[i] = i;
+	}
+        sem_post(accelNode0->semptr);
+	printf("###\n");
+	sem_wait(accelNode4->semptr);
+	printf("###\n");
+	sem_wait(accelNode5->semptr);
+	printf("###\n");
+	
+	printhex((uint32_t*)accelNode0->ptr, 0x50);
+	printhex((uint32_t*)accelNode4->ptr, 0x50);
+	printhex((uint32_t*)accelNode5->ptr, 0x50);
+	abstractGraphFinalise(acapGraph);
 	return 0;
-}*/
+}
 /*
 int case3(){
 	INFO("TEST1: CMA buffer with single PL Accelerator\n");
@@ -657,11 +664,11 @@ int case9(){
 int main(void){
 	//case0();
 	//case1();
-	case2();
+	//case2();
 	//case3();
 	//case4();
 	//case5();
-	//case6();
+	case6();
 	//case7();
 	//case8();
 	//case9();

@@ -491,7 +491,7 @@ int deallocateIOBuffers(AbstractGraph_t *graph){
 			node->semptr = NULL;	
 		//	INFO("unmapBuffer fd : %d size: %d ptr: %p\n", node->fd, node->size, &node->ptr);
                         unmapBuffer(node->fd, node->size, &node->ptr);
-			status = xrt_deallocateBuffer(graph->xrt_fd, node->handle);
+			status = xrt_deallocateBuffer(graph->xrt_fd, &node->handle);
       			if(status < 0){
 				printf( "error @ config deallocation\n");
 				return status;
