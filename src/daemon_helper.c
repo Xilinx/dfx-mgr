@@ -260,16 +260,22 @@ void remove_accelerator(int slot)
         platform.active_base = NULL;
     }
 }
+void sendBuff(uint64_t size)
+{
+    acapd_print("%s: allocating buffer of size %lu\n",__func__,size);
+    sendBuffer(size, socket_d);
+}
 void allocBuffer(uint64_t size)
 {
     acapd_print("%s: allocating buffer of size %lu\n",__func__,size);
-    allocateBuffer(size, socket_d);
+    allocateBuffer(size);
 }
 void freeBuff(uint64_t pa)
 {
     printf("%s: free buffer PA %lu\n",__func__,pa);
     freeBuffer(pa);
 }
+
 void getFDs(int slot)
 {
     struct basePLDesign *base = platform.active_base;
@@ -282,36 +288,16 @@ void getFDs(int slot)
         acapd_perror("%s No Accel in slot %d\n",__func__,slot);
         return;
     }
-    get_fds(accel, slot, socket_d);
+   get_fds(accel, slot, socket_d);
 }
 
-void getShellFD(int slot)
+void getShellFD()
 {
-    struct basePLDesign *base = platform.active_base;
-    if(base == NULL){
-        acapd_perror("No active design\n");
-        return;
-    }
-    acapd_accel_t *accel = base->slots[slot]->accel;
-    if (accel == NULL){
-        acapd_perror("%s No Accel in slot %d\n",__func__,slot);
-        return;
-    }
-    get_shell_fd(accel, socket_d);
+    get_shell_fd(socket_d);
 }
-void getClockFD(int slot)
+void getClockFD()
 {
-    struct basePLDesign *base = platform.active_base;
-    if(base == NULL){
-        acapd_perror("No active design\n");
-        return;
-    }
-    acapd_accel_t *accel = base->slots[slot]->accel;
-    if (accel == NULL){
-        acapd_perror("%s No Accel in slot %d\n",__func__,slot);
-        return;
-    }
-    get_shell_clock_fd(accel, socket_d);
+    get_shell_clock_fd(socket_d);
 }
 void listAccelerators()
 {
