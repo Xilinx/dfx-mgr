@@ -275,7 +275,8 @@ int delBuffNode(BuffNode_t** buffNode, int drm_fd){
 		tBuffNode->buffer.ptr = NULL;
 		tBuffNode->buffer.phyAddr = 0;
 		tBuffNode->buffer.size = 0;
-		xrt_deallocateBuffer(drm_fd, &tBuffNode->buffer.handle);	
+		xrt_deallocateBuffer(drm_fd, tBuffNode->buffer.size, &tBuffNode->buffer.handle, &tBuffNode->buffer.ptr);
+		///xrt_deallocateBuffer(drm_fd, &tBuffNode->buffer.handle);	
 	}
 	free(tBuffNode);
 	return 0;
@@ -534,11 +535,12 @@ int updateBuffers(AcapGraph_t* graph, Link_t* linkHead){
 	Buffers_t* buffers = SIHAGetBuffers();
 	INFO("%p\n", buffers);
 	if (link != NULL){
+		INFO("%d %s%d %d %d %p %lx\n", link->type, link->buffNode->buffer.name, link->buffNode->buffer.index, link->buffNode->buffer.fd, link->buffNode->buffer.size, link->buffNode->buffer.ptr, link->buffNode->buffer.phyAddr);
 		if(link->buffNode->buffer.type == PL_BASED && link->buffNode->buffer.InterRMCompatible == 2){
 			INFO("Buffer Type PL_BASED and InterRMCompatible is enabled\n");
 		}
 		else if(buffers != NULL && link->type == 0 && link->buffNode->buffer.fd == 0 && link->accelNode->accel.inHardware){
-			//INFO("%s %d %p\n", link->accelNode->accel.name, link->accelNode->accel.index, link->tail);
+			INFO("IF 1\n");//INFO("%s %d %p\n", link->accelNode->accel.name, link->accelNode->accel.index, link->tail);
 			//INFO("%x : %x\n", link->buffNode->buffer.size, buffers->MM2S_size[link->accelNode->accel.index]);
 			if(link->buffNode->buffer.size == buffers->MM2S_size[link->accelNode->accel.index]){
 				link->buffNode->buffer.fd      = buffers->MM2S_fd    [link->accelNode->accel.index];
@@ -562,13 +564,13 @@ int updateBuffers(AcapGraph_t* graph, Link_t* linkHead){
                         link->buffNode->readStatus = 0;
 			//INFO("%s%d %d %d %p %lx\n", link->buffNode->buffer.name, link->buffNode->buffer.index, link->buffNode->buffer.fd, link->buffNode->buffer.size, link->buffNode->buffer.ptr, link->buffNode->buffer.phyAddr);
 		}
-		else if(buffers == NULL){
-			//INFO("%p\n", buffers);
-			//int tmpfd;
+		else if(buffers == NULL && link->type == 0 && link->buffNode->buffer.fd == 0){
+			INFO("%s%d %d %d %p %lx\n", link->buffNode->buffer.name, link->buffNode->buffer.index, link->buffNode->buffer.fd, link->buffNode->buffer.size, link->buffNode->buffer.ptr, link->buffNode->buffer.phyAddr);
 			xrt_allocateBuffer(graph->drmfd, link->buffNode->buffer.size, 
 				&link->buffNode->buffer.handle, &link->buffNode->buffer.ptr, 
 				&link->buffNode->buffer.phyAddr, &link->buffNode->buffer.fd);
 		}
+		INFO("IF END\n");
 		if(link->tail != NULL){
 			updateBuffers(graph, link->tail);
 		}
@@ -576,7 +578,7 @@ int updateBuffers(AcapGraph_t* graph, Link_t* linkHead){
 	return 0;
 }
 
-int updateBuffersPass2(Link_t* linkHead){
+int updateBuffersPass2(AcapGraph_t* graph, Link_t* linkHead){
 	Link_t* link = linkHead;
 	Buffers_t* buffers = SIHAGetBuffers();
 	//INFO("\n"); 
@@ -601,8 +603,14 @@ int updateBuffersPass2(Link_t* linkHead){
 
 			//INFO("%s%d %d %d %p %lx\n", link->buffNode->buffer.name, link->buffNode->buffer.index, link->buffNode->buffer.fd, link->buffNode->buffer.size, link->buffNode->buffer.ptr, link->buffNode->buffer.phyAddr);
 		}
+		else if(buffers == NULL && link->buffNode->buffer.fd == 0){
+			INFO("%s%d %d %d %p %lx\n", link->buffNode->buffer.name, link->buffNode->buffer.index, link->buffNode->buffer.fd, link->buffNode->buffer.size, link->buffNode->buffer.ptr, link->buffNode->buffer.phyAddr);
+			xrt_allocateBuffer(graph->drmfd, link->buffNode->buffer.size, 
+				&link->buffNode->buffer.handle, &link->buffNode->buffer.ptr, 
+				&link->buffNode->buffer.phyAddr, &link->buffNode->buffer.fd);
+		}
 		if(link->tail != NULL){
-			updateBuffersPass2(link->tail);
+			updateBuffersPass2(graph, link->tail);
 		}
 	}
 	return 0;
@@ -873,10 +881,13 @@ int acapGraphConfig(AcapGraph_t *acapGraph){
 	//INFO("\n"); 
 	//acapGraphToJson(acapGraph);
 	updateBuffers(acapGraph, acapGraph->linkHead);
+	INFO("updateBuffer done !");
 	//acapGraphToJson(acapGraph);
-	updateBuffersPass2(acapGraph->linkHead);
+	updateBuffersPass2(acapGraph, acapGraph->linkHead);
+	INFO("updateBufferPass2 done !");
 	//acapGraphToJson(acapGraph);
 	updateDependency(&(acapGraph->dependencyHead), acapGraph->linkHead);
+	INFO("updateDependency done !");
 	return 0;
 }
 

@@ -168,9 +168,13 @@ void *jobScheduler_Task(void* carg){
 							linkElement = linkElement->tail;
 						}
 						acapGraphConfig(currentGraph);
+						INFO("acapGraphConfig \n");
 						acapGraphToJson(currentGraph);
+						INFO("acapGraphToJson \n");
         					acapGraphSchedule(currentGraph);
+						INFO("acapGraphSchedule \n");
 						acapGraphFinalise(currentGraph);
+						INFO("acapGraphFinalise \n");
 						currentGraph = NULL;
 						graph->state = AGRAPH_INIT;
 						break;

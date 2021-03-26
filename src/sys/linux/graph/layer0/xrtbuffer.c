@@ -55,7 +55,8 @@ int xrt_allocateBuffer(int drm_fd, int size, int* handle, uint8_t** ptr, unsigne
 	return 0;
 }
 
-int xrt_deallocateBuffer(int drm_fd, int *handle){
+int xrt_deallocateBuffer(int drm_fd, int size, int *handle, uint8_t** ptr){
+	munmap(*ptr, size);
         struct drm_gem_close closeInfo = {0, 0};
 	closeInfo.handle = *handle;
         int result = ioctl(drm_fd, DRM_IOCTL_GEM_CLOSE, &closeInfo);

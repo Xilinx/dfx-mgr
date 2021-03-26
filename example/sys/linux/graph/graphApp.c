@@ -80,9 +80,6 @@ int case0(){
 	for(int i=0; i < 1024; i++){
 		accelNode0->ptr[i] = i;
 	}
-        sem_post(accelNode0->semptr);
-	sem_wait(accelNode1->semptr);
-	
 	//printhex((uint32_t*)accelNode0->ptr, 0x50);
 	//printhex((uint32_t*)accelNode1->ptr, 0x50);
 								
@@ -662,13 +659,34 @@ int case9(){
 }*/
 
 int main(void){
+	/*int drm_fd;
+	int size = 0x1000000;
+	int handle = -1;
+	uint8_t* ptr = NULL;
+	unsigned long paddr;
+	int fd;
+	int status;
+ 
+	drm_fd = open("/dev/dri/renderD128",  O_RDWR);
+	if (drm_fd < 0) {
+		return -1;
+	}
+	status = xrt_allocateBuffer(drm_fd, size, &handle, &ptr, &paddr, &fd);
+	printf("%d\n", status);
+
+	sleep(10);
+	close(fd);
+	status = xrt_deallocateBuffer(drm_fd, size, &handle, &ptr);
+	printf("%d\n", status);
+	close(drm_fd);
+	*/
 	//case0();
-	//case1();
+	case1();
 	//case2();
 	//case3();
 	//case4();
 	//case5();
-	case6();
+	//case6();
 	//case7();
 	//case8();
 	//case9();

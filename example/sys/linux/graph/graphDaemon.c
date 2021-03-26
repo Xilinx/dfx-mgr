@@ -153,6 +153,7 @@ int main (int argc, char **argv)
 								//INFO("%s\n", recv_message.data);
 								//INFO("%p\n", scheduler);	
 								abstractGraphServerFinalise(scheduler, recv_message.data);
+								INFO("abstractGraphServerFinalise \n");
 								memcpy(send_message.data, recv_message.data, 
 									recv_message.size);
 								send_message.size = recv_message.size;

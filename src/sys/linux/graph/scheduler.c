@@ -68,24 +68,24 @@ void *scheduler_Task(void* carg){
                         commandQueueBuffer = queue_dequeue(commandQueue);
                         switch (commandQueueBuffer->type){
                                 case SCHEDULER_COMPLETION:
-					//INFO("processing SCHEDULER_COMPLETION\n");
+					INFO("processing SCHEDULER_COMPLETION\n");
                                 	responseQueueBuffer = malloc(sizeof(ScQueueBuffer_t));
                                 	responseQueueBuffer->type = SCHEDULER_COMPLETION;
                                 	queue_enqueue(responseQueue, responseQueueBuffer);
                                         break;
                                 case SCHEDULER_TASKEND:
-					//INFO("processing TASKEND\n");
+					INFO("processing TASKEND\n");
                                         return NULL;
                                         break;
 				case SCHEDULER_STATUS:
-					//INFO("Status Requested\n");
+					INFO("Status Requested\n");
                                 	responseQueueBuffer = malloc(sizeof(ScQueueBuffer_t));
                                 	responseQueueBuffer->type = SCHEDULER_STATUS;
                                 	responseQueueBuffer->busy = busy;
                                 	queue_enqueue(responseQueue, responseQueueBuffer);
 					break;
                                 case SCHEDULER_TRIGGER:
-					//INFO("processing TRIGGER\n");
+					INFO("processing TRIGGER\n");
         				busy = 1;
         				enableScheduler = 1;
                                         break;
@@ -113,7 +113,7 @@ void *scheduler_Task(void* carg){
                                                 	schedule->dependency->linkCount - 1]->buffNode;
 						_unused(dbuffNode);
 					}
-					//printTransaction(schedule);
+					printTransaction(schedule, "scheduler");
 					if(accelNode->currentTransactionIndex == 0)
 					{
 					accelNode->currentTransactionIndex = transactionIndex; 

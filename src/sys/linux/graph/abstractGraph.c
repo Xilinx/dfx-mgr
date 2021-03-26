@@ -491,7 +491,7 @@ int deallocateIOBuffers(AbstractGraph_t *graph){
 			node->semptr = NULL;	
 		//	INFO("unmapBuffer fd : %d size: %d ptr: %p\n", node->fd, node->size, &node->ptr);
                         unmapBuffer(node->fd, node->size, &node->ptr);
-			status = xrt_deallocateBuffer(graph->xrt_fd, &node->handle);
+			status = xrt_deallocateBuffer(graph->xrt_fd, node->size, &node->handle, &node->ptr);
       			if(status < 0){
 				printf( "error @ config deallocation\n");
 				return status;
@@ -557,6 +557,7 @@ int abstractGraphServerFinalise(JobScheduler_t *scheduler, char* json){
 	AbstractGraph_t *graph = (AbstractGraph_t *)graphNode->node;
 	printf("abstractGraphFinalise\n");
 	deallocateIOBuffers(graph);
+	printf("abstractGraphFinalise\n");
         while(graph->linkHead != NULL){
 		free((AbstractLink_t *)graph->linkHead->node);
 		graph->linkHead->node = NULL;
