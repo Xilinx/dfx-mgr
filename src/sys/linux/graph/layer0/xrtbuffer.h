@@ -64,7 +64,7 @@ extern int finaliseXrtBuffer(int slot, Buffers_t* buffers);
 extern int mapBuffer(int fd, int size, uint8_t** ptr);
 extern int unmapBuffer(int fd, int size, uint8_t** ptr);
 extern int xrt_allocateBuffer(int drm_fd, int size, int* handle, uint8_t** ptr, unsigned long* paddr, int* fd);
-extern int xrt_deallocateBuffer(int drm_fd, int size, int *handle, uint8_t** ptr);
+extern int xrt_deallocateBuffer(int drm_fd, int size, int *handle, uint8_t** ptr, unsigned long* paddr);
 #endif
 
 #define XRTBUFFER_H

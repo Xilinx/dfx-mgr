@@ -291,6 +291,25 @@ void getFDs(int slot)
    get_fds(accel, slot, socket_d);
 }
 
+int dfx_getFDs(int slot, int *fd)
+{
+    struct basePLDesign *base = platform.active_base;
+    if(base == NULL){
+        acapd_perror("No active design\n");
+        return -1;
+    }
+    acapd_accel_t *accel = base->slots[slot]->accel;
+    if (accel == NULL){
+        acapd_perror("%s No Accel in slot %d\n",__func__,slot);
+        return -1;
+    }
+    fd[0] = accel->ip_dev[2*slot].id;
+    fd[1] = accel->ip_dev[2*slot+1].id;
+    acapd_perror("%s Daemon slot %d accel_config %d d_hls %d\n",
+                    __func__,slot,fd[0],fd[1]);
+    return 0;
+}
+
 void getShellFD()
 {
     get_shell_fd(socket_d);
@@ -670,3 +689,11 @@ void *threadFunc()
     //exit(EXIT_SUCCESS);
 }
 
+int dfx_init()
+{
+        pthread_t t;
+	strcpy(platform.boardName,"Xilinx board");
+	pthread_create(&t, NULL,threadFunc, NULL);
+	printf("pthread created \n");
+	return 0;
+}

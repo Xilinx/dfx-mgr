@@ -29,6 +29,8 @@
 
 static int interrupted;;
 
+static int socket_d;
+//
 struct pss {
 	struct lws_spa *spa;
 };

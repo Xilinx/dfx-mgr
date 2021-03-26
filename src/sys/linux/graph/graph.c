@@ -272,11 +272,10 @@ int delBuffNode(BuffNode_t** buffNode, int drm_fd){
 	if(tBuffNode->buffer.handle){
 		INFO("deallocate Buffer handle: %d\n", tBuffNode->buffer.handle);
 		close(tBuffNode->buffer.fd);
+		xrt_deallocateBuffer(drm_fd, tBuffNode->buffer.size, &tBuffNode->buffer.handle, &tBuffNode->buffer.ptr, &tBuffNode->buffer.phyAddr);
 		tBuffNode->buffer.ptr = NULL;
 		tBuffNode->buffer.phyAddr = 0;
 		tBuffNode->buffer.size = 0;
-		xrt_deallocateBuffer(drm_fd, tBuffNode->buffer.size, &tBuffNode->buffer.handle, &tBuffNode->buffer.ptr);
-		///xrt_deallocateBuffer(drm_fd, &tBuffNode->buffer.handle);	
 	}
 	free(tBuffNode);
 	return 0;

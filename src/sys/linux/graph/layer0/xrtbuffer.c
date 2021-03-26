@@ -15,12 +15,20 @@
 #include "uio.h"
 #include "xrtbuffer.h"
 #include "debug.h"
+#include <dfx-mgr/sys/linux/accel.h>
+#include <dfx-mgr/accel.h>
 
 //static plDevices pldevices;
 //static Buffers buffers;
 //static int slot = 0;
 int xrt_allocateBuffer(int drm_fd, int size, int* handle, uint8_t** ptr, unsigned long* paddr, int* fd){ 
-	struct drm_zocl_create_bo info1 = {size, 0xffffffff, DRM_ZOCL_BO_FLAGS_COHERENT | DRM_ZOCL_BO_FLAGS_CMA};
+	_unused(drm_fd);
+	acapd_buffer_t *acapdBuff =  sys_alloc_buffer(size);
+	*handle = acapdBuff->handle;
+	*fd = acapdBuff->fd;
+	*paddr = acapdBuff->PA;
+	*ptr = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED, *fd, 0);
+	/*struct drm_zocl_create_bo info1 = {size, 0xffffffff, DRM_ZOCL_BO_FLAGS_COHERENT | DRM_ZOCL_BO_FLAGS_CMA};
 	int result = ioctl(drm_fd, DRM_IOCTL_ZOCL_CREATE_BO, &info1);
 	*handle = info1.handle;
 
@@ -51,12 +59,16 @@ int xrt_allocateBuffer(int drm_fd, int size, int* handle, uint8_t** ptr, unsigne
 	}
 	INFO("\n");
 
-	*fd = bo_h.fd;
+	*fd = bo_h.fd;*/
 	return 0;
 }
 
-int xrt_deallocateBuffer(int drm_fd, int size, int *handle, uint8_t** ptr){
+int xrt_deallocateBuffer(int drm_fd, int size, int *handle, uint8_t** ptr, unsigned long* paddr){
+	_unused(drm_fd);
+	_unused(handle);
 	munmap(*ptr, size);
+	sys_free_buffer(*paddr);
+	/*
         struct drm_gem_close closeInfo = {0, 0};
 	closeInfo.handle = *handle;
         int result = ioctl(drm_fd, DRM_IOCTL_GEM_CLOSE, &closeInfo);
@@ -65,7 +77,7 @@ int xrt_deallocateBuffer(int drm_fd, int size, int *handle, uint8_t** ptr){
                 return result;
         }
 	*handle = -1;
-	INFO("%d\n", result);
+	INFO("%d\n", result);*/
         return 0;
 }
 
