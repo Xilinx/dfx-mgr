@@ -27,8 +27,7 @@
 #include "generic-device.h"
 #include "json-config.h"
 
-#define DTBO_ROOT_DIR "/sys/kernel/config/device-tree/overlays"
-#define SERVER_PATH     "/tmp/server_rm"
+#define MAX_BUFFERS 40
 acapd_buffer_t *buffer_list = NULL;
 
 static int remove_directory(const char *path)
@@ -355,7 +354,7 @@ int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
 out:
 	return ACAPD_ACCEL_SUCCESS;
 }
-int sys_send_fds(acapd_accel_t *accel, int *fds, int num_fds, int socket)
+int sys_send_fds(int *fds, int num_fds, int socket)
 {
 	char dummy = '$';
     struct msghdr msg;
@@ -387,8 +386,7 @@ int sys_send_fds(acapd_accel_t *accel, int *fds, int num_fds, int socket)
 	memcpy((int*) CMSG_DATA(cmsg), fds, sizeof(int)*num_fds);
     int ret = sendmsg(socket_d2, &msg, 0);
     if (ret == -1) {
-		acapd_perror("%s send ip device FD's failed for slot %d\n",
-											__func__,accel->rm_slot);
+		acapd_perror("%s send FD's failed.\n",__func__);
 		return -1;
 	}
 	return 0;
@@ -401,11 +399,11 @@ int sys_get_fds(acapd_accel_t *accel, int slot, int socket)
 	fd[1] = accel->ip_dev[2*slot+1].id;
 	acapd_perror("%s Daemon slot %d accel_config %d d_hls %d\n",
 												__func__,slot,fd[0],fd[1]);
-	return sys_send_fds(accel, &fd[0], 2, socket);
+	return sys_send_fds(&fd[0], 2, socket);
 }
-void sys_get_fd(acapd_accel_t *accel, int fd, int socket)
+void sys_get_fd(int fd, int socket)
 {
-	sys_send_fds(accel, &fd, 1, socket);
+	sys_send_fds(&fd, 1, socket);
 }
 int sys_send_fd_pa(acapd_buffer_t *buff)
 {
@@ -413,6 +411,7 @@ int sys_send_fd_pa(acapd_buffer_t *buff)
     struct msghdr msg;
     struct iovec iov;
     char cmsgbuf[CMSG_SPACE(sizeof(int))];
+	printf("enter sys_send_fd_pa\n");
 	memset(cmsgbuf, '\0',sizeof(cmsgbuf));
 	int socket_d2 = accept(buff->socket_d, NULL, NULL);
     if (socket_d2 < 0){
@@ -437,14 +436,13 @@ int sys_send_fd_pa(acapd_buffer_t *buff)
     cmsg->cmsg_len = CMSG_LEN(sizeof(int));
 
 	memcpy((int*) CMSG_DATA(cmsg), &buff->fd, sizeof(int));
-	printf("server sending fd %d\n",buff->fd);
     int ret = sendmsg(socket_d2, &msg, 0);
     if (ret == -1) {
 		acapd_perror("%s send FD's failed for buffer (%s)\n", __func__,
                                                        strerror(errno));
 		return -1;
 	}
-	acapd_perror("%s server Sending PA %lu\n",__func__,buff->PA);
+	acapd_print("Server Sending fd %d PA %lu\n",buff->fd, buff->PA);
 	ret =  write(socket_d2,&buff->PA,sizeof(uint64_t));
 	if (ret == -1) {
 		acapd_perror("%s Failed to send PA for buffer (%s) \n", __func__,
@@ -454,32 +452,31 @@ int sys_send_fd_pa(acapd_buffer_t *buff)
 	//close(socket_d2);
 	return 0;
 }
-int sys_alloc_buffer(uint64_t size, int socket)
+acapd_buffer_t * sys_alloc_buffer(uint64_t size)
 {
 	acapd_buffer_t *buff;
 	int i;
 
 	if(buffer_list == NULL) {
-		buffer_list = (acapd_buffer_t *) malloc(20 * sizeof(acapd_buffer_t));
-		for (i = 0; i < 20; i++) {
+		buffer_list = (acapd_buffer_t *) malloc(MAX_BUFFERS * sizeof(acapd_buffer_t));
+		for (i = 0; i < MAX_BUFFERS; i++) {
 			buffer_list[i].PA = 0;
 		}
 	}
-	for (i = 0; i < 20; i++) {
+	for (i = 0; i < MAX_BUFFERS; i++) {
 		if (!buffer_list[i].PA) {
 			buff = &buffer_list[i];
 			break;
 		}
 	}
-	if (i == 20){
+	if (i == MAX_BUFFERS){
 		acapd_perror("all buffers are full\n");
-		return -1;
+		return NULL;
 	}
 
-	buff->socket_d = socket;
 	buff->drm_fd = open("/dev/dri/renderD128", O_RDWR);
 	if (buff->drm_fd < 0) {
-		return -1;
+		return NULL;
 	}
 	struct drm_zocl_create_bo bo = {size, 0xffffffff,
                    DRM_ZOCL_BO_FLAGS_COHERENT | DRM_ZOCL_BO_FLAGS_CMA};
@@ -503,22 +500,32 @@ int sys_alloc_buffer(uint64_t size, int socket)
 	if (ioctl(buff->drm_fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &bo_h) < 0) {
 		acapd_perror("%s:DRM_IOCTL_PRIME_HANDLE_TO_FD failed: %s\n",
                                                    __func__,strerror(errno));
-		return -1;
+		goto err2;
 	}
 	buff->fd = bo_h.fd;
-	sys_send_fd_pa(buff);
-	return 0;
+	return buff;
 err2:
 	closeInfo.handle = buff->handle;
 	ioctl(buff->drm_fd, DRM_IOCTL_GEM_CLOSE, &closeInfo);
 err1:
 	close(buff->drm_fd);
-	return -1;
+	return NULL;
+}
+int sys_send_buff(uint64_t size,int socket)
+{
+	acapd_buffer_t *buff = sys_alloc_buffer(size);
+	if (buff == NULL){
+		printf("returned buff is empty\n");
+		return -1;
+	}
+	buff->socket_d = socket;
+	sys_send_fd_pa(buff);
+	return 0;
 }
 
 int sys_free_buffer(uint64_t pa){
 	int i;
-	for (i = 0; i < 20; i++) {
+	for (i = 0; i < MAX_BUFFERS; i++) {
 		if (buffer_list[i].PA == pa) {
 			acapd_print("Free buffer pa %lu \n",pa);
 			struct drm_gem_close closeInfo = {0, 0};
@@ -526,6 +533,8 @@ int sys_free_buffer(uint64_t pa){
 			ioctl(buffer_list[i].drm_fd, DRM_IOCTL_GEM_CLOSE, &closeInfo);
 			buffer_list[i].handle = -1;
 			buffer_list[i].PA = 0;
+			close(buffer_list[i].fd);
+			close(buffer_list[i].drm_fd);
 			return 0;
 		}
 	}

@@ -27,7 +27,6 @@
 
 #define SERVER_PATH     "/tmp/dfx-mgrd_socket"
 
-static int socket_d;
 static int interrupted;;
 
 struct pss {
@@ -94,7 +93,7 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
 			}
 			else if(strcmp(m->cmd,"-allocBuffer") == 0){
 				lwsl_debug("Received %s size %s\n",m->cmd,m->arg);
-				allocBuffer(atoi(m->arg));
+				sendBuff(atoi(m->arg));
 				sprintf(r->data,"%s","");
 				r->len = 0;
 				lws_callback_on_writable( wsi );
@@ -107,17 +106,17 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
 				lws_callback_on_writable(wsi);
 			}
 			else if(strcmp(m->cmd,"-getShellFD") == 0){
-				lwsl_debug("Received %s slot %s\n",m->cmd,m->arg);
+				lwsl_debug("Received %s \n",m->cmd);
 				sprintf(r->data,"%s","");
 				r->len = 0;
-				getShellFD(atoi(m->arg));
+				getShellFD();
 				lws_callback_on_writable_all_protocol( lws_get_context( wsi ), lws_get_protocol( wsi ) );
 			}
 			else if(strcmp(m->cmd,"-getClockFD") == 0){
-				lwsl_debug("Received %s slot %s\n",m->cmd,m->arg);
+				lwsl_debug("Received %s \n",m->cmd);
 				sprintf(r->data,"%s","");
 				r->len = 0;
-				getClockFD(atoi(m->arg));
+				getClockFD();
 				lws_callback_on_writable_all_protocol( lws_get_context( wsi ), lws_get_protocol( wsi ) );
 			}
 			else if(strcmp(m->cmd,"-getFDs") == 0){
@@ -216,8 +215,8 @@ void socket_fd_setup()
         acapd_perror("%s socket listen() failed\n",__func__);
         //return ACAPD_ACCEL_FAILURE;
     }
-    printf("%s Server started %s ready for client connect.\n",
-                                    __func__, SERVER_PATH);
+    printf("Server started %s ready for client connect.\n",
+                                    SERVER_PATH);
 }
 
 int main(int argc, const char **argv)

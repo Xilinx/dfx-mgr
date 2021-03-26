@@ -111,10 +111,11 @@ int remove_base(int fpga_cfg_id);
 int acapd_accel_open_channel(acapd_accel_t *accel);
 int acapd_accel_reset_channel(acapd_accel_t *accel);
 void get_fds(acapd_accel_t *accel, int slot, int socket);
-void allocateBuffer(uint64_t size, int socketd);
+void allocateBuffer(uint64_t size);
+void sendBuffer(uint64_t size, int socket);
 void freeBuffer(uint64_t pa);
-void get_shell_fd();
-void get_shell_clock_fd();
+void get_shell_fd(int socket);
+void get_shell_clock_fd(int socket);
 char * getAccelMetadata(char *package_name);
 #ifdef ACAPD_INTERNAL
 int sys_needs_load_accel(acapd_accel_t *accel);
@@ -125,10 +126,11 @@ int sys_load_accel_post(acapd_accel_t *accel);
 int sys_close_accel(acapd_accel_t *accel);
 int sys_remove_accel(acapd_accel_t *accel, unsigned int async);
 int sys_remove_base(int fpga_cfg_id);
-int sys_alloc_buffer(uint64_t size, int socketd);
+acapd_buffer_t *sys_alloc_buffer(uint64_t size);
 int sys_free_buffer(uint64_t pa);
+int sys_send_buff(uint64_t size, int socket);
 int sys_get_fds(acapd_accel_t *accel, int fd, int socket);
-void sys_get_fd(acapd_accel_t *accel, int fd, int socket);
+void sys_get_fd(int fd, int socket);
 #endif /* ACAPD_INTERNAL */
 
 #ifdef __cplusplus

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-//#include <libwebsockets.h>
+#include <libwebsockets.h>
 #include <string.h>
 #include <signal.h>
 #include <time.h>
@@ -202,19 +202,15 @@ int load_accelerator(const char *accel_name)
                     printf("No accel found for %s slot %d\n",accel_info->name,i);
                     continue;
                 }
-		printf("#01\n");
                 strcpy(pkg->name, accel_name);
                 pkg->path = path;
                 pkg->type = ACAPD_ACCEL_PKG_TYPE_NONE;
                 init_accel(accel, pkg);
-		printf("#02\n");
                 /* Set rm_slot before load_accel() so isolation for appropriate slot can be applied*/
                 accel->rm_slot = i;
                 accel->type = SIHA_SHELL;
 
-		printf("#03 %d : %s %s\n", accel->rm_slot, accel->pkg->path, shell_path);
                 ret = load_accel(accel, shell_path, 0);
-		printf("#04\n");
                 if (ret < 0){
                     acapd_perror("%s: Failed to load accel %s\n",__func__,accel_name);
                 goto out;
@@ -264,10 +260,15 @@ void remove_accelerator(int slot)
         platform.active_base = NULL;
     }
 }
+void sendBuff(uint64_t size)
+{
+    acapd_print("%s: allocating buffer of size %lu\n",__func__,size);
+    sendBuffer(size, socket_d);
+}
 void allocBuffer(uint64_t size)
 {
     acapd_print("%s: allocating buffer of size %lu\n",__func__,size);
-    //allocateBuffer(size, socket_d);
+    allocateBuffer(size);
 }
 void freeBuff(uint64_t pa)
 {
@@ -287,58 +288,16 @@ void getFDs(int slot)
         acapd_perror("%s No Accel in slot %d\n",__func__,slot);
         return;
     }
-
-   //get_fds(accel, slot, socket_d);
+   get_fds(accel, slot, socket_d);
 }
 
-int dfx_getFDs(int slot, int *fd)
+void getShellFD()
 {
-    struct basePLDesign *base = platform.active_base;
-    if(base == NULL){
-        acapd_perror("No active design\n");
-        return -1;
-    }
-    acapd_accel_t *accel = base->slots[slot]->accel;
-    if (accel == NULL){
-        acapd_perror("%s No Accel in slot %d\n",__func__,slot);
-        return -1;
-    }
-
-    fd[0] = accel->ip_dev[2*slot].id;
-    fd[1] = accel->ip_dev[2*slot+1].id;
-    acapd_perror("%s Daemon slot %d accel_config %d d_hls %d\n",
-                    __func__,slot,fd[0],fd[1]);
-    return 0;
-   // get_fds(accel, slot, socket_d);
+    get_shell_fd(socket_d);
 }
-
-void getShellFD(int slot)
+void getClockFD()
 {
-    struct basePLDesign *base = platform.active_base;
-    if(base == NULL){
-        acapd_perror("No active design\n");
-        return;
-    }
-    acapd_accel_t *accel = base->slots[slot]->accel;
-    if (accel == NULL){
-        acapd_perror("%s No Accel in slot %d\n",__func__,slot);
-        return;
-    }
-    //get_shell_fd(accel, socket_d);
-}
-void getClockFD(int slot)
-{
-    struct basePLDesign *base = platform.active_base;
-    if(base == NULL){
-        acapd_perror("No active design\n");
-        return;
-    }
-    acapd_accel_t *accel = base->slots[slot]->accel;
-    if (accel == NULL){
-        acapd_perror("%s No Accel in slot %d\n",__func__,slot);
-        return;
-    }
-   // get_shell_clock_fd(accel, socket_d);
+    get_shell_clock_fd(socket_d);
 }
 void listAccelerators()
 {
@@ -711,13 +670,3 @@ void *threadFunc()
     //exit(EXIT_SUCCESS);
 }
 
-
-int dfx_init()
-{
-        pthread_t t;
-	strcpy(platform.boardName,"Xilinx board");
-	pthread_create(&t, NULL,threadFunc, NULL);
-	printf("pthread created \n");
-
-	return 0;
-}
