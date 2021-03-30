@@ -15,9 +15,9 @@
 //#include "dm.h"
 #include "graph.h"
 #include "layer0/utils.h"
-#include "layer0/debug.h"
 #include "layer0/siha.h"
 #include "scheduler.h"
+#include "layer0/nodebug.h"
 
 
 #include <fcntl.h>
@@ -216,6 +216,8 @@ BuffNode_t* createBuffNode(int size, char *name, int type){
 	nextBuff->buffer.phyAddr = 0;
 	nextBuff->buffer.srcSlot = 0;
 	nextBuff->buffer.sincSlot = 0;
+	nextBuff->readStatus = 0;
+	nextBuff->status = 0;
 	//nextBuff->buffer.otherAccel_phyAddr[0] = 0x080000000;
 	//nextBuff->buffer.otherAccel_phyAddr[1] = 0x100000000;
 	//nextBuff->buffer.otherAccel_phyAddr[2] = 0x140000000;
@@ -392,9 +394,10 @@ int printLinksInfo(Link_t *link, char* json){
 	return len;
 }
 
-Schedule_t* createSchedule(DependencyList_t *dependency, int offset, int size, int first, int last){ //, BuffNode_t *dependentBuffNode){
+Schedule_t* createSchedule(DependencyList_t *dependency, int index, int offset, int size, int first, int last){ //, BuffNode_t *dependentBuffNode){
 	//INFO("\n"); 
 	Schedule_t* schedule = (Schedule_t *) malloc(sizeof(Schedule_t));
+	schedule->index = index;
 	schedule->dependency = dependency;
 	schedule->size = size;
 	schedule->offset = offset;
@@ -449,8 +452,8 @@ int printSchedule(Schedule_t* schedule){
 	if(schedule != NULL){
 		while(1){
 			//printDepend(schedule->dependency);
-			INFOP("%s%d ", 
-				schedule->dependency->link->accelNode->accel.name, 
+			INFOP("%d: %s%d ", 
+				schedule->index, schedule->dependency->link->accelNode->accel.name, 
 				schedule->dependency->link->accelNode->accel.index);
 			if(schedule->dependency->link->type){
 				INFOP("====> ");
@@ -751,6 +754,7 @@ int graphSchedule(Schedule_t** scheduleHead, DependencyList_t* dependencyHead){
 	Schedule_t* tSchedule;
 	int tSize, first, last;
 	int pending = 0;
+	int index = 0;
 	//for(int i = 0; i < 3; i++){//)while(1){
 	while(1){
 		while(cDependency != NULL){
@@ -777,7 +781,8 @@ int graphSchedule(Schedule_t** scheduleHead, DependencyList_t* dependencyHead){
 				else{
 					last = 0;
 				}
-				tSchedule = createSchedule(cDependency, cDependency->link->offset, tSize, first, last);
+				tSchedule = createSchedule(cDependency, index, cDependency->link->offset, tSize, first, last);
+				index ++;
 				addSchedule(scheduleHead, tSchedule);
 				pending += tSize;
 				//INFO("======== > Scheduled\n");

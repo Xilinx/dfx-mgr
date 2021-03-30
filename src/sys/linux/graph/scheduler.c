@@ -8,10 +8,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "layer0/utils.h"
-#include "layer0/debug.h"
 #include "layer0/queue.h"
 #include "graph.h"
 #include "scheduler.h"
+#include "layer0/debug.h"
 int printTransaction(Schedule_t *schedule, char* message){
 	if(schedule){
 		int dependent = schedule->dependency->linkCount;
@@ -23,7 +23,7 @@ int printTransaction(Schedule_t *schedule, char* message){
 			dbuffNode = schedule->dependency->dependentLinks[
 				schedule->dependency->linkCount - 1]->buffNode;
 		}
-		INFOP("%x: ", schedule->dependency->link->transactionIndex);
+		INFOP("%d : %x: ", schedule->index, schedule->dependency->link->transactionIndex);
 		INFOP("(%x) %s%d (%x, %x) ",
 			schedule->status,
 			accelNode->accel.name,
@@ -113,10 +113,10 @@ void *scheduler_Task(void* carg){
                                                 	schedule->dependency->linkCount - 1]->buffNode;
 						_unused(dbuffNode);
 					}
-					printTransaction(schedule, "scheduler");
+					//printTransaction(schedule, "scheduler");
 					if(accelNode->currentTransactionIndex == 0)
 					{
-					accelNode->currentTransactionIndex = transactionIndex; 
+						accelNode->currentTransactionIndex = transactionIndex; 
 					}
 					//######################################################
                         		if(schedule->dependency->link->type){
@@ -152,7 +152,8 @@ void *scheduler_Task(void* carg){
 								schedule->first
 							); 
 							printTransaction(schedule, "Transaction Triggered");
-						}
+					
+	}
 						else if(schedule->status == 1 &&
 							buffNode->status == 2 &&
 							(((accelNode->accel.type == IO_NODE ||
@@ -178,16 +179,14 @@ void *scheduler_Task(void* carg){
 						accelNode->currentTransactionIndex = transactionIndex; 
 						}
 						if(schedule->status == 0 && 
-							(buffNode->status == 3 ||
-							(interRMCompatible == 2 && 
-							buffNode->status == 2)) &&
+							(buffNode->status == 3 || 
+								(interRMCompatible == 2 && buffNode->status == 2)) &&
 							(((accelNode->accel.type == IO_NODE ||
 							accelNode->accel.type == HW_NODE) &&
 							((dependent && accelNode->S2MMStatus == 1) || !dependent)) ||
 							(accelNode->accel.type == OUT_NODE)) &&
 							accelNode->MM2SStatus == 0 &&
-							accelNode->currentTransactionIndex == transactionIndex 
-							){
+							accelNode->currentTransactionIndex == transactionIndex){
 							accelNode->MM2SStatus = 1;
 							schedule->status = 1;
 							printTransaction(schedule, "Transaction Scheduled");
@@ -225,13 +224,16 @@ void *scheduler_Task(void* carg){
                                                                 &buffNode->buffer);
 							if(status == 1){ 
 								buffNode->readStatus += 1;
+								char msg[100];
+								sprintf(msg, "Transaction Done %d %d", 
+									buffNode->readStatus, readerCount);
 								if(buffNode->readStatus == readerCount){
 									buffNode->status = 0;
 									buffNode->readStatus = 0;
 								}
 								accelNode->MM2SStatus = 0;
 								accelNode->currentTransactionIndex = 0; 
-								printTransaction(schedule, "Transaction Done");
+								printTransaction(schedule, msg);
 								delSchedule(&schedule, &(acapGraph->scheduleHead));
 								continue;
 							}

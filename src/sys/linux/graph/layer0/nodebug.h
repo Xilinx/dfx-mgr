@@ -6,3 +6,7 @@
 #define INFO(...) \
     fprintf(stderr, " ");
 
+#define INFOP(...) \
+    fprintf(stderr, __VA_ARGS__);
+
+#define _unused(x) ((void)(x))

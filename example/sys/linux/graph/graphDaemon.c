@@ -159,6 +159,7 @@ int main (int argc, char **argv)
 								send_message.size = recv_message.size;
 								send_message.id = GRAPH_FINALISE_DONE;
 								
+								INFO("abstractGraphServerFinalise \n");
 								if (write (fd, &send_message, HEADERSIZE + 
 									send_message.size) == -1)
 									error ("write");

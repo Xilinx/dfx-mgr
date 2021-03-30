@@ -79,6 +79,7 @@ void *jobScheduler_Task(void* carg){
 			//INFO("%p\n", graphList);
 			graphElement = graphList;
 			while(graphElement){
+				if(graphElement!= NULL){
         			graph = (AbstractGraph_t *)(graphElement->node);
 				if (graph != NULL){
 					switch (graph->state){
@@ -137,8 +138,6 @@ void *jobScheduler_Task(void* carg){
 						while(buffElement != NULL){
 							AbstractBuffNode_t *abstractBuff =
 								(AbstractBuffNode_t *) buffElement->node;	
-							//INFO("%d\n", abstractBuff->id);
-							//INFO("####################### Assign Buffers\n");
 							abstractBuff->node = acapAddBuffNode(currentGraph, 
 											abstractBuff->size, 
 											abstractBuff->name, 
@@ -180,17 +179,14 @@ void *jobScheduler_Task(void* carg){
 						currentGraph = NULL;
 						graph->state = AGRAPH_INIT;
 						break;
-					/*case AGRAPH_EXECUTING:
-						if(currentGraph != NULL){
-							acapGraphFinalise(currentGraph);
-							graph->state = AGRAPH_INIT;	
-						}
-						break;
-					}*/
 					case AGRAPH_INIT:
 						break;
 					}
 					graphElement = graphElement->tail;				
+				}
+				}
+				else{
+					INFO("praphElement : %p", graphElement);
 				}
 			}
 		}

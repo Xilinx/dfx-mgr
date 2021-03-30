@@ -88,6 +88,7 @@ struct DependencyList{
 struct Schedule{
 	DependencyList_t *dependency;
         //Link_t *link;
+	int index;
 	int size;
 	int offset;
 	int status;
