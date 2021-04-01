@@ -19,6 +19,7 @@ typedef struct JobScheduler JobScheduler_t;
 #define AGRAPH_SCHEDULED	0XC1
 #define AGRAPH_EXECUTING	0XC2
 #define AGRAPH_COMPLETED	0XC3
+#define AGRAPH_PREINIT		0XC4
 
 struct Element{
 	void* node;

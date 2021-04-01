@@ -67,9 +67,9 @@ int SIHAInitAccel(int slot, char * accel){
 	//@@//slotNum[slot] = loadpdi(accel);
 	//listAccelerators();
 	//INFO("loading Accel: %s\n", accel);
-	INFO("######################### Before Load Accel ###################\n");
+	//INFO("######################### Before Load Accel ###################\n");
 	slotNum[slot] = load_accelerator(accel);
-	INFO("######################### After Load Accel ###################\n");
+	//INFO("######################### After Load Accel ###################\n");
 	//INFO("loadded at slot: %d\n", slotNum[slot]);
 	//INFO("%s\n", accel);
 	//INFO("############ %d %d ###################\n", slot, slotNum[slot]);
@@ -139,6 +139,7 @@ int SIHAInitAccel(int slot, char * accel){
 		INFO("mapPlDevices Failed !!\n");
 		return -1;
 	}
+	getRMInfo();
 	return 0;
 }
 
@@ -187,7 +188,7 @@ int SIHAInit(int configSize, int MM2SSize, int S2MMSize, int slot){
 int SIHAStartAccel(int slot){
        // INFO("\n");
 	uint8_t* AccelConfig;
-	printf("%d\n", slot);
+	//printf("%d\n", slot);
 	AccelConfig = pldevices->AccelConfig[slot];
 	/*switch(slot){
 		case 0:
@@ -200,9 +201,9 @@ int SIHAStartAccel(int slot){
 			AccelConfig = pldevices->AccelConfig_2;
 			break;
 	}*/
-	printf("%hhn\n", AccelConfig);
+	//printf("%hhn\n", AccelConfig);
 	*(uint32_t*)(AccelConfig) = 0x81;
-	printf("%x\n", AccelConfig[0]);
+	//printf("%x\n", AccelConfig[0]);
 	return 0;
 }
 
@@ -257,8 +258,10 @@ int SIHAFinaliseAccel(int slot){
 	//printf("%d, %d, %d\n", r0, r1, r2);
 	//printf("Unmapped Buffers !!\n");
 	unmapPlDevicesAccel(pldevices, slot);
-	printf("Unmapped Devices !!\n");
+	//printf("Unmapped Devices !!\n");
 	remove_accelerator(slotNum[slot]);
+	//printf("Unmapped Devices !!\n");
+	getRMInfo();
 	return 0;
 }
 

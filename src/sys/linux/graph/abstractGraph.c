@@ -518,19 +518,24 @@ int abstractGraphServerConfig(JobScheduler_t *scheduler, char* json, int len, in
 		return 1;
 	}
 	//INFO("\n");
-	graph->state = AGRAPH_INIT;	
+	graph->state = AGRAPH_PREINIT;	
 	abstractGraph2Json(graph, json2);
 	fdcnt = allocateIOBuffers(graph, fd);
+	
+	//INFO("\n");
         element->node =  graph;
         element->head = NULL;
         element->tail = NULL;
+	//INFO("%p\n", scheduler->graphList);
 	if(scheduler->graphList == NULL){
 		scheduler->graphList = element;
 	}
 	else{
         	addElement(&(scheduler->graphList), element);
 	}
+	//INFO("\n");
 	jobSchedulerSubmit(scheduler, element);
+	graph->state = AGRAPH_INIT;	
 	return fdcnt;
 }
 
@@ -575,6 +580,7 @@ int abstractGraphServerFinalise(JobScheduler_t *scheduler, char* json){
         }
 	free(graph);
 	graph = NULL;
+	//INFO("%p %p\n", graphNode->head, graphNode->tail);
 	delElement(&(scheduler->graphList), graphNode);
 	return 0;
 }

@@ -49,22 +49,22 @@ int sihahls_start(void* dmconfig_a){
 	*(uint32_t*)(dmconfig->accel->AccelConfig) = 0x81;
         switch (dmconfig->accel->slot){
 		case 0:
- 	               *(uint32_t*)(dmconfig->accel->dma_hls + 0x0) = 0x00000000;
-                       *(uint32_t*)(dmconfig->accel->dma_hls + 0x4) = 0x00000002;
-                       *(uint32_t*)(dmconfig->accel->dma_hls + 0x8) = 0x3fffffff;
-                       *(uint32_t*)(dmconfig->accel->dma_hls + 0xC) = 0x00000002;
+ 	               //*(uint32_t*)(dmconfig->accel->dma_hls + 0x0) = 0x00000000;
+                       //*(uint32_t*)(dmconfig->accel->dma_hls + 0x4) = 0x00000002;
+                       //*(uint32_t*)(dmconfig->accel->dma_hls + 0x8) = 0x3fffffff;
+                      // *(uint32_t*)(dmconfig->accel->dma_hls + 0xC) = 0x00000002;
                        break;
                 case 1:
-                       *(uint32_t*)(dmconfig->accel->dma_hls + 0x0) = 0x80000000;
-                       *(uint32_t*)(dmconfig->accel->dma_hls + 0x4) = 0x00000002;
-                       *(uint32_t*)(dmconfig->accel->dma_hls + 0x8) = 0xbfffffff;
-                       *(uint32_t*)(dmconfig->accel->dma_hls + 0xC) = 0x00000002;
+                       //*(uint32_t*)(dmconfig->accel->dma_hls + 0x0) = 0x80000000;
+                      // *(uint32_t*)(dmconfig->accel->dma_hls + 0x4) = 0x00000002;
+                      // *(uint32_t*)(dmconfig->accel->dma_hls + 0x8) = 0xbfffffff;
+                       //*(uint32_t*)(dmconfig->accel->dma_hls + 0xC) = 0x00000002;
                        break;
                 case 2:
-                       *(uint32_t*)(dmconfig->accel->dma_hls + 0x0) = 0x00000000;
-                       *(uint32_t*)(dmconfig->accel->dma_hls + 0x4) = 0x00000003;
-                       *(uint32_t*)(dmconfig->accel->dma_hls + 0x8) = 0x3fffffff;
-                       *(uint32_t*)(dmconfig->accel->dma_hls + 0xC) = 0x00000003;
+                       //*(uint32_t*)(dmconfig->accel->dma_hls + 0x0) = 0x00000000;
+                       //*(uint32_t*)(dmconfig->accel->dma_hls + 0x4) = 0x00000003;
+                       //*(uint32_t*)(dmconfig->accel->dma_hls + 0x8) = 0x3fffffff;
+                       //*(uint32_t*)(dmconfig->accel->dma_hls + 0xC) = 0x00000003;
                        break;
 	}
 	dmconfig->start = 1;

@@ -20,6 +20,7 @@
 #include <dfx-mgr/sys/linux/graph/jobScheduler.h>
 #include <dfx-mgr/sys/linux/graph/abstractGraph.h>
 #include <dfx-mgr/sys/linux/graph/layer0/debug.h>
+#include <dfx-mgr/daemon_helper.h>
 #include <signal.h>
 
 static volatile int interrupted = 0;
@@ -50,6 +51,7 @@ int main (int argc, char **argv)
 	signal(SIGINT, intHandler);
 	_unused(argc);
 	_unused(argv);
+	_unused(socket_d);
 	// initialize the complaint queue
 	JobScheduler_t *scheduler = jobSchedulerInit();
 
@@ -129,13 +131,13 @@ int main (int argc, char **argv)
 
 							case GRAPH_INIT:
 								INFO("### GRAPH INIT ###\n");
-								printf ("recieved %s\n", recv_message.data);
+								//printf ("recieved %s\n", recv_message.data);
 								int buff_fd[25];
 								int buff_fd_cnt = 0;
 								buff_fd_cnt = abstractGraphServerConfig(scheduler, 
 									recv_message.data, recv_message.size, buff_fd);
 
-								INFO("%d\n", buff_fd_cnt);
+								//INFO("%d\n", buff_fd_cnt);
 							//	for (int i = 0; i < buff_fd_cnt; i++){
 							//		INFO("%d\n", buff_fd[i]);
 							//	}
@@ -153,18 +155,18 @@ int main (int argc, char **argv)
 								//INFO("%s\n", recv_message.data);
 								//INFO("%p\n", scheduler);	
 								abstractGraphServerFinalise(scheduler, recv_message.data);
-								INFO("abstractGraphServerFinalise \n");
+								//INFO("abstractGraphServerFinalise \n");
 								memcpy(send_message.data, recv_message.data, 
 									recv_message.size);
 								send_message.size = recv_message.size;
 								send_message.id = GRAPH_FINALISE_DONE;
 								
-								INFO("abstractGraphServerFinalise \n");
+								//INFO("abstractGraphServerFinalise \n");
 								if (write (fd, &send_message, HEADERSIZE + 
 									send_message.size) == -1)
 									error ("write");
 								
-								printf("### GRAPH FINALISE ###\n");
+								//printf("### GRAPH FINALISE ###\n");
 								break;
 
 							case QUIT:

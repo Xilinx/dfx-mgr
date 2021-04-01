@@ -12,8 +12,11 @@
 #include "graph.h"
 #include "scheduler.h"
 #include "layer0/debug.h"
+#include <dfx-mgr/daemon_helper.h>
+
 int printTransaction(Schedule_t *schedule, char* message){
 	if(schedule){
+		_unused(socket_d);
 		int dependent = schedule->dependency->linkCount;
 		AccelNode_t *accelNode = schedule->dependency->link->accelNode;
 		BuffNode_t *buffNode = schedule->dependency->link->buffNode;
@@ -68,26 +71,27 @@ void *scheduler_Task(void* carg){
                         commandQueueBuffer = queue_dequeue(commandQueue);
                         switch (commandQueueBuffer->type){
                                 case SCHEDULER_COMPLETION:
-					INFO("processing SCHEDULER_COMPLETION\n");
+					INFOP("processing SCHEDULER_COMPLETION\n");
                                 	responseQueueBuffer = malloc(sizeof(ScQueueBuffer_t));
                                 	responseQueueBuffer->type = SCHEDULER_COMPLETION;
                                 	queue_enqueue(responseQueue, responseQueueBuffer);
                                         break;
                                 case SCHEDULER_TASKEND:
-					INFO("processing TASKEND\n");
+					INFOP("processing TASKEND\n");
                                         return NULL;
                                         break;
 				case SCHEDULER_STATUS:
-					INFO("Status Requested\n");
+					INFOP("Status Requested\n");
                                 	responseQueueBuffer = malloc(sizeof(ScQueueBuffer_t));
                                 	responseQueueBuffer->type = SCHEDULER_STATUS;
                                 	responseQueueBuffer->busy = busy;
                                 	queue_enqueue(responseQueue, responseQueueBuffer);
 					break;
                                 case SCHEDULER_TRIGGER:
-					INFO("processing TRIGGER\n");
+					INFOP("processing TRIGGER\n");
         				busy = 1;
         				enableScheduler = 1;
+					//getRMInfo();
                                         break;
                                 default:
                                         break;
@@ -311,6 +315,7 @@ int SchedulerCompletion(AcapGraph_t *acapGraph){
                 if(responseQueueBuffer->type == SCHEDULER_COMPLETION) break;
                 //}
         }
+	//getRMInfo();
         return 0;
 }
         

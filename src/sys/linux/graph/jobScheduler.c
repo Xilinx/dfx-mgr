@@ -47,6 +47,7 @@ void *jobScheduler_Task(void* carg){
 	_unused(enableScheduler);
         while(1){
                 usleep(1000);
+        	graphList = scheduler->graphList;
                 if((busy == 0) && (queue_size(commandQueue) > 0)){
                         commandQueueBuffer = queue_dequeue(commandQueue);
                         switch (commandQueueBuffer->type){
@@ -78,9 +79,9 @@ void *jobScheduler_Task(void* carg){
 		if(graphList != NULL){
 			//INFO("%p\n", graphList);
 			graphElement = graphList;
-			while(graphElement){
+			while(graphElement != NULL){
 				if(graphElement!= NULL){
-        			graph = (AbstractGraph_t *)(graphElement->node);
+				graph = (AbstractGraph_t *)(graphElement->node);
 				if (graph != NULL){
 					switch (graph->state){
 					case AGRAPH_SCHEDULED:
@@ -136,8 +137,11 @@ void *jobScheduler_Task(void* carg){
 						}
 						Element_t* buffElement = graph->buffNodeHead;
 						while(buffElement != NULL){
+							//INFO("%p", buffElement->node);
 							AbstractBuffNode_t *abstractBuff =
 								(AbstractBuffNode_t *) buffElement->node;	
+							//INFO("%p %d %s %d\n", currentGraph, abstractBuff->size, abstractBuff->name,
+							//	abstractBuff->type);
 							abstractBuff->node = acapAddBuffNode(currentGraph, 
 											abstractBuff->size, 
 											abstractBuff->name, 
@@ -169,13 +173,13 @@ void *jobScheduler_Task(void* carg){
 							linkElement = linkElement->tail;
 						}
 						acapGraphConfig(currentGraph);
-						INFO("acapGraphConfig \n");
+						//INFO("acapGraphConfig \n");
 						acapGraphToJson(currentGraph);
-						INFO("acapGraphToJson \n");
+						//INFO("acapGraphToJson \n");
         					acapGraphSchedule(currentGraph);
-						INFO("acapGraphSchedule \n");
+						//INFO("acapGraphSchedule \n");
 						acapGraphFinalise(currentGraph);
-						INFO("acapGraphFinalise \n");
+						//INFO("acapGraphFinalise \n");
 						currentGraph = NULL;
 						graph->state = AGRAPH_INIT;
 						break;
@@ -186,7 +190,7 @@ void *jobScheduler_Task(void* carg){
 				}
 				}
 				else{
-					INFO("praphElement : %p", graphElement);
+					//INFO("praphElement : %p", graphElement);
 				}
 			}
 		}

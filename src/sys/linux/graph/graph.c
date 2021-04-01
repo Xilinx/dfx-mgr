@@ -88,7 +88,7 @@ AccelNode_t* addAccelNode(AccelNode_t **accelNode, AccelNode_t *nextAccel){
 	}
 
 	else if(nextAccel->accel.type == HW_NODE){
-		INFO("%d, %s\n", nextAccel->accel.index, nextAccel->accel.name);
+		//INFO("%d, %s\n", nextAccel->accel.index, nextAccel->accel.name);
 		int status = SIHAInitAccel(nextAccel->accel.index, nextAccel->accel.name);
 		if(status < 0){
 			nextAccel->accel.inHardware = 0;
@@ -168,8 +168,8 @@ int delAccelNode(AccelNode_t** accelNode){
 
 int printAccelInfo(Accel_t accel, char* json){
 	//INFO("\n"); 
-	int len = sprintf(json, "{\"node\": \"%s_%x\", \"type\": %d, \"inDmaType\": %d, \"outDmaType\": %d", 
-			accel.name, accel.index, accel.type, accel.inDmaType, accel.outDmaType);
+	int len = sprintf(json, "{\"node\": \"%s_%x\", \"type\": %d, \"inDmaType\": %d, \"outDmaType\": %d, \"size\": %ld", 
+			accel.name, accel.index, accel.type, accel.inDmaType, accel.outDmaType, accel.softBufferSize);
 	if(accel.AccelConfig){
 		len += sprintf(json + len, ", \"AccelConfig_fd\": %d, \"dma_hls_fd\": %d, \"AccelConfig\": \"%p\", \"dma_hls\": \"%p\", \"slot\": %d, \"InterRMCompatible\": %d}", accel.AccelConfig_fd, accel.dma_hls_fd, accel.AccelConfig, accel.dma_hls, accel.slot, accel.InterRMCompatible);
 	}
@@ -207,7 +207,6 @@ BuffNode_t* createBuffNode(int size, char *name, int type){
 	BuffNode_t *nextBuff = (BuffNode_t *) malloc(sizeof(BuffNode_t));
 	nextBuff->head = NULL;
 	nextBuff->tail = NULL;
-	nextBuff->status = 0;
 	nextBuff->buffer.size = size;
 	nextBuff->buffer.type = type;
 	nextBuff->buffer.fd   = 0;
@@ -217,10 +216,8 @@ BuffNode_t* createBuffNode(int size, char *name, int type){
 	nextBuff->buffer.srcSlot = 0;
 	nextBuff->buffer.sincSlot = 0;
 	nextBuff->readStatus = 0;
+	nextBuff->buffer.index = 0;
 	nextBuff->status = 0;
-	//nextBuff->buffer.otherAccel_phyAddr[0] = 0x080000000;
-	//nextBuff->buffer.otherAccel_phyAddr[1] = 0x100000000;
-	//nextBuff->buffer.otherAccel_phyAddr[2] = 0x140000000;
 	nextBuff->buffer.otherAccel_phyAddr[0] = 0x200000000;
 	nextBuff->buffer.otherAccel_phyAddr[1] = 0x280000000;
 	nextBuff->buffer.otherAccel_phyAddr[2] = 0x300000000;
@@ -272,7 +269,7 @@ int delBuffNode(BuffNode_t** buffNode, int drm_fd){
 		tailBuff->head = headBuff;
 	}
 	if(tBuffNode->buffer.handle){
-		INFO("deallocate Buffer handle: %d\n", tBuffNode->buffer.handle);
+		//INFO("deallocate Buffer handle: %d\n", tBuffNode->buffer.handle);
 		close(tBuffNode->buffer.fd);
 		xrt_deallocateBuffer(drm_fd, tBuffNode->buffer.size, &tBuffNode->buffer.handle, &tBuffNode->buffer.ptr, &tBuffNode->buffer.phyAddr);
 		tBuffNode->buffer.ptr = NULL;
@@ -535,14 +532,14 @@ Link_t* addOutputBuffer(AccelNode_t *accelNode, BuffNode_t *buffNode,
 int updateBuffers(AcapGraph_t* graph, Link_t* linkHead){
 	Link_t* link = linkHead;
 	Buffers_t* buffers = SIHAGetBuffers();
-	INFO("%p\n", buffers);
+	//INFO("%p\n", buffers);
 	if (link != NULL){
-		INFO("%d %s%d %d %d %p %lx\n", link->type, link->buffNode->buffer.name, link->buffNode->buffer.index, link->buffNode->buffer.fd, link->buffNode->buffer.size, link->buffNode->buffer.ptr, link->buffNode->buffer.phyAddr);
+		//INFO("%d %s%d %d %d %p %lx\n", link->type, link->buffNode->buffer.name, link->buffNode->buffer.index, link->buffNode->buffer.fd, link->buffNode->buffer.size, link->buffNode->buffer.ptr, link->buffNode->buffer.phyAddr);
 		if(link->buffNode->buffer.type == PL_BASED && link->buffNode->buffer.InterRMCompatible == 2){
-			INFO("Buffer Type PL_BASED and InterRMCompatible is enabled\n");
+			//INFO("Buffer Type PL_BASED and InterRMCompatible is enabled\n");
 		}
 		else if(buffers != NULL && link->type == 0 && link->buffNode->buffer.fd == 0 && link->accelNode->accel.inHardware){
-			INFO("IF 1\n");//INFO("%s %d %p\n", link->accelNode->accel.name, link->accelNode->accel.index, link->tail);
+			//INFO("IF 1\n");//INFO("%s %d %p\n", link->accelNode->accel.name, link->accelNode->accel.index, link->tail);
 			//INFO("%x : %x\n", link->buffNode->buffer.size, buffers->MM2S_size[link->accelNode->accel.index]);
 			if(link->buffNode->buffer.size == buffers->MM2S_size[link->accelNode->accel.index]){
 				link->buffNode->buffer.fd      = buffers->MM2S_fd    [link->accelNode->accel.index];
@@ -567,12 +564,12 @@ int updateBuffers(AcapGraph_t* graph, Link_t* linkHead){
 			//INFO("%s%d %d %d %p %lx\n", link->buffNode->buffer.name, link->buffNode->buffer.index, link->buffNode->buffer.fd, link->buffNode->buffer.size, link->buffNode->buffer.ptr, link->buffNode->buffer.phyAddr);
 		}
 		else if(buffers == NULL && link->type == 0 && link->buffNode->buffer.fd == 0){
-			INFO("%s%d %d %d %p %lx\n", link->buffNode->buffer.name, link->buffNode->buffer.index, link->buffNode->buffer.fd, link->buffNode->buffer.size, link->buffNode->buffer.ptr, link->buffNode->buffer.phyAddr);
+			//INFO("%s%d %d %d %p %lx\n", link->buffNode->buffer.name, link->buffNode->buffer.index, link->buffNode->buffer.fd, link->buffNode->buffer.size, link->buffNode->buffer.ptr, link->buffNode->buffer.phyAddr);
 			xrt_allocateBuffer(graph->drmfd, link->buffNode->buffer.size, 
 				&link->buffNode->buffer.handle, &link->buffNode->buffer.ptr, 
 				&link->buffNode->buffer.phyAddr, &link->buffNode->buffer.fd);
 		}
-		INFO("IF END\n");
+		//INFO("IF END\n");
 		if(link->tail != NULL){
 			updateBuffers(graph, link->tail);
 		}
@@ -606,7 +603,7 @@ int updateBuffersPass2(AcapGraph_t* graph, Link_t* linkHead){
 			//INFO("%s%d %d %d %p %lx\n", link->buffNode->buffer.name, link->buffNode->buffer.index, link->buffNode->buffer.fd, link->buffNode->buffer.size, link->buffNode->buffer.ptr, link->buffNode->buffer.phyAddr);
 		}
 		else if(buffers == NULL && link->buffNode->buffer.fd == 0){
-			INFO("%s%d %d %d %p %lx\n", link->buffNode->buffer.name, link->buffNode->buffer.index, link->buffNode->buffer.fd, link->buffNode->buffer.size, link->buffNode->buffer.ptr, link->buffNode->buffer.phyAddr);
+			//INFO("%s%d %d %d %p %lx\n", link->buffNode->buffer.name, link->buffNode->buffer.index, link->buffNode->buffer.fd, link->buffNode->buffer.size, link->buffNode->buffer.ptr, link->buffNode->buffer.phyAddr);
 			xrt_allocateBuffer(graph->drmfd, link->buffNode->buffer.size, 
 				&link->buffNode->buffer.handle, &link->buffNode->buffer.ptr, 
 				&link->buffNode->buffer.phyAddr, &link->buffNode->buffer.fd);
@@ -931,13 +928,16 @@ int acapGraphResetLinks(AcapGraph_t *acapGraph){
 int acapGraphFinalise(AcapGraph_t *acapGraph){
 	//INFO("\n"); 
 	SchedulerFinalise(acapGraph);
+	//INFO("\n"); 
 	while(acapGraph->linkHead != NULL){
 		delLink(&(acapGraph->linkHead));
 	}
+	//INFO("\n"); 
 	acapGraph->linkHead = NULL; 
 	while(acapGraph->buffNodeHead != NULL){
 		delBuffNode(&(acapGraph->buffNodeHead), acapGraph->drmfd);
 	}
+	//INFO("\n"); 
 	acapGraph->buffNodeHead = NULL; 
 	while(acapGraph->accelNodeHead != NULL){
 		delAccelNode(&(acapGraph->accelNodeHead));
