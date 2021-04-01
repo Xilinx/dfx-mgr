@@ -1,3 +1,8 @@
+#########################################################################
+# Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+# SPDX-License-Identifier: MIT
+#########################################################################
+
 collect(PROJECT_LIB_DEPS acapd)
 
 add_subdirectory (sys)

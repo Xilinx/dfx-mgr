@@ -1,18 +1,30 @@
+#########################################################################
+# Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+# SPDX-License-Identifier: MIT
+#########################################################################
 
 # Overview
-ACPAD provides APIs to launch accelerators and provide acceleration
+DFX-MGR provides APIs to launch accelerators and provide acceleration
 services for across different platforms. Once the code is compiled you will
-get acapd_daemon-static binary and libacapd.so. The library provides client api to
+get dfx-mgrd-static binary and libdfx.so. The library provides client api to
 interact with the daemon which can be used by application code or you can use
-acap-static binary to interact with daemon from console.
+dfx-mgr-client binary to interact with daemon from console.
 
 Library source code is in `src/`, the examples are in `example/`, headers are
 in `include/` and required external libraries can be found in `lib/`
 
 # How to build
-ACAPD uses cmake for cross platform and OSes compilation
+DFX-MGR depends on external libraries/frameworks like libdfx, libwebsockets,
+i-notify etc. The recommended way to compile this repo is using yocto where
+the required dependency are taken care of.
 
-## How to build for Linux
+## How to build using yocto
+
+To compile using yocto in 2021.1 onwards, do `bitbake dfx-mgr`.
+
+## How to build using cmake
+
+You would need to provide dependency libraries using -DCMAKE_LIBRARY_PATH for cmake.
 
 There is generic cmake toolchian file for generic Linux which is in
 `cmake/platforms/cross-linux-gcc.cmake`
@@ -43,5 +55,5 @@ to not known way to share fd's over websocket/http.
 and multiple applications trying to stress test load/unload concurrently will be undetermined.
 However the applications can load and then compute as many times.
 
-3. Current shared mem buffer size is 16MB for each slot, will be changed to configure
-using json file.
+3. DFX-MGR uses i-notify for firmware file updates and i-notify doesn't work with network filesystem.
+Hence it is recommended to NOT boot linux over NFS for correct functinality of DFX-MGR daemon.

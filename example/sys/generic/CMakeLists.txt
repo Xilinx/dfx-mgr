@@ -1,3 +1,8 @@
+#########################################################################
+# Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+# SPDX-License-Identifier: MIT
+#########################################################################
+
 find_path (_include_dir xparameters.h)
 if (NOT _include_dir)
   message (FATAL_ERROR "xparameter.h not find")

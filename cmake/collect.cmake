@@ -1,3 +1,8 @@
+#########################################################################
+# Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+# SPDX-License-Identifier: MIT
+#########################################################################
+
 function (collector_create name base)
   set_property (GLOBAL PROPERTY "COLLECT_${name}_LIST")
   set_property (GLOBAL PROPERTY "COLLECT_${name}_BASE" "${base}")

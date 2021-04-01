@@ -1,3 +1,8 @@
+#########################################################################
+# Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+# SPDX-License-Identifier: MIT
+#########################################################################
+
 set (CMAKE_SYSTEM_PROCESSOR "aarch64"           CACHE STRING "")
 set (CROSS_PREFIX           "aarch64-none-elf-" CACHE STRING "")
 

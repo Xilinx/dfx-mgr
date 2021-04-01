@@ -1,3 +1,8 @@
+#########################################################################
+# Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+# SPDX-License-Identifier: MIT
+#########################################################################
+
 collect (PROJECT_LIB_HEADERS accel.h)
 collect (PROJECT_LIB_HEADERS dma.h)
 collect (PROJECT_LIB_HEADERS acapd-vfio-common.h)
