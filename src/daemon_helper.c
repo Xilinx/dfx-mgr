@@ -157,7 +157,7 @@ int load_accelerator(const char *accel_name)
             goto out;
         }
         base->fpga_cfg_id = accel->sys_info.fpga_cfg_id;
-        base->active = 1;
+        base->active += 1;
         base->slots[0] = slot;
 
         /* VART libary for SOM desings needs .xclbin path to be written to a file*/
@@ -169,9 +169,21 @@ int load_accelerator(const char *accel_name)
     }
     /* For SIHA slotted architecture */
     else if(base != NULL && strcmp(base->type,"SLOTTED") == 0) {
+        if (platform.active_base != NULL && !platform.active_base->active && 
+				strcmp(platform.active_base->base_path, accel_info->parent_path)) {
+			acapd_print("All slots for base are empty, loading new base design\n");
+			remove_base(platform.active_base->fpga_cfg_id);
+			free(platform.active_base->slots);
+			platform.active_base = NULL;
+		}
+		else if(platform.active_base != NULL && platform.active_base->active > 0 && 
+				strcmp(platform.active_base->base_path, accel_info->parent_path)) {
+            acapd_perror("Active base design doesn't match this accel base\n");
+            goto out;
+        }
         if (platform.active_base == NULL) {
             sprintf(pkg->name,"%s",base->name);
-            acapd_print("Loading base shell design %s\n",__func__,base->name);
+            acapd_print("Loading base shell design %s\n",base->name);
             pkg->path = base->base_path;
             pkg->type = ACAPD_ACCEL_PKG_TYPE_NONE;
             init_accel(accel, pkg);
@@ -183,16 +195,11 @@ int load_accelerator(const char *accel_name)
                 goto out;
             }
             base->fpga_cfg_id = accel->sys_info.fpga_cfg_id;
-            base->active = 1;
             base->slots = (slot_info_t **)malloc(sizeof(slot_info_t *) * base->num_slots);
             for (i = 0; i < base->num_slots; i++)
                 base->slots[i] = NULL;
             platform.active_base = base;
             acapd_print("Loaded %s successfully.\n",base->name);
-        }
-        else if(strcmp(platform.active_base->base_path, accel_info->parent_path)) {
-            acapd_perror("Active base design doesn't match this accel base\n");
-            goto out;
         }
         for (i = 0; i < base->num_slots; i++) {
             acapd_debug("Finding empty slot for %s i %d \n",accel_name,i);
@@ -215,6 +222,7 @@ int load_accelerator(const char *accel_name)
                     acapd_perror("%s: Failed to load accel %s\n",__func__,accel_name);
                 goto out;
                 }
+				platform.active_base->active += 1;
                 base->slots[i] = slot;
                 acapd_print("Loaded %s successfully to slot %d\n",pkg->name,i);
                 return i;
@@ -235,7 +243,6 @@ out:
 void remove_accelerator(int slot)
 {
     struct basePLDesign *base = platform.active_base;
-    int i;
     acapd_accel_t *accel;
 
     if (base == NULL || base->slots[slot] == NULL){
@@ -248,17 +255,7 @@ void remove_accelerator(int slot)
     remove_accel(accel, 0);
     free(accel);
     base->slots[slot] = NULL;
-    //check if base design needs to be removed
-    for (i = 0; i < base->num_slots; i++){
-        if (base->slots[i] != NULL) break;
-    }
-    if (i == base->num_slots){
-        acapd_print("All slots for base %s are empty.\n",base->name);
-        remove_base(base->fpga_cfg_id);
-        free(base->slots);
-        base->active = 0;
-        platform.active_base = NULL;
-    }
+	platform.active_base->active -= 1;
 }
 void sendBuff(uint64_t size)
 {
