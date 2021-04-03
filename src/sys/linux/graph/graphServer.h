@@ -5,7 +5,7 @@
  */
 #include <stdint.h>
 
-#define GRAPH_SOCKET       "/tmp/graph-server.socket"
+#define SERVER_SOCKET       "/tmp/dfx-mgrd.socket"
 
 #define MAX_MESSAGE_SIZE          4*1024
 #define BACKLOG                   10
@@ -15,6 +15,10 @@
 #define GRAPH_SCHEDULED           3
 #define GRAPH_GET_IOBUFF          4
 #define GRAPH_SET_IOBUFF          5
+#define LOAD_ACCEL				6
+#define REMOVE_ACCEL			7
+#define LIST_PACKAGE			8
+
 #define QUIT                      0
 
 #define GRAPH_INIT_DONE           11

@@ -131,7 +131,7 @@ int load_accelerator(const char *accel_name)
     for (i = 0; i < 10; i++){
         if(!strcmp(base->accel_list[i].name, accel_name)) {
             accel_info = &base->accel_list[i];
-            printf("Found accel %s base %s parent %s\n",accel_name,base->base_path,accel_info->parent_path);
+            acapd_debug("Found accel %s base %s parent %s\n",accel_name,base->base_path,accel_info->parent_path);
         }
     }
 

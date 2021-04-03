@@ -10,7 +10,6 @@
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <dirent.h>
 #include <unistd.h>
 #include <dfx-mgr/accel.h>
@@ -24,7 +23,181 @@
 #include <pthread.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/types.h>
+#include <errno.h>
+#include <unistd.h>
+#include <stdbool.h>
+#include <sys/select.h>
+#include <dfx-mgr/sys/linux/graph/graphServer.h>
+#include <dfx-mgr/sys/linux/graph/graphClient.h>
+#include <dfx-mgr/sys/linux/graph/jobScheduler.h>
+#include <dfx-mgr/sys/linux/graph/abstractGraph.h>
+#include <dfx-mgr/sys/linux/graph/layer0/debug.h>
 
+static volatile int interrupted = 0;
+
+void intHandler(int dummy) {
+	_unused(dummy);
+	INFO("ctrl+c ... \n");
+	interrupted = 1;
+	exit(0);
+}
+
+#define MAX_CLIENTS 200
+
+void error (char *msg)
+{
+	perror (msg);
+	exit (1);
+}
+
+
+int main (int argc, char **argv)
+{
+	struct message recv_message, send_message;
+	ssize_t size;
+	struct stat statbuf;
+	struct sockaddr_un socket_address;
+	int slot;
+
+	signal(SIGINT, intHandler);
+	_unused(argc);
+	_unused(argv);
+	// initialize the complaint queue
+	JobScheduler_t *scheduler = jobSchedulerInit();
+
+	if (stat(SERVER_SOCKET, &statbuf) == 0) {
+		if (unlink(SERVER_SOCKET) == -1)
+			error ("unlink");
+	}
+    
+
+	if ((socket_d = socket (AF_UNIX, SOCK_SEQPACKET, 0)) == -1)
+		error ("socket");
+
+
+	memset (&socket_address, 0, sizeof (struct sockaddr_un));
+	socket_address.sun_family = AF_UNIX;
+	strncpy (socket_address.sun_path, SERVER_SOCKET, sizeof(socket_address.sun_path) - 1);
+
+	if (bind (socket_d, (const struct sockaddr *) &socket_address, sizeof (struct sockaddr_un)) == -1)
+		error ("bind");
+
+	// Mark socket for accepting incoming connections using accept
+	if (listen (socket_d, BACKLOG) == -1)
+		error ("listen");
+
+	fd_set fds, readfds;
+	FD_ZERO (&fds);
+	FD_SET (socket_d, &fds);
+	int fdmax = socket_d;
+
+	acapd_print("dfx-mgr daemon started.\n");
+	while (1) {
+		readfds = fds;
+		// monitor readfds for readiness for reading
+		if (select (fdmax + 1, &readfds, NULL, NULL, NULL) == -1)
+			error ("select");
+        
+		// Some sockets are ready. Examine readfds
+		for (int fd = 0; fd < (fdmax + 1); fd++) {
+			if (FD_ISSET (fd, &readfds)) {  // fd is ready for reading 
+				if (fd == socket_d) {  // request for new connection
+					int fd_new;
+					if ((fd_new = accept (socket_d, NULL, NULL)) == -1)
+						error ("accept");
+
+					FD_SET (fd_new, &fds); 
+					if (fd_new > fdmax) 
+						fdmax = fd_new;
+					fprintf (stderr, "Graph-server: new client\n");
+				}
+				else  // data from an existing connection, receive it
+				{
+					memset (&recv_message, '\0', sizeof (struct message));
+					ssize_t numbytes = read (fd, &recv_message, sizeof (struct message));
+					if (numbytes == -1)
+						error ("read");
+					else if (numbytes == 0) {
+						// connection closed by client
+						fprintf (stderr, "Socket %d closed by client\n", fd);
+						if (close (fd) == -1)
+						error ("close");
+						FD_CLR (fd, &fds);
+					}
+			        else 
+                   	{
+						// data from client
+						memset (&send_message, '\0', sizeof (struct message));
+						switch (recv_message.id) {
+
+							case GRAPH_INIT:
+								INFO("### GRAPH INIT ###\n");
+								//printf ("recieved %s\n", recv_message.data);
+								int buff_fd[25];
+								int buff_fd_cnt = 0;
+								buff_fd_cnt = abstractGraphServerConfig(scheduler, 
+									recv_message.data, recv_message.size, buff_fd);
+
+								send_message.id = GRAPH_INIT_DONE;
+								send_message.fdcount = buff_fd_cnt;
+								send_message.size = 0;
+								size = sock_fd_write(fd, &send_message, 
+											HEADERSIZE + send_message.size,
+											buff_fd, buff_fd_cnt);
+								printf ("wrote %ld\n", size);
+								break;
+							case GRAPH_FINALISE:
+								printf("### GRAPH FINALISE ###\n");
+								abstractGraphServerFinalise(scheduler, recv_message.data);
+								memcpy(send_message.data, recv_message.data, 
+									recv_message.size);
+								send_message.size = recv_message.size;
+								send_message.id = GRAPH_FINALISE_DONE;
+								
+								if (write(fd, &send_message, HEADERSIZE +send_message.size) < 0)
+									acapd_perror("GRAPH_FINALISE: write failed\n");
+								break;
+
+							case LOAD_ACCEL:
+								acapd_print("LOAD_ACCEL: loading accel %s \n",recv_message.data);
+								slot = load_accelerator(recv_message.data);
+								sprintf(send_message.data, "%d", slot);
+								send_message.size = 2;
+								if (write(fd, &send_message, HEADERSIZE + send_message.size) < 0)
+									acapd_perror("LOAD_ACCEL: write failed\n");
+								break;
+
+							case REMOVE_ACCEL:
+								acapd_print("REMOVE_ACCEL: removing accel at slot %d\n",atoi(recv_message.data));
+								remove_accelerator(atoi(recv_message.data));
+								break;
+
+							case LIST_PACKAGE:
+								listAccelerators();
+								break;
+							case QUIT:
+								if (close (fd) == -1)
+									error ("close");
+								FD_CLR (fd, &fds);
+								break;
+
+							default: 
+								acapd_print("Unexpected message from client\n"); 
+						}
+					}
+				}
+			} 
+		} 
+	} 
+    exit (EXIT_SUCCESS);
+}
+
+
+
+
+
+/*
 #define SERVER_PATH     "/tmp/dfx-mgrd_socket"
 
 static int interrupted;;
@@ -34,7 +207,7 @@ static int socket_d;
 struct pss {
 	struct lws_spa *spa;
 };
-
+*/
 /*static const char * const param_names[] = {
 	"text1",
 };
@@ -42,7 +215,7 @@ struct pss {
 enum enum_param_names {
     EPN_TEXT1,
 };*/
-struct msg{
+/*struct msg{
     char cmd[32];
     char arg[128];
 };
@@ -167,10 +340,10 @@ enum protocols
 static const struct lws_protocols protocols[] = { 
 	// first protocol must always be HTTP handler
   {
-    "http",			/* name */
-    lws_callback_http_dummy,	/* callback */
-    0,				/* per session data */
-	0,				/* max frame size/ rx buffer */
+    "http",			
+    lws_callback_http_dummy,	
+    0,				
+	0,				
 	0, NULL, 0,
   },
   {
@@ -180,7 +353,7 @@ static const struct lws_protocols protocols[] = {
     EXAMPLE_RX_BUFFER_BYTES,
 	0, NULL, 0,
   },
-  { NULL, NULL, 0, 0, 0, NULL, 0 } /* terminator */
+  { NULL, NULL, 0, 0, 0, NULL, 0 } 
 };
 
 void sigint_handler(int sig)
@@ -230,13 +403,13 @@ int main(int argc, const char **argv)
 	//int ret;
 
 	int n = 0, logs = LLL_ERR | LLL_WARN
-			/* for LLL_ verbosity above NOTICE to be built into lws,
-			 * lws must have been configured and built with
-			 * -DCMAKE_BUILD_TYPE=DEBUG instead of =RELEASE */
-			/* | LLL_INFO */ /* | LLL_PARSER */ /* | LLL_HEADER */
-			/* | LLL_EXT */ /* | LLL_CLIENT */ /* | LLL_LATENCY */
-			/* | LLL_DEBUG */;
-
+			// for LLL_ verbosity above NOTICE to be built into lws,
+			// lws must have been configured and built with
+			// -DCMAKE_BUILD_TYPE=DEBUG instead of =RELEASE
+			// | LLL_INFO */ /* | LLL_PARSER */ /* | LLL_HEADER
+			// | LLL_EXT */ /* | LLL_CLIENT */ /* | LLL_LATENCY
+			// | LLL_DEBUG */;
+/*
 	acapd_debug("Starting http daemon\n");
 	signal(SIGINT, sigint_handler);
 
@@ -246,7 +419,7 @@ int main(int argc, const char **argv)
 	lws_set_log_level(logs, NULL);
 	lwsl_user("LWS minimal http server dynamic | visit http://localhost:7681\n");
 
-	memset(&info, 0, sizeof info); /* otherwise uninitialized garbage */
+	memset(&info, 0, sizeof info); 
 	//info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT |
 	//	       LWS_SERVER_OPTION_EXPLICIT_VHOSTS |
 	//	LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE;
@@ -278,4 +451,4 @@ bail:
 	lws_context_destroy(context);
 
 	return 0;
-}
+}*/

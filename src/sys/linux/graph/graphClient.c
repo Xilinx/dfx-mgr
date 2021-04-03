@@ -3,11 +3,6 @@
  *
  * SPDX-License-Identifier: MIT
  */
-/* 
- *    complaint-client.c:
- *
- *
- */
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -159,7 +154,7 @@ int graphClientInit(struct graphSocket* gs){
 	//INFO("\n");
 	memset (&gs->socket_address, 0, sizeof(struct sockaddr_un));
 	gs->socket_address.sun_family = AF_UNIX;
-	strncpy (gs->socket_address.sun_path, GRAPH_SOCKET, sizeof(gs->socket_address.sun_path) - 1);
+	strncpy (gs->socket_address.sun_path, SERVER_SOCKET, sizeof(gs->socket_address.sun_path) - 1);
 	//INFO("%d\n", gs->sock_fd);
 	//INFO("%p\n", &gs->socket_address);
 	//INFO("%ld\n", sizeof(struct sockaddr_un));
