@@ -17,7 +17,7 @@ extern "C" {
 
 #define WATCH_PATH_LEN 256
 #define MAX_WATCH 50
-static int socket_d;
+int socket_d;
 
 int load_accelerator(const char *accel_name);
 void remove_accelerator(int slot);
