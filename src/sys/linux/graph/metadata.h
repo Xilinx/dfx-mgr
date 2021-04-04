@@ -59,7 +59,7 @@ struct Json{
 extern int json2meta(Json_t* json, Metadata_t *metadata);
 extern int printMeta(Metadata_t *metadata);
 extern int file2json(char* filename, Json_t *json);
-
+extern int str2json(char* str, Json_t *json);
 typedef struct AbstractGraph AbstractGraph_t;
 typedef struct Element Element_t;
 

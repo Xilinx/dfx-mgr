@@ -103,3 +103,9 @@ extern int abstractGraphServerConfig(JobScheduler_t *scheduler, char* json, int 
 extern int abstractGraphServerFinalise(JobScheduler_t *scheduler, char* json);
 extern int reallocateIOBuffers(AbstractGraph_t *graph, int* fd, int fdcount);
 extern int appFinaliseIPBuffers(AbstractGraph_t *graph);
+
+
+extern int softgFFT(void* inData, int inDataSize, void* inConfig, int inConfigSize, void* outData, int outDataSize);
+extern int softgFIR(void* inData, int inDataSize, void* inConfig, int inConfigSize, void* outData, int outDataSize);
+extern int softgAES192(void* inData, int inDataSize, void* inConfig, int inConfigSize, void* outData, int outDataSize);
+

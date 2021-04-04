@@ -15,6 +15,8 @@
 #include "layer0/queue.h"
 #include "layer0/debug.h"
 #include <dfx-mgr/daemon_helper.h>
+#include <dfx-mgr/accel.h>
+#include "aesFallback.h"
 //#include "layer0/dfx-mgrd.h"
 //#include "layer0/uio.h"
 #include "metadata.h"
@@ -38,7 +40,8 @@ void *jobScheduler_Task(void* carg){
         JobQueueBuffer_t *commandQueueBuffer, *responseQueueBuffer;
 	Json_t* json = malloc(sizeof(Json_t));
 	Metadata_t *metadata = malloc(sizeof(Metadata_t));
-       	char jsonfile[100];
+       	//char jsonfile[100];
+       	char *jsonStr;
 	AcapGraph_t *currentGraph = NULL;
 	Element_t *graphElement;
 	int busy = 0;
@@ -98,26 +101,37 @@ void *jobScheduler_Task(void* carg){
 							switch(abstractAccel->type){
 								case HW_NODE:
 									//INFO("#####################\n");
-	       								if(strcmp(abstractAccel->name, "FFT4")){
-        								        strcpy(jsonfile, 
-											"/media/test/home/root/accel.json");
+	       								jsonStr = getAccelMetadata(abstractAccel->name);
+									//INFO("%s\n", jsonStr);
+									FALLBACKFUNCTION fallback = NULL;
+									INFO("%s\n", abstractAccel->name);
+									INFO("%d\n", strcmp(abstractAccel->name, "FFT4"));
+									INFO("%d\n", strcmp(abstractAccel->name, "aes128encdec"));
+									INFO("%d\n", strcmp(abstractAccel->name, "fir_compiler"));
+									if(strcmp(abstractAccel->name, "FFT4") == 0){
+										INFO("Fallback to SoftFFT\n")
+										fallback = softgFFT;
         								}
-       									else if(strcmp(abstractAccel->name, "aes128encdec")){
-                								strcpy(jsonfile, 
-											"/media/test/home/root/accel.json");
+       									else if(strcmp(abstractAccel->name, "aes128encdec") == 0){
+										INFO("Fallback to SoftAES\n")
+										fallback = softgAES128;
 	        							}
-        								else if(strcmp(abstractAccel->name, "fir_compiler")){
-             									strcpy(jsonfile, 
-											"/media/test/home/root/accel.json");
+       									//else if(strcmp(abstractAccel->name, "aes192encdec") == 0){
+									//	fallback = softgAES192;
+	        							//}
+        								else if(strcmp(abstractAccel->name, "fir_compiler") == 0){
+										INFO("Fallback to SoftFIR\n")
+										fallback = softgFIR;
         								}
- 									file2json(jsonfile, json);
+ 									str2json(jsonStr, json);
         								json2meta(json, metadata);
         								//printMeta(metadata);
 									abstractAccel->node = acapAddAccelNode(currentGraph,
 										abstractAccel->name, metadata->DMA_type,
-										NULL, //metadata->fallback.lib,
-                                                	       			metadata->interRM.compatible, 
-										0); //SchedulerBypassFlag);
+										fallback, 
+                                                	       			metadata->interRM.compatible, 0);//, 
+										//metadata->Input_Channel_Count, 
+										//metadata->Output_Channel_Count);
 									//INFO("#####################\n");
  									break;
 								case IN_NODE:
@@ -180,6 +194,12 @@ void *jobScheduler_Task(void* carg){
 						//INFO("acapGraphSchedule \n");
 						acapGraphFinalise(currentGraph);
 						//INFO("acapGraphFinalise \n");
+						FILE *fp;
+						char json[] = "{\"nodes\": [], \"buffnodes\": [], \"links\":[]}";
+						fp = fopen("/home/root/plgraph.json", "w");
+						fwrite(json, 1, strlen(json), fp);
+						fclose(fp);
+						
 						currentGraph = NULL;
 						graph->state = AGRAPH_INIT;
 						break;

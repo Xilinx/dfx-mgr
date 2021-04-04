@@ -296,6 +296,14 @@ int json2meta(Json_t* json, Metadata_t *metadata){
 	return 0;	
 } 
 
+int str2json(char* str, Json_t *json){
+	json->size = strlen(str);
+	json->data = str; //malloc(json->size + 1);
+	json->data[json->size] = 0;
+	INFO("%s\n", json->data);
+	return 0;
+}
+
 int file2json(char* filename, Json_t *json){
 	FILE *f = fopen(filename, "rb");
 	fseek(f, 0, SEEK_END);
