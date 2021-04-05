@@ -6,6 +6,8 @@ collect (PROJECT_LIB_HEADERS graphServer.h)
 collect (PROJECT_LIB_HEADERS metadata.h)
 collect (PROJECT_LIB_HEADERS scheduler.h)
 collect (PROJECT_LIB_HEADERS jobScheduler.h)
+collect (PROJECT_LIB_HEADERS aes.h)
+collect (PROJECT_LIB_HEADERS aesFallback.h)
 #collect (PROJECT_LIB_HEADERS schedulerBypass.h)
 
 collect (PROJECT_LIB_SOURCES abstractGraph.c)
@@ -15,6 +17,8 @@ collect (PROJECT_LIB_SOURCES metadata.c)
 #collect (PROJECT_LIB_SOURCES main.c)
 collect (PROJECT_LIB_SOURCES scheduler.c)
 collect (PROJECT_LIB_SOURCES jobScheduler.c)
+collect (PROJECT_LIB_SOURCES aes.c)
+collect (PROJECT_LIB_SOURCES aesFallback.c)
 #collect (PROJECT_LIB_SOURCES schedulerBypass.c)
 
 

@@ -7,7 +7,7 @@ typedef struct dm dm_t;
 typedef struct Buffer Buffer_t;
 typedef struct Accel  Accel_t;
 
-typedef int (*FALLBACKFUNCTION)(void*, int, void*, int, void*, int);
+typedef int (*FALLBACKFUNCTION)(void**, int*, void**, int*);
 
 typedef struct fallback_DMConfig{
         uint8_t* InputChannelReq[10]; 

@@ -32,7 +32,7 @@ struct plDevices{
 };
 typedef struct plDevices plDevices_t; 
 
-typedef int (*FALLBACKFUNCTION)(void*, int, void*, int, void*, int);
+typedef int (*FALLBACKFUNCTION)(void**, int*, void**, int*);
 
 #define ACCELDONE 1
 #define INTER_RM_COMPATIBLE 1

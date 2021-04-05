@@ -16,7 +16,16 @@
 #include <sys/socket.h>
 #include <fcntl.h>
 
-int softgFFT(void* inData, int inDataSize, void* inConfig, int inConfigSize, void* outData, int outDataSize){
+int softgFFT(void** inData, int* inDataSize, void** outData, int* outDataSize){
+        INFO("FALLBACK CALLED !!\n");
+	_unused(inConfig);
+	_unused(inConfigSize);
+	_unused(outDataSize);
+        memcpy(outData[0], inData[0], inDataSize[0]);
+        return 0;
+}
+
+int softgFIR(void** inData, int* inDataSize, void** outData, int* outDataSize){
         INFO("FALLBACK CALLED !!\n");
 	_unused(inConfig);
 	_unused(inConfigSize);
@@ -25,21 +34,12 @@ int softgFFT(void* inData, int inDataSize, void* inConfig, int inConfigSize, voi
         return 0;
 }
 
-int softgFIR(void* inData, int inDataSize, void* inConfig, int inConfigSize, void* outData, int outDataSize){
+int softgAES192(void** inData, int* inDataSize, void** outData, int* outDataSize){
         INFO("FALLBACK CALLED !!\n");
 	_unused(inConfig);
 	_unused(inConfigSize);
 	_unused(outDataSize);
-        memcpy(outData, inData, inDataSize);
-        return 0;
-}
-
-int softgAES128(void* inData, int inDataSize, void* inConfig, int inConfigSize, void* outData, int outDataSize){
-        INFO("FALLBACK CALLED !!\n");
-	_unused(inConfig);
-	_unused(inConfigSize);
-	_unused(outDataSize);
-        memcpy(outData, inData, inDataSize);
+        memcpy(outData[0], inData[0], inDataSize[0]);
         return 0;
 }
 
@@ -325,7 +325,7 @@ int abstractGraph2Json(AbstractGraph_t *graph, char* json){
 }
 
 int abstractGraphConfig(AbstractGraph_t *graph){
-	char json[1024*4];
+	char json[1024*32];
 	int len;
 	int fd[25];
 	int fdcount = 0;
@@ -504,7 +504,7 @@ int deallocateIOBuffers(AbstractGraph_t *graph){
 }
 
 int abstractGraphServerConfig(JobScheduler_t *scheduler, char* json, int len, int* fd){
-	char json2[1024*4];
+	char json2[1024*32];
 	_unused(len);
 	int status;
 	int fdcnt;

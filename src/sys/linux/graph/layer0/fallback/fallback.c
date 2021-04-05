@@ -18,7 +18,7 @@ int fallback_config(void* dmconfig_a, Accel_t *accel){
 	fallback_DMConfig_t* dmconfig = (fallback_DMConfig_t*)dmconfig_a;
 	_unused(dmconfig);
 	_unused(accel);
-	INFO("\n");
+	//INFO("\n");
 	//dmconfig->data = base;
 	return 0;
 }
@@ -36,45 +36,29 @@ int fallback_config(void* dmconfig_a, Accel_t *accel){
 
 int fallback_MM2SStatus(void* dmconfig_a){
 	_unused(dmconfig_a);
-	INFO("\n");
+	//INFO("\n");
 	return 0;
 }
 
 int fallback_S2MMStatus(void* dmconfig_a){
 	_unused(dmconfig_a);
-	INFO("\n");
+	//INFO("\n");
 	return 0;
 }
 
 int fallback_MM2SData(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t size, uint8_t firstLast, uint8_t tid){
-	INFO("\n");
-	_unused(offset);
+	//INFO("\n");
 	_unused(firstLast);
 	fallback_DMConfig_t* dmconfig = (fallback_DMConfig_t*)dmconfig_a;
-	dmconfig->InputChannelReq[tid] = data->ptr;
+	dmconfig->InputChannelReq[tid] = data->ptr + offset;
 	dmconfig->InputChannelSize[tid] = size;
-	int dataAvailable = 1;
-	for(int i = 0; i < dmconfig->InputChannelCount; i++){
-		if(dmconfig->InputChannelReq[i] == NULL){
-			dataAvailable = 0;
-		}
-	}
-	INFO("%d\n", dataAvailable);
-	
-	if(dmconfig->OutputChannelReq[0] == NULL){
-		dataAvailable = 0;
-	}
-	INFO("%d\n", dataAvailable);
-
-	if(dataAvailable){
-		//memcpy(dmconfig->OutputChannelReq[0], dmconfig->InputChannelReq[0], dmconfig->InputChannelSize[0]);
+	if(dmconfig->InputChannelReq[0] != NULL && dmconfig->OutputChannelReq[0] != NULL){
 		if(dmconfig->fallbackfunction != NULL){
-			dmconfig->fallbackfunction(dmconfig->InputChannelReq[0], dmconfig->InputChannelSize[0],
-						dmconfig->InputChannelReq[1], dmconfig->InputChannelSize[1],
-						dmconfig->OutputChannelReq[0], dmconfig->OutputChannelSize[0]);
+			dmconfig->fallbackfunction(dmconfig->InputChannelReq, dmconfig->InputChannelSize,
+							dmconfig->OutputChannelReq, dmconfig->OutputChannelSize);
 		}
-		dmconfig->status = 1;
 	}
+	dmconfig->status = 1;
 	return 0;
 }
 
@@ -85,39 +69,25 @@ int fallback_S2MMData(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_
 	fallback_DMConfig_t* dmconfig = (fallback_DMConfig_t*)dmconfig_a;
 	dmconfig->OutputChannelReq[0] = data->ptr;
 	dmconfig->OutputChannelSize[0] = size;
-	int dataAvailable = 1;
-	for(int i = 0; i < dmconfig->InputChannelCount; i++){
-		if(dmconfig->InputChannelReq[i] == NULL){
-			dataAvailable = 0;
-		}
-	}
-	INFO("%d\n", dataAvailable);
-	if(dmconfig->OutputChannelReq[0] == NULL){
-		dataAvailable = 0;
-	}
-
-	INFO("%d\n", dataAvailable);
-	if(dataAvailable){
-		//memcpy(dmconfig->OutputChannelReq[0], dmconfig->InputChannelReq[0], dmconfig->InputChannelSize[0]);
+	if(dmconfig->InputChannelReq[0] != NULL && dmconfig->OutputChannelReq[0] != NULL){
 		if(dmconfig->fallbackfunction != NULL){
-			dmconfig->fallbackfunction(dmconfig->InputChannelReq[0], dmconfig->InputChannelSize[0],
-						dmconfig->InputChannelReq[1], dmconfig->InputChannelSize[1],
-						dmconfig->OutputChannelReq[0], dmconfig->OutputChannelSize[0]);
+			dmconfig->fallbackfunction(dmconfig->InputChannelReq, dmconfig->InputChannelSize,
+							dmconfig->OutputChannelReq, dmconfig->OutputChannelSize);
 		}
-		dmconfig->status = 1;
 	}
+	dmconfig->status = 1;
 	return 0;
 }
 
 int fallback_S2MMDone(void* dmconfig_a, Buffer_t* data){
-	INFO("\n");
+	//INFO("\n");
 	fallback_DMConfig_t* dmconfig = (fallback_DMConfig_t*)dmconfig_a;
 	_unused(data);
 	return dmconfig->status;
 }
 
 int fallback_MM2SDone(void* dmconfig_a, Buffer_t* data){
-	INFO("\n");
+	//INFO("\n");
 	fallback_DMConfig_t* dmconfig = (fallback_DMConfig_t*)dmconfig_a;
 	_unused(data);
 	return dmconfig->status;
@@ -125,18 +95,18 @@ int fallback_MM2SDone(void* dmconfig_a, Buffer_t* data){
 
 int fallback_MM2SAck(void* dmconfig_a){
 	_unused(dmconfig_a);
-	INFO("\n");
+	//INFO("\n");
 	return 0;
 }
 
 int fallback_S2MMAck(void* dmconfig_a){
-	INFO("\n");
+	//INFO("\n");
 	_unused(dmconfig_a);
 	return 0;
 }
 
 int fallback_register(dm_t *datamover, uint8_t InputChannelCount, uint8_t OutputChannelCount, FALLBACKFUNCTION fallbackfunction){
-	INFO("\n");
+	//INFO("\n");
 	datamover->dmstruct = (void*) malloc(sizeof(fallback_DMConfig_t));
         datamover->config     = fallback_config;
         datamover->S2MMStatus = fallback_S2MMStatus;
