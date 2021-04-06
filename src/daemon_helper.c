@@ -315,11 +315,16 @@ void getClockFD()
 {
     get_shell_clock_fd(socket_d);
 }
-void listAccelerators()
+char *listAccelerators()
 {
     int i,j, slot;
     char msg[256];
-    printf("%32s%32s%15s%10s%20s\n\n","Accelerator","Base","Type","#slots","Active_slot");
+	char res[8*1024];
+
+	memset(res,0, sizeof(res));
+ 
+    sprintf(msg,"%32s%32s%15s%10s%20s\n\n","Accelerator","Base","Type","#slots","Active_slot");
+	strcat(res,msg);
     for (i = 0; i < MAX_WATCH; i++) {
         if (base_designs[i].base_path[0] != '\0') {
             for (j = 0; j < 10; j++) {
@@ -335,22 +340,23 @@ void listAccelerators()
                             }
                         }
                         if (strcmp(active_slots, ""))
-                            sprintf(msg,"%32s%32s%15s%10d%20s",base_designs[i].accel_list[j].name, base_designs[i].name,
+                            sprintf(msg,"%32s%32s%15s%10d%20s\n",base_designs[i].accel_list[j].name, base_designs[i].name,
                                                                 base_designs[i].type, base_designs[i].num_slots,active_slots);
                         else
-                            sprintf(msg,"%32s%32s%15s%10d%20d",base_designs[i].accel_list[j].name,base_designs[i].name,
+                            sprintf(msg,"%32s%32s%15s%10d%20d\n",base_designs[i].accel_list[j].name,base_designs[i].name,
                                                     base_designs[i].type,base_designs[i].num_slots,-1);
-                        printf("%s\n",msg);
+						strcat(res,msg);
                     }
                     else {
-                        sprintf(msg,"%32s%32s%15s%10d%20d",base_designs[i].accel_list[j].name,base_designs[i].name,
+                        sprintf(msg,"%32s%32s%15s%10d%20d\n",base_designs[i].accel_list[j].name,base_designs[i].name,
                                                 base_designs[i].type,base_designs[i].num_slots,-1);
-                        printf("%s\n",msg);
+						strcat(res,msg);
                     }
                 }
             }
         }
     }
+	return strdup(res);
 }
 
 void add_to_watch(int wd, char *pathname)

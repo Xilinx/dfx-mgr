@@ -27,15 +27,17 @@ int main(int argc, char *argv[])
 	struct graphSocket* gs = (struct graphSocket*) malloc(sizeof(struct graphSocket));
 	struct message send_message, recv_message;
 	int ret;
-	_unused(argc);
 
 	memset (&send_message, '\0', sizeof(struct message));
 	memset (&recv_message, '\0', sizeof(struct message));
-
+	if (argc < 2) {
+		printf("Expects an argument. Use -h to see options\n");
+		return 0;
+	}
 	graphClientInit(gs);
-	
+
 	if (!strcmp(argv[1],"-load")) {
-		if (!strcmp(argv[2],"")) {
+		if (argc < 3) {
 			printf("-load expects a package name. Try again.\n");
 			return 0;
 		}
@@ -49,42 +51,45 @@ int main(int argc, char *argv[])
 			printf("No message recieved\n");
 		printf("Accel loaded to slot %s\n",recv_message.data);
 	} else if(!strcmp(argv[1],"-remove")) {
-			if (!strcmp(argv[2],"")){
-				printf("-remove expects slot number\n");
-				return 0;
-			}
-			memcpy(send_message.data, argv[2], strlen(argv[2]));
-			send_message.id = REMOVE_ACCEL;
-			send_message.size = strlen(argv[2]);
-			if (write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size) == -1)
-				acapd_perror("error sending message from client\n");
+		if (argc < 3){
+			printf("-remove expects slot number\n");
+			return 0;
+		}
+		memcpy(send_message.data, argv[2], strlen(argv[2]));
+		send_message.id = REMOVE_ACCEL;
+		send_message.size = strlen(argv[2]);
+		if (write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size) == -1)
+			acapd_perror("error sending message from client\n");
 	} else if(!strcmp(argv[1],"-listPackage")) {
-			send_message.id = LIST_PACKAGE;
-			send_message.size = 0;
-			if (write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size) == -1)
-				acapd_perror("error sending message from client\n");
+		send_message.id = LIST_PACKAGE;
+		send_message.size = 0;
+		if (write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size) == -1)
+			acapd_perror("error sending message from client\n");
+		ret = read(gs->sock_fd, &recv_message, sizeof (struct message));
+		if (ret <= 0)
+			printf("No message recieved\n");
+		printf("%s",recv_message.data);
 	} else if(!strcmp(argv[1],"-allocBuffer")) {
-
 	} else if(!strcmp(argv[1],"-freeBuffer")) {
 	} else if(!strcmp(argv[1],"-getFDs")) {
 	} else if(!strcmp(argv[1],"-getRMInfo")) {
 	} else if(!strcmp(argv[1],"-getShellFD")) {
 	} else if(!strcmp(argv[1],"-getClockFD")) {
 	} else if(!strcmp(argv[1],"-h") || !strcmp(argv[1],"--help")) {
-			printf("Usage dfx-mgr-client COMMAND\n");
-			printf("Commmands\n");
-			printf("-listPackage\t\t List locally downloaded accelerator package\n");
-			printf("-load <accel_name>\t\t Load the provided accelerator packaged\n");
-			printf("-remove <accel_name>\t\t\t Unload package previously programmed\n");
-			printf("-allocBuffer <size> \t\t Allocate buffer of size and return its DMA fd and pa\n");
-			printf("-freeBuffer <pa> \t\t free buffer with physical address pa in decimal\n");
-			printf("-getFDs <slot#> \t\t Send ip device FD's over socket\n");
-			printf("-getRMInfo \n");
-			printf("-getShellFD \n");
-			printf("-getClockFD \n");
+		printf("Usage dfx-mgr-client COMMAND\n");
+		printf("Commmands\n");
+		printf("-listPackage\t\t List locally downloaded accelerator package\n");
+		printf("-load <accel_name>\t\t Load the provided accelerator packaged\n");
+		printf("-remove <accel_name>\t\t\t Unload package previously programmed\n");
+		printf("-allocBuffer <size> \t\t Allocate buffer of size and return its DMA fd and pa\n");
+		printf("-freeBuffer <pa> \t\t free buffer with physical address pa in decimal\n");
+		printf("-getFDs <slot#> \t\t Send ip device FD's over socket\n");
+		printf("-getRMInfo \n");
+		printf("-getShellFD \n");
+		printf("-getClockFD \n");
 	} else {
-			printf("Option not recognized, Try again.\n");
-			return 0;
+		printf("Option not recognized, Try again.\n");
+		return 0;
 	}	
 	return 0;
 }

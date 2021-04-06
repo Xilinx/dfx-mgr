@@ -28,7 +28,7 @@ void getFDs(int slot);
 int dfx_getFDs(int slot, int *fd);
 void getShellFD();
 void getClockFD();
-void listAccelerators();
+char *listAccelerators();
 void getRMInfo();
 void *threadFunc();
 int dfx_init();

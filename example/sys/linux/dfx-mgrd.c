@@ -58,6 +58,7 @@ int main (int argc, char **argv)
 	struct stat statbuf;
 	struct sockaddr_un socket_address;
 	int slot;
+	char *msg;
 
 	signal(SIGINT, intHandler);
 	_unused(argc);
@@ -172,7 +173,11 @@ int main (int argc, char **argv)
 								break;
 
 							case LIST_PACKAGE:
-								listAccelerators();
+								msg = listAccelerators();
+								memcpy(send_message.data, msg, sizeof(send_message.data)); 
+								send_message.size = sizeof(send_message.data);
+								if (write(fd, &send_message, HEADERSIZE + send_message.size) < 0)
+									acapd_perror("LIST_PACKAGE: write failed\n");
 								break;
 							case QUIT:
 								if (close (fd) == -1)
