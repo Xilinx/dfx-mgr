@@ -145,7 +145,7 @@ int main (int argc, char **argv)
 								size = sock_fd_write(fd, &send_message, 
 											HEADERSIZE + send_message.size,
 											buff_fd, buff_fd_cnt);
-								printf ("wrote %ld\n", size);
+								//printf ("wrote %ld\n", size);
 								break;
 							case GRAPH_FINALISE:
 								printf("### GRAPH FINALISE ###\n");

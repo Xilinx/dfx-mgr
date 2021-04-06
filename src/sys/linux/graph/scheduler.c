@@ -27,10 +27,11 @@ int printTransaction(Schedule_t *schedule, char* message){
 				schedule->dependency->linkCount - 1]->buffNode;
 		}
 		INFOP("%d : %x: ", schedule->index, schedule->dependency->link->transactionIndex);
-		INFOP("(%x) %s%d (%x, %x) ",
+		INFOP("(%x) %s%d irm%d (%x, %x) ",
 			schedule->status,
 			accelNode->accel.name,
 			accelNode->accel.index,
+			accelNode->accel.InterRMCompatible,
 			accelNode->S2MMStatus,
 			accelNode->MM2SStatus);
 		if(schedule->dependency->link->type){
@@ -38,9 +39,11 @@ int printTransaction(Schedule_t *schedule, char* message){
 		}else{
 			INFOP("<==== ");
 		}
-		INFOP("%s%d (%x %d)",
+		INFOP("%s%d irm%d typ%d (%x %d)",
 			buffNode->buffer.name,
 			buffNode->buffer.index,
+			buffNode->buffer.InterRMCompatible,
+			buffNode->buffer.type,
 			buffNode->status,
 			schedule->dependency->link->channel);
 		if(dependent){
@@ -102,6 +105,7 @@ void *scheduler_Task(void* carg){
 			if(schedule != NULL){
             			while(1){
 					usleep(100);
+					//printf("######\n");
 					if(schedule == NULL){
 						break;
 					}
@@ -121,9 +125,12 @@ void *scheduler_Task(void* carg){
 					if(accelNode->currentTransactionIndex == 0)
 					{
 						accelNode->currentTransactionIndex = transactionIndex; 
+						//printf("######2\n");
 					}
 					//######################################################
                         		if(schedule->dependency->link->type){
+
+						//printf("######3\n");
 						if(schedule->status == 0 && 
 							buffNode->status == 0 &&
 							(((accelNode->accel.type == IO_NODE ||
@@ -133,10 +140,11 @@ void *scheduler_Task(void* carg){
 							accelNode->S2MMStatus == 0 &&
 							accelNode->currentTransactionIndex == transactionIndex 
 							){
+							//printf("%p\n", buffNode->buffer->ptr);
 							accelNode->S2MMStatus = 1;
 							buffNode->status = 1;
 							schedule->status = 1;
-							printTransaction(schedule, "Transaction Scheduled");
+							printTransaction(schedule, "S2MM Transaction Scheduled");
 							break;
 						}
 						else if(schedule->status == 1 && 
@@ -148,6 +156,8 @@ void *scheduler_Task(void* carg){
 							accelNode->S2MMStatus == 1){
 							accelNode->S2MMStatus = 2;
 							buffNode->status = 2;
+							//printf("######5\n");
+							//printf("%p\n", buffNode->buffer.ptr);
 							accelNode->accel.datamover->S2MMData(
 								accelNode->accel.datamover->dmstruct,
 								&buffNode->buffer,
@@ -155,9 +165,9 @@ void *scheduler_Task(void* carg){
 								schedule->size,
 								schedule->first
 							); 
-							printTransaction(schedule, "Transaction Triggered");
+							printTransaction(schedule, "S2MM Transaction Triggered");
 					
-	}
+						}
 						else if(schedule->status == 1 &&
 							buffNode->status == 2 &&
 							(((accelNode->accel.type == IO_NODE ||
@@ -172,19 +182,27 @@ void *scheduler_Task(void* carg){
 								buffNode->status = 3;
 								accelNode->S2MMStatus = 0;
 								accelNode->currentTransactionIndex = 0; 
-								printTransaction(schedule, "Transaction Done");
+								printTransaction(schedule, "S2MM Transaction Done");
 								delSchedule(&schedule, &(acapGraph->scheduleHead));
 								continue;
 							}
+							else{
+								printTransaction(schedule, "S2MM scheduler #");
+								printf("S2MM status : %d\n", status);
+							}
 						}
                         		}else{
+						//printf("######4\n");
 						if(accelNode->currentTransactionIndex == 0)
 						{
 						accelNode->currentTransactionIndex = transactionIndex; 
 						}
+						//printf("###1\n");
 						if(schedule->status == 0 && 
 							(buffNode->status == 3 || 
-								(interRMCompatible == 2 && buffNode->status == 2)) &&
+							(
+							//buffNode->buffer.type == 1 && 
+							interRMCompatible == 2 && buffNode->status == 2)) &&
 							(((accelNode->accel.type == IO_NODE ||
 							accelNode->accel.type == HW_NODE) &&
 							((dependent && accelNode->S2MMStatus == 1) || !dependent)) ||
@@ -193,12 +211,14 @@ void *scheduler_Task(void* carg){
 							accelNode->currentTransactionIndex == transactionIndex){
 							accelNode->MM2SStatus = 1;
 							schedule->status = 1;
-							printTransaction(schedule, "Transaction Scheduled");
+							printTransaction(schedule, "MM2S Transaction Scheduled");
 							break;
 						}
 						else if(schedule->status == 1 && 
 							(buffNode->status == 3 ||
-							(interRMCompatible == 2  && 
+							(
+							//buffNode->buffer.type == 1 && 
+							interRMCompatible == 2  && 
 							buffNode->status == 2)) &&
 							(((accelNode->accel.type == IO_NODE ||
 							accelNode->accel.type == HW_NODE) &&
@@ -214,7 +234,7 @@ void *scheduler_Task(void* carg){
 								schedule->last,
 								schedule->dependency->link->channel
 							); 
-							printTransaction(schedule, "Transaction Triggered");
+							printTransaction(schedule, "MM2S Transaction Triggered");
 						}
 						else if(schedule->status == 1 && 
 							(buffNode->status == 3) &&
@@ -229,7 +249,7 @@ void *scheduler_Task(void* carg){
 							if(status == 1){ 
 								buffNode->readStatus += 1;
 								char msg[100];
-								sprintf(msg, "Transaction Done %d %d", 
+								sprintf(msg, "MM2S Transaction Done %d %d", 
 									buffNode->readStatus, readerCount);
 								if(buffNode->readStatus == readerCount){
 									buffNode->status = 0;
@@ -241,10 +261,14 @@ void *scheduler_Task(void* carg){
 								delSchedule(&schedule, &(acapGraph->scheduleHead));
 								continue;
 							}
+							else{
+								printTransaction(schedule, "MM2S scheduler #");
+								printf("MM2S status : %d\n", status);
+							}
 						}
                         		}
 					
-					//######################################################
+					//printf("######################################################\n");
                         		if(schedule->tail != NULL){
                                 		schedule = schedule->tail;
                         		}
@@ -252,7 +276,7 @@ void *scheduler_Task(void* carg){
                 		}
         		}else{
         			busy = 0;
-				//INFO("Scheduler Done !!\n");
+				printf("Scheduler Done !!\n");
 			}
 		}
         }

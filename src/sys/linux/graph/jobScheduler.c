@@ -17,6 +17,7 @@
 #include <dfx-mgr/daemon_helper.h>
 #include <dfx-mgr/accel.h>
 #include "aesFallback.h"
+#include "aes192Fallback.h"
 //#include "layer0/dfx-mgrd.h"
 //#include "layer0/uio.h"
 #include "metadata.h"
@@ -104,10 +105,10 @@ void *jobScheduler_Task(void* carg){
 	       								jsonStr = getAccelMetadata(abstractAccel->name);
 									//INFO("%s\n", jsonStr);
 									FALLBACKFUNCTION fallback = NULL;
-									INFO("%s\n", abstractAccel->name);
-									INFO("%d\n", strcmp(abstractAccel->name, "FFT4"));
-									INFO("%d\n", strcmp(abstractAccel->name, "aes128encdec"));
-									INFO("%d\n", strcmp(abstractAccel->name, "fir_compiler"));
+									//INFO("%s\n", abstractAccel->name);
+									//INFO("%d\n", strcmp(abstractAccel->name, "FFT4"));
+									//INFO("%d\n", strcmp(abstractAccel->name, "aes128encdec"));
+									//INFO("%d\n", strcmp(abstractAccel->name, "fir_compiler"));
 									if(strcmp(abstractAccel->name, "FFT4") == 0){
 										INFO("Fallback to SoftFFT\n")
 										fallback = softgFFT;
@@ -116,9 +117,9 @@ void *jobScheduler_Task(void* carg){
 										INFO("Fallback to SoftAES\n")
 										fallback = softgAES128;
 	        							}
-       									//else if(strcmp(abstractAccel->name, "aes192encdec") == 0){
-									//	fallback = softgAES192;
-	        							//}
+       									else if(strcmp(abstractAccel->name, "aes192encdec") == 0){
+										fallback = softgAES192;
+	        							}
         								else if(strcmp(abstractAccel->name, "fir_compiler") == 0){
 										INFO("Fallback to SoftFIR\n")
 										fallback = softgFIR;

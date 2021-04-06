@@ -18,8 +18,6 @@
 
 int softgFFT(void** inData, int* inDataSize, void** outData, int* outDataSize){
         INFO("FALLBACK CALLED !!\n");
-	_unused(inConfig);
-	_unused(inConfigSize);
 	_unused(outDataSize);
         memcpy(outData[0], inData[0], inDataSize[0]);
         return 0;
@@ -27,17 +25,6 @@ int softgFFT(void** inData, int* inDataSize, void** outData, int* outDataSize){
 
 int softgFIR(void** inData, int* inDataSize, void** outData, int* outDataSize){
         INFO("FALLBACK CALLED !!\n");
-	_unused(inConfig);
-	_unused(inConfigSize);
-	_unused(outDataSize);
-        memcpy(outData, inData, inDataSize);
-        return 0;
-}
-
-int softgAES192(void** inData, int* inDataSize, void** outData, int* outDataSize){
-        INFO("FALLBACK CALLED !!\n");
-	_unused(inConfig);
-	_unused(inConfigSize);
 	_unused(outDataSize);
         memcpy(outData[0], inData[0], inDataSize[0]);
         return 0;
@@ -331,9 +318,11 @@ int abstractGraphConfig(AbstractGraph_t *graph){
 	int fdcount = 0;
 	int status;
 	graph->gs = malloc(sizeof(graphSocket_t));	
-	//INFO("\n");
+	INFO("\n");
 	len = abstractGraph2Json(graph, json);
+	INFO("\n");
         status = graphClientInit(graph->gs);
+	INFO("\n");
 	if(status < 0){
 		return -1;
 	}

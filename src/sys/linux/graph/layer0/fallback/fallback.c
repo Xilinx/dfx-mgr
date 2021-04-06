@@ -49,33 +49,43 @@ int fallback_S2MMStatus(void* dmconfig_a){
 int fallback_MM2SData(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t size, uint8_t firstLast, uint8_t tid){
 	//INFO("\n");
 	_unused(firstLast);
+	_unused(offset);
 	fallback_DMConfig_t* dmconfig = (fallback_DMConfig_t*)dmconfig_a;
-	dmconfig->InputChannelReq[tid] = data->ptr + offset;
+	dmconfig->InputChannelReq[tid] = data->ptr;
 	dmconfig->InputChannelSize[tid] = size;
+	//printf("MM2SData %d : %p %lx\n", tid, data->ptr, data->phyAddr);
+	//printf("%p : %p \n", dmconfig->InputChannelReq[0], dmconfig->OutputChannelReq[0]);
 	if(dmconfig->InputChannelReq[0] != NULL && dmconfig->OutputChannelReq[0] != NULL){
 		if(dmconfig->fallbackfunction != NULL){
-			dmconfig->fallbackfunction(dmconfig->InputChannelReq, dmconfig->InputChannelSize,
-							dmconfig->OutputChannelReq, dmconfig->OutputChannelSize);
+			dmconfig->fallbackfunction((void**)dmconfig->InputChannelReq, dmconfig->InputChannelSize,
+							(void**)dmconfig->OutputChannelReq, dmconfig->OutputChannelSize);
 		}
+		dmconfig->MM2Sstatus = 1;
+		dmconfig->S2MMstatus = 1;
 	}
-	dmconfig->status = 1;
+	if(tid != 0){
+		dmconfig->MM2Sstatus = 1;
+	}
 	return 0;
 }
 
 int fallback_S2MMData(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t size, uint8_t firstLast){
-	INFO("\n");
+	//INFO("\n");
 	_unused(offset);
 	_unused(firstLast);
 	fallback_DMConfig_t* dmconfig = (fallback_DMConfig_t*)dmconfig_a;
 	dmconfig->OutputChannelReq[0] = data->ptr;
 	dmconfig->OutputChannelSize[0] = size;
+	//printf("S2MMData %p %lx\n", data->ptr, data->phyAddr);
+	//printf("%p : %p \n", dmconfig->InputChannelReq[0], dmconfig->OutputChannelReq[0]);
 	if(dmconfig->InputChannelReq[0] != NULL && dmconfig->OutputChannelReq[0] != NULL){
 		if(dmconfig->fallbackfunction != NULL){
-			dmconfig->fallbackfunction(dmconfig->InputChannelReq, dmconfig->InputChannelSize,
-							dmconfig->OutputChannelReq, dmconfig->OutputChannelSize);
+			dmconfig->fallbackfunction((void**)dmconfig->InputChannelReq, dmconfig->InputChannelSize,
+							(void**)dmconfig->OutputChannelReq, dmconfig->OutputChannelSize);
 		}
+		dmconfig->S2MMstatus = 1;
+		dmconfig->MM2Sstatus = 1;
 	}
-	dmconfig->status = 1;
 	return 0;
 }
 
@@ -83,14 +93,18 @@ int fallback_S2MMDone(void* dmconfig_a, Buffer_t* data){
 	//INFO("\n");
 	fallback_DMConfig_t* dmconfig = (fallback_DMConfig_t*)dmconfig_a;
 	_unused(data);
-	return dmconfig->status;
+	int status = dmconfig->S2MMstatus;
+	dmconfig->S2MMstatus = 0;
+	return status;
 }
 
 int fallback_MM2SDone(void* dmconfig_a, Buffer_t* data){
 	//INFO("\n");
 	fallback_DMConfig_t* dmconfig = (fallback_DMConfig_t*)dmconfig_a;
 	_unused(data);
-	return dmconfig->status;
+	int status = dmconfig->MM2Sstatus;
+	dmconfig->MM2Sstatus = 0;
+	return status;
 }
 
 int fallback_MM2SAck(void* dmconfig_a){
@@ -130,7 +144,8 @@ int fallback_register(dm_t *datamover, uint8_t InputChannelCount, uint8_t Output
 	dmconfig->InputChannelReq[9] = NULL;
 	dmconfig->OutputChannelReq[0] = NULL;
 	dmconfig->fallbackfunction = fallbackfunction;
-	dmconfig->status = 0;
+	dmconfig->S2MMstatus = 0;
+	dmconfig->MM2Sstatus = 0;
 	return 0;
 }
 

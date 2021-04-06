@@ -17,7 +17,8 @@ typedef struct fallback_DMConfig{
         int OutputChannelSize[10]; 
         uint8_t OutputChannelCount; 
         uint64_t size; 
-        uint64_t status; 
+        uint64_t S2MMstatus; 
+        uint64_t MM2Sstatus; 
 	FALLBACKFUNCTION fallbackfunction;
 }fallback_DMConfig_t;
 

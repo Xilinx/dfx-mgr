@@ -31,7 +31,7 @@ struct message {
 	uint32_t id;
 	uint32_t size;
 	uint32_t fdcount;
-	char data [4*1024];
+	char data [32*1024];
 };
 
 extern void error (char *msg);

@@ -17,7 +17,7 @@
 #include "layer0/utils.h"
 #include "layer0/siha.h"
 #include "scheduler.h"
-#include "layer0/nodebug.h"
+#include "layer0/debug.h"
 
 
 #include <fcntl.h>
@@ -149,6 +149,7 @@ int delAccelNode(AccelNode_t** accelNode){
 		free(tAccelNode->accel.datamover);
 	}
 	else if(tAccelNode->accel.type == HW_NODE){
+		INFO("%d\n", tAccelNode->accel.inHardware);
 		if(tAccelNode->accel.inHardware){
 			//TaskFinalise(tAccelNode->accel.datamover);
 			sihahls_unregister(tAccelNode->accel.datamover);
@@ -457,9 +458,10 @@ int printSchedule(Schedule_t* schedule){
 			}else{
 				INFOP("<==== ");
 			}
-			INFOP("%s%d ", 
+			INFOP("%s%d %lx", 
 				schedule->dependency->link->buffNode->buffer.name, 
-				schedule->dependency->link->buffNode->buffer.index);
+				schedule->dependency->link->buffNode->buffer.index,
+				schedule->dependency->link->buffNode->buffer.phyAddr);
 			//if(schedule->dependentBuffNode){
 			//	INFOP("depends on %s%d\n", 
 			//		schedule->dependentBuffNode->buffer.name, 
@@ -520,7 +522,7 @@ Link_t* addOutputBuffer(AccelNode_t *accelNode, BuffNode_t *buffNode,
 	link->tail = NULL;
 	//INFO("\n");
 //	INFO("%p\n", accelNode); //->accel.InterRMCompatible); 
-	if(accelNode->accel.InterRMCompatible == INTER_RM_COMPATIBLE){
+	if(accelNode->accel.InterRMCompatible == INTER_RM_COMPATIBLE && buffNode->buffer.type == 1){ 
 		buffNode->buffer.InterRMCompatible += 1;
 		buffNode->buffer.srcSlot = accelNode->accel.slot;
 		//buffNode->buffer.sincSlot = accelNode->accel.slot;
@@ -882,13 +884,13 @@ int acapGraphConfig(AcapGraph_t *acapGraph){
 	//INFO("\n"); 
 	//acapGraphToJson(acapGraph);
 	updateBuffers(acapGraph, acapGraph->linkHead);
-	INFO("updateBuffer done !");
+	//INFO("updateBuffer done !");
 	//acapGraphToJson(acapGraph);
 	updateBuffersPass2(acapGraph, acapGraph->linkHead);
-	INFO("updateBufferPass2 done !");
+	//INFO("updateBufferPass2 done !");
 	//acapGraphToJson(acapGraph);
 	updateDependency(&(acapGraph->dependencyHead), acapGraph->linkHead);
-	INFO("updateDependency done !");
+	//INFO("updateDependency done !");
 	return 0;
 }
 

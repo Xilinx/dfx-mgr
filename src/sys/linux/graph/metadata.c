@@ -300,7 +300,7 @@ int str2json(char* str, Json_t *json){
 	json->size = strlen(str);
 	json->data = str; //malloc(json->size + 1);
 	json->data[json->size] = 0;
-	INFO("%s\n", json->data);
+	//INFO("%s\n", json->data);
 	return 0;
 }
 

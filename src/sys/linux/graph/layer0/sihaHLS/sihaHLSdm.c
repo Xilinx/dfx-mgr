@@ -174,6 +174,7 @@ int sihahls_MM2SData_B(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64
 	}
 	uint64_t address = data->phyAddr + offset ;
 	if(data->InterRMCompatible == 2){
+		printf("InterRMCompatible");
 		*(uint32_t*)(dmconfig->mm2s_ADDR_LOW)  = data->otherAccel_phyAddr[dmconfig->accel->slot] & 0xFFFFFFFF;
 		*(uint32_t*)(dmconfig->mm2s_ADDR_HIGH) = (data->otherAccel_phyAddr[dmconfig->accel->slot] >> 32) & 0xFFFFFFFF;
 	}
@@ -198,6 +199,7 @@ int sihahls_S2MMData_B(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64
 	}
 	uint64_t address = data->phyAddr + offset ;
 	if(data->InterRMCompatible == 2){
+		printf("InterRMCompatible");
 		*(uint32_t*)(dmconfig->s2mm_ADDR_LOW)  = data->otherAccel_phyAddr[data->sincSlot] & 0xFFFFFFFF;
 		*(uint32_t*)(dmconfig->s2mm_ADDR_HIGH) = (data->otherAccel_phyAddr[data->sincSlot] >> 32) & 0xFFFFFFFF;
 	}
