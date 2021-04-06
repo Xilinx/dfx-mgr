@@ -55,7 +55,6 @@ void error (char *msg)
 int main (int argc, char **argv)
 {
 	struct message recv_message, send_message;
-	ssize_t size;
 	struct stat statbuf;
 	struct sockaddr_un socket_address;
 	int slot;
@@ -142,10 +141,9 @@ int main (int argc, char **argv)
 								send_message.id = GRAPH_INIT_DONE;
 								send_message.fdcount = buff_fd_cnt;
 								send_message.size = 0;
-								size = sock_fd_write(fd, &send_message, 
+								sock_fd_write(fd, &send_message, 
 											HEADERSIZE + send_message.size,
 											buff_fd, buff_fd_cnt);
-								//printf ("wrote %ld\n", size);
 								break;
 							case GRAPH_FINALISE:
 								printf("### GRAPH FINALISE ###\n");
