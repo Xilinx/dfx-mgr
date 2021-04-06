@@ -18,3 +18,5 @@ collect (PROJECT_LIB_SOURCES json-config.c)
 collect (PROJECT_LIB_SOURCES print.c)
 collect (PROJECT_LIB_SOURCES shm.c)
 collect (PROJECT_LIB_SOURCES shell.c)
+add_subdirectory (graph)
+

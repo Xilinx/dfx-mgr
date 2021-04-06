@@ -15,6 +15,7 @@ collect (PROJECT_LIB_HEADERS shm.h)
 collect (PROJECT_LIB_HEADERS lws_client.h)
 collect (PROJECT_LIB_HEADERS model.h)
 collect (PROJECT_LIB_HEADERS json-config.h)
+collect (PROJECT_LIB_HEADERS daemon_helper.h)
 
 collect (PROJECT_LIB_SOURCES accel.c)
 collect (PROJECT_LIB_SOURCES assert.c)
@@ -23,6 +24,7 @@ collect (PROJECT_LIB_SOURCES device.c)
 collect (PROJECT_LIB_SOURCES shell.c)
 collect (PROJECT_LIB_SOURCES shm.c)
 collect (PROJECT_LIB_SOURCES lws_client.c)
+collect (PROJECT_LIB_SOURCES daemon_helper.c)
 
 add_subdirectory (sys)
 
@@ -43,6 +45,7 @@ include_directories (${_inc_dirs})
 add_definitions (-DACAPD_INTERNAL)
 
 get_property (_ec_flags GLOBAL PROPERTY "PROJECT_EC_FLAGS")
+set (_deps "dfx" "websockets")
 
 if (WITH_SHARED_LIB)
   set (_lib ${PROJECT_NAME}-shared)

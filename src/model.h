@@ -16,28 +16,38 @@
 extern "C" {
 #endif
 
-struct RM {
-	char rm_path[512];	
-};
-struct pl_slot {
+typedef struct {
 	int uid;
-	struct RM *rm;
-};
+	int parent_uid;
+	acapd_accel_t *accel;
+}slot_info_t;
+
+typedef struct {
+	int uid;
+	char name[64];
+	char path[512];
+	char parent_path[512];
+	int wd;
+}accel_info_t;
+
 struct basePLDesign {
+	int uid;
+	int fpga_cfg_id;
+	char name[64];
 	char base_path[512];
+	char parent_path[512];
 	char type[128];
 	int num_slots;
-	struct pl_slot* slots;
+	slot_info_t **slots;
 	int active;
+	int wd; //inotify watch desc
+	accel_info_t accel_list[10];
 };
 
-struct pl_config {
-	struct basePLDesign* base;
-};
-struct platform {
+typedef struct {
 	char boardName[128];
-	struct pl_config* PL;	
-};
+	struct basePLDesign* active_base;
+}platform_info_t;
 
 struct daemon_config {
 	char defaul_accel_name[64];

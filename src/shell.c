@@ -25,38 +25,9 @@ int acapd_shell_fd(){
 int acapd_shell_clock_fd(){
 	return shell.clock_dev.id;
 }
-//int acapd_shell_get(const char *config)
-//{
-//	if (shell.dev.va == NULL) {
-//		int ret;
-//
-//		ret = acapd_shell_config(config);
-//		if (ret < 0) {
-//			acapd_perror("%s: no shell dev specified.\n",
-//				     __func__);
-//			return ACAPD_ACCEL_FAILURE;
-//		} else {
-//			return 0;
-//		}
-//		ret = acapd_device_open(&(shell.dev));
-//		if (ret < 0) {
-//			acapd_perror("%s: failed to open shell dev.\n");
-//			return ACAPD_ACCEL_FAILURE;
-//		}
-//	} else {
-//		return 0;
-//	}
-//}
-
-//int acapd_shell_put()
-//{
-	/* Empty for now */
-//	return 0;
-//}
 
 int acapd_shell_release_isolation(acapd_accel_t *accel)
 {
-	/* TODO: FIXME: hardcoded to release isolation */
 	void *reg_va;
 	acapd_device_t *dev;
 	acapd_shell_regs_t regs;
@@ -82,7 +53,6 @@ int acapd_shell_release_isolation(acapd_accel_t *accel)
 				     __func__, dev->dev_name);
 			return ACAPD_ACCEL_FAILURE;
 		}
-		printf("Opening shell clock_dev\n");
 		ret = acapd_device_open(&shell.clock_dev);
 		if (ret < 0) {
 			acapd_perror("%s: failed to open shell clock_dev %s.\n",
@@ -114,7 +84,6 @@ int acapd_shell_release_isolation(acapd_accel_t *accel)
 
 int acapd_shell_assert_isolation(acapd_accel_t *accel)
 {
-	/* TODO: FIXME: hardcoded to release isolation */
 	void *reg_va;
 	acapd_device_t *dev;
 	//uint32_t v;
@@ -159,9 +128,4 @@ int acapd_shell_assert_isolation(acapd_accel_t *accel)
 	//	}
 	//}
 	return 0;
-}
-
-int get_shell_slots()
-{
-	return shell.num_slots;
 }

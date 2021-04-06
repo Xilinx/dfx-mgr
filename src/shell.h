@@ -42,7 +42,6 @@ int acapd_shell_clock_fd();
 int acapd_shell_fd();
 int acapd_shell_release_isolation(acapd_accel_t *accel);
 int acapd_shell_assert_isolation(acapd_accel_t *accel);
-int get_shell_slots();
 
 #ifdef ACAPD_INTERNAL
 int sys_shell_config(acapd_shell_t *shell, const char *config);

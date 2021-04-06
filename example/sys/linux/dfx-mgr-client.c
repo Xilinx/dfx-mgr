@@ -3,7 +3,97 @@
  *
  * SPDX-License-Identifier: MIT
  */
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <unistd.h>
+#include <stdbool.h>
+#include <signal.h>
+#include <stdint.h>
+#include <sys/select.h>
+#include <sys/stat.h>
+ #include <dfx-mgr/accel.h>
+#include <dfx-mgr/daemon_helper.h>
+#include <dfx-mgr/sys/linux/graph/graphServer.h>
+#include <dfx-mgr/sys/linux/graph/graphClient.h>
+#include <dfx-mgr/sys/linux/graph/layer0/debug.h>
 
+int main(int argc, char *argv[])
+{
+	struct graphSocket* gs = (struct graphSocket*) malloc(sizeof(struct graphSocket));
+	struct message send_message, recv_message;
+	int ret;
+
+	memset (&send_message, '\0', sizeof(struct message));
+	memset (&recv_message, '\0', sizeof(struct message));
+	if (argc < 2) {
+		printf("Expects an argument. Use -h to see options\n");
+		return 0;
+	}
+	graphClientInit(gs);
+
+	if (!strcmp(argv[1],"-load")) {
+		if (argc < 3) {
+			printf("-load expects a package name. Try again.\n");
+			return 0;
+		}
+		memcpy(send_message.data, argv[2], strlen(argv[2]));
+		send_message.id = LOAD_ACCEL;
+		send_message.size = strlen(argv[2]);
+		if (write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size) < 0)
+			printf("error sending message from client\n");
+		ret = read(gs->sock_fd, &recv_message, sizeof (struct message));
+		if (ret <= 0)
+			printf("No message recieved\n");
+		printf("Accel loaded to slot %s\n",recv_message.data);
+	} else if(!strcmp(argv[1],"-remove")) {
+		if (argc < 3){
+			printf("-remove expects slot number\n");
+			return 0;
+		}
+		memcpy(send_message.data, argv[2], strlen(argv[2]));
+		send_message.id = REMOVE_ACCEL;
+		send_message.size = strlen(argv[2]);
+		if (write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size) == -1)
+			acapd_perror("error sending message from client\n");
+	} else if(!strcmp(argv[1],"-listPackage")) {
+		send_message.id = LIST_PACKAGE;
+		send_message.size = 0;
+		if (write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size) == -1)
+			acapd_perror("error sending message from client\n");
+		ret = read(gs->sock_fd, &recv_message, sizeof (struct message));
+		if (ret <= 0)
+			printf("No message recieved\n");
+		printf("%s",recv_message.data);
+	} else if(!strcmp(argv[1],"-allocBuffer")) {
+	} else if(!strcmp(argv[1],"-freeBuffer")) {
+	} else if(!strcmp(argv[1],"-getFDs")) {
+	} else if(!strcmp(argv[1],"-getRMInfo")) {
+	} else if(!strcmp(argv[1],"-getShellFD")) {
+	} else if(!strcmp(argv[1],"-getClockFD")) {
+	} else if(!strcmp(argv[1],"-h") || !strcmp(argv[1],"--help")) {
+		printf("Usage dfx-mgr-client COMMAND\n");
+		printf("Commmands\n");
+		printf("-listPackage\t\t List locally downloaded accelerator package\n");
+		printf("-load <accel_name>\t\t Load the provided accelerator packaged\n");
+		printf("-remove <accel_name>\t\t\t Unload package previously programmed\n");
+		printf("-allocBuffer <size> \t\t Allocate buffer of size and return its DMA fd and pa\n");
+		printf("-freeBuffer <pa> \t\t free buffer with physical address pa in decimal\n");
+		printf("-getFDs <slot#> \t\t Send ip device FD's over socket\n");
+		printf("-getRMInfo \n");
+		printf("-getShellFD \n");
+		printf("-getClockFD \n");
+	} else {
+		printf("Option not recognized, Try again.\n");
+		return 0;
+	}	
+	return 0;
+}
+/*
 #include <libwebsockets.h>
 #include <string.h>
 #include <signal.h>
@@ -23,7 +113,7 @@ struct msg{
     char arg[32];
 };
 struct resp{
-    char data[128];
+    char data[4096];
     int len;
 };
 static int msgs_sent;
@@ -55,7 +145,6 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
             lwsl_debug("client recieved %s len %d\n",r->data,r->len);
 			if(!msgs_sent)
 				interrupted = 1;
-            /* Handle incomming messages here. */
             break;
 
         case LWS_CALLBACK_CLIENT_WRITEABLE:
@@ -91,7 +180,7 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
 
 
 
-/*static int
+static int
 callback_http(struct lws *wsi, enum lws_callback_reasons reason,
 	      void *user, void *in, size_t len)
 {
@@ -166,7 +255,7 @@ callback_http(struct lws *wsi, enum lws_callback_reasons reason,
 
 	return lws_callback_http_dummy(wsi, reason, user, in, len);
 }*/
-
+/*
 static struct lws_protocols protocols[] =
 {
     {
@@ -175,11 +264,11 @@ static struct lws_protocols protocols[] =
         0,
         EXAMPLE_RX_BUFFER_BYTES, 0, NULL, 0
     },
-    { NULL, NULL, 0, 0, 0, NULL, 0} /* terminator */
+    { NULL, NULL, 0, 0, 0, NULL, 0} 
 };
 
 
-/*static const struct lws_protocols protocols[] = {
+static const struct lws_protocols protocols[] = {
 	{
 		"http",
 		callback_http,
@@ -192,7 +281,7 @@ static struct lws_protocols protocols[] =
 	{ NULL, NULL, 0, 0, 0, NULL, 0 }
 };*/
 
-static void
+/*static void
 sigint_handler(int sig)
 {
 	lwsl_debug("Recieved signal %d\n",sig);
@@ -213,7 +302,7 @@ int main(int argc, const char **argv)
 
 	lws_cmdline_option_handle_builtin(argc, argv, &info);
 
-	info.port = CONTEXT_PORT_NO_LISTEN; /* we do not run any server */
+	info.port = CONTEXT_PORT_NO_LISTEN; 
 	info.protocols = protocols;
 	info.gid = -1;
 	info.uid = -1;
@@ -246,19 +335,21 @@ int main(int argc, const char **argv)
 		cmd = "-listPackage";
 		arg = "";
 	}
-	else if (lws_cmdline_option(argc, argv, "-h") ||
-				lws_cmdline_option(argc, argv, "--help")) {
-		printf("Usage dfx-mgr-client COMMAND\n");
-		printf("Commmands\n");
-		printf("listPackage\t\t List locally downloaded accelerator package\n");
-		printf("load <arg>\t\t Load the provided accelerator packaged\n");
-		printf("remove\t\t\t Unload the programmed package\n");
-		return 0;
-		
-	}
-	/*else if ((option = lws_cmdline_option(argc, argv, "-getFD"))) {
-		cmd = "-getFD";
+	else if ((option = lws_cmdline_option(argc, argv, "-allocBuffer"))) {
+		cmd = "-allocBuffer";
 		arg = option;
+	}
+	else if ((option = lws_cmdline_option(argc, argv, "-freeBuffer"))) {
+		cmd = "-freeBuffer";
+		arg = option;
+	}
+	else if ((option = lws_cmdline_option(argc, argv, "-getFDs"))) {
+		cmd = "-getFDs";
+		arg = option;
+	}
+	else if ((lws_cmdline_option(argc, argv, "-getRMInfo"))) {
+		cmd = "-getRMInfo";
+		arg = "";
 	}
 	else if ((lws_cmdline_option(argc, argv, "-getShellFD"))) {
 		cmd = "-getShellFD";
@@ -268,10 +359,22 @@ int main(int argc, const char **argv)
 		cmd = "-getClockFD";
 		arg = "";
 	}
-	else if ((lws_cmdline_option(argc, argv, "-getRMInfo"))) {
-		cmd = "-getRMInfo";
-		arg = "";
-	}*/
+
+	else if (lws_cmdline_option(argc, argv, "-h") ||
+				lws_cmdline_option(argc, argv, "--help")) {
+		printf("Usage dfx-mgr-client COMMAND\n");
+		printf("Commmands\n");
+		printf("-listPackage\t\t List locally downloaded accelerator package\n");
+		printf("-load <accel_name>\t\t Load the provided accelerator packaged\n");
+		printf("-remove <accel_name>\t\t\t Unload package previously programmed\n");
+		printf("-allocBuffer <size> \t\t Allocate buffer of size and return its DMA fd and pa\n");
+		printf("-freeBuffer <pa> \t\t free buffer with physical address pa in decimal\n");
+		printf("-getFDs <slot#> \t\t Send ip device FD's over socket\n");
+		printf("-getRMInfo \n");
+		printf("-getShellFD \n");
+		printf("-getClockFD \n");
+		return 0;
+	}
 	else {
 		printf("Option not recognized, Try again.\n");
 		return 0;
@@ -288,4 +391,4 @@ int main(int argc, const char **argv)
 	lws_context_destroy(context);
 
 	return 0;
-}
+}*/
