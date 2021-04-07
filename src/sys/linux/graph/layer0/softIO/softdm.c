@@ -12,8 +12,8 @@
 #include "../dm.h"
 #include "../xrtbuffer.h"
 #include "../uio.h"
-#include "../debug.h"
-
+#include <dfx-mgr/print.h>
+#include <dfx-mgr/assert.h>
 
 int soft_config(void* dmconfig_a, Accel_t *accel){ //, volatile uint8_t* base){
 	soft_DMConfig_t* dmconfig = (soft_DMConfig_t*)dmconfig_a;

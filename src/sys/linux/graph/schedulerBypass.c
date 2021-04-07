@@ -8,9 +8,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "layer0/utils.h"
-#include "layer0/debug.h"
 #include "graph.h"
 #include "scheduler.h"
+#include <dfx-mgr/print.h>
+#include <dfx-mgr/assert.h>
+
 int printTransaction(Schedule_t *schedule){
 	if(schedule){
 		int dependent = schedule->dependency->linkCount;

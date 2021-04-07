@@ -14,6 +14,8 @@
 #include <unistd.h>
 #include "uio.h"
 #include "uiomap.h"
+#include <dfx-mgr/print.h>
+#include <dfx-mgr/assert.h>
 
 //static plDevices pldevices;
 

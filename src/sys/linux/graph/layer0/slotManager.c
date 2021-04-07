@@ -10,8 +10,9 @@
 #include "dm.h"
 #include "xrtbuffer.h"
 #include "slotManager.h"
+#include <dfx-mgr/print.h>
+#include <dfx-mgr/assert.h>
 #include "utils.h"
-#include "debug.h"
 
 void *dm_Task(void* carg){
         dm_t *datamover = carg;

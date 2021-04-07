@@ -5,7 +5,6 @@
  */
 #include "metadata.h"
 #include <time.h>
-#include "layer0/debug.h"
 #include "jobScheduler.h"
 #include "abstractGraph.h"
 #include "graphClient.h"
@@ -15,6 +14,8 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <fcntl.h>
+#include <dfx-mgr/print.h>
+#include <dfx-mgr/assert.h>
 
 int softgFFT(void** inData, int* inDataSize, void** outData, int* outDataSize){
         INFO("FALLBACK CALLED !!\n");
@@ -317,11 +318,11 @@ int abstractGraphConfig(AbstractGraph_t *graph){
 	int fd[25];
 	int fdcount = 0;
 	int status;
-	graph->gs = malloc(sizeof(graphSocket_t));	
+	graph->gs = malloc(sizeof(socket_t));	
 	INFO("\n");
 	len = abstractGraph2Json(graph, json);
 	INFO("\n");
-        status = graphClientInit(graph->gs);
+        status = initSocket(graph->gs);
 	INFO("\n");
 	if(status < 0){
 		return -1;

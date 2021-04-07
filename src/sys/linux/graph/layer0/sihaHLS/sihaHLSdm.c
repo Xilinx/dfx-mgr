@@ -11,8 +11,8 @@
 #include "../dm.h"
 #include "../xrtbuffer.h"
 #include "../uio.h"
-#include "../debug.h"
-
+#include <dfx-mgr/print.h>
+#include <dfx-mgr/assert.h>
 
 int sihahls_config(void* dmconfig_a, Accel_t *accel){ //volatile uint8_t* base){
 	sihahls_DMConfig_t* dmconfig = (sihahls_DMConfig_t*)dmconfig_a;

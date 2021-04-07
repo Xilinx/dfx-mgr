@@ -5,7 +5,8 @@
  */
 #include <stdio.h>
 #include <stdint.h>
-
+#include <dfx-mgr/print.h>
+#include <dfx-mgr/assert.h>
 
 int compare(int counts, uint32_t *address, uint32_t *reference){
 	int i;

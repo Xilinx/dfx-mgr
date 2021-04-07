@@ -11,7 +11,8 @@
 #include "layer0/queue.h"
 #include "graph.h"
 #include "scheduler.h"
-#include "layer0/debug.h"
+#include <dfx-mgr/print.h>
+#include <dfx-mgr/assert.h>
 #include <dfx-mgr/daemon_helper.h>
 
 int printTransaction(Schedule_t *schedule, char* message){

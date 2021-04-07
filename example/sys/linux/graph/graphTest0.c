@@ -8,10 +8,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <dfx-mgr/sys/linux/graph/layer0/utils.h>
-#include <dfx-mgr/sys/linux/graph/layer0/debug.h>
 #include <unistd.h>
 #include <dfx-mgr/sys/linux/graph/graph.h>
 #include <dfx-mgr/sys/linux/graph/abstractGraph.h>
+#include <dfx-mgr/print.h>
+#include <dfx-mgr/assert.h>
 #include <fcntl.h>
 
 int main(void){

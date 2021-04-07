@@ -14,6 +14,7 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <dfx-mgr/accel.h>
+#include <dfx-mgr/assert.h>
 #include <dfx-mgr/shell.h>
 #include <dfx-mgr/model.h>
 #include <dfx-mgr/json-config.h>
@@ -700,12 +701,15 @@ void *threadFunc()
 int dfx_init()
 {
 	pthread_t t;
+	int ret;
 	struct daemon_config config;
 
 	strcpy(platform.boardName,"Xilinx board");
 	sem_init(&mutex, 0, 0);
 	pthread_create(&t, NULL,threadFunc, NULL);
 	sem_wait(&mutex);
+	ret = system("rmdir /configfs/device-tree/overlays/*");
+	_unused(ret);
 	parse_config(CONFIG_PATH, &config);
 	if (config.defaul_accel_name != NULL && strcmp(config.defaul_accel_name, "") != 0)
 		load_accelerator(config.defaul_accel_name);

@@ -7,10 +7,11 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
-#include "layer0/debug.h"
 #include "layer0/utils.h"
 #include "aes192.h"
-//#include "aes128.h"
+#include <dfx-mgr/print.h>
+#include <dfx-mgr/assert.h>
+
 #define BLOCKSIZE 16
 
 int encrypt192Buffer(unsigned char* key, unsigned char* buffer, int bytes){

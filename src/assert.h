@@ -12,6 +12,8 @@
 #ifndef _ACAPD_ASSERT_H
 #define _ACAPD_ASSERT_H
 
+#define _unused(x) ((void)(x))
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -14,9 +14,9 @@
 #include <stdio.h>
 #include "uio.h"
 #include "xrtbuffer.h"
-#include "debug.h"
-#include <dfx-mgr/sys/linux/accel.h>
 #include <dfx-mgr/accel.h>
+#include <dfx-mgr/print.h>
+#include <dfx-mgr/assert.h>
 
 //static plDevices pldevices;
 //static Buffers buffers;

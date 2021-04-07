@@ -11,15 +11,13 @@
 #include "graph.h"
 #include "jobScheduler.h"
 #include "abstractGraph.h"
-//#include "graph.h"
 #include "layer0/queue.h"
-#include "layer0/debug.h"
 #include <dfx-mgr/daemon_helper.h>
 #include <dfx-mgr/accel.h>
+#include <dfx-mgr/print.h>
+#include <dfx-mgr/assert.h>
 #include "aesFallback.h"
 #include "aes192Fallback.h"
-//#include "layer0/dfx-mgrd.h"
-//#include "layer0/uio.h"
 #include "metadata.h"
 #include "layer0/utils.h"
 
@@ -221,20 +219,19 @@ void *jobScheduler_Task(void* carg){
 }
 
 JobScheduler_t * jobSchedulerInit(){
-        //INFO("\n");
-        JobScheduler_t *scheduler = malloc(sizeof(JobScheduler_t));
+    JobScheduler_t *scheduler = malloc(sizeof(JobScheduler_t));
 	dfx_init();
-        scheduler->graphList = NULL;
-	//INFO("%p\n", scheduler->graphList);
-        scheduler->CommandQueue  = malloc(sizeof(queue_t));
-        scheduler->ResponseQueue = malloc(sizeof(queue_t));
-        *(scheduler->CommandQueue ) = (queue_t) { malloc(sizeof(void*)*1000), 1000, 0, 0, 0,
-                                      PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, PTHREAD_COND_INITIALIZER };
-        *(scheduler->ResponseQueue) = (queue_t) { malloc(sizeof(void*)*1000), 1000, 0, 0, 0,
-                                      PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, PTHREAD_COND_INITIALIZER };
+    scheduler->graphList = NULL;
+        
+	scheduler->CommandQueue  = malloc(sizeof(queue_t));
+    scheduler->ResponseQueue = malloc(sizeof(queue_t));
+    *(scheduler->CommandQueue ) = (queue_t) { malloc(sizeof(void*)*1000), 1000, 0, 0, 0,
+                                  PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, PTHREAD_COND_INITIALIZER };
+    *(scheduler->ResponseQueue) = (queue_t) { malloc(sizeof(void*)*1000), 1000, 0, 0, 0,
+                                  PTHREAD_MUTEX_INITIALIZER, PTHREAD_COND_INITIALIZER, PTHREAD_COND_INITIALIZER };
 
-        pthread_create(scheduler->thread    , NULL, jobScheduler_Task, scheduler);
-        return scheduler;
+    pthread_create(scheduler->thread    , NULL, jobScheduler_Task, scheduler);
+    return scheduler;
 }
 
 

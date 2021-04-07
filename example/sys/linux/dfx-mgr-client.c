@@ -16,15 +16,13 @@
 #include <stdint.h>
 #include <sys/select.h>
 #include <sys/stat.h>
- #include <dfx-mgr/accel.h>
+#include <dfx-mgr/accel.h>
 #include <dfx-mgr/daemon_helper.h>
-#include <dfx-mgr/sys/linux/graph/graphServer.h>
 #include <dfx-mgr/sys/linux/graph/graphClient.h>
-#include <dfx-mgr/sys/linux/graph/layer0/debug.h>
 
 int main(int argc, char *argv[])
 {
-	struct graphSocket* gs = (struct graphSocket*) malloc(sizeof(struct graphSocket));
+	socket_t *gs = (socket_t *) malloc(sizeof(socket_t));
 	struct message send_message, recv_message;
 	int ret;
 
@@ -34,7 +32,7 @@ int main(int argc, char *argv[])
 		printf("Expects an argument. Use -h to see options\n");
 		return 0;
 	}
-	graphClientInit(gs);
+	initSocket(gs);
 
 	if (!strcmp(argv[1],"-load")) {
 		if (argc < 3) {
@@ -58,13 +56,17 @@ int main(int argc, char *argv[])
 		memcpy(send_message.data, argv[2], strlen(argv[2]));
 		send_message.id = REMOVE_ACCEL;
 		send_message.size = strlen(argv[2]);
-		if (write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size) == -1)
+		if (write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size) == -1){
 			acapd_perror("error sending message from client\n");
+			return -1;
+		}
 	} else if(!strcmp(argv[1],"-listPackage")) {
 		send_message.id = LIST_PACKAGE;
 		send_message.size = 0;
-		if (write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size) == -1)
+		if (write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size) == -1){
 			acapd_perror("error sending message from client\n");
+			return -1;
+		}
 		ret = read(gs->sock_fd, &recv_message, sizeof (struct message));
 		if (ret <= 0)
 			printf("No message recieved\n");

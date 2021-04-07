@@ -12,19 +12,17 @@
 #include <sys/mman.h>
 #include <time.h>
 #include <unistd.h>
+#include <stdio.h>
 #include "zynq_ioctl.h"
 #include "dm.h"
 #include "shellDriver.h"
-#include <stdio.h>
-//#include "dfx-mgrd.h"
 #include "siha.h"
 #include "utils.h"
-#include "debug.h"
-#include "xrtbuffer.h"
 #include "uio.h"
+#include "xrtbuffer.h"
 #include <dfx-mgr/print.h>
+#include <dfx-mgr/assert.h>
 #include <dfx-mgr/daemon_helper.h>
-//#include "acapd/acapdwebsoc.h"
 
 static plDevices_t* pldevices=NULL; 
 static Buffers_t* buffers=NULL; 

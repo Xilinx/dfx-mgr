@@ -9,18 +9,16 @@
 #include <stdint.h>
 #include <time.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include "layer0/sihaHLS/sihaHLSdm.h"
 #include "layer0/softIO/softdm.h"
 #include "layer0/fallback/fallback.h"
-//#include "dm.h"
 #include "graph.h"
 #include "layer0/utils.h"
 #include "layer0/siha.h"
 #include "scheduler.h"
-#include "layer0/debug.h"
-
-
-#include <fcntl.h>
+#include <dfx-mgr/print.h>
+#include <dfx-mgr/assert.h>
 
 AccelNode_t* createAccelNode(char *name, int inDmaType, 
 				int outDmaType, FALLBACKFUNCTION fallbackfunction,

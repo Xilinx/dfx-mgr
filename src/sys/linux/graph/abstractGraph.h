@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: MIT
  */
 #include <semaphore.h>
+#include "graphClient.h"
 typedef struct AbstractBuffNode AbstractBuffNode_t;
 typedef struct AbstractAccelNode AbstractAccelNode_t;
 typedef struct AbstractLink AbstractLink_t;
 typedef struct AbstractGraph AbstractGraph_t;
 typedef struct Element Element_t;
-typedef struct graphSocket graphSocket_t;
 typedef struct AccelNode AccelNode_t;
 typedef struct BuffNode BuffNode_t;
 typedef struct Link Link_t;
@@ -67,7 +67,7 @@ struct AbstractGraph{
         uint8_t type;
         uint8_t state;
         uint32_t accelCount;
-	graphSocket_t *gs;
+	socket_t *gs;
 	int xrt_fd;
         Element_t *accelNodeHead;
         Element_t *buffNodeHead;

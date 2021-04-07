@@ -13,6 +13,7 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <dfx-mgr/accel.h>
+#include <dfx-mgr/assert.h>
 #include <dfx-mgr/shell.h>
 #include <dfx-mgr/model.h>
 #include <dfx-mgr/daemon_helper.h>
@@ -28,11 +29,9 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <sys/select.h>
-#include <dfx-mgr/sys/linux/graph/graphServer.h>
 #include <dfx-mgr/sys/linux/graph/graphClient.h>
 #include <dfx-mgr/sys/linux/graph/jobScheduler.h>
 #include <dfx-mgr/sys/linux/graph/abstractGraph.h>
-#include <dfx-mgr/sys/linux/graph/layer0/debug.h>
 
 #define WATCH_PATH_LEN 256
 #define MAX_WATCH 50
@@ -51,7 +50,6 @@ void error (char *msg)
 	perror (msg);
 	exit (1);
 }
-
 
 int main (int argc, char **argv)
 {

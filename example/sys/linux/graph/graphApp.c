@@ -7,14 +7,15 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <fcntl.h>
 #include <dfx-mgr/sys/linux/graph/layer0/utils.h>
-#include <dfx-mgr/sys/linux/graph/layer0/debug.h>
 //#include <dfx-mgr/sys/linux/graph/layer0/uio.h>
 #include <unistd.h>
 //#include "metadata.h"
 #include <dfx-mgr/sys/linux/graph/graph.h>
 #include <dfx-mgr/sys/linux/graph/abstractGraph.h>
-#include <fcntl.h>
+#include <dfx-mgr/print.h>
+#include <dfx-mgr/assert.h>
 
 uint32_t buff[] = {
 	0xcca5a729, 0x4b276e90, 0x9a57a7e7, 0xd0bfe1c7,

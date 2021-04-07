@@ -6,6 +6,8 @@
 #include <pthread.h>
 #include <stdio.h>
 #include "queue.h"
+#include <dfx-mgr/print.h>
+#include <dfx-mgr/assert.h>
 
 void queue_enqueue(queue_t *queue, void *value)
 {
