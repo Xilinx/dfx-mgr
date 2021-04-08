@@ -57,3 +57,10 @@ However the applications can load and then compute as many times.
 
 3. DFX-MGR uses i-notify for firmware file updates and i-notify doesn't work with network filesystem.
 Hence it is recommended to NOT boot linux over NFS for correct functinality of DFX-MGR daemon.
+
+4. Swapping of base shell not supported unless power cycling the board. #CR-1094476
+
+5. Multiple graph merge not supported (future work)
+
+6. I/O nodes doesn't support zero copy.
+
