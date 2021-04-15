@@ -13,6 +13,9 @@ User can also write application code to manage accelerators using the libary api
 Library source code is in `src/`, the examples are in `example/`, headers are
 in `include/` and required external libraries can be found in `lib/`
 
+![Screenshot](https://media.gitenterprise.xilinx.com/user/978/files/c2254180-9d53-11eb-9371-ad2d44922a8b)
+
+
 # How to build
 DFX-MGR depends on external libraries/frameworks like libdfx, libwebsockets,
 i-notify etc. The recommended way to compile this repo is using yocto where
