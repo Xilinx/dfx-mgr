@@ -38,6 +38,7 @@
 #define MAX_CLIENTS 200
 
 static volatile int interrupted = 0;
+static int socket_d;
 
 void intHandler(int dummy) {
 	_unused(dummy);
@@ -56,7 +57,7 @@ int main (int argc, char **argv)
 	struct message recv_message, send_message;
 	struct stat statbuf;
 	struct sockaddr_un socket_address;
-	int slot;
+	int slot, ret;
 	char *msg;
 
 	signal(SIGINT, intHandler);
@@ -162,20 +163,24 @@ int main (int argc, char **argv)
 								slot = load_accelerator(recv_message.data);
 								sprintf(send_message.data, "%d", slot);
 								send_message.size = 2;
-								if (write(fd, &send_message, HEADERSIZE + send_message.size) < 0)
+								if (write(fd, &send_message, send_message.size) < 0)
 									acapd_perror("LOAD_ACCEL: write failed\n");
 								break;
 
 							case REMOVE_ACCEL:
 								acapd_print("REMOVE_ACCEL: removing accel at slot %d\n",atoi(recv_message.data));
-								remove_accelerator(atoi(recv_message.data));
+								ret = remove_accelerator(atoi(recv_message.data));
+								sprintf(send_message.data, "%d", ret);
+								send_message.size = 2;
+								if (write(fd, &send_message, send_message.size) < 0)
+									acapd_perror("REMOVE_ACCEL: write failed\n");
 								break;
 
 							case LIST_PACKAGE:
 								msg = listAccelerators();
 								memcpy(send_message.data, msg, sizeof(send_message.data)); 
 								send_message.size = sizeof(send_message.data);
-								if (write(fd, &send_message, HEADERSIZE + send_message.size) < 0)
+								if (write(fd, &send_message, send_message.size) < 0)
 									acapd_perror("LIST_PACKAGE: write failed\n");
 								break;
 							case QUIT:

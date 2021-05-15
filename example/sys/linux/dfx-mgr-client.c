@@ -47,19 +47,28 @@ int main(int argc, char *argv[])
 		ret = read(gs->sock_fd, &recv_message, sizeof (struct message));
 		if (ret <= 0)
 			printf("No message recieved\n");
-		printf("Accel loaded to slot %s\n",recv_message.data);
+		printf("Accelerator loaded to slot %s\n",recv_message.data);
 	} else if(!strcmp(argv[1],"-remove")) {
 		if (argc < 3){
-			printf("-remove expects slot number\n");
-			return 0;
+			/* If no slot number provided default to 0*/
+			strcpy(send_message.data, "0");
+			send_message.size = 1;
+		} else {
+			memcpy(send_message.data, argv[2], strlen(argv[2]));
+			send_message.size = strlen(argv[2]);
 		}
-		memcpy(send_message.data, argv[2], strlen(argv[2]));
 		send_message.id = REMOVE_ACCEL;
-		send_message.size = strlen(argv[2]);
 		if (write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size) == -1){
 			acapd_perror("error sending message from client\n");
 			return -1;
 		}
+		ret = read(gs->sock_fd, &recv_message, sizeof (struct message));
+		if (ret <= 0)
+			printf("No message recieved\n");
+		if (atoi(recv_message.data) == 0)
+			printf("Accelerator succesfully removed.\n");
+		else
+			printf("Error trying to remove accelerator.\n");
 	} else if(!strcmp(argv[1],"-listPackage")) {
 		send_message.id = LIST_PACKAGE;
 		send_message.size = 0;

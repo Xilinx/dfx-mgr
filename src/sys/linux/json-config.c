@@ -200,7 +200,6 @@ int parseShellJson(acapd_shell_t *shell, const char *filename)
 	char *jsonData;
 	acapd_device_t *dev;
 	acapd_device_t *clk_dev;
-
 	acapd_assert(shell != NULL);
 	acapd_assert(filename != NULL);
 	fptr = fopen(filename, "r");
@@ -237,13 +236,13 @@ int parseShellJson(acapd_shell_t *shell, const char *filename)
 		}
 		if (jsoneq(jsonData, &token[i],"reg_base")== 0)
 			dev->reg_pa = (uint64_t)strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 16);
-		if (jsoneq(jsonData, &token[i],"reg_size") == 0){}
+		if (jsoneq(jsonData, &token[i],"reg_size") == 0)
 			dev->reg_size = (size_t)strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 16);
 		if (jsoneq(jsonData, &token[i],"clock_device_name") == 0)
 			clk_dev->dev_name = strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start);
 		if (jsoneq(jsonData, &token[i],"clock_reg_base")== 0)
 			clk_dev->reg_pa = (uint64_t)strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 16);
-		if (jsoneq(jsonData, &token[i],"clock_reg_size") == 0){}
+		if (jsoneq(jsonData, &token[i],"clock_reg_size") == 0)
 			clk_dev->reg_size = (size_t)strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 16);
 		if (jsoneq(jsonData, &token[i],"isolation_slots") == 0){
 			int j;

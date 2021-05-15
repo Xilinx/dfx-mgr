@@ -17,7 +17,6 @@
 
 int printTransaction(Schedule_t *schedule, char* message){
 	if(schedule){
-		_unused(socket_d);
 		int dependent = schedule->dependency->linkCount;
 		AccelNode_t *accelNode = schedule->dependency->link->accelNode;
 		BuffNode_t *buffNode = schedule->dependency->link->buffNode;

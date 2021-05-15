@@ -18,6 +18,10 @@ extern "C" {
 
 #include <stddef.h>
 #include <stdint.h>
+#include <dfx-mgr/dma.h>
+#include <dfx-mgr/device.h>
+#include <dfx-mgr/helper.h>
+#include <dfx-mgr/sys/@PROJECT_SYSTEM@/accel.h>
 
 #define ACAPD_ACCEL_STATUS_UNLOADED	0U
 #define ACAPD_ACCEL_STATUS_LOADING	1U
@@ -40,11 +44,6 @@ extern "C" {
 #define ACAPD_ACCEL_PKG_TYPE_LAST	2U
 
 #define FIRMWARE_PATH	"/lib/firmware/xilinx"
-
-#include <dfx-mgr/dma.h>
-#include <dfx-mgr/device.h>
-#include <dfx-mgr/helper.h>
-#include <dfx-mgr/sys/@PROJECT_SYSTEM@/accel.h>
 
 typedef enum shell_type {
 	FLAT_SHELL = 1U,

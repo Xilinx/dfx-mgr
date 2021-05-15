@@ -30,7 +30,6 @@
 void *jobScheduler_Task(void* carg){
         //INFO("\n");
         //
-        _unused(socket_d);
 	JobScheduler_t *scheduler = (JobScheduler_t *)carg; 
         Element_t *graphList = NULL;
         AbstractGraph_t *graph = NULL;

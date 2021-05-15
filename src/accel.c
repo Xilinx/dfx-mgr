@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <errno.h>
 
 void init_accel(acapd_accel_t *accel, acapd_accel_pkg_hd_t *pkg)
 {

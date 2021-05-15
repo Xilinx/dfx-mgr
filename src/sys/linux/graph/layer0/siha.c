@@ -51,7 +51,6 @@ plDevices_t* SIHAGetPLDevices(){
 }
 
 int SIHAInitAccel(int slot, char * accel){
-        _unused(socket_d);
         //INFO("\n");
 	//FILE *fp;
 	//size_t len = 0;

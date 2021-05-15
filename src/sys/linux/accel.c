@@ -200,14 +200,13 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 
 	acapd_assert(accel != NULL);
 	if (accel->is_cached == 0) {
-		acapd_perror("%s: accel is not cached.\n");
+		acapd_perror("accel is not cached.\n");
 		return ACAPD_ACCEL_FAILURE;
 	}
 	fpga_cfg_id = accel->sys_info.fpga_cfg_id;
 	ret = dfx_cfg_load(fpga_cfg_id);
 	if (ret != 0) {
-		acapd_perror("Failed to load fpga config: %d\n",
-		     fpga_cfg_id);
+		acapd_perror("Failed to load fpga config: %d\n", fpga_cfg_id);
 		dfx_cfg_destroy(fpga_cfg_id);
 		return ACAPD_ACCEL_FAILURE;
 	}
