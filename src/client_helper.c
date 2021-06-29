@@ -9,6 +9,9 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <sys/select.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -19,8 +22,11 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <dfx-mgr/print.h>
-#include "lws_client.h"
+#include "client_helper.h"
 
+#define MAX_FD 25
+struct message message;
+int sock_fd;
 static int interrupted;
 static struct lws *web_socket;
 static const char *arg;
@@ -68,7 +74,6 @@ static int callback_example( struct lws *wsi, enum lws_callback_reasons reason, 
             printf("client recieved data %s len %d\n",response->data,response->len);
             if(!msgs_sent)
                 interrupted = 1;
-            /* Handle incomming messages here. */
             break;
 
         case LWS_CALLBACK_CLIENT_WRITEABLE:
@@ -115,10 +120,8 @@ static struct lws_protocols protocols[] =
         0,
         EXAMPLE_RX_BUFFER_BYTES, 0, NULL, 0
     },
-    { NULL, NULL, 0, 0, 0, NULL, 0} /* terminator */
+    { NULL, NULL, 0, 0, 0, NULL, 0} // terminator 
 };
-
-
 
 static void sigint_handler(int sig)
 {
@@ -137,7 +140,7 @@ int exchangeCommand(char* path, char* argvalue){
     memset(&ccinfo, 0, sizeof ccinfo);
 
 	interrupted = 0;
-    info.port = CONTEXT_PORT_NO_LISTEN; /* we do not run any server */
+    info.port = CONTEXT_PORT_NO_LISTEN; 
     info.protocols = protocols;
     info.gid = -1;
     info.uid = -1;
@@ -171,14 +174,34 @@ int exchangeCommand(char* path, char* argvalue){
     return 0;
 }
 
-int loadpdi(char* pdifilename)
+int loadapp(char* packageName)
 {
-	exchangeCommand("-loadpdi", pdifilename);
-	printf("loaded accel %s resp->data %s resp->len %d\n",pdifilename,response->data,response->len);
-	if (response->len)
-		return atoi(response->data);
-	else
+	socket_t *gs;
+    struct message send_message, recv_message;
+    int ret;
+
+	printf("Enter loadapp() %s\n",packageName);
+	if (packageName == NULL || !strcmp(packageName,""))
+		acapd_perror("Load expects a package name\n");
+
+	gs = (socket_t *) malloc(sizeof(socket_t));
+    memset (&send_message, '\0', sizeof(struct message));
+    memset (&recv_message, '\0', sizeof(struct message));
+	initSocket(gs);
+
+    memcpy(send_message.data, packageName, strlen(packageName));
+    send_message.id = LOAD_ACCEL;
+    send_message.size = strlen(packageName);
+    if (write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size) < 0)
+        printf("error sending message from client\n");
+    ret = read(gs->sock_fd, &recv_message, sizeof (struct message));
+    if (ret <= 0){
+        printf("No message recieved\n");
 		return -1;
+	}
+
+    printf("Accelerator loaded to slot %s\n",recv_message.data);
+	return atoi(recv_message.data);
 }
 
 int removepdi(char* argvalue, fds_t *fds)
@@ -192,7 +215,7 @@ int removepdi(char* argvalue, fds_t *fds)
 	return exchangeCommand("-remove", argvalue);
 }
 
-int clientFD(char* argvalue)
+/*int clientFD(char* argvalue)
 {
 	return exchangeCommand("-getFD", argvalue);
 }
@@ -207,17 +230,6 @@ int clientClockFD()
 	return exchangeCommand("-getClockFD", "");
 }
 
-
-/**************************************************************************/
-/* Constants used by this program                                         */
-/**************************************************************************/
-#define SERVER_PATH_0     "/tmp/server_rm0"
-#define SERVER_PATH_1     "/tmp/server_rm1"
-#define SERVER_PATH_2     "/tmp/server_rm2"
-#define BUFFER_LENGTH    250
-#define FALSE              0
-
-char *server_paths[] = {"/tmp/server_rm0", "/tmp/server_rm1", "/tmp/server_rm2"};
 
 int recvfd(int socket, fds_t *fds) {
 	int len;
@@ -286,11 +298,6 @@ int cfileexists(const char* filename){
 	else
 		return 0;
 }
-/* Pass in 1 parameter which is either the */
-/* path name of the server as a UNICODE    */
-/* string, or set the server path in the   */
-/* #define SERVER_PATH which is a CCSID    */
-/* 500 string.                             */
 
 int socketGetFd(int slot, fds_t* fds){
 	struct sockaddr_un serveraddr;
@@ -353,3 +360,149 @@ int socketGetPA(int slot, fds_t* fds){
 	  	close(sd);
 	return 0;
 }
+
+*/
+ssize_t
+sock_fd_write(int sock, void *buf, ssize_t buflen, int *fd, int fdcount)
+{
+    ssize_t     size;
+    struct msghdr   msg;
+    struct iovec    iov;
+    union {
+        struct cmsghdr  cmsghdr;
+        char control[CMSG_SPACE(sizeof (int) * MAX_FD)];
+    } cmsgu;
+    struct cmsghdr  *cmsg;
+
+    iov.iov_base = buf;
+    iov.iov_len = buflen;
+
+    msg.msg_name = NULL;
+    msg.msg_namelen = 0;
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    msg.msg_flags = 0;
+
+    if (fd[0] != -1) {
+        msg.msg_control = cmsgu.control;
+        msg.msg_controllen = sizeof(cmsgu.control);
+
+        cmsg = CMSG_FIRSTHDR(&msg);
+        cmsg->cmsg_len = CMSG_LEN(MAX_FD * sizeof (int));
+        cmsg->cmsg_level = SOL_SOCKET;
+        cmsg->cmsg_type = SCM_RIGHTS;
+
+        memset(CMSG_DATA(cmsg), '\0', MAX_FD * sizeof(int));
+        memcpy(CMSG_DATA(cmsg), fd, fdcount * sizeof(int));
+    } else {
+        msg.msg_control = NULL;
+        msg.msg_controllen = 0;
+    }
+
+    size = sendmsg(sock, &msg, 0);
+
+    if (size < 0)
+        perror ("sendmsg");
+    return size;
+}
+
+ssize_t sock_fd_read(int sock, struct message *buf, int *fd, int *fdcount)
+{
+	ssize_t size = 0;
+    struct msghdr   msg;
+    struct iovec    iov;
+    union {
+        struct cmsghdr  cmsghdr;
+        char        control[CMSG_SPACE(sizeof (int) * MAX_FD)];
+    } cmsgu;
+    struct cmsghdr  *cmsg;
+    iov.iov_base = buf;
+    iov.iov_len = 1024*4;
+
+    msg.msg_name = NULL;
+    msg.msg_namelen = 0;
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+	msg.msg_flags = 0;
+    msg.msg_control = cmsgu.control;
+    msg.msg_controllen = sizeof(cmsgu.control);
+    size = recvmsg (sock, &msg, 0);
+    if (size < 0) {
+        perror ("recvmsg");
+        exit(1);
+    }
+	*fdcount = buf->fdcount;
+    cmsg = CMSG_FIRSTHDR(&msg);
+    if (cmsg && cmsg->cmsg_len == CMSG_LEN(sizeof(int))) {
+        if (cmsg->cmsg_level != SOL_SOCKET) {
+            fprintf (stderr, "invalid cmsg_level %d\n",
+                 cmsg->cmsg_level);
+            exit(1);
+        }
+        if (cmsg->cmsg_type != SCM_RIGHTS) {
+            fprintf (stderr, "invalid cmsg_type %d\n",
+                 cmsg->cmsg_type);
+            exit(1);
+        }
+	}
+
+    memcpy(fd, CMSG_DATA(cmsg), sizeof(int)*(*fdcount));
+    return size;
+}
+
+int initSocket(socket_t* gs){
+	int status;
+	
+	if ((gs->sock_fd = socket(AF_UNIX, SOCK_SEQPACKET, 0)) == -1){
+		error("socket error !!");
+		return -1;
+	}
+	
+	memset(&gs->socket_address, 0, sizeof(struct sockaddr_un));
+	gs->socket_address.sun_family = AF_UNIX;
+	strncpy(gs->socket_address.sun_path, SERVER_SOCKET, sizeof(gs->socket_address.sun_path) - 1);
+	status = connect(gs->sock_fd, (const struct sockaddr *) &gs->socket_address, sizeof(struct sockaddr_un));
+	if (status < 0){
+		error("connect failed");
+		return -1;
+	}
+	return 0;
+}
+
+int graphClientSubmit(socket_t *gs, char* json, int size, int *fd, int *fdcount){
+	struct message send_message, recv_message;
+	memset (&send_message, '\0', sizeof(struct message));
+	send_message.id = GRAPH_INIT;
+	send_message.size = size;
+	send_message.fdcount = 0;
+	memcpy(send_message.data, json, size);
+	//INFO("\n");
+	if (write (gs->sock_fd, &send_message, HEADERSIZE + send_message.size) == -1){
+		//INFO("Write error occured !!");
+		//return -1;
+		error("write");
+	}
+	memset (&recv_message, '\0', sizeof(struct message));
+	size = sock_fd_read(gs->sock_fd, &recv_message, fd, fdcount);
+	if (size <= 0)
+		return -1;
+	//INFO("\n");
+	return 0;
+}
+
+int graphClientFinalise(socket_t *gs, char* json, int size){	
+	struct message send_message, recv_message;
+	memset (&send_message, '\0', sizeof(struct message));
+	send_message.id = GRAPH_FINALISE;
+	send_message.size = size;
+	send_message.fdcount = 0;
+	memcpy(send_message.data, json, size);
+	if (write (gs->sock_fd, &send_message, HEADERSIZE + send_message.size) == -1)
+		error ("write");
+	memset (&recv_message, '\0', sizeof(struct message));
+	size = read (gs->sock_fd, &recv_message, sizeof (struct message));
+	if (size <= 0)
+		return -1;
+	return 0;
+}
+

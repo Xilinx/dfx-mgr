@@ -29,7 +29,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <sys/select.h>
-#include <dfx-mgr/sys/linux/graph/graphClient.h>
+#include <dfx-mgr/client_helper.h>
 #include <dfx-mgr/sys/linux/graph/jobScheduler.h>
 #include <dfx-mgr/sys/linux/graph/abstractGraph.h>
 

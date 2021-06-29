@@ -3,12 +3,7 @@
  *
  * SPDX-License-Identifier: MIT
  */
-#include "metadata.h"
 #include <time.h>
-#include "jobScheduler.h"
-#include "abstractGraph.h"
-#include "graphClient.h"
-#include "graph.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -16,19 +11,23 @@
 #include <fcntl.h>
 #include <dfx-mgr/print.h>
 #include <dfx-mgr/assert.h>
+#include "jobScheduler.h"
+#include "abstractGraph.h"
+#include "graph.h"
+#include "metadata.h"
 
 int softgFFT(void** inData, int* inDataSize, void** outData, int* outDataSize){
-        INFO("FALLBACK CALLED !!\n");
+    INFO("FALLBACK CALLED !!\n");
 	_unused(outDataSize);
-        memcpy(outData[0], inData[0], inDataSize[0]);
-        return 0;
+    memcpy(outData[0], inData[0], inDataSize[0]);
+    return 0;
 }
 
 int softgFIR(void** inData, int* inDataSize, void** outData, int* outDataSize){
-        INFO("FALLBACK CALLED !!\n");
+    INFO("FALLBACK CALLED !!\n");
 	_unused(outDataSize);
-        memcpy(outData[0], inData[0], inDataSize[0]);
-        return 0;
+    memcpy(outData[0], inData[0], inDataSize[0]);
+    return 0;
 }
 
 Element_t* addElement(Element_t** headElement, Element_t* nextElement){
@@ -68,12 +67,12 @@ AbstractGraph_t* graphInit(){//uint8_t schedulerBypassFlag){
 	AbstractGraph_t * graph = malloc(sizeof(AbstractGraph_t));
 	graph->id = rand(); 
 	graph->type = ENABLE_SCHEDULER;
-        graph->accelNodeHead = NULL;
-        graph->buffNodeHead = NULL;
-        graph->linkHead = NULL;
-        graph->accelNodeID = 0;
-        graph->buffNodeID = 0;
-        graph->linkID = 0;
+    graph->accelNodeHead = NULL;
+    graph->buffNodeHead = NULL;
+    graph->linkHead = NULL;
+    graph->accelNodeID = 0;
+    graph->buffNodeID = 0;
+    graph->linkID = 0;
 	graph->accelCount = 0;
 	return graph;
 }
@@ -152,10 +151,10 @@ Link_t *addInBuffer(AcapGraph_t *acapGraph, AccelNode_t *accelNode, BuffNode_t *
 
 AbstractAccelNode_t* createNode(uint32_t id, uint32_t type, uint32_t size, char* name){
 	AbstractAccelNode_t *node = (AbstractAccelNode_t *) malloc(sizeof(AbstractAccelNode_t));
-        node->id = id;
-        node->type = type;
-        strcpy(node->name, name);
-        node->size = size;
+    node->id = id;
+    node->type = type;
+    strcpy(node->name, name);
+    node->size = size;
 	node->semaphore = rand(); 
 	return node;
 }
@@ -170,10 +169,10 @@ int printAccelNode(AbstractAccelNode_t *node, char * json){
 
 AbstractBuffNode_t* createBNode(uint32_t id, uint32_t type, uint32_t size, char* name){
 	AbstractBuffNode_t *node = (AbstractBuffNode_t *) malloc(sizeof(AbstractBuffNode_t));
-        node->id = id;
-        node->type = type;
-        strcpy(node->name, name);
-        node->size = size;
+    node->id = id;
+    node->type = type;
+    strcpy(node->name, name);
+    node->size = size;
 	return node;
 }
 
@@ -186,14 +185,14 @@ AbstractLink_t* createLink(AbstractAccelNode_t *accelNode, AbstractBuffNode_t *b
 				uint32_t id, uint8_t type, uint32_t offset, uint32_t transactionSize, 
 				uint8_t transactionIndex, uint8_t channel){
 	AbstractLink_t *node = (AbstractLink_t *) malloc(sizeof(AbstractLink_t));
-        node->id = id;
+    node->id = id;
 	node->accelNode = accelNode;
-        node->buffNode = buffNode;
-        node->type = type;
-        node->transactionIndex = transactionIndex;
-        node->transactionSize = transactionSize;
-        node->offset = offset;
-        node->channel = channel;
+    node->buffNode = buffNode;
+    node->type = type;
+    node->transactionIndex = transactionIndex;
+    node->transactionSize = transactionSize;
+    node->offset = offset;
+    node->channel = channel;
 	return node;
 }
 
@@ -206,8 +205,8 @@ AbstractAccelNode_t* addInputNode(AbstractGraph_t *graph, int size){
 	Element_t* element = (Element_t *) malloc(sizeof(Element_t));
 	element->node =  createNode(graph->accelNodeID, IN_NODE, size, "Input");
 	graph->accelNodeID ++;
-        element->head = NULL;
-        element->tail = NULL;
+    element->head = NULL;
+    element->tail = NULL;
 	addElement(&(graph->accelNodeHead), element);
 	return element->node; 
 }
@@ -216,8 +215,8 @@ AbstractAccelNode_t* addOutputNode(AbstractGraph_t *graph, int size){
 	Element_t* element = (Element_t *) malloc(sizeof(Element_t));
 	element->node =  createNode(graph->accelNodeID, OUT_NODE, size, "Output");
 	graph->accelNodeID ++;
-        element->head = NULL;
-        element->tail = NULL;
+    element->head = NULL;
+    element->tail = NULL;
 	addElement(&(graph->accelNodeHead), element);
 	return element->node; 
 }
@@ -227,8 +226,8 @@ AbstractAccelNode_t* addAcceleratorNode(AbstractGraph_t *graph, char *name){
 	element->node =  createNode(graph->accelNodeID, HW_NODE, 0, name);
 	graph->accelNodeID ++;
 	graph->accelCount ++;
-        element->head = NULL;
-        element->tail = NULL;
+    element->head = NULL;
+    element->tail = NULL;
 	addElement(&(graph->accelNodeHead), element);
 	return element->node; 
 }
@@ -237,8 +236,8 @@ AbstractBuffNode_t* addBuffer(AbstractGraph_t *graph, int size, int type){
 	Element_t* element = (Element_t *) malloc(sizeof(Element_t));
 	element->node =  createBNode(graph->buffNodeID, type, size, "Buffer");
 	graph->buffNodeID ++; 
-        element->head = NULL;
-        element->tail = NULL;
+    element->head = NULL;
+    element->tail = NULL;
 	addElement(&(graph->buffNodeHead), element);
 	return element->node; 
 }
@@ -248,8 +247,8 @@ AbstractLink_t *addOutBuffer(AbstractGraph_t *graph, AbstractAccelNode_t *accelN
 	Element_t* element = (Element_t *) malloc(sizeof(Element_t));
 	element->node =  createLink(accelNode, buffNode, graph->linkID, 1, offset, transactionSize, transactionIndex, channel);
 	graph->linkID ++; 
-        element->head = NULL;
-        element->tail = NULL;
+    element->head = NULL;
+    element->tail = NULL;
 	addElement(&(graph->linkHead), element);
 	return element->node; 
 }
@@ -268,12 +267,12 @@ AbstractLink_t *addInBuffer(AbstractGraph_t *graph, AbstractAccelNode_t *accelNo
 
 int abstractGraph2Json(AbstractGraph_t *graph, char* json){
 	int len = 0;
-        uint32_t id = graph->id;
-        uint8_t type = graph->type;
-	//INFO("\n");
-        Element_t *accelNodeHead = graph->accelNodeHead, *accelNode;
-        Element_t *buffNodeHead = graph->buffNodeHead, *buffNode;
-        Element_t *linkHead = graph->linkHead, *link;
+    uint32_t id = graph->id;
+    uint8_t type = graph->type;
+        
+	Element_t *accelNodeHead = graph->accelNodeHead, *accelNode;
+    Element_t *buffNodeHead = graph->buffNodeHead, *buffNode;
+    Element_t *linkHead = graph->linkHead, *link;
 	len += sprintf(json + len, "{\"id\": %d, \"type\": %x,\n", id, type);
 	accelNode = accelNodeHead;
 	len += sprintf(json + len, "\"accelNode\": [\n");
@@ -349,26 +348,26 @@ int abstractGraphFinalise(AbstractGraph_t *graph){
 	memset(json, '\0', 1024*4);
 	len = sprintf(json, "{\"id\": %d}", graph->id);
 	//INFO("%d %s\n", len, json);
-        graphClientFinalise(graph->gs, json, len);
+    graphClientFinalise(graph->gs, json, len);
 	appFinaliseIPBuffers(graph);
 	//printf("abstractGraphFinalise\n");
 	
-        while(graph->linkHead != NULL){
-                free((AbstractLink_t *)graph->linkHead->node);
-                graph->linkHead->node = NULL;
-                delElement(&(graph->linkHead), graph->linkHead);
-        }
-        while(graph->buffNodeHead != NULL){
-                free((AbstractBuffNode_t *)graph->buffNodeHead->node);
-                graph->buffNodeHead->node = NULL;
-                delElement(&(graph->buffNodeHead), graph->buffNodeHead);
-        }
-        while(graph->accelNodeHead != NULL){
-                free((AbstractAccelNode_t *)graph->accelNodeHead->node);
-                graph->accelNodeHead->node = NULL;
-                delElement(&(graph->accelNodeHead), graph->accelNodeHead);
-        }
-        free(graph);
+    while(graph->linkHead != NULL){
+        free((AbstractLink_t *)graph->linkHead->node);
+        graph->linkHead->node = NULL;
+        delElement(&(graph->linkHead), graph->linkHead);
+    }
+    while(graph->buffNodeHead != NULL){
+        free((AbstractBuffNode_t *)graph->buffNodeHead->node);
+        graph->buffNodeHead->node = NULL;
+        delElement(&(graph->buffNodeHead), graph->buffNodeHead);
+    }
+    while(graph->accelNodeHead != NULL){
+        free((AbstractAccelNode_t *)graph->accelNodeHead->node);
+        graph->accelNodeHead->node = NULL;
+        delElement(&(graph->accelNodeHead), graph->accelNodeHead);
+    }
+    free(graph);
 	return 0;
 }
 
@@ -387,7 +386,6 @@ int appFinaliseIPBuffers(AbstractGraph_t *graph){
 			unmapBuffer(node->fd, node->size, &node->ptr);
 		}
 		element = element->tail;
-
 	}
 	return 0;
 }

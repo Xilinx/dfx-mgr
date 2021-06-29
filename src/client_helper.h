@@ -11,6 +11,7 @@ extern "C" {
 #endif
 
 #include <sys/un.h>
+#include <stdint.h>
 #include <sys/types.h>
 
 #define SERVER_SOCKET       "/tmp/dfx-mgrd.socket"
@@ -53,5 +54,30 @@ extern int graphClientSubmit(socket_t *gs, char* json, int size, int *fd, int *f
 extern int graphClientFinalise(socket_t *gs, char* json, int size);
 extern ssize_t sock_fd_write(int sock, void *buf, ssize_t buflen, int *fd, int fdcount);
 extern ssize_t sock_fd_read(int sock, struct message *buf, int *fd, int *fdcount);
-#endif
 
+typedef struct fds{
+	int s2mm_fd;
+	int mm2s_fd;
+	int config_fd;
+	int accelconfig_fd;
+	int dma_hls_fd;
+	uint64_t mm2s_pa;
+	uint64_t mm2s_size;
+	uint64_t s2mm_pa;
+	uint64_t s2mm_size;
+	uint64_t config_pa;
+	uint64_t config_size;
+
+} fds_t;
+
+extern int loadapp(char* packageName);
+extern int removepdi(char* argvalue, fds_t *fds);
+//extern int getFD(char* argvalue);
+//extern int getPA(char* argvalue);
+//extern int getShellFD();
+//extern int getClockFD();
+//extern int socketGetFd(int slot, fds_t *fds);
+//extern int socketGetPA(int slot, fds_t *fds);
+//extern int test();
+
+#endif
