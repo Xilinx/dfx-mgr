@@ -215,23 +215,25 @@ int load_accelerator(const char *accel_name)
         }
         if (platform.active_base == NULL) {
             sprintf(pkg->name,"%s",base->name);
-            acapd_print("Loading base shell design %s\n",base->name);
             pkg->path = base->base_path;
             pkg->type = ACAPD_ACCEL_PKG_TYPE_NONE;
-            init_accel(accel, pkg);
-            accel->type = FLAT_SHELL;
-            ret = load_accel(accel, shell_path, 0);
-            if (ret < 0){
-                acapd_perror("%s: Failed to load accel %s\n",__func__,accel_name);
-                base->active = 0;
-                goto out;
-            }
-            base->fpga_cfg_id = accel->sys_info.fpga_cfg_id;
+			if (base->load_base_design) {
+				init_accel(accel, pkg);
+				accel->type = FLAT_SHELL;
+				acapd_print("Loading base shell design %s\n",base->name);
+				ret = load_accel(accel, shell_path, 0);
+				if (ret < 0){
+					acapd_perror("%s: Failed to load accel %s\n",__func__,accel_name);
+					base->active = 0;
+					goto out;
+				}
+				acapd_print("Loaded %s successfully.\n",base->name);
+				base->fpga_cfg_id = accel->sys_info.fpga_cfg_id;
+			}
             base->slots = (slot_info_t **)malloc(sizeof(slot_info_t *) * base->num_slots);
             for (i = 0; i < base->num_slots; i++)
                 base->slots[i] = NULL;
             platform.active_base = base;
-            acapd_print("Loaded %s successfully.\n",base->name);
         }
         for (i = 0; i < base->num_slots; i++) {
             acapd_debug("Finding empty slot for %s i %d \n",accel_name,i);
@@ -277,7 +279,10 @@ int remove_accelerator(int slot)
     struct basePLDesign *base = platform.active_base;
     acapd_accel_t *accel;
 	int ret;
-
+	if (slot < 0) {
+		acapd_perror("%s invalid slot %d\n",__func__, slot);
+		return 0;
+	}
     if (base == NULL || base->slots[slot] == NULL){
         acapd_perror("%s No Accel in slot %d\n",__func__,slot);
         return 0;
@@ -307,19 +312,37 @@ void freeBuff(uint64_t pa)
     freeBuffer(pa);
 }
 
-void getFDs(int slot)
+int getFD(int slot, char *name)
 {
     struct basePLDesign *base = platform.active_base;
     if(base == NULL){
         acapd_perror("No active design\n");
-        return;
+        return -1;
     }
     acapd_accel_t *accel = base->slots[slot]->accel;
     if (accel == NULL){
         acapd_perror("%s No Accel in slot %d\n",__func__,slot);
-        return;
+        return -1;
     }
-   //get_fds(accel, slot, socket_d);
+	for (int i = 0; i < accel->num_ip_devs; i++) {
+		char *dev_name = accel->ip_dev[i].dev_name;
+		char substr[32];
+		int j = 0;
+		int n = strlen(dev_name);
+		while (j < n){
+			if (dev_name[j] == '.') {
+				strncpy(substr, (dev_name + j +1),(n - 1 - j));
+				break;
+			}
+			j += 1;
+		}
+		if(!strcmp(substr, name)){
+			acapd_debug("Found ip_dev for %s fd %d\n",name,accel->ip_dev[i].id);
+			return accel->ip_dev[i].id;
+		}
+	}
+	acapd_perror("No ip_dev found for %s slot %d\n",name,slot);
+	return -1;
 }
 
 int dfx_getFDs(int slot, int *fd)

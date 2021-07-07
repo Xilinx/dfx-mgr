@@ -110,7 +110,6 @@ int main (int argc, char **argv)
 					FD_SET (fd_new, &fds); 
 					if (fd_new > fdmax) 
 						fdmax = fd_new;
-					fprintf (stderr, "Graph-server: new client\n");
 				}
 				else  // data from an existing connection, receive it
 				{
@@ -132,8 +131,7 @@ int main (int argc, char **argv)
 						switch (recv_message.id) {
 
 							case GRAPH_INIT:
-								INFO("### GRAPH INIT ###\n");
-								//printf ("recieved %s\n", recv_message.data);
+								acapd_debug("daemon recieved GRAPH_INIT\n");
 								int buff_fd[25];
 								int buff_fd_cnt = 0;
 								buff_fd_cnt = abstractGraphServerConfig(scheduler, 
@@ -147,7 +145,7 @@ int main (int argc, char **argv)
 											buff_fd, buff_fd_cnt);
 								break;
 							case GRAPH_FINALISE:
-								printf("### GRAPH FINALISE ###\n");
+								acapd_debug("daemon recieved graph_finalise\n");
 								abstractGraphServerFinalise(scheduler, recv_message.data);
 								memcpy(send_message.data, recv_message.data, 
 									recv_message.size);
@@ -155,25 +153,25 @@ int main (int argc, char **argv)
 								send_message.id = GRAPH_FINALISE_DONE;
 								
 								if (write(fd, &send_message, HEADERSIZE +send_message.size) < 0)
-									acapd_perror("GRAPH_FINALISE: write failed\n");
+									acapd_perror("GRAPH_FINALISE write failed\n");
 								break;
 
 							case LOAD_ACCEL:
-								acapd_print("LOAD_ACCEL: loading accel %s \n",recv_message.data);
+								acapd_print("daemon loading accel %s \n",recv_message.data);
 								slot = load_accelerator(recv_message.data);
 								sprintf(send_message.data, "%d", slot);
 								send_message.size = 2;
-								if (write(fd, &send_message, send_message.size) < 0)
-									acapd_perror("LOAD_ACCEL: write failed\n");
+								if (write(fd, &send_message, HEADERSIZE + send_message.size) < 0)
+									acapd_perror("LOAD_ACCEL write failed\n");
 								break;
 
 							case REMOVE_ACCEL:
-								acapd_print("REMOVE_ACCEL: removing accel at slot %d\n",atoi(recv_message.data));
+								acapd_print("daemon removing accel at slot %d\n",atoi(recv_message.data));
 								ret = remove_accelerator(atoi(recv_message.data));
 								sprintf(send_message.data, "%d", ret);
 								send_message.size = 2;
-								if (write(fd, &send_message, send_message.size) < 0)
-									acapd_perror("REMOVE_ACCEL: write failed\n");
+								if (write(fd, &send_message, HEADERSIZE+ send_message.size) < 0)
+									acapd_perror("REMOVE_ACCEL write failed\n");
 								break;
 
 							case LIST_PACKAGE:

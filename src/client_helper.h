@@ -70,8 +70,8 @@ typedef struct fds{
 
 } fds_t;
 
-extern int loadapp(char* packageName);
-extern int removepdi(char* argvalue, fds_t *fds);
+extern int dfxmgr_load(char* packageName);
+extern int dfxmgr_remove(int slot);
 //extern int getFD(char* argvalue);
 //extern int getPA(char* argvalue);
 //extern int getShellFD();

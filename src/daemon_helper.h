@@ -24,7 +24,7 @@ int remove_accelerator(int slot);
 void allocBuffer(uint64_t size);
 void sendBuff(uint64_t size);
 void freeBuff(uint64_t pa);
-void getFDs(int slot);
+int getFD(int slot, char *dev_name);
 int dfx_getFDs(int slot, int *fd);
 void getShellFD();
 void getClockFD();

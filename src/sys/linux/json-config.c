@@ -329,6 +329,8 @@ int initBaseDesign(struct basePLDesign *base, const char *shell_path)
 		acapd_perror("Failed to parse JSON: %d\n", ret);
 	}
 
+	base->load_base_design = 1;
+
 	for(i=1; i < ret; i++){
 		if (token[i].type == JSMN_OBJECT)
 			continue;
@@ -341,6 +343,12 @@ int initBaseDesign(struct basePLDesign *base, const char *shell_path)
 		}
 		if (jsoneq(jsonData, &token[i],"uid") == 0) {
 			base->uid = strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 10);
+		}
+		if (jsoneq(jsonData, &token[i],"load_base_design") == 0) {
+			char value[8];
+			strncpy(value,strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), 7);
+			if (!strcmp(value,"no") || !strcmp(value, "No"))
+				base->load_base_design = 0;
 		}
 	}
 	return 0;

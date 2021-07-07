@@ -215,30 +215,26 @@ int acapd_accel_reset_channel(acapd_accel_t *accel)
 
 void *acapd_accel_get_reg_va(acapd_accel_t *accel, const char *name)
 {
-	acapd_device_t *dev;
+	acapd_device_t *dev = NULL;
 
 	acapd_assert(accel != NULL);
-	dev = NULL;
 	if (name == NULL) {
-		dev = &accel->ip_dev[0];
+		acapd_perror("Enter a non-empty device name.\n");
+		return NULL;
 	} else {
 		for (int i = 0; i < accel->num_ip_devs; i++) {
-			acapd_device_t *tmpdev;
-
-			tmpdev = &accel->ip_dev[i];
-			if (strcmp(tmpdev->dev_name, name) == 0) {
-				dev = tmpdev;
+			if(!strcmp(accel->ip_dev[i].dev_name, name)){
+				dev = &accel->ip_dev[i];
 				break;
 			}
 		}
 	}
 	if (dev == NULL) {
-		acapd_perror("%s: failed to get %s device.\n", __func__, name);
+		acapd_perror("%s: failed to find %s device.\n", __func__, name);
 		return NULL;
 	}
 	if (dev->va == NULL) {
 		int ret;
-
 		ret = acapd_device_open(dev);
 		if (ret < 0) {
 			acapd_perror("%s: failed to open dev %s.\n",

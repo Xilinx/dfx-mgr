@@ -55,7 +55,6 @@ int SIHAInitAccel(int slot, char * accel){
 	//FILE *fp;
 	//size_t len = 0;
 	int status;
-	int fd[2];
 	_unused(accel);
 	//ssize_t read;
 	//char* line;
@@ -83,8 +82,8 @@ int SIHAInitAccel(int slot, char * accel){
 	}
 	sprintf(slotStr[slot], "%d", slotNum[slot]);
 
-	status = dfx_getFDs(slotNum[slot], fd);
-	if (status < 0) return status;
+	//status = dfx_getFDs(slotNum[slot], fd);
+	//if (status < 0) return status;
 	//fds->accelconfig_fd = fd[0];
 	//fds->dma_hls_fd = fd[1];
 	//INFO("############ getFD ###################\n");
@@ -127,8 +126,16 @@ int SIHAInitAccel(int slot, char * accel){
 	//mapBuffer(buffers->MM2S_fd[slot],   buffers->MM2S_size[slot],   &buffers->MM2S_ptr[slot]);
 	//INFO("%p %d\n", buffers->config_ptr[slot], slot);
 	//printBuffer(buffers, slot);
-	pldevices->AccelConfig_fd[slot] = fd[0]; //s.accelconfig_fd;
-	pldevices->dma_hls_fd[slot] = fd[1]; //s.dma_hls_fd;
+	pldevices->AccelConfig_fd[slot] = getFD(slotNum[slot], "AccelConfig");
+	if (pldevices->AccelConfig_fd[slot] < 0){
+		printf("No AccelConfig dev found\n");
+		return -1;
+	}
+	pldevices->dma_hls_fd[slot] = getFD(slotNum[slot], "dma_hls");
+	if (pldevices->dma_hls_fd[slot] < 0){
+		printf("No dma_hls dev found\n");
+		return -1;
+	}
 	pldevices->slot[slot] = slotNum[slot];
 	//INFO("#######################################\n");
 	status = mapPlDevicesAccel(pldevices, slot);

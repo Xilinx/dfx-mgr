@@ -38,9 +38,10 @@ struct basePLDesign {
 	char parent_path[512];
 	char type[128];
 	int num_slots;
-	slot_info_t **slots;
 	int active;
 	int wd; //inotify watch desc
+	int load_base_design;
+	slot_info_t **slots;
 	accel_info_t accel_list[10];
 };
 

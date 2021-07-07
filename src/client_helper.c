@@ -174,15 +174,14 @@ int exchangeCommand(char* path, char* argvalue){
     return 0;
 }
 
-int loadapp(char* packageName)
+int dfxmgr_load(char* packageName)
 {
 	socket_t *gs;
     struct message send_message, recv_message;
     int ret;
 
-	printf("Enter loadapp() %s\n",packageName);
 	if (packageName == NULL || !strcmp(packageName,""))
-		acapd_perror("Load expects a package name\n");
+		acapd_perror("%s expects a package name\n",__func__);
 
 	gs = (socket_t *) malloc(sizeof(socket_t));
     memset (&send_message, '\0', sizeof(struct message));
@@ -192,29 +191,53 @@ int loadapp(char* packageName)
     memcpy(send_message.data, packageName, strlen(packageName));
     send_message.id = LOAD_ACCEL;
     send_message.size = strlen(packageName);
-    if (write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size) < 0)
-        printf("error sending message from client\n");
+	ret = write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size);
+    if (ret < 0){
+        acapd_perror("%s:error sending message from client %d\n",__func__,ret);
+		return -1;
+	}
     ret = read(gs->sock_fd, &recv_message, sizeof (struct message));
     if (ret <= 0){
-        printf("No message recieved\n");
+        acapd_perror("%s:No message recieved %d\n",__func__, ret);
 		return -1;
 	}
 
-    printf("Accelerator loaded to slot %s\n",recv_message.data);
+    acapd_print("%s:Accelerator loaded to slot %s\n",__func__,recv_message.data);
 	return atoi(recv_message.data);
 }
 
-int removepdi(char* argvalue, fds_t *fds)
+int dfxmgr_remove(int slot)
 {
-	close(fds->mm2s_fd);
-	close(fds->s2mm_fd);
-	close(fds->config_fd);
-	close(fds->accelconfig_fd);
-	close(fds->dma_hls_fd);
-	printf("***********************closed fd*****\n");
-	return exchangeCommand("-remove", argvalue);
-}
+	socket_t *gs;
+    struct message send_message, recv_message;
+    int ret;
 
+	if (slot < 0){
+		acapd_perror("invalid argument to dfxmgr_remove()\n");
+		return -1;
+	}
+	gs = (socket_t *) malloc(sizeof(socket_t));
+    memset (&send_message, '\0', sizeof(struct message));
+    memset (&recv_message, '\0', sizeof(struct message));
+	initSocket(gs);
+
+	sprintf(send_message.data, "%d", slot);
+    send_message.id = REMOVE_ACCEL;
+    send_message.size = 2;
+    if (write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size) < 0)
+        acapd_perror("%s:error sending message from client\n",__func__);
+    ret = read(gs->sock_fd, &recv_message, sizeof (struct message));
+    if (ret <= 0){
+		acapd_perror("%s:No message recieved\n",__func__);
+		return ret;
+	}
+	ret = atoi(recv_message.data);
+	if (ret == 0)
+		acapd_print("%s:Accelerator succesfully removed.\n",__func__);
+	else
+		acapd_perror("%s:Error trying to remove accelerator.\n",__func__);
+	return ret;
+}
 /*int clientFD(char* argvalue)
 {
 	return exchangeCommand("-getFD", argvalue);
@@ -362,17 +385,16 @@ int socketGetPA(int slot, fds_t* fds){
 }
 
 */
-ssize_t
-sock_fd_write(int sock, void *buf, ssize_t buflen, int *fd, int fdcount)
+ssize_t sock_fd_write(int sock, void *buf, ssize_t buflen, int *fd, int fdcount)
 {
-    ssize_t     size;
-    struct msghdr   msg;
-    struct iovec    iov;
+    ssize_t size;
+    struct msghdr msg;
+    struct iovec iov;
     union {
-        struct cmsghdr  cmsghdr;
+		struct cmsghdr  cmsghdr;
         char control[CMSG_SPACE(sizeof (int) * MAX_FD)];
     } cmsgu;
-    struct cmsghdr  *cmsg;
+    struct cmsghdr *cmsg;
 
     iov.iov_base = buf;
     iov.iov_len = buflen;
@@ -402,20 +424,21 @@ sock_fd_write(int sock, void *buf, ssize_t buflen, int *fd, int fdcount)
     size = sendmsg(sock, &msg, 0);
 
     if (size < 0)
-        perror ("sendmsg");
+        acapd_perror("%s:sendmsg() failed\n",__func__);
     return size;
 }
 
 ssize_t sock_fd_read(int sock, struct message *buf, int *fd, int *fdcount)
 {
 	ssize_t size = 0;
-    struct msghdr   msg;
-    struct iovec    iov;
+    struct msghdr msg;
+    struct iovec iov;
     union {
-        struct cmsghdr  cmsghdr;
-        char        control[CMSG_SPACE(sizeof (int) * MAX_FD)];
+        struct cmsghdr cmsghdr;
+        char control[CMSG_SPACE(sizeof (int) * MAX_FD)];
     } cmsgu;
-    struct cmsghdr  *cmsg;
+
+    struct cmsghdr *cmsg;
     iov.iov_base = buf;
     iov.iov_len = 1024*4;
 
@@ -428,24 +451,21 @@ ssize_t sock_fd_read(int sock, struct message *buf, int *fd, int *fdcount)
     msg.msg_controllen = sizeof(cmsgu.control);
     size = recvmsg (sock, &msg, 0);
     if (size < 0) {
-        perror ("recvmsg");
+        acapd_perror("%s:recvmsg() failed\n",__func__);
         exit(1);
     }
 	*fdcount = buf->fdcount;
     cmsg = CMSG_FIRSTHDR(&msg);
     if (cmsg && cmsg->cmsg_len == CMSG_LEN(sizeof(int))) {
         if (cmsg->cmsg_level != SOL_SOCKET) {
-            fprintf (stderr, "invalid cmsg_level %d\n",
-                 cmsg->cmsg_level);
+            acapd_perror("%s: invalid cmsg_level %d\n",__func__, cmsg->cmsg_level);
             exit(1);
         }
         if (cmsg->cmsg_type != SCM_RIGHTS) {
-            fprintf (stderr, "invalid cmsg_type %d\n",
-                 cmsg->cmsg_type);
+            acapd_perror("%s: invalid cmsg_type %d\n",__func__, cmsg->cmsg_type);
             exit(1);
         }
 	}
-
     memcpy(fd, CMSG_DATA(cmsg), sizeof(int)*(*fdcount));
     return size;
 }
@@ -454,16 +474,15 @@ int initSocket(socket_t* gs){
 	int status;
 	
 	if ((gs->sock_fd = socket(AF_UNIX, SOCK_SEQPACKET, 0)) == -1){
-		error("socket error !!");
+		acapd_perror("%s:socket creation failed\n",__func__);
 		return -1;
 	}
-	
 	memset(&gs->socket_address, 0, sizeof(struct sockaddr_un));
 	gs->socket_address.sun_family = AF_UNIX;
 	strncpy(gs->socket_address.sun_path, SERVER_SOCKET, sizeof(gs->socket_address.sun_path) - 1);
 	status = connect(gs->sock_fd, (const struct sockaddr *) &gs->socket_address, sizeof(struct sockaddr_un));
 	if (status < 0){
-		error("connect failed");
+		acapd_perror("%s:connect failed\n",__func__);
 		return -1;
 	}
 	return 0;
@@ -471,36 +490,41 @@ int initSocket(socket_t* gs){
 
 int graphClientSubmit(socket_t *gs, char* json, int size, int *fd, int *fdcount){
 	struct message send_message, recv_message;
-	memset (&send_message, '\0', sizeof(struct message));
+	int ret;
+
+	memset(&send_message, '\0', sizeof(struct message));
 	send_message.id = GRAPH_INIT;
 	send_message.size = size;
 	send_message.fdcount = 0;
 	memcpy(send_message.data, json, size);
-	//INFO("\n");
-	if (write (gs->sock_fd, &send_message, HEADERSIZE + send_message.size) == -1){
-		//INFO("Write error occured !!");
-		//return -1;
-		error("write");
+	ret = write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size);
+	if (ret < 0){
+		acapd_perror("%s:graphClientSubmit write() failed\n",__func__);
+		return -1;
 	}
-	memset (&recv_message, '\0', sizeof(struct message));
+	memset(&recv_message, '\0', sizeof(struct message));
 	size = sock_fd_read(gs->sock_fd, &recv_message, fd, fdcount);
 	if (size <= 0)
 		return -1;
-	//INFO("\n");
 	return 0;
 }
 
 int graphClientFinalise(socket_t *gs, char* json, int size){	
 	struct message send_message, recv_message;
-	memset (&send_message, '\0', sizeof(struct message));
+	int ret;
+
+	memset(&send_message, '\0', sizeof(struct message));
 	send_message.id = GRAPH_FINALISE;
 	send_message.size = size;
 	send_message.fdcount = 0;
 	memcpy(send_message.data, json, size);
-	if (write (gs->sock_fd, &send_message, HEADERSIZE + send_message.size) == -1)
-		error ("write");
-	memset (&recv_message, '\0', sizeof(struct message));
-	size = read (gs->sock_fd, &recv_message, sizeof (struct message));
+	ret = write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size);
+	if (ret < 0){
+		acapd_perror("%s:graphClientFinalise write() failed\n",__func__);
+		return -1;
+	}
+	memset(&recv_message, '\0', sizeof(struct message));
+	size = read(gs->sock_fd, &recv_message, sizeof (struct message));
 	if (size <= 0)
 		return -1;
 	return 0;

@@ -1,4 +1,3 @@
-#include <dfx-mgr/accel.h>
 #include <dfx-mgr/client_helper.h>
 #include <errno.h>
 #include <getopt.h>
@@ -16,7 +15,9 @@ int main(int argc, char *argv[])
 		printf("Enter the package to load\n");
 		return 0;
 	}
-	ret = loadapp(argv[0]);
-	printf("loadapp returned %d\n",ret);
+	ret = dfxmgr_load(argv[1]);
+	printf("dfxmgr_load returned %d\n",ret);
+	sleep(5);
+	dfxmgr_remove(ret);
 }
 
