@@ -80,4 +80,8 @@ extern int dfxmgr_remove(int slot);
 //extern int socketGetPA(int slot, fds_t *fds);
 //extern int test();
 
+#ifdef __cplusplus
+}
+#endif
+
 #endif

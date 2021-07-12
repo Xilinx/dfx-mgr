@@ -1,4 +1,4 @@
-#include <dfx-mgr/client_helper.h>
+#include <dfx-mgr/dfxmgr_client.h>
 #include <errno.h>
 #include <getopt.h>
 #include <signal.h>

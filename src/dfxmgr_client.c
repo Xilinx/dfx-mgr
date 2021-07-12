@@ -22,7 +22,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <dfx-mgr/print.h>
-#include "client_helper.h"
+#include "dfxmgr_client.h"
 
 #define MAX_FD 25
 struct message message;

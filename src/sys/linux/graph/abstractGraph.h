@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 #include <semaphore.h>
-#include <dfx-mgr/client_helper.h>
+#include <dfx-mgr/dfxmgr_client.h>
 
 #define AGRAPH_INIT			0XC0
 #define AGRAPH_SCHEDULED	0XC1

@@ -18,7 +18,7 @@
 #include <sys/stat.h>
 #include <dfx-mgr/accel.h>
 #include <dfx-mgr/daemon_helper.h>
-#include <dfx-mgr/client_helper.h>
+#include <dfx-mgr/dfxmgr_client.h>
 
 int main(int argc, char *argv[])
 {
