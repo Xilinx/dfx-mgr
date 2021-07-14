@@ -110,14 +110,14 @@ void *jobScheduler_Task(void* carg){
 												INFO("Fallback to SoftFFT\n")
 													fallback = softgFFT;
 											}
-											else if(strcmp(abstractAccel->name, "aes128encdec_2RP") == 0){
+											else if(strcmp(abstractAccel->name, "AES128") == 0){
 												INFO("Fallback to SoftAES\n")
 													fallback = softgAES128;
 											}
-											else if(strcmp(abstractAccel->name, "aes192encdec_2RP") == 0){
+											else if(strcmp(abstractAccel->name, "AES192") == 0){
 												fallback = softgAES192;
 											}
-											else if(strcmp(abstractAccel->name, "fir_compiler_2RP") == 0){
+											else if(strcmp(abstractAccel->name, "FIR") == 0){
 												INFO("Fallback to SoftFIR\n")
 													fallback = softgFIR;
 											}

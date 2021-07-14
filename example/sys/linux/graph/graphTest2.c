@@ -17,12 +17,12 @@
 
 int main(void){
 	int status;
-	INFO("TEST1: CMA buffer with single PL Accelerator\n");
+	INFO("######### TEST2: CMA buffer with single PL Accelerator\n");
 
 	AbstractGraph_t *acapGraph = graphInit();
 
 	AbstractAccelNode_t *accelNode0 = addInputNode(acapGraph, 32*1024*1024);
-	AbstractAccelNode_t *accelNode1 = addAcceleratorNode(acapGraph, "FFT4"); 
+	AbstractAccelNode_t *accelNode1 = addAcceleratorNode(acapGraph, "AES128"); 
 	AbstractAccelNode_t *accelNode2 = addOutputNode(acapGraph, 32*1024*1024);
 
 	AbstractBuffNode_t *buffNode0 = addBuffer(acapGraph, 16*1024*1024, DDR_BASED);
