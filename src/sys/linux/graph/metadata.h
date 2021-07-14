@@ -12,9 +12,9 @@ typedef struct Metadata Metadata_t;
 typedef struct Json Json_t;
 
 struct PLDevice{
-        char		name[100];
-        uint64_t	base;
-        uint64_t	size;
+	char		name[100];
+	uint64_t	base;
+	uint64_t	size;
 	uint8_t		type;
 };
 

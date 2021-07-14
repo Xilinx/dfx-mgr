@@ -19,14 +19,14 @@ int main(void){
 	int status;
 	INFO("TEST1: Load CMA buffer without PL Accelerator and test transactions\n");
 	AbstractGraph_t *acapGraph = graphInit();
-        AbstractAccelNode_t *accelNode0 = addInputNode(acapGraph, 32*1024*1024);
-        AbstractAccelNode_t *accelNode1 = addOutputNode(acapGraph, 32*1024*1024);
+	AbstractAccelNode_t *accelNode0 = addInputNode(acapGraph, 32*1024*1024);
+	AbstractAccelNode_t *accelNode1 = addOutputNode(acapGraph, 32*1024*1024);
 
 	AbstractBuffNode_t *buffNode0 = addBuffer(acapGraph, 16*1024*1024, DDR_BASED);
-	
+
 	addOutBuffer(acapGraph, accelNode0, buffNode0, 0x00, 32*1024*1024, 1, 0);
 	addInBuffer (acapGraph, accelNode1, buffNode0, 0x00, 32*1024*1024, 2, 0);
-        
+
 	status = abstractGraphConfig(acapGraph);
 	if(status < 0){
 		printf("Seems like GraphDaemon not running ...!!\n");
@@ -35,12 +35,12 @@ int main(void){
 	for(int i=0; i < 1024; i++){
 		accelNode0->ptr[i] = i;
 	}
-        sem_post(accelNode0->semptr);
+	sem_post(accelNode0->semptr);
 	sem_wait(accelNode1->semptr);
-	
+
 	printhex((uint32_t*)accelNode0->ptr, 0x50);
 	printhex((uint32_t*)accelNode1->ptr, 0x50);
-								
+
 	abstractGraphFinalise(acapGraph);
 	return 0;
 }

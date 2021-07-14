@@ -21,7 +21,7 @@
 
 static int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
 	if (tok->type == JSMN_STRING && (int)strlen(s) == tok->end - tok->start &&
-		strncmp(json + tok->start, s, tok->end - tok->start) == 0) {
+			strncmp(json + tok->start, s, tok->end - tok->start) == 0) {
 		return 0;
 	}
 	return -1;
@@ -49,7 +49,7 @@ int json2fallback(Json_t* json, Metadata_t *metadata){
 		}
 		else if (jsoneq(json->data, &t[i], "fallback_Lib") == 0) {
 			sprintf(metadata->fallback.lib, "%.*s", t[i + 1].end - t[i + 1].start,
-				json->data + t[i + 1].start);
+					json->data + t[i + 1].start);
 			i++;
 		}
 	}
@@ -85,7 +85,7 @@ int json2interrm(Json_t* json, Metadata_t *metadata){
 			}
 			i++;
 		}
-		
+
 		if (jsoneq(json->data, &t[i], "Address") == 0) {
 			sscanf(json->data + t[i + 1].start, "0x%lx", &(metadata->interRM.address));
 			i++;
@@ -210,7 +210,7 @@ int json2device(Json_t* json, Metadata_t *metadata, int index){
 	for (int i = 1; i < r; i++) {
 		if (jsoneq(json->data, &t[i], "dev_name") == 0) {
 			sprintf(metadata->plDevices[index].name, "%.*s", t[i + 1].end - t[i + 1].start,
-				json->data + t[i + 1].start);
+					json->data + t[i + 1].start);
 			i++;
 		}
 		else if (jsoneq(json->data, &t[i], "reg_base") == 0) {
@@ -272,7 +272,7 @@ int json2meta(Json_t* json, Metadata_t *metadata){
 	for (int i = 1; i < r; i++) {
 		if (jsoneq(json->data, &t[i], "accel_type") == 0) {
 			sprintf(metadata->accel_type, "%.*s", t[i + 1].end - t[i + 1].start,
-				json->data + t[i + 1].start);
+					json->data + t[i + 1].start);
 			i++;
 		}
 		else if (jsoneq(json->data, &t[i], "accel_devices") == 0) {
@@ -310,7 +310,7 @@ int file2json(char* filename, Json_t *json){
 	fseek(f, 0, SEEK_END);
 	json->size = ftell(f);
 	fseek(f, 0, SEEK_SET);
-	
+
 	json->data = malloc(json->size + 1);
 	int len = fread(json->data, json->size, 1, f);
 	_unused(len);
@@ -377,7 +377,7 @@ int json2accelNodes(Json_t* json, AbstractGraph_t *graph){
 			continue;
 		}
 		printf("%.*s\n", t[i].end - t[i].start,
-			json->data + t[i].start);
+				json->data + t[i].start);
 		Json_t* subJson = malloc(sizeof(Json_t));
 		subJson->data = json->data + t[i].start;
 		subJson->size = t[i].end - t[i].start;
@@ -408,7 +408,7 @@ int json2buffNodes(Json_t* json, AbstractGraph_t *graph){
 			continue;
 		}
 		printf("%.*s\n", t[i].end - t[i].start,
-			json->data + t[i].start);
+				json->data + t[i].start);
 		Json_t* subJson = malloc(sizeof(Json_t));
 		subJson->data = json->data + t[i].start;
 		subJson->size = t[i].end - t[i].start;
@@ -439,7 +439,7 @@ int json2links(Json_t* json, AbstractGraph_t *graph){
 			continue;
 		}
 		printf("%.*s\n", t[i].end - t[i].start,
-			json->data + t[i].start);
+				json->data + t[i].start);
 		Json_t* subJson = malloc(sizeof(Json_t));
 		subJson->data = json->data + t[i].start;
 		subJson->size = t[i].end - t[i].start;
@@ -463,7 +463,7 @@ int graphParser(char* jsonStr, AbstractGraph_t **graph){
 		INFO("Failed to parse JSON: %d\n", r);
 		return 1;
 	}
-	
+
 	/* Assume the top-level element is an object */
 	if (r < 1 || t[0].type != JSMN_OBJECT) {
 		INFO("Object expected\n");
@@ -471,8 +471,8 @@ int graphParser(char* jsonStr, AbstractGraph_t **graph){
 	}
 	for (int i = 1; i < r; i++) {
 		if (t[i].parent != 0) {
-                        continue; 
-                }
+			continue; 
+		}
 
 		if (jsoneq(json->data, &t[i], "id") == 0) {
 			sscanf(json->data + t[i + 1].start, "%d", &(tgraph->id));
@@ -498,20 +498,20 @@ int graphParser(char* jsonStr, AbstractGraph_t **graph){
 					i ++;
 					AbstractAccelNode_t *accelNode = malloc(sizeof(AbstractAccelNode_t));
 					Element_t* element = (Element_t *) malloc(sizeof(Element_t));
-        				element->node =  accelNode; 
-        				tgraph->accelNodeID ++;
-       					element->head = NULL;
-				        element->tail = NULL;
-       					addElement(&(tgraph->accelNodeHead), element);
+					element->node =  accelNode; 
+					tgraph->accelNodeID ++;
+					element->head = NULL;
+					element->tail = NULL;
+					addElement(&(tgraph->accelNodeHead), element);
 					for (int k = 0; k < objectElementCount; k++) {
 						if (t[i + j + k].parent == object) {
 							if (jsoneq(json->data, &t[i + j + k], "id") == 0) {
 								sscanf(json->data + t[i + j + k + 1].start, 
-									"%d", &(accelNode->id));
+										"%d", &(accelNode->id));
 							}
 							else if (jsoneq(json->data, &t[i + j + k], "type") == 0) {
 								sscanf(json->data + t[i + j + k + 1].start, 
-									"%hhd", &(accelNode->type));
+										"%hhd", &(accelNode->type));
 								if(accelNode->type == HW_NODE){
 									tgraph->accelCount ++;
 								}
@@ -519,16 +519,16 @@ int graphParser(char* jsonStr, AbstractGraph_t **graph){
 							else if (jsoneq(json->data, &t[i + j + k], "name") == 0) {
 								memset(accelNode->name, '\0', 256);
 								sprintf(accelNode->name, "%.*s", 
-									t[i + j + k + 1].end - t[i + j + k + 1].start,
-									json->data + t[i + j + k + 1].start);
+										t[i + j + k + 1].end - t[i + j + k + 1].start,
+										json->data + t[i + j + k + 1].start);
 							}
 							else if (jsoneq(json->data, &t[i + j + k], "size") == 0) {
 								sscanf(json->data + t[i + j + k + 1].start, 
-									"%d", &(accelNode->size));
+										"%d", &(accelNode->size));
 							}
 							else if (jsoneq(json->data, &t[i + j + k], "semaphore") == 0) {
 								sscanf(json->data + t[i + j + k + 1].start, 
-									"%d", &(accelNode->semaphore));
+										"%d", &(accelNode->semaphore));
 							}
 						}
 						else{
@@ -558,30 +558,30 @@ int graphParser(char* jsonStr, AbstractGraph_t **graph){
 					i ++;
 					AbstractBuffNode_t *buffNode = malloc(sizeof(AbstractBuffNode_t));
 					Element_t* element = (Element_t *) malloc(sizeof(Element_t));
-        				element->node =  buffNode; 
-        				tgraph->buffNodeID ++;
-       					element->head = NULL;
-				        element->tail = NULL;
-       					addElement(&(tgraph->buffNodeHead), element);
+					element->node =  buffNode; 
+					tgraph->buffNodeID ++;
+					element->head = NULL;
+					element->tail = NULL;
+					addElement(&(tgraph->buffNodeHead), element);
 					for (int k = 0; k < objectElementCount; k++) {
 						if (t[i + j + k].parent == object) {
 							if (jsoneq(json->data, &t[i + j + k], "id") == 0) {
 								sscanf(json->data + t[i + j + k + 1].start, 
-									"%d", &(buffNode->id));
+										"%d", &(buffNode->id));
 							}
 							else if (jsoneq(json->data, &t[i + j + k], "type") == 0) {
 								sscanf(json->data + t[i + j + k + 1].start, 
-									"%hhd", &(buffNode->type));
+										"%hhd", &(buffNode->type));
 							}
 							else if (jsoneq(json->data, &t[i + j + k], "name") == 0) {
 								memset(buffNode->name, '\0', 256);
 								sprintf(buffNode->name, "%.*s", 
-									t[i + j + k + 1].end - t[i + j + k + 1].start,
-									json->data + t[i + j + k + 1].start);
+										t[i + j + k + 1].end - t[i + j + k + 1].start,
+										json->data + t[i + j + k + 1].start);
 							}
 							else if (jsoneq(json->data, &t[i + j + k], "size") == 0) {
 								sscanf(json->data + t[i + j + k + 1].start, 
-									"%d", &(buffNode->size));
+										"%d", &(buffNode->size));
 							}
 						}
 						else{
@@ -613,24 +613,24 @@ int graphParser(char* jsonStr, AbstractGraph_t **graph){
 					i ++;
 					AbstractLink_t *link = malloc(sizeof(AbstractLink_t));
 					Element_t* element = (Element_t *) malloc(sizeof(Element_t));
-        				element->node =  link; 
-        				tgraph->linkID ++;
-       					element->head = NULL;
-				        element->tail = NULL;
-       					addElement(&(tgraph->linkHead), element);
+					element->node =  link; 
+					tgraph->linkID ++;
+					element->head = NULL;
+					element->tail = NULL;
+					addElement(&(tgraph->linkHead), element);
 					for (int k = 0; k < objectElementCount; k++) {
 						if (t[i + j + k].parent == object) {
 							if (jsoneq(json->data, &t[i + j + k],
-									"id") == 0) {
+										"id") == 0) {
 								sscanf(json->data + t[i + j + k + 1].start, 
-									"%d", &(link->id));
+										"%d", &(link->id));
 							}
 							else if (jsoneq(json->data, &t[i + j + k],
-									"accelNode") == 0) {
+										"accelNode") == 0) {
 								uint32_t nodeid;
 								Element_t *accelElement = tgraph->accelNodeHead;
 								sscanf(json->data + t[i + j + k + 1].start, 
-									"%d", &(nodeid)); //link->accelNode));
+										"%d", &(nodeid)); //link->accelNode));
 								//printf("nodeid : %d\n", nodeid);
 								//INFO(" %d\n", nodeid);
 								while(accelElement != NULL){
@@ -644,11 +644,11 @@ int graphParser(char* jsonStr, AbstractGraph_t **graph){
 								}
 							}
 							else if (jsoneq(json->data, &t[i + j + k],
-									"buffNode") == 0) {
+										"buffNode") == 0) {
 								uint32_t nodeid;
 								Element_t *buffElement = tgraph->buffNodeHead;
 								sscanf(json->data + t[i + j + k + 1].start, 
-									"%d", &(nodeid)); //link->accelNode));
+										"%d", &(nodeid)); //link->accelNode));
 								//printf("nodeid : %d\n", nodeid);
 								while(buffElement != NULL){
 									if (((AbstractBuffNode_t*)buffElement->node)->id == nodeid){
@@ -659,29 +659,29 @@ int graphParser(char* jsonStr, AbstractGraph_t **graph){
 								}
 							}
 							else if (jsoneq(json->data, &t[i + j + k],
-									"type") == 0) {
+										"type") == 0) {
 								sscanf(json->data + t[i + j + k + 1].start, 
-									"%hhd", &(link->type));
+										"%hhd", &(link->type));
 							}
 							else if (jsoneq(json->data, &t[i + j + k],
-									"transactionIndex") == 0) {
+										"transactionIndex") == 0) {
 								sscanf(json->data + t[i + j + k + 1].start, 
-									"%hhd", &(link->transactionIndex));
+										"%hhd", &(link->transactionIndex));
 							}
 							else if (jsoneq(json->data, &t[i + j + k],
-									"transactionSize") == 0) {
+										"transactionSize") == 0) {
 								sscanf(json->data + t[i + j + k + 1].start, 
-									"%d", &(link->transactionSize));
+										"%d", &(link->transactionSize));
 							}
 							else if (jsoneq(json->data, &t[i + j + k],
-									"offset") == 0) {
+										"offset") == 0) {
 								sscanf(json->data + t[i + j + k + 1].start, 
-									"%d", &(link->offset));
+										"%d", &(link->offset));
 							}
 							else if (jsoneq(json->data, &t[i + j + k],
-									"channel") == 0) {
+										"channel") == 0) {
 								sscanf(json->data + t[i + j + k + 1].start, 
-									"%hhd", &(link->channel));
+										"%hhd", &(link->channel));
 							}
 						}
 						else{
@@ -717,7 +717,7 @@ int graphIDParser(char* jsonStr){
 		INFO("Failed to parse JSON: %d\n", r);
 		return 1;
 	}
-	
+
 	/* Assume the top-level element is an object */
 	if (r < 1 || t[0].type != JSMN_OBJECT) {
 		INFO("Object expected\n");
@@ -725,8 +725,8 @@ int graphIDParser(char* jsonStr){
 	}
 	for (int i = 1; i < r; i++) {
 		if (t[i].parent != 0) {
-                        continue; 
-                }
+			continue; 
+		}
 
 		if (jsoneq(json->data, &t[i], "id") == 0) {
 			sscanf(json->data + t[i + 1].start, "%d", &(id));

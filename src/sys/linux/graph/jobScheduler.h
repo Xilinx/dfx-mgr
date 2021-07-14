@@ -7,14 +7,14 @@ typedef struct Element Element_t;
 
 struct JobScheduler{
 	queue_t* CommandQueue;
-        queue_t* ResponseQueue;
-        pthread_t thread[1];
-        Element_t *graphList; 
+	queue_t* ResponseQueue;
+	pthread_t thread[1];
+	Element_t *graphList; 
 };
 
 struct JobQueueBuffer{
-        int type;
-        int id;
+	int type;
+	int id;
 };
 
 extern JobScheduler_t * jobSchedulerInit();

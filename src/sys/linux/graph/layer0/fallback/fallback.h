@@ -10,15 +10,15 @@ typedef struct Accel  Accel_t;
 typedef int (*FALLBACKFUNCTION)(void**, int*, void**, int*);
 
 typedef struct fallback_DMConfig{
-        uint8_t* InputChannelReq[10]; 
-        int InputChannelSize[10]; 
-        uint8_t InputChannelCount; 
-        uint8_t* OutputChannelReq[10]; 
-        int OutputChannelSize[10]; 
-        uint8_t OutputChannelCount; 
-        uint64_t size; 
-        uint64_t S2MMstatus; 
-        uint64_t MM2Sstatus; 
+	uint8_t* InputChannelReq[10]; 
+	int InputChannelSize[10]; 
+	uint8_t InputChannelCount; 
+	uint8_t* OutputChannelReq[10]; 
+	int OutputChannelSize[10]; 
+	uint8_t OutputChannelCount; 
+	uint64_t size; 
+	uint64_t S2MMstatus; 
+	uint64_t MM2Sstatus; 
 	FALLBACKFUNCTION fallbackfunction;
 }fallback_DMConfig_t;
 
@@ -33,6 +33,6 @@ extern int fallback_MM2SAck(void* dmconfig_a);
 extern int fallback_S2MMAck(void* dmconfig_a);
 
 extern int fallback_register(dm_t *datamover, uint8_t InputChannelCount, 
-			uint8_t OutputChannelCount, FALLBACKFUNCTION fallbackfunction);
+		uint8_t OutputChannelCount, FALLBACKFUNCTION fallbackfunction);
 extern int fallback_unregister(dm_t *datamover);
 

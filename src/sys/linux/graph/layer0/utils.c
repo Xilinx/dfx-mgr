@@ -29,12 +29,12 @@ int compare(int counts, uint32_t *address, uint32_t *reference){
 
 // prints string as hex
 void printhex(uint32_t* data, uint32_t len)
- {
-    	 uint32_t i;
-    	 for (i = 0; i < len >> 2; ++i){
-    		 if(i%4==0) fprintf(stderr, "\n%.8x: ", i << 2);
-    	 	 fprintf(stderr, "0x%.8x, ", data[i]);
-	 }
-	 fprintf(stderr, "\n");
+{
+	uint32_t i;
+	for (i = 0; i < len >> 2; ++i){
+		if(i%4==0) fprintf(stderr, "\n%.8x: ", i << 2);
+		fprintf(stderr, "0x%.8x, ", data[i]);
+	}
+	fprintf(stderr, "\n");
 }
 

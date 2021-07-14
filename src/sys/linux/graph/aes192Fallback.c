@@ -15,9 +15,9 @@
 #define BLOCKSIZE 16
 
 int encrypt192Buffer(unsigned char* key, unsigned char* buffer, int bytes){
-    struct AES_192_ctx ctx;
+	struct AES_192_ctx ctx;
 	int i;
-    AES_192_init_ctx(&ctx, key);
+	AES_192_init_ctx(&ctx, key);
 	for (i = 0; i < bytes/BLOCKSIZE; i++){
 		AES_192_ECB_encrypt(&ctx, &buffer[BLOCKSIZE * i]);  
 	}
@@ -25,9 +25,9 @@ int encrypt192Buffer(unsigned char* key, unsigned char* buffer, int bytes){
 }
 
 int decrypt192Buffer(unsigned char* key, unsigned char* buffer, int bytes){
-    struct AES_192_ctx ctx;
+	struct AES_192_ctx ctx;
 	int i;
-    AES_192_init_ctx(&ctx, key);
+	AES_192_init_ctx(&ctx, key);
 
 	for (i = 0; i < bytes/BLOCKSIZE; i++){	
 		AES_192_ECB_decrypt(&ctx, &buffer[BLOCKSIZE * i]);  
@@ -36,8 +36,8 @@ int decrypt192Buffer(unsigned char* key, unsigned char* buffer, int bytes){
 }
 
 int softgAES192(void** inData, int* inDataSize, void** outData, int* outDataSize){
-        INFO("soft AES192 FALLBACK CALLED !!\n");
-        _unused(outDataSize);
+	INFO("soft AES192 FALLBACK CALLED !!\n");
+	_unused(outDataSize);
 	int DOENC = 0;
 	uint8_t key[32];
 	if(inData[1] != NULL){
@@ -50,6 +50,6 @@ int softgAES192(void** inData, int* inDataSize, void** outData, int* outDataSize
 	else{
 		decrypt192Buffer(key, inData[0], inDataSize[0]);
 	}
-        memcpy((void*)outData[0], (void*)inData[0], inDataSize[0]);
-        return 0;
+	memcpy((void*)outData[0], (void*)inData[0], inDataSize[0]);
+	return 0;
 }

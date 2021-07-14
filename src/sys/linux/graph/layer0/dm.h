@@ -22,21 +22,21 @@ typedef struct dm{
 	void* dmstruct;
 	int S2MMChannelStatus;
 	int MM2SChannelStatus;
-        CONFIG     config;
-        S2MMSTATUS S2MMStatus;
-        S2MMDATA   S2MMData;
-        S2MMDONE   S2MMDone;
-        MM2SSTATUS MM2SStatus;
-        MM2SDATA   MM2SData;
-        MM2SDONE   MM2SDone;
+	CONFIG     config;
+	S2MMSTATUS S2MMStatus;
+	S2MMDATA   S2MMData;
+	S2MMDONE   S2MMDone;
+	MM2SSTATUS MM2SStatus;
+	MM2SDATA   MM2SData;
+	MM2SDONE   MM2SDone;
 
-        queue_t* MM2SCommandQueue;
-        queue_t* MM2SResponseQueue;
-        queue_t* S2MMCommandQueue;
-        queue_t* S2MMResponseQueue;
-        queue_t* CommandQueue;
-        queue_t* ResponseQueue;
-        queue_t* CacheQueue;
-        pthread_t thread[2];
+	queue_t* MM2SCommandQueue;
+	queue_t* MM2SResponseQueue;
+	queue_t* S2MMCommandQueue;
+	queue_t* S2MMResponseQueue;
+	queue_t* CommandQueue;
+	queue_t* ResponseQueue;
+	queue_t* CacheQueue;
+	pthread_t thread[2];
 
 }dm_t;

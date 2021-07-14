@@ -14,14 +14,14 @@ struct Buffers{
 	int config_used[20];
 	uint8_t* config_ptr[20];
 	unsigned long config_paddr[20];
-	
+
 	int S2MM_fd[20];
 	int S2MM_size[20];
 	int S2MM_handle[20];
 	int S2MM_used[20];
 	uint8_t* S2MM_ptr[20];
 	unsigned long S2MM_paddr[20];
-	
+
 	int MM2S_fd[20];
 	int MM2S_size[20];
 	int MM2S_handle[20];
@@ -35,24 +35,24 @@ typedef struct Buffers Buffers_t;
 #define INQUEUE 1
 #define FULL  2
 struct Buffer{
-        int index; // Serial No of Buffer
-        int type;  //
-        int fd;    // File descriptor from ACAPD
-        int size;  // Buffer Size
-        int handle;// Buffer XRT Handeler
-        uint8_t* ptr; // Buffer Ptr
-        unsigned long phyAddr; // Buffer Physical Address
-        int srcSlot; // Buffer Physical Address
-        int sincSlot; // Buffer Physical Address
-        unsigned long otherAccel_phyAddr[3]; // Buffer Physical Address
-        int InterRMCompatible; // Buffer Physical Address
-        unsigned int readctr[2]; 
-        unsigned int writectr[2];
-        unsigned int readerCount;
-        unsigned int readStatus;
-        unsigned int writeStatus;
-        unsigned int status;
-        char name[1024]; // Buffer Name Identifier
+	int index; // Serial No of Buffer
+	int type;  //
+	int fd;    // File descriptor from ACAPD
+	int size;  // Buffer Size
+	int handle;// Buffer XRT Handeler
+	uint8_t* ptr; // Buffer Ptr
+	unsigned long phyAddr; // Buffer Physical Address
+	int srcSlot; // Buffer Physical Address
+	int sincSlot; // Buffer Physical Address
+	unsigned long otherAccel_phyAddr[3]; // Buffer Physical Address
+	int InterRMCompatible; // Buffer Physical Address
+	unsigned int readctr[2]; 
+	unsigned int writectr[2];
+	unsigned int readerCount;
+	unsigned int readStatus;
+	unsigned int writeStatus;
+	unsigned int status;
+	char name[1024]; // Buffer Name Identifier
 };
 
 typedef struct Buffer Buffer_t;

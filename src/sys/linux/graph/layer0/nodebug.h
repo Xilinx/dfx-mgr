@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: MIT
  */
 #define INFO(...) \
-    fprintf(stderr, " ");
+	fprintf(stderr, " ");
 
 #define INFOP(...) \
-    fprintf(stderr, __VA_ARGS__);
+	fprintf(stderr, __VA_ARGS__);
 
 #define _unused(x) ((void)(x))

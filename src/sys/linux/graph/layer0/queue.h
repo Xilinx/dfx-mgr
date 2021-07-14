@@ -12,14 +12,14 @@
 typedef struct queue queue_t; 
 struct queue
 {
-    void **buffer;
-    int capacity;
-    int size;
-    int in;
-    int out;
-    pthread_mutex_t mutex;
-    pthread_cond_t cond_full;
-    pthread_cond_t cond_empty;
+	void **buffer;
+	int capacity;
+	int size;
+	int in;
+	int out;
+	pthread_mutex_t mutex;
+	pthread_cond_t cond_full;
+	pthread_cond_t cond_empty;
 };
 
 typedef struct biQueue

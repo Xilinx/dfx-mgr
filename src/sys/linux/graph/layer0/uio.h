@@ -38,28 +38,28 @@ typedef int (*FALLBACKFUNCTION)(void**, int*, void**, int*);
 #define INTER_RM_COMPATIBLE 1
 #define INTER_RM_NOT_COMPATIBLE 0
 struct Accel{
-        char name[1024];// Accelerator name
-        int index;      // Serial No of Accelerator
-        int inHardware; // This reg captures the Accel implemented in Hardware
-        int type;       //
-        int inDmaType;  // Inward  Data Mover Type
-        int outDmaType; // Outward Data Mover Type
-        FALLBACKFUNCTION fallbackfunction;// Pointer to a software fallback function
-        int AccelConfig_fd;
-        int dma_hls_fd;
-        int accels_fd[10];
-        uint8_t* AccelConfig;
-        uint8_t* dma_hls;
-        uint8_t* accels[10];
-        int slot;
-        int InterRMCompatible;
-        int SchedulerBypassFlag;
-        uint8_t* confBuffer;
-        uint8_t* softBuffer;
-        uint64_t softBufferSize;
+	char name[1024];// Accelerator name
+	int index;      // Serial No of Accelerator
+	int inHardware; // This reg captures the Accel implemented in Hardware
+	int type;       //
+	int inDmaType;  // Inward  Data Mover Type
+	int outDmaType; // Outward Data Mover Type
+	FALLBACKFUNCTION fallbackfunction;// Pointer to a software fallback function
+	int AccelConfig_fd;
+	int dma_hls_fd;
+	int accels_fd[10];
+	uint8_t* AccelConfig;
+	uint8_t* dma_hls;
+	uint8_t* accels[10];
+	int slot;
+	int InterRMCompatible;
+	int SchedulerBypassFlag;
+	uint8_t* confBuffer;
+	uint8_t* softBuffer;
+	uint64_t softBufferSize;
 	sem_t* semptr;
-        uint64_t status;
-        dm_t* datamover;
+	uint64_t status;
+	dm_t* datamover;
 };
 
 typedef struct Accel Accel_t;

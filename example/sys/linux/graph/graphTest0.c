@@ -18,16 +18,16 @@
 int main(void){
 	INFO("TEST0: Just load CMA buffer without PL Accelerator");
 	AbstractGraph_t *acapGraph = graphInit();
-        AbstractAccelNode_t *accelNode0 = addInputNode(acapGraph, 32*1024*1024);
-        AbstractAccelNode_t *accelNode1 = addOutputNode(acapGraph, 32*1024*1024);
+	AbstractAccelNode_t *accelNode0 = addInputNode(acapGraph, 32*1024*1024);
+	AbstractAccelNode_t *accelNode1 = addOutputNode(acapGraph, 32*1024*1024);
 
 	_unused(accelNode0);
 	_unused(accelNode1);
-        abstractGraphConfig(acapGraph);
+	abstractGraphConfig(acapGraph);
 	for(int i=0; i < 1024; i++){
 		accelNode0->ptr[i] = i;
 	}
-								
+
 	abstractGraphFinalise(acapGraph);
 	return 0;
 }

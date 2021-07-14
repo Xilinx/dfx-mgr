@@ -22,7 +22,7 @@ typedef struct QueueBuffer{
 	int type;
 	char filename[1024];
 	Buffer_t* buffer;
-        Buffer_t* dependentBuffer;
+	Buffer_t* dependentBuffer;
 	int direction;
 	int transferSize;
 	double throughput;
@@ -37,4 +37,4 @@ extern int MM2S_Buffer(dm_t *datamover, Buffer_t* buffer, Buffer_t* dependentBuf
 extern int S2MM_Buffer(dm_t *datamover, Buffer_t* buffer, int outsize);
 extern int S2MM_Completion(dm_t *datamover);
 extern int MM2S_Completion(dm_t *datamover);
-       
+

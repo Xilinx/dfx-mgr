@@ -9,8 +9,8 @@ typedef struct Buffer Buffer_t;
 typedef struct Accel  Accel_t;
 
 typedef struct soft_DMConfig{
-        uint8_t* data; 
-        uint64_t size; 
+	uint8_t* data; 
+	uint64_t size; 
 	sem_t* semptr;
 }soft_DMConfig_t;
 

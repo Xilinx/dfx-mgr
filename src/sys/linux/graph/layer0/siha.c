@@ -31,27 +31,27 @@ char slotStr[3][5];
 long inthroughput[3], outthroughput[3]; 
 
 long SIHAGetInThroughput(int slot){
-        //INFO("\n");
+	//INFO("\n");
 	return inthroughput[slot];
 }
 
 long SIHAGetOutThroughput(int slot){
-        //INFO("\n");
+	//INFO("\n");
 	return outthroughput[slot];
 }
 
 Buffers_t* SIHAGetBuffers(){
-        //INFO("\n");
+	//INFO("\n");
 	return buffers;
 }
 
 plDevices_t* SIHAGetPLDevices(){
-        //INFO("\n");
+	//INFO("\n");
 	return pldevices;
 }
 
 int SIHAInitAccel(int slot, char * accel){
-        //INFO("\n");
+	//INFO("\n");
 	//FILE *fp;
 	//size_t len = 0;
 	int status;
@@ -89,23 +89,23 @@ int SIHAInitAccel(int slot, char * accel){
 	//INFO("############ getFD ###################\n");
 	//@@//status = socketGetFd(slotNum[slot], &fds);
 	//@@//if (status < 0) return status;
-        //INFO("s2mm_fd        : %d\n", fds.s2mm_fd);
-        //INFO("mm2s_fd        : %d\n", fds.mm2s_fd);
-        //INFO("config_fd      : %d\n", fds.config_fd);
-        //INFO("accelconfig_fd : %d\n", fd[0]); //s.accelconfiig_fd);
-        //INFO("dma_hls_fd     : %d\n", fd[1]); ///s.dma_hls_fd);
-        //status = getPA(slotStr[slot]);
+	//INFO("s2mm_fd        : %d\n", fds.s2mm_fd);
+	//INFO("mm2s_fd        : %d\n", fds.mm2s_fd);
+	//INFO("config_fd      : %d\n", fds.config_fd);
+	//INFO("accelconfig_fd : %d\n", fd[0]); //s.accelconfiig_fd);
+	//INFO("dma_hls_fd     : %d\n", fd[1]); ///s.dma_hls_fd);
+	//status = getPA(slotStr[slot]);
 	//if (status < 0) return status;
 	//INFO("############ getPA ###################\n");
 
-        //status = socketGetPA(slotNum[slot], &fds);
+	//status = socketGetPA(slotNum[slot], &fds);
 	//if (status < 0) return status;
-        //INFO("mm2s_pa        : %lx\n", fds.mm2s_pa);
+	//INFO("mm2s_pa        : %lx\n", fds.mm2s_pa);
 	//INFO("mm2s_size      : %lx\n", fds.mm2s_size);
-        //INFO("s2mm_pa        : %lx\n", fds.s2mm_pa);
+	//INFO("s2mm_pa        : %lx\n", fds.s2mm_pa);
 	//INFO("s2mm_size      : %lx\n", fds.s2mm_size);
 	//INFO("config_pa      : %lx\n", fds.config_pa);
-	
+
 	if(!pldevices) pldevices = (plDevices_t*) malloc(sizeof(plDevices_t));
 	//if(!buffers) buffers   = (Buffers_t*) malloc(sizeof(Buffers_t));
 
@@ -116,11 +116,11 @@ int SIHAInitAccel(int slot, char * accel){
 	//@@//buffers->config_fd[slot]   = fds.config_fd;
 	//@@//buffers->S2MM_fd[slot]     = fds.s2mm_fd;
 	//@@//buffers->MM2S_fd[slot]     = fds.mm2s_fd;
-	
+
 	//@@//buffers->config_paddr[slot]= fds.config_pa;
 	//@@//buffers->S2MM_paddr[slot]  = fds.s2mm_pa;
 	//@@//buffers->MM2S_paddr[slot]  = fds.mm2s_pa;
-	
+
 	//mapBuffer(buffers->config_fd[slot], buffers->config_size[slot], &buffers->config_ptr[slot]);
 	//mapBuffer(buffers->S2MM_fd[slot],   buffers->S2MM_size[slot],   &buffers->S2MM_ptr[slot]);
 	//mapBuffer(buffers->MM2S_fd[slot],   buffers->MM2S_size[slot],   &buffers->MM2S_ptr[slot]);
@@ -148,9 +148,9 @@ int SIHAInitAccel(int slot, char * accel){
 }
 
 int SIHAInit(int configSize, int MM2SSize, int S2MMSize, int slot){
-        //INFO("\n");
+	//INFO("\n");
 	int status;
-	
+
 	pldevices = (plDevices_t*) malloc(sizeof(plDevices_t));
 	buffers   = (Buffers_t*) malloc(sizeof(Buffers_t));
 
@@ -178,33 +178,33 @@ int SIHAInit(int configSize, int MM2SSize, int S2MMSize, int slot){
 	//enableSlot(slot);
 	//configDMSlots(0, pldevices->dma_hls[slot]);
 	/*switch(slot){
-		case 0:	configDMSlots(0, pldevices->dma_hls_0);
-			break;
-		case 1:	configDMSlots(1, pldevices->dma_hls_1);
-			break;
-		case 2:	configDMSlots(2, pldevices->dma_hls_2);
-			break;
-	}*/
+	  case 0:	configDMSlots(0, pldevices->dma_hls_0);
+	  break;
+	  case 1:	configDMSlots(1, pldevices->dma_hls_1);
+	  break;
+	  case 2:	configDMSlots(2, pldevices->dma_hls_2);
+	  break;
+	  }*/
 
 	return 0;
 }
 
 int SIHAStartAccel(int slot){
-       // INFO("\n");
+	// INFO("\n");
 	uint8_t* AccelConfig;
 	//printf("%d\n", slot);
 	AccelConfig = pldevices->AccelConfig[slot];
 	/*switch(slot){
-		case 0:
-			AccelConfig = pldevices->AccelConfig_0;
-			break;
-		case 1:
-			AccelConfig = pldevices->AccelConfig_1;
-			break;
-		case 2:
-			AccelConfig = pldevices->AccelConfig_2;
-			break;
-	}*/
+	  case 0:
+	  AccelConfig = pldevices->AccelConfig_0;
+	  break;
+	  case 1:
+	  AccelConfig = pldevices->AccelConfig_1;
+	  break;
+	  case 2:
+	  AccelConfig = pldevices->AccelConfig_2;
+	  break;
+	  }*/
 	//printf("%hhn\n", AccelConfig);
 	*(uint32_t*)(AccelConfig) = 0x81;
 	//printf("%x\n", AccelConfig[0]);
@@ -212,26 +212,26 @@ int SIHAStartAccel(int slot){
 }
 
 int SIHAStopAccel(int slot){
-        //INFO("\n");
+	//INFO("\n");
 	uint8_t* AccelConfig;
 	AccelConfig = pldevices->AccelConfig[slot];
 	/*switch(slot){
-		case 0:
-			AccelConfig = pldevices->AccelConfig_0;
-			break;
-		case 1:
-			AccelConfig = pldevices->AccelConfig_1;
-			break;
-		case 2:
-			AccelConfig = pldevices->AccelConfig_2;
-			break;
-	}*/
+	  case 0:
+	  AccelConfig = pldevices->AccelConfig_0;
+	  break;
+	  case 1:
+	  AccelConfig = pldevices->AccelConfig_1;
+	  break;
+	  case 2:
+	  AccelConfig = pldevices->AccelConfig_2;
+	  break;
+	  }*/
 	AccelConfig[0] = 0x00;
 	return 0;
 }
 
 int SIHAFinaliseAccel(int slot){
-        //INFO("\n");
+	//INFO("\n");
 	//int r0, r1;	
 	//@@//fds_t fds;
 	//@@//fds.config_fd = buffers->config_fd[slot];
@@ -240,19 +240,19 @@ int SIHAFinaliseAccel(int slot){
 	//@@//fds.accelconfig_fd = pldevices->AccelConfig_fd[slot];
 	//@@//fds.dma_hls_fd     = pldevices->dma_hls_fd[slot];
 	/*switch(slot){
-		case 0:
-			fds.accelconfig_fd = pldevices->AccelConfig_0_fd;
-			fds.dma_hls_fd     = pldevices->dma_hls_0_fd;
-			break;
-		case 1:
-			fds.accelconfig_fd = pldevices->AccelConfig_1_fd;
-			fds.dma_hls_fd     = pldevices->dma_hls_1_fd;
-			break;
-		case 2:
-			fds.accelconfig_fd = pldevices->AccelConfig_2_fd;
-			fds.dma_hls_fd     = pldevices->dma_hls_2_fd;
-			break;
-	}*/
+	  case 0:
+	  fds.accelconfig_fd = pldevices->AccelConfig_0_fd;
+	  fds.dma_hls_fd     = pldevices->dma_hls_0_fd;
+	  break;
+	  case 1:
+	  fds.accelconfig_fd = pldevices->AccelConfig_1_fd;
+	  fds.dma_hls_fd     = pldevices->dma_hls_1_fd;
+	  break;
+	  case 2:
+	  fds.accelconfig_fd = pldevices->AccelConfig_2_fd;
+	  fds.dma_hls_fd     = pldevices->dma_hls_2_fd;
+	  break;
+	  }*/
 	//r0 = unmapBuffer(buffers->config_fd[slot], buffers->config_size[slot], &buffers->config_ptr[slot]);
 	//r1 = unmapBuffer(buffers->S2MM_fd[slot], buffers->S2MM_size[slot], &buffers->S2MM_ptr[slot]);
 	//r2 = unmapBuffer(buffers->MM2S_fd[slot], buffers->MM2S_size[slot], &buffers->MM2S_ptr[slot]);
@@ -271,7 +271,7 @@ int SIHAFinaliseAccel(int slot){
 
 
 int SIHAFinalise(int slot){
-        //INFO("\n");
+	//INFO("\n");
 	int status;
 	finalisePlDevices(pldevices, slot);
 	status = finaliseXrtBuffer(slot, buffers);
@@ -283,7 +283,7 @@ int SIHAFinalise(int slot){
 }
 
 int SIHAConfig(int slot, uint32_t* config, int size, int tid){
-        //INFO("\n");
+	//INFO("\n");
 	_unused(tid);
 	memcpy(buffers->config_ptr[slot], (uint8_t*)config, size);
 	printf("%lx : %lx\n", buffers->S2MM_paddr[slot], buffers->MM2S_paddr[slot]);
@@ -298,19 +298,19 @@ int SIHAConfig(int slot, uint32_t* config, int size, int tid){
 
 int SIHALoopFile(char* filename){
 	_unused(filename);
-        //INFO("\n");
+	//INFO("\n");
 	return 0;
 }
 
 int SIHAExchangeFile(char* infile, char* outfile){
-        //INFO("\n");
+	//INFO("\n");
 	_unused(infile);
 	_unused(outfile);
 	return 0;
 }
 
 int SIHAExchangeBuffer(int slot, uint32_t* inbuff, uint32_t* outbuff, int insize, int outsize){
-        //INFO("\n");
+	//INFO("\n");
 	struct timespec start, finish;
 	double elapsedTime;
 	memcpy(buffers->MM2S_ptr[slot], (uint8_t*)inbuff, insize);

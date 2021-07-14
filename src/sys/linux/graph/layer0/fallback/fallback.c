@@ -23,17 +23,17 @@ int fallback_config(void* dmconfig_a, Accel_t *accel){
 	//dmconfig->data = base;
 	return 0;
 }
-	
-	
+
+
 /*int fallback_config(void* dmconfig_a, uint8_t InputChannelCount, uint8_t OutputChannelCount){
-	fallback_DMConfig_t* dmconfig = (fallback_DMConfig_t*)dmconfig_a;
-	INFO("\n");
-	dmconfig->InputChannelReq[0]  = 0;
-	dmconfig->InputChannelCount   = InputChannelCount;
-	dmconfig->OutputChannelReq[0] = 0;
-	dmconfig->OutputChannelCount  = OutputChannelCount;
-	return 0;
-}*/
+  fallback_DMConfig_t* dmconfig = (fallback_DMConfig_t*)dmconfig_a;
+  INFO("\n");
+  dmconfig->InputChannelReq[0]  = 0;
+  dmconfig->InputChannelCount   = InputChannelCount;
+  dmconfig->OutputChannelReq[0] = 0;
+  dmconfig->OutputChannelCount  = OutputChannelCount;
+  return 0;
+  }*/
 
 int fallback_MM2SStatus(void* dmconfig_a){
 	_unused(dmconfig_a);
@@ -59,7 +59,7 @@ int fallback_MM2SData(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_
 	if(dmconfig->InputChannelReq[0] != NULL && dmconfig->OutputChannelReq[0] != NULL){
 		if(dmconfig->fallbackfunction != NULL){
 			dmconfig->fallbackfunction((void**)dmconfig->InputChannelReq, dmconfig->InputChannelSize,
-							(void**)dmconfig->OutputChannelReq, dmconfig->OutputChannelSize);
+					(void**)dmconfig->OutputChannelReq, dmconfig->OutputChannelSize);
 		}
 		dmconfig->MM2Sstatus = 1;
 		dmconfig->S2MMstatus = 1;
@@ -82,7 +82,7 @@ int fallback_S2MMData(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_
 	if(dmconfig->InputChannelReq[0] != NULL && dmconfig->OutputChannelReq[0] != NULL){
 		if(dmconfig->fallbackfunction != NULL){
 			dmconfig->fallbackfunction((void**)dmconfig->InputChannelReq, dmconfig->InputChannelSize,
-							(void**)dmconfig->OutputChannelReq, dmconfig->OutputChannelSize);
+					(void**)dmconfig->OutputChannelReq, dmconfig->OutputChannelSize);
 		}
 		dmconfig->S2MMstatus = 1;
 		dmconfig->MM2Sstatus = 1;
@@ -123,13 +123,13 @@ int fallback_S2MMAck(void* dmconfig_a){
 int fallback_register(dm_t *datamover, uint8_t InputChannelCount, uint8_t OutputChannelCount, FALLBACKFUNCTION fallbackfunction){
 	//INFO("\n");
 	datamover->dmstruct = (void*) malloc(sizeof(fallback_DMConfig_t));
-        datamover->config     = fallback_config;
-        datamover->S2MMStatus = fallback_S2MMStatus;
-        datamover->S2MMData   = fallback_S2MMData;
-        datamover->S2MMDone   = fallback_S2MMDone;
-        datamover->MM2SStatus = fallback_MM2SStatus;
-        datamover->MM2SData   = fallback_MM2SData;
-        datamover->MM2SDone   = fallback_MM2SDone;
+	datamover->config     = fallback_config;
+	datamover->S2MMStatus = fallback_S2MMStatus;
+	datamover->S2MMData   = fallback_S2MMData;
+	datamover->S2MMDone   = fallback_S2MMDone;
+	datamover->MM2SStatus = fallback_MM2SStatus;
+	datamover->MM2SData   = fallback_MM2SData;
+	datamover->MM2SDone   = fallback_MM2SDone;
 	fallback_DMConfig_t* dmconfig = (fallback_DMConfig_t*)datamover->dmstruct;
 	dmconfig->InputChannelCount = InputChannelCount;
 	dmconfig->OutputChannelCount = OutputChannelCount;

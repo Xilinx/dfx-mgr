@@ -39,7 +39,7 @@ typedef struct Scheduler Scheduler_t;
 
 // Layer 1 Graph Structures
 struct AccelNode{
-        Accel_t accel; // Accel Node Link List structure contains all the Accel nodes
+	Accel_t accel; // Accel Node Link List structure contains all the Accel nodes
 	int S2MMStatus;
 	int MM2SStatus;
 	int SchedulerBypassFlag;
@@ -49,7 +49,7 @@ struct AccelNode{
 };
 
 struct BuffNode{
-        Buffer_t buffer; // Buffer Node Link List structure contains all the Buffer nodes
+	Buffer_t buffer; // Buffer Node Link List structure contains all the Buffer nodes
 	int status;
 	int readStatus;
 	struct BuffNode *head;
@@ -57,29 +57,29 @@ struct BuffNode{
 };
 
 struct Link{// Link(transaction paths) Link List structure contains all the link nodes
-        AccelNode_t *accelNode;// Reference to connected accelerator
-        BuffNode_t *buffNode;// Reference to connected buffer
-        int transactionIndex;
-        int transactionSize;
-        int offset;
-        int totalTransactionDone;
-        int totalTransactionScheduled;
-        int type;// Direction of transfer path MM2S or S2MM
-        int channel;
-        int accounted;
+	AccelNode_t *accelNode;// Reference to connected accelerator
+	BuffNode_t *buffNode;// Reference to connected buffer
+	int transactionIndex;
+	int transactionSize;
+	int offset;
+	int totalTransactionDone;
+	int totalTransactionScheduled;
+	int type;// Direction of transfer path MM2S or S2MM
+	int channel;
+	int accounted;
 	struct Link *head;
 	struct Link *tail;
 };
 
 /*struct DependencyList{
-        Link_t *S2MMlink;
-        Link_t *MM2Slink;
-	struct DependencyList *head;
-	struct DependencyList *tail;
-};*/
+  Link_t *S2MMlink;
+  Link_t *MM2Slink;
+  struct DependencyList *head;
+  struct DependencyList *tail;
+  };*/
 
 struct DependencyList{
-        Link_t *link;
+	Link_t *link;
 	Link_t *dependentLinks[10];
 	int linkCount;
 	struct DependencyList *head;
@@ -87,14 +87,14 @@ struct DependencyList{
 };
 struct Schedule{
 	DependencyList_t *dependency;
-        //Link_t *link;
+	//Link_t *link;
 	int index;
 	int size;
 	int offset;
 	int status;
 	int last;
 	int first;
-        //BuffNode_t *dependentBuffNode[10];// Reference to connected buffer
+	//BuffNode_t *dependentBuffNode[10];// Reference to connected buffer
 	//int buffCount;
 	struct Schedule *head;
 	struct Schedule *tail;
@@ -102,8 +102,8 @@ struct Schedule{
 
 struct Scheduler{
 	queue_t* CommandQueue;
-        queue_t* ResponseQueue;
-        pthread_t thread[1];
+	queue_t* ResponseQueue;
+	pthread_t thread[1];
 };
 
 struct AcapGraph{
@@ -134,9 +134,9 @@ extern int printLinkInfo(Link_t *link, char *json);
 extern int printLinks(Link_t *link, char *json);
 extern int printLinksInfo(Link_t *link, char* json);
 extern Link_t* addInputBuffer (AccelNode_t *accelNode, BuffNode_t *buffNode, 
-			int offset, int transactionSize, int transactionIndex, int channel);
+		int offset, int transactionSize, int transactionIndex, int channel);
 extern Link_t* addOutputBuffer(AccelNode_t *accelNode, BuffNode_t *buffNode,
-			int offset, int transactionSize, int transactionIndex, int channel);
+		int offset, int transactionSize, int transactionIndex, int channel);
 
 //################################################################################
 //         AcapdGraph
@@ -149,9 +149,9 @@ extern AccelNode_t* acapAddInputNode(AcapGraph_t *acapGraph, uint8_t *buff, int 
 extern AccelNode_t* acapAddOutputNode(AcapGraph_t *acapGraph, uint8_t *buff, int size, int SchedulerBypassFlag, sem_t* semptr);
 BuffNode_t* acapAddBuffNode(AcapGraph_t *acapGraph, int size, char *name, int type);
 Link_t *acapAddOutputBuffer(AcapGraph_t *acapGraph, AccelNode_t *accelNode, BuffNode_t *buffNode, 
-			    int offset, int transactionSize, int transactionIndex, int channel);
+		int offset, int transactionSize, int transactionIndex, int channel);
 Link_t *acapAddInputBuffer(AcapGraph_t *acapGraph, AccelNode_t *accelNode, BuffNode_t *buffNode, 
-			    int offset, int transactionSize, int transactionIndex, int channel);
+		int offset, int transactionSize, int transactionIndex, int channel);
 int acapGraphToJson(AcapGraph_t *acapGraph);
 int acapGraphConfig(AcapGraph_t *acapGraph);
 int acapGraphSchedule(AcapGraph_t *acapGraph);

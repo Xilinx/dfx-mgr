@@ -18,7 +18,7 @@
 int soft_config(void* dmconfig_a, Accel_t *accel){ //, volatile uint8_t* base){
 	soft_DMConfig_t* dmconfig = (soft_DMConfig_t*)dmconfig_a;
 	//INFO("%p\n", accel->semptr);
-	
+
 	dmconfig->data = accel->softBuffer;
 	dmconfig->semptr = accel->semptr;
 	//INFO("%p\n", dmconfig->semptr);
@@ -42,7 +42,7 @@ int soft_MM2SData(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t si
 	soft_DMConfig_t* dmconfig = (soft_DMConfig_t*)dmconfig_a;
 	memcpy((uint8_t*)dmconfig->data, ((uint8_t*)data->ptr) + offset, size);
 	if(firstLast){
-        	sem_post(dmconfig->semptr);
+		sem_post(dmconfig->semptr);
 		//INFO("######## Soft MM2SData last #############");
 	}
 	return 0;
@@ -87,13 +87,13 @@ int soft_S2MMAck(void* dmconfig_a){
 int soft_register(dm_t *datamover){
 	//INFO("\n");
 	datamover->dmstruct = (void*) malloc(sizeof(soft_DMConfig_t));
-        datamover->config     = soft_config;
-        datamover->S2MMStatus = soft_S2MMStatus;
-        datamover->S2MMData   = soft_S2MMData;
-        datamover->S2MMDone   = soft_S2MMDone;
-        datamover->MM2SStatus = soft_MM2SStatus;
-        datamover->MM2SData   = soft_MM2SData;
-        datamover->MM2SDone   = soft_MM2SDone;
+	datamover->config     = soft_config;
+	datamover->S2MMStatus = soft_S2MMStatus;
+	datamover->S2MMData   = soft_S2MMData;
+	datamover->S2MMDone   = soft_S2MMDone;
+	datamover->MM2SStatus = soft_MM2SStatus;
+	datamover->MM2SData   = soft_MM2SData;
+	datamover->MM2SDone   = soft_MM2SDone;
 	return 0;
 }
 

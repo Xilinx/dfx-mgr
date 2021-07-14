@@ -11,15 +11,15 @@
 
 // The #ifndef-guard allows it to be configured before #include'ing or at compile time.
 #ifndef CBC
-  #define CBC 1
+#define CBC 1
 #endif
 
 #ifndef ECB
-  #define ECB 1
+#define ECB 1
 #endif
 
 #ifndef CTR
-  #define CTR 1
+#define CTR 1
 #endif
 
 
@@ -30,21 +30,21 @@
 #define AES_BLOCKLEN 16 //Block length in bytes AES is 128b block only
 
 #if defined(AES256) && (AES256 == 1)
-    #define AES_KEYLEN 32
-    #define AES_keyExpSize 240
+#define AES_KEYLEN 32
+#define AES_keyExpSize 240
 #elif defined(AES192) && (AES192 == 1)
-    #define AES_KEYLEN 24
-    #define AES_keyExpSize 208
+#define AES_KEYLEN 24
+#define AES_keyExpSize 208
 #else
-    #define AES_KEYLEN 16   // Key length in bytes
-    #define AES_keyExpSize 176
+#define AES_KEYLEN 16   // Key length in bytes
+#define AES_keyExpSize 176
 #endif
 
 struct AES_ctx
 {
-  uint8_t RoundKey[AES_keyExpSize];
+	uint8_t RoundKey[AES_keyExpSize];
 #if (defined(CBC) && (CBC == 1)) || (defined(CTR) && (CTR == 1))
-  uint8_t Iv[AES_BLOCKLEN];
+	uint8_t Iv[AES_BLOCKLEN];
 #endif
 };
 

@@ -29,53 +29,53 @@ struct Element{
 };
 
 struct AbstractAccelNode{
-    uint8_t type;
-    char name[256];
-    uint32_t size;
-    uint32_t id;
-    int fd;    	// File descriptor from ACAPD
-    int handle;	// Buffer XRT Handeler
-    uint8_t* ptr;	// Buffer Ptr
-    unsigned long phyAddr; // Buffer Physical Address
+	uint8_t type;
+	char name[256];
+	uint32_t size;
+	uint32_t id;
+	int fd;    	// File descriptor from ACAPD
+	int handle;	// Buffer XRT Handeler
+	uint8_t* ptr;	// Buffer Ptr
+	unsigned long phyAddr; // Buffer Physical Address
 	uint32_t semaphore; 
 	sem_t* semptr;
 	AccelNode_t *node;
-    //int SchedulerBypassFlag;
+	//int SchedulerBypassFlag;
 };
 
 struct AbstractBuffNode{
-    uint8_t type;
-    char name[256];
-    uint32_t size;
-    uint32_t id;
+	uint8_t type;
+	char name[256];
+	uint32_t size;
+	uint32_t id;
 	BuffNode_t *node;
 };
 
 struct AbstractLink{
-    AbstractAccelNode_t *accelNode;// Reference to connected accelerator
-    AbstractBuffNode_t *buffNode;// Reference to connected buffer
-    uint8_t type;
-    uint8_t transactionIndex;
-    uint32_t transactionSize;
-    uint32_t offset;
-    uint8_t channel;
-    uint32_t id;
+	AbstractAccelNode_t *accelNode;// Reference to connected accelerator
+	AbstractBuffNode_t *buffNode;// Reference to connected buffer
+	uint8_t type;
+	uint8_t transactionIndex;
+	uint32_t transactionSize;
+	uint32_t offset;
+	uint8_t channel;
+	uint32_t id;
 	Link_t *node;
 };
 
 struct AbstractGraph{
-    uint32_t id;
-    uint8_t type;
-    uint8_t state;
-    uint32_t accelCount;
+	uint32_t id;
+	uint8_t type;
+	uint8_t state;
+	uint32_t accelCount;
 	socket_t *gs;
 	int xrt_fd;
-    Element_t *accelNodeHead;
-    Element_t *buffNodeHead;
-    Element_t *linkHead;
-    uint32_t accelNodeID;
-    uint32_t buffNodeID;
-    uint32_t linkID;
+	Element_t *accelNodeHead;
+	Element_t *buffNodeHead;
+	Element_t *linkHead;
+	uint32_t accelNodeID;
+	uint32_t buffNodeID;
+	uint32_t linkID;
 };
 
 //extern AcapGraph_t* graphInit();
@@ -88,10 +88,10 @@ extern AbstractAccelNode_t* addOutputNode(AbstractGraph_t *graph, int size);
 extern AbstractAccelNode_t* addAcceleratorNode(AbstractGraph_t *graph, char *name);
 extern AbstractBuffNode_t* addBuffer(AbstractGraph_t *graph, int size, int type);
 extern AbstractLink_t *addOutBuffer(AbstractGraph_t *graph, AbstractAccelNode_t *accelNode, AbstractBuffNode_t *buffNode,
-			    uint32_t offset, uint32_t transactionSize, uint8_t transactionIndex, uint8_t channel);
+		uint32_t offset, uint32_t transactionSize, uint8_t transactionIndex, uint8_t channel);
 
 extern AbstractLink_t *addInBuffer(AbstractGraph_t *graph, AbstractAccelNode_t *accelNode, AbstractBuffNode_t *buffNode,
-			    uint32_t offset, uint32_t transactionSize, uint8_t transactionIndex, uint8_t channel);
+		uint32_t offset, uint32_t transactionSize, uint8_t transactionIndex, uint8_t channel);
 
 extern int abstractGraph2Json(AbstractGraph_t *graph, char* json);
 extern int abstractGraphConfig(AbstractGraph_t *graph);
