@@ -8,19 +8,19 @@
 
 using opendfx::Link;
 
-Link::Link(opendfx::Accel &accel, opendfx::Buffer &buffer, int dir) : accel(accel), buffer(buffer), dir(dir) {
+Link::Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir) : accel(accel), buffer(buffer), dir(dir) {
 	deleteFlag = false;
-	accel.addLinkRefCount();
-	buffer.addLinkRefCount();
+	accel->addLinkRefCount();
+	buffer->addLinkRefCount();
 	//std::cout << accel.toJson(true); 
 	utils::setID(id, strid);
 }
 
-opendfx::Accel Link::getAccel() const{
+opendfx::Accel* Link::getAccel() const{
 	return this->accel;
 }
 
-opendfx::Buffer Link::getBuffer() const{
+opendfx::Buffer* Link::getBuffer() const{
 	return this->buffer;
 }
 
@@ -36,10 +36,10 @@ bool Link::getDeleteFlag() const{
 int Link::info() {
 	std::string resp;
 	if(dir == opendfx::direction::toAccel){
-		std::cout << strid << "Link: buffer:" + buffer.getName() + " -> accel:" + accel.getName() << std::endl;
+		std::cout << strid << "Link: buffer:" + buffer->getName() + " -> accel:" + accel->getName() << std::endl;
 	}
 	else{
-		std::cout << strid << "Link: accel:" + accel.getName() + " -> buffer:" + buffer.getName() << std::endl;
+		std::cout << strid << "Link: accel:" + accel->getName() + " -> buffer:" + buffer->getName() << std::endl;
 	}
 
 	return 0;
@@ -52,8 +52,8 @@ std::string Link::toJson(bool withDetail){
 	if(withDetail){
 		jsonStream << "\t\"deleteFlag\"\t: "    << deleteFlag          << ",\n";
 	}
-	jsonStream << "\t\"accel\"\t: " << accel.getId()  << ",\n";
-	jsonStream << "\t\"buffer\"\t: "<< buffer.getId(); 
+	jsonStream << "\t\"accel\"\t: " << accel->getId()  << ",\n";
+	jsonStream << "\t\"buffer\"\t: "<< buffer->getId(); 
 	jsonStream << "}";
 	return jsonStream.str();
 }

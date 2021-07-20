@@ -13,13 +13,13 @@ namespace opendfx {
 	class Link {
 
 	public:
-		explicit Link(opendfx::Accel &accel, opendfx::Buffer &buffer, int dir);
+		explicit Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir);
 		int info();
 		inline bool operator==(const Link& rhs) const {
 		    return (this->id == rhs.id && this->strid == rhs.strid);
 		}
-		opendfx::Accel getAccel() const;
-		opendfx::Buffer getBuffer() const;
+		opendfx::Accel* getAccel() const;
+		opendfx::Buffer* getBuffer() const;
 		int setDeleteFlag(bool deleteFlag);
 		bool getDeleteFlag() const;
 		static inline bool staticGetDeleteFlag(Link *link) {
@@ -28,8 +28,8 @@ namespace opendfx {
 		inline std::string getId() const { return this->strid; }
 		std::string toJson(bool withDetail = false);
 	private:
-		opendfx::Accel accel;
-		opendfx::Buffer buffer;
+		opendfx::Accel *accel;
+		opendfx::Buffer *buffer;
 		int dir;
 		int id;
 		std::string strid;

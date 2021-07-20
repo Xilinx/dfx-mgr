@@ -57,7 +57,6 @@ int Graph::delAccel(opendfx::Accel *accel){
 	}
 	accel->setDeleteFlag(true);
 	links.erase(std::remove_if(links.begin(), links.end(), Link::staticGetDeleteFlag), links.end());
-	accels.erase(std::remove(accels.begin(), accels.end(), &accel), accels.end());
 	accels.erase(std::remove_if(accels.begin(), accels.end(), Accel::staticGetDeleteFlag), accels.end());
 	return 0;
 }
@@ -69,14 +68,15 @@ int Graph::delBuffer(opendfx::Buffer *buffer){
 			(*it)->setDeleteFlag(true);
 		}
 	}
-	buffer.setDeleteFlag(true);
+	buffer->setDeleteFlag(true);
 	links.erase(std::remove_if(links.begin(), links.end(), Link::staticGetDeleteFlag), links.end());
 	buffers.erase(std::remove_if(buffers.begin(), buffers.end(), Buffer::staticGetDeleteFlag), buffers.end());
 	return 0;
 }
 
-int Graph::delLink(opendfx::Link &link){
-	links.erase(std::remove(links.begin(), links.end(), &link), links.end());
+int Graph::delLink(opendfx::Link *link){
+	link->setDeleteFlag(true);
+	links.erase(std::remove_if(links.begin(), links.end(), Link::staticGetDeleteFlag), links.end());
 	return 0;
 }
 
