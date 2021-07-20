@@ -493,7 +493,7 @@ acapd_buffer_t * sys_alloc_buffer(uint64_t size)
 		goto err2;
 	}
 	buff->PA = boInfo.paddr;
-	acapd_print("aloocated BO size %lu paddr %lu\n",boInfo.size,buff->PA);
+	acapd_print("allocated BO size %lu paddr %lu\n",boInfo.size,buff->PA);
 
 	struct drm_prime_handle bo_h = {bo.handle, DRM_RDWR, -1};
 	if (ioctl(buff->drm_fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &bo_h) < 0) {
