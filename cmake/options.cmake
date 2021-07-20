@@ -3,10 +3,10 @@
 # SPDX-License-Identifier: MIT
 #########################################################################
 
-set (PROJECT_VER_MAJOR  0)
-set (PROJECT_VER_MINOR  1)
-set (PROJECT_VER_PATCH  0)
-set (PROJECT_VER        0.1.0)
+#PROJECT_VER should match with yocto recipe version for SOVERSION
+set (PROJECT_VER_MAJOR 1)
+set (PROJECT_VER_MINOR 0)
+set (PROJECT_VER "${PROJECT_VER_MAJOR}.${PROJECT_VER_MINOR}")
 
 if (NOT CMAKE_BUILD_TYPE)
   set (CMAKE_BUILD_TYPE Debug)
