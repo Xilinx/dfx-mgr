@@ -6,17 +6,20 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdlib.h>
 #include "sihaHLSdm.h"
 #include "../utils.h"
 #include "../dm.h"
 #include "../xrtbuffer.h"
 #include "../uio.h"
-#include <dfx-mgr/print.h>
 #include <dfx-mgr/assert.h>
+#include <dfx-mgr/conio.h>
+
+//#define DEBUG
+#include <dfx-mgr/print.h>
 
 int sihahls_config(void* dmconfig_a, Accel_t *accel){ //volatile uint8_t* base){
 	sihahls_DMConfig_t* dmconfig = (sihahls_DMConfig_t*)dmconfig_a;
-	//INFO("\n");
 	dmconfig->s2mm_baseAddr  = accel->dma_hls + S2MM;
 	dmconfig->s2mm_APCR      = dmconfig->s2mm_baseAddr + APCR;
 	dmconfig->s2mm_GIER      = dmconfig->s2mm_baseAddr + GIER; 
@@ -39,34 +42,47 @@ int sihahls_config(void* dmconfig_a, Accel_t *accel){ //volatile uint8_t* base){
 	dmconfig->mm2s_TID       = dmconfig->mm2s_baseAddr + TID;
 	dmconfig->accel		 = accel;
 	dmconfig->start          = 0;
+
+    acapd_debug("base Address %x\n",accel->dma_hls);
+    acapd_debug("S2MM %x\n",dmconfig->s2mm_baseAddr);
+    acapd_debug("MM2S %x\n",dmconfig->mm2s_baseAddr);
+    acapd_debug("S2MM %x\n",dmconfig->s2mm_baseAddr + APCR);
+    acapd_debug("MM2S %x\n",dmconfig->mm2s_baseAddr + APCR);
+
 	return 0;
 }
 
 int sihahls_start(void* dmconfig_a){
 	sihahls_DMConfig_t* dmconfig = (sihahls_DMConfig_t*)dmconfig_a;
-	//INFO("\n");
-	//return 0;
+	INFO("#######################################\n");
+	int ret;//return 0;
+	//getch();
 	*(uint32_t*)(dmconfig->accel->AccelConfig) = 0x81;
+	//getch();
 	switch (dmconfig->accel->slot){
 		case 0:
+			//ret = system("devmem 0x20100000000 w 0x81");
 			//*(uint32_t*)(dmconfig->accel->dma_hls + 0x0) = 0x00000000;
 			//*(uint32_t*)(dmconfig->accel->dma_hls + 0x4) = 0x00000002;
 			//*(uint32_t*)(dmconfig->accel->dma_hls + 0x8) = 0x3fffffff;
 			// *(uint32_t*)(dmconfig->accel->dma_hls + 0xC) = 0x00000002;
 			break;
 		case 1:
+			//ret = system("devmem 0x20110000000 w 0x81");
 			//*(uint32_t*)(dmconfig->accel->dma_hls + 0x0) = 0x80000000;
 			// *(uint32_t*)(dmconfig->accel->dma_hls + 0x4) = 0x00000002;
 			// *(uint32_t*)(dmconfig->accel->dma_hls + 0x8) = 0xbfffffff;
 			//*(uint32_t*)(dmconfig->accel->dma_hls + 0xC) = 0x00000002;
 			break;
 		case 2:
+			//ret = system("devmem 0x20120000000 w 0x81");
 			//*(uint32_t*)(dmconfig->accel->dma_hls + 0x0) = 0x00000000;
 			//*(uint32_t*)(dmconfig->accel->dma_hls + 0x4) = 0x00000003;
 			//*(uint32_t*)(dmconfig->accel->dma_hls + 0x8) = 0x3fffffff;
 			//*(uint32_t*)(dmconfig->accel->dma_hls + 0xC) = 0x00000003;
 			break;
 	}
+	_unused(ret);
 	dmconfig->start = 1;
 	return 0;
 }
@@ -162,6 +178,7 @@ int sihahls_S2MMData(void* dmconfig_a, uint64_t data, uint64_t size){
 }
 
 int sihahls_MM2SData_B(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t size, uint8_t firstLast, uint8_t tid){
+	acapd_debug("MM2S %x\n", MM2S);
 	_unused(firstLast);
 	//INFO("%x %d\n", size, tid);
 	//INFO("%p\n", data->ptr);
@@ -174,24 +191,35 @@ int sihahls_MM2SData_B(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64
 	}
 	uint64_t address = data->phyAddr + offset ;
 	if(data->InterRMCompatible == 2){
-		printf("InterRMCompatible");
-		*(uint32_t*)(dmconfig->mm2s_ADDR_LOW)  = data->otherAccel_phyAddr[dmconfig->accel->slot] & 0xFFFFFFFF;
-		*(uint32_t*)(dmconfig->mm2s_ADDR_HIGH) = (data->otherAccel_phyAddr[dmconfig->accel->slot] >> 32) & 0xFFFFFFFF;
+		acapd_debug("InterRMCompatible");
+		*(volatile uint32_t*)(dmconfig->mm2s_ADDR_LOW)  = data->otherAccel_phyAddr[dmconfig->accel->slot] & 0xFFFFFFFF;
+		*(volatile uint32_t*)(dmconfig->mm2s_ADDR_HIGH) = (data->otherAccel_phyAddr[dmconfig->accel->slot] >> 32) & 0xFFFFFFFF;
+		acapd_debug("ADDR_LOW : %x\n", data->otherAccel_phyAddr[dmconfig->accel->slot] & 0xffffffff);
+		acapd_debug("ADDR_HIGH: %x\n", (data->otherAccel_phyAddr[dmconfig->accel->slot] >> 32) & 0xffffffff);
 	}
 	else{
-		*(uint32_t*)(dmconfig->mm2s_ADDR_LOW)  = address & 0xFFFFFFFF;
-		*(uint32_t*)(dmconfig->mm2s_ADDR_HIGH) = (address >> 32) & 0xFFFFFFFF;
+		*(volatile uint32_t*)(dmconfig->mm2s_ADDR_LOW)  = address & 0xFFFFFFFF;
+		*(volatile uint32_t*)(dmconfig->mm2s_ADDR_HIGH) = (address >> 32) & 0xFFFFFFFF;
+		acapd_debug("ADDR_LOW : %x\n", address & 0xffffffff);
+		acapd_debug("ADDR_HIGH: %x\n", (address >> 32) & 0xffffffff);
 	}
-	*(uint32_t*)(dmconfig->mm2s_SIZE_LOW)  = (size >> 4) & 0xFFFFFFFF;
-	*(uint32_t*)(dmconfig->mm2s_SIZE_HIGH) = (size >> 36) & 0xFFFFFFFF;
-	*(uint32_t*)(dmconfig->mm2s_TID)       = tid;
-	*(uint32_t*)(dmconfig->mm2s_GIER)      = 0x1;
-	*(uint32_t*)(dmconfig->mm2s_IIER)      = 0x3;
-	*(uint32_t*)(dmconfig->mm2s_APCR)      = 0x1 << AP_START;
+	acapd_debug("SIZE_LOW : %x\n", (size >> 4) & 0xffffffff);
+	acapd_debug("SIZE_HIGH: %x\n", (size >> 36) & 0xffffffff);
+	acapd_debug("TID      : %x\n", tid);
+	acapd_debug("GIER     : %x\n", 0x01);
+	acapd_debug("IIER     : %x\n", 0x03);
+	acapd_debug("APCR     : %x\n", 0x01 << AP_START);
+	*(volatile uint32_t*)(dmconfig->mm2s_SIZE_LOW)  = (size >> 4) & 0xFFFFFFFF;
+	*(volatile uint32_t*)(dmconfig->mm2s_SIZE_HIGH) = (size >> 36) & 0xFFFFFFFF;
+	*(volatile uint32_t*)(dmconfig->mm2s_TID)       = tid;
+	*(volatile uint32_t*)(dmconfig->mm2s_GIER)      = 0x1;
+	*(volatile uint32_t*)(dmconfig->mm2s_IIER)      = 0x3;
+	*(volatile uint32_t*)(dmconfig->mm2s_APCR)      = 0x1 << AP_START;
 	return 0;
 }
 
 int sihahls_S2MMData_B(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t size, uint8_t firstLast){
+	acapd_debug("S2MM %x\n", S2MM);
 	_unused(firstLast);
 	sihahls_DMConfig_t* dmconfig = (sihahls_DMConfig_t*)dmconfig_a;
 	if (dmconfig->start == 0){
@@ -202,11 +230,20 @@ int sihahls_S2MMData_B(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64
 		printf("InterRMCompatible");
 		*(uint32_t*)(dmconfig->s2mm_ADDR_LOW)  = data->otherAccel_phyAddr[data->sincSlot] & 0xFFFFFFFF;
 		*(uint32_t*)(dmconfig->s2mm_ADDR_HIGH) = (data->otherAccel_phyAddr[data->sincSlot] >> 32) & 0xFFFFFFFF;
+		acapd_debug("ADDR_LOW : %x\n", data->otherAccel_phyAddr[data->sincSlot] & 0xffffffff);
+		acapd_debug("ADDR_HIGH: %x\n", (data->otherAccel_phyAddr[data->sincSlot] >> 32) & 0xffffffff);
 	}
 	else{
 		*(uint32_t*)(dmconfig->s2mm_ADDR_LOW)  = address & 0xFFFFFFFF;
 		*(uint32_t*)(dmconfig->s2mm_ADDR_HIGH) = (address >> 32) & 0xFFFFFFFF;
+		acapd_debug("ADDR_LOW : %x\n", address & 0xffffffff);
+		acapd_debug("ADDR_HIGH: %x\n", (address >> 32) & 0xffffffff);
 	}
+	acapd_debug("SIZE_LOW : %x\n", (size >> 4) & 0xffffffff);
+	acapd_debug("SIZE_HIGH: %x\n", (size >> 36) & 0xffffffff);
+	acapd_debug("GIER     : %x\n", 0x01);
+	acapd_debug("IIER     : %x\n", 0x03);
+	acapd_debug("APCR     : %x\n", 0x01 << AP_START);
 	*(uint32_t*)(dmconfig->s2mm_SIZE_LOW)  = (size >> 4) & 0xFFFFFFFF;
 	*(uint32_t*)(dmconfig->s2mm_SIZE_HIGH) = (size >> 36) & 0xFFFFFFFF;
 	*(uint32_t*)(dmconfig->s2mm_GIER)      = 0x1;
@@ -219,21 +256,21 @@ int sihahls_S2MMDone(void* dmconfig_a, Buffer_t* data){
 	sihahls_DMConfig_t* dmconfig = (sihahls_DMConfig_t*)dmconfig_a;
 	int status, res;
 	status = *(uint32_t*)(uint32_t*)(dmconfig->s2mm_APCR);
-	res = ((status >> AP_DONE) | (status >> AP_IDLE)) & 0x1;
-	//INFO("%x, %x\n", res, status);
-	//INFO("\n");
+	res = status ? ((status >> AP_DONE) | (status >> AP_IDLE)) & 0x1 : 1;
+	acapd_debug("S2MM Status : %x %x\n", status, res);
 	if(res){
 		data->writeStatus += 1;
 	}
+	//getch();
 	return res;
 }
 
 int sihahls_MM2SDone(void* dmconfig_a, Buffer_t* data){
 	sihahls_DMConfig_t* dmconfig = (sihahls_DMConfig_t*)dmconfig_a;
 	int status, res;
-	status = *(uint32_t*)(uint32_t*)(dmconfig->mm2s_APCR);
-	res = ((status >> AP_DONE) | (status >> AP_IDLE)) & 0x1;
-	//INFO("%x, %x\n", res, status);
+	status = *(volatile uint32_t*)(uint32_t*)(dmconfig->mm2s_APCR);
+	res = status ? ((status >> AP_DONE) | (status >> AP_IDLE)) & 0x1 : 1;
+	acapd_debug("MM2S Status : %x %x\n", status, res);
 	if(res){
 		data->readStatus += 1;
 		if(data->readStatus == 2*data->readerCount){
@@ -241,6 +278,7 @@ int sihahls_MM2SDone(void* dmconfig_a, Buffer_t* data){
 			data->writeStatus = 0;
 		}
 	}
+	//getch();
 	return res;
 }
 

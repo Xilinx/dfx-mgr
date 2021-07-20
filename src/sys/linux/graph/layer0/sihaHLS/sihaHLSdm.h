@@ -25,8 +25,10 @@ typedef struct Accel  Accel_t;
 
 //#define S2MM      0x0000
 //#define MM2S      0x8000
-#define S2MM      0x8000
-#define MM2S      0xc000
+//#define S2MM      0x8000
+//#define MM2S      0xc000
+#define S2MM      0x00000
+#define MM2S      0x10000
 
 typedef struct sihahls_DMConfig{
 	volatile uint8_t* s2mm_baseAddr; 

@@ -16,6 +16,7 @@ collect (PROJECT_LIB_HEADERS dfxmgr_client.h)
 collect (PROJECT_LIB_HEADERS model.h)
 collect (PROJECT_LIB_HEADERS json-config.h)
 collect (PROJECT_LIB_HEADERS daemon_helper.h)
+collect (PROJECT_LIB_HEADERS conio.h)
 
 collect (PROJECT_LIB_SOURCES accel.c)
 collect (PROJECT_LIB_SOURCES assert.c)

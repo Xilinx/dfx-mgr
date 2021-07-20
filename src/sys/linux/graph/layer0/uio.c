@@ -103,7 +103,7 @@ int mapPlDevices(plDevices_t* pldevices, int slot){
 		return -1;
 	}
 
-	pldevices->dma_hls[slot] = (uint8_t*) mmap(0, 0x10000, PROT_READ | PROT_WRITE, MAP_SHARED, 
+	pldevices->dma_hls[slot] = (uint8_t*) mmap(0, 0x20000, PROT_READ | PROT_WRITE, MAP_SHARED, 
 			pldevices->dma_hls_fd[slot], 0);
 	if(pldevices->dma_hls[slot] == MAP_FAILED){
 		printf("Mmap dma_hls_0 failed !!\n");
@@ -165,7 +165,7 @@ int mapPlDevicesAccel(plDevices_t* pldevices, int slot){
 		return -1;
 	}
 
-	pldevices->dma_hls[slot] = (uint8_t*) mmap(0, 0x10000, PROT_READ | PROT_WRITE, MAP_SHARED, 
+	pldevices->dma_hls[slot] = (uint8_t*) mmap(0, 0x20000, PROT_READ | PROT_WRITE, MAP_SHARED, 
 			pldevices->dma_hls_fd[slot], 0);
 	if(pldevices->dma_hls[slot] == MAP_FAILED){
 		printf("Mmap dma_hls_%d failed !!\n", slot);
@@ -221,7 +221,7 @@ int mapPlDevicesAccel(plDevices_t* pldevices, int slot){
 int unmapPlDevicesAccel(plDevices_t* pldevices, int slot){
 
 	munmap(pldevices->AccelConfig[slot], 0x9000);
-	munmap(pldevices->dma_hls[slot], 0x10000);
+	munmap(pldevices->dma_hls[slot], 0x20000);
 	/*switch(slot){
 	  case 0:	munmap(pldevices->AccelConfig_0, 0x9000);
 	  munmap(pldevices->dma_hls_0, 0x10000);
