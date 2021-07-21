@@ -13,11 +13,15 @@
 using opendfx::Graph;
 
 Graph::Graph(const std::string &name) : m_name(name) {
-	srand(time(0));
 	id = rand() % 0x10000;
 	std::stringstream stream;
 	stream << std::hex << id;
 	strid = stream.str();
+	//std::cout << strid;
+}
+
+std::string Graph::info() const {
+	return "Graph ID: " + strid;
 }
 
 std::string Graph::getInfo() const {
@@ -183,4 +187,13 @@ std::string Graph::toJson(bool withDetail){
 	jsonStream << "\"links\"\t: "   << jsonLinks(withDetail) << "\n";
 	jsonStream << "}\n";
 	return jsonStream.str();
+}
+
+int Graph::setDeleteFlag(bool deleteFlag){
+	this->deleteFlag = deleteFlag;
+	return 0;
+}
+
+bool Graph::getDeleteFlag() const{
+	return this->deleteFlag;
 }

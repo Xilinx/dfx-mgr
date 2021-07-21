@@ -1,6 +1,6 @@
-// wrapper.hpp
-#ifndef WRAPPER_HPP_
-#define WRAPPER_HPP_
+// graph.hpp
+#ifndef GRAPH_HPP_
+#define GRAPH_HPP_
 
 #include <string>
 #include <vector>
@@ -15,6 +15,7 @@ class Graph {
 
 	public:
 		explicit Graph(const std::string &name);
+		std::string info() const;
 		std::string getInfo() const;
 		Accel* addAccel(const std::string &name);
 		Buffer* addBuffer(const std::string &name);
@@ -30,6 +31,11 @@ class Graph {
 		std::string jsonBuffers(bool withDetail = false);
 		std::string jsonLinks(bool withDetail = false);
 		std::string toJson(bool withDetail = false);
+		int setDeleteFlag(bool deleteFlag);
+		bool getDeleteFlag() const;
+		static inline bool staticGetDeleteFlag(Graph *graph) {
+			return graph->getDeleteFlag();
+		}
 		
 	private:
 		std::string m_name;
@@ -38,6 +44,7 @@ class Graph {
 		std::vector<opendfx::Accel *> accels;
 		std::vector<opendfx::Buffer *> buffers;
 		std::vector<opendfx::Link *> links;
+		bool deleteFlag;
 	};
-} // #end of wrapper
-#endif // WRAPPER_HPP_
+} // #end of graph
+#endif // GRAPH_HPP_

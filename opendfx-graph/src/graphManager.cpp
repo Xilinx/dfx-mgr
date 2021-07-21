@@ -1,0 +1,48 @@
+// graphManager.cpp
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <stdlib.h>
+#include <time.h>
+#include <algorithm>
+#include <vector>
+#include "graph.hpp"
+#include "graphManager.hpp"
+
+using opendfx::GraphManager;
+
+GraphManager::GraphManager(){
+	int i;
+	//srand(time(0)); // Seed initialisation based on time
+	char * block;
+	short size = 1;
+	std::ifstream urandom("/dev/urandom", std::ios::in|std::ios::binary); // Seed initialisation based on /dev/urandom
+	urandom >> i;
+	srand(i ^ time(0));
+	urandom.close();
+	
+	id = rand() % 0x10000;
+}
+
+int GraphManager::addGraph(opendfx::Graph *graph){
+	graphs.push_back(graph);
+	return 0;
+}
+
+int GraphManager::delGraph(opendfx::Graph *graph){
+	graph->setDeleteFlag(true);
+	graphs.erase(std::remove_if(graphs.begin(), graphs.end(), Graph::staticGetDeleteFlag), graphs.end());
+	return 0;
+}
+
+
+int GraphManager::listGraphs()
+{
+	for (std::vector<opendfx::Graph *>::iterator it = graphs.begin() ; it != graphs.end(); ++it)
+	{
+		opendfx::Graph* graph = *it;
+		std::cout << ' ' << graph->info() << '\n';
+	}
+	std::cout << '\n';
+	return 0;
+}
