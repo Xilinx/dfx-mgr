@@ -18,12 +18,17 @@ class Graph {
 		std::string info() const;
 		std::string getInfo() const;
 		Accel* addAccel(const std::string &name);
+		Accel* addAccel(Accel *accel);
 		Buffer* addBuffer(const std::string &name);
-		Link* addInputBuffer (opendfx::Accel *accel, opendfx::Buffer *buffer);
-		Link* addOutputBuffer(opendfx::Accel *accel, opendfx::Buffer *buffer);
-		int delAccel(opendfx::Accel *accel);
-		int delBuffer(opendfx::Buffer *buffer);
-		int delLink(opendfx::Link *link);
+		Buffer* addBuffer(Buffer *buffer);
+		Link* addInputBuffer (Accel *accel, Buffer *buffer);
+		Link* addOutputBuffer(Accel *accel, Buffer *buffer);
+		Link* addLink(Link *link);
+		int copyGraph(Graph &graph);
+		int cutGraph (Graph &graph);
+		int delAccel(Accel *accel);
+		int delBuffer(Buffer *buffer);
+		int delLink(Link *link);
 		int listAccels();
 		int listBuffers();
 		int listLinks();
@@ -35,8 +40,9 @@ class Graph {
 		bool getDeleteFlag() const;
 		static inline bool staticGetDeleteFlag(Graph *graph) {
 			return graph->getDeleteFlag();
-		}
-		
+		};
+		opendfx::Graph operator + (opendfx::Graph& graph);
+		Graph operator - (Graph &graph);
 	private:
 		std::string m_name;
 		int id;
@@ -47,4 +53,5 @@ class Graph {
 		bool deleteFlag;
 	};
 } // #end of graph
+
 #endif // GRAPH_HPP_

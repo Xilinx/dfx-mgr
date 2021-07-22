@@ -5,7 +5,7 @@
 //#include "accel.hpp"
 
 int main(int argc, char **argv) {
-	opendfx::GraphManager *gManager = new opendfx::GraphManager();
+	opendfx::GraphManager gManager;
 	opendfx::Graph graph0{"G0"};
 	auto input00   = graph0.addAccel("INPUT");
 	auto accel01   = graph0.addAccel("AES");
@@ -17,7 +17,7 @@ int main(int argc, char **argv) {
 	auto link02    = graph0.addOutputBuffer(accel01,  buffer01);
 	auto link03    = graph0.addInputBuffer (output02, buffer01);
 	std::cout << graph0.toJson();
-	
+
 	opendfx::Graph graph1{"G1"};
 	auto input10   = graph1.addAccel("INPUT");
 	auto accel11   = graph1.addAccel("AES");
@@ -30,8 +30,14 @@ int main(int argc, char **argv) {
 	auto link13    = graph1.addInputBuffer (output12, buffer11);
 	std::cout << graph1.toJson();
 
-	gManager->addGraph(&graph0);
-	gManager->addGraph(&graph1);
-	gManager->listGraphs();
+	gManager.addGraph(graph0);
+	gManager.addGraph(graph1);
+	opendfx::Graph graph = gManager.mergeGraphs();
+	std::cout << "###################\n";
+	std::cout << graph.toJson();
+	gManager.listGraphs();
+	//std::cout << "###################\n";
+	//gManager.delGraph(graph1);
+	//gManager.listGraphs();
 	return 0;
 }

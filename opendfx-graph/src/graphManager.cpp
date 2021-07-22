@@ -20,18 +20,17 @@ GraphManager::GraphManager(){
 	urandom >> i;
 	srand(i ^ time(0));
 	urandom.close();
-	
+
 	id = rand() % 0x10000;
 }
 
-int GraphManager::addGraph(opendfx::Graph *graph){
-	graphs.push_back(graph);
+int GraphManager::addGraph(opendfx::Graph &graph){
+	graphs.push_back(&graph);
 	return 0;
 }
 
-int GraphManager::delGraph(opendfx::Graph *graph){
-	graph->setDeleteFlag(true);
-	graphs.erase(std::remove_if(graphs.begin(), graphs.end(), Graph::staticGetDeleteFlag), graphs.end());
+int GraphManager::delGraph(opendfx::Graph &graph){
+	graphs.erase(std::remove(graphs.begin(), graphs.end(), &graph), graphs.end());
 	return 0;
 }
 
@@ -45,4 +44,14 @@ int GraphManager::listGraphs()
 	}
 	std::cout << '\n';
 	return 0;
+}
+
+opendfx::Graph GraphManager::mergeGraphs(){
+	opendfx::Graph graph0{"Merged"};
+	for (std::vector<opendfx::Graph *>::iterator it = graphs.begin() ; it != graphs.end(); ++it)
+	{
+		opendfx::Graph* graph = *it;
+		graph0 = graph0 + *graph;
+	}
+	return graph0;
 }

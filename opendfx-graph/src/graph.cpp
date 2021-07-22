@@ -34,8 +34,18 @@ opendfx::Accel* Graph::addAccel(const std::string &name){
 	return accel;
 }
 
+opendfx::Accel* Graph::addAccel(opendfx::Accel *accel){
+	accels.push_back(accel);
+	return accel;
+}
+
 opendfx::Buffer* Graph::addBuffer(const std::string &name){
 	opendfx::Buffer *buffer= new opendfx::Buffer(name);
+	buffers.push_back(buffer);
+	return buffer;
+}
+
+opendfx::Buffer* Graph::addBuffer(opendfx::Buffer *buffer){
 	buffers.push_back(buffer);
 	return buffer;
 }
@@ -48,6 +58,11 @@ opendfx::Link* Graph::addInputBuffer(opendfx::Accel *accel, opendfx::Buffer *buf
 
 opendfx::Link* Graph::addOutputBuffer(opendfx::Accel *accel, opendfx::Buffer *buffer){
 	opendfx::Link *link = new opendfx::Link(accel, buffer, opendfx::direction::fromAccel);
+	links.push_back(link);
+	return link;
+}
+
+opendfx::Link* Graph::addLink(opendfx::Link *link){
 	links.push_back(link);
 	return link;
 }
@@ -196,4 +211,71 @@ int Graph::setDeleteFlag(bool deleteFlag){
 
 bool Graph::getDeleteFlag() const{
 	return this->deleteFlag;
+}
+
+Graph Graph::operator + (Graph &graph){
+	Graph ograph("merged");
+	ograph.copyGraph(*this);
+	ograph.copyGraph(graph);
+	return ograph;
+}
+
+Graph Graph::operator - (Graph &graph){
+	Graph ograph("merged");
+	ograph.copyGraph(*this);
+	ograph.cutGraph(graph);
+	return ograph;
+}
+
+int Graph::copyGraph(opendfx::Graph &graph){
+	for (std::vector<opendfx::Accel  *>::iterator it = graph.accels.begin() ; it != graph.accels.end() ; ++it)
+	{
+		opendfx::Accel* accel = *it;
+		addAccel(accel);
+	}
+	for (std::vector<opendfx::Buffer *>::iterator it = graph.buffers.begin(); it != graph.buffers.end(); ++it)
+	{
+		opendfx::Buffer* buffer = *it;
+		addBuffer(buffer);
+	}
+	for (std::vector<opendfx::Link   *>::iterator it = graph.links.begin()  ; it != graph.links.end()  ; ++it)
+	{
+		opendfx::Link* link = *it;
+		addLink(link);
+	}
+	return 0;
+}
+
+int Graph::cutGraph(opendfx::Graph &graph){
+	for (std::vector<opendfx::Accel  *>::iterator it = graph.accels.begin() ; it != graph.accels.end() ; ++it)
+	{
+		for (std::vector<opendfx::Accel  *>::iterator itt = this->accels.begin() ; itt != this->accels.end() ; ++itt)
+		{
+			if(*itt == *it){
+				this->accels.erase(itt);
+				break;
+			}
+		}
+	}
+	for (std::vector<opendfx::Buffer *>::iterator it = graph.buffers.begin(); it != graph.buffers.end(); ++it)
+	{
+		for (std::vector<opendfx::Buffer *>::iterator itt = this->buffers.begin(); itt != this->buffers.end(); ++itt)
+		{
+			if(*itt == *it){
+				this->buffers.erase(itt);
+				break;
+			}
+		}
+	}
+	for (std::vector<opendfx::Link   *>::iterator it = graph.links.begin()  ; it != graph.links.end()  ; ++it)
+	{
+		for (std::vector<opendfx::Link   *>::iterator itt = this->links.begin()  ; itt != this->links.end()  ; ++itt)
+		{
+			if(*itt == *it){
+				this->links.erase(itt);
+				break;
+			}
+		}
+	}
+	return 0;
 }

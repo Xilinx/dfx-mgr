@@ -12,23 +12,20 @@
 
 namespace opendfx {
 
-class GraphManager {
+	class GraphManager {
 
-	public:
-		explicit GraphManager();
-		std::string getInfo() const;
-		int addGraph(opendfx::Graph *graph);
-		int delGraph(opendfx::Graph *graph);
-		int listGraphs();
-		//std::string jsonAccels(bool withDetail = false);
-		//std::string jsonBuffers(bool withDetail = false);
-		//std::string jsonLinks(bool withDetail = false);
-		//std::string toJson(bool withDetail = false);
-		
-	private:
-		std::vector<opendfx::Graph *> graphs;
-		int id;
-		std::string strid;
+		public:
+			explicit GraphManager();
+			std::string getInfo() const;
+			int addGraph(opendfx::Graph &graph);
+			int delGraph(opendfx::Graph &graph);
+			int listGraphs();
+			opendfx::Graph mergeGraphs();
+
+		private:
+			std::vector<opendfx::Graph *> graphs;
+			int id;
+			std::string strid;
 	};
 } // #end of graphManager
 #endif // GRAPH_MANAGER_HPP_
