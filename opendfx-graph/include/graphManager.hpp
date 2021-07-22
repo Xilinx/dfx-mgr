@@ -17,13 +17,16 @@ namespace opendfx {
 		public:
 			explicit GraphManager();
 			std::string getInfo() const;
-			int addGraph(opendfx::Graph &graph);
-			int delGraph(opendfx::Graph &graph);
+			int addGraph(opendfx::Graph *graph);
+			int delGraph(opendfx::Graph *graph);
 			int listGraphs();
-			opendfx::Graph mergeGraphs();
+			Graph mergeGraphs();
+			int stageGraphs();
+			int scheduleGraph();
 
 		private:
 			std::vector<opendfx::Graph *> graphs;
+			std::vector<opendfx::Graph *> stagedGraphs;
 			int id;
 			std::string strid;
 	};

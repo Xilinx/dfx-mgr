@@ -17,10 +17,11 @@ Graph::Graph(const std::string &name) : m_name(name) {
 	std::stringstream stream;
 	stream << std::hex << id;
 	strid = stream.str();
-	//std::cout << strid;
+	//std::cout << strid << "\n";
 }
 
 std::string Graph::info() const {
+	//std::cout << "Graph ID: " << strid << "\n";
 	return "Graph ID: " + strid;
 }
 
