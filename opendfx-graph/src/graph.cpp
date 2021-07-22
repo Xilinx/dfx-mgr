@@ -99,6 +99,18 @@ int Graph::delLink(opendfx::Link *link){
 	return 0;
 }
 
+int Graph::countAccel(){
+	return accels.size();
+}
+
+int Graph::countBuffer(){
+	return buffers.size();
+}
+
+int Graph::countLink(){
+	return links.size();
+}
+
 int Graph::listAccels()
 {
 	for (std::vector<opendfx::Accel *>::iterator it = accels.begin() ; it != accels.end(); ++it)

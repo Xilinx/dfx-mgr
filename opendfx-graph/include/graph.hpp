@@ -29,6 +29,9 @@ class Graph {
 		int delAccel(Accel *accel);
 		int delBuffer(Buffer *buffer);
 		int delLink(Link *link);
+		int countAccel();
+		int countBuffer();
+		int countLink();
 		int listAccels();
 		int listBuffers();
 		int listLinks();

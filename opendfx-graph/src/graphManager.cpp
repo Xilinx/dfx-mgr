@@ -53,5 +53,8 @@ opendfx::Graph GraphManager::mergeGraphs(){
 		opendfx::Graph* graph = *it;
 		graph0 = graph0 + *graph;
 	}
+	std::cout << "\nNo of accels  = " << graph0.countAccel();
+	std::cout << "\nNo of buffers = " << graph0.countBuffer(); 
+	std::cout << "\nNo of links   = " << graph0.countLink(); 
 	return graph0;
 }
