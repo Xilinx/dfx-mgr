@@ -25,7 +25,9 @@ namespace opendfx {
 			int scheduleGraph();
 
 		private:
-			std::vector<opendfx::Graph *> graphs;
+			std::vector<opendfx::Graph *> graphsQueue0;
+			std::vector<opendfx::Graph *> graphsQueue1;
+			std::vector<opendfx::Graph *> graphsQueue2;
 			std::vector<opendfx::Graph *> stagedGraphs;
 			int id;
 			std::string strid;

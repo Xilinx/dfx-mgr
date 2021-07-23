@@ -12,11 +12,17 @@
 
 using opendfx::Graph;
 
-Graph::Graph(const std::string &name) : m_name(name) {
+Graph::Graph(const std::string &name, int priority) : m_name(name) {
 	id = rand() % 0x10000;
 	std::stringstream stream;
 	stream << std::hex << id;
 	strid = stream.str();
+	if (priority < 3 && priority >= 0){
+		this->priority = priority;
+	}
+	else{
+		this->priority = 0;
+	}
 	//std::cout << strid << "\n";
 }
 
@@ -26,7 +32,11 @@ std::string Graph::info() const {
 }
 
 std::string Graph::getInfo() const {
-	return "{\"name\": \"" + m_name + "_" + strid + "\"}";
+	std::stringstream stream;
+	stream << "{\"name\": \"" << m_name << "_" << strid << "\", \"priority\": " << priority << "}";
+	return stream.str();
+
+	//return "{\"name\": \"" + m_name + "_" + strid + "\", \"priority\": " + priority + "}";
 }
 
 opendfx::Accel* Graph::addAccel(const std::string &name){

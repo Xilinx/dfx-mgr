@@ -14,7 +14,7 @@ namespace opendfx {
 class Graph {
 
 	public:
-		explicit Graph(const std::string &name);
+		explicit Graph(const std::string &name, int priority = 0);
 		std::string info() const;
 		std::string getInfo() const;
 		Accel* addAccel(const std::string &name);
@@ -41,6 +41,9 @@ class Graph {
 		std::string toJson(bool withDetail = false);
 		int setDeleteFlag(bool deleteFlag);
 		bool getDeleteFlag() const;
+		inline int getPriority() {
+			return priority;
+		};
 		static inline bool staticGetDeleteFlag(Graph *graph) {
 			return graph->getDeleteFlag();
 		};
@@ -49,12 +52,13 @@ class Graph {
 	private:
 		std::string m_name;
 		int id;
+		int priority;
 		std::string strid;
 		std::vector<opendfx::Accel *> accels;
 		std::vector<opendfx::Buffer *> buffers;
 		std::vector<opendfx::Link *> links;
 		bool deleteFlag;
-	};
+};
 } // #end of graph
 
 #endif // GRAPH_HPP_

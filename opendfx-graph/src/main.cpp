@@ -9,7 +9,7 @@ int main(int argc, char **argv) {
 	opendfx::Graph *graph[10];
 
 	for(int i = 0; i < 10; i++){
-		graph[i] = new opendfx::Graph{"G"};
+		graph[i] = new opendfx::Graph{"G", i};
 		auto input00   = graph[i]->addAccel("INPUT");
 		auto accel01   = graph[i]->addAccel("AES");
 		auto output02  = graph[i]->addAccel("OUTPUT");
@@ -21,11 +21,10 @@ int main(int argc, char **argv) {
 		auto link03    = graph[i]->addInputBuffer (output02, buffer01);
 		gManager.addGraph(graph[i]);
 	}
-
 	gManager.listGraphs();
 	for(int i = 0; i < 10; i++){
 		gManager.stageGraphs();
-		gManager.listGraphs();
+		//gManager.listGraphs();
 	}
 	//std::cout << "###################\n";
 	//std::cout << graph.toJson();
