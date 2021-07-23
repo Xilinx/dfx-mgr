@@ -19,6 +19,8 @@ class Graph {
 		std::string getInfo() const;
 		Accel* addAccel(const std::string &name);
 		Accel* addAccel(Accel *accel);
+		Accel* addInputNode(const std::string &name);
+		Accel* addOutputNode(const std::string &name);
 		Buffer* addBuffer(const std::string &name);
 		Buffer* addBuffer(Buffer *buffer);
 		Link* addInputBuffer (Accel *accel, Buffer *buffer);
@@ -58,6 +60,7 @@ class Graph {
 		std::vector<opendfx::Buffer *> buffers;
 		std::vector<opendfx::Link *> links;
 		bool deleteFlag;
+		int accelCount;
 };
 } // #end of graph
 

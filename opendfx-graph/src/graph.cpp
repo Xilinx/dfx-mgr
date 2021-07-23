@@ -23,6 +23,7 @@ Graph::Graph(const std::string &name, int priority) : m_name(name) {
 	else{
 		this->priority = 0;
 	}
+	accelCount = 0;
 	//std::cout << strid << "\n";
 }
 
@@ -41,6 +42,19 @@ std::string Graph::getInfo() const {
 
 opendfx::Accel* Graph::addAccel(const std::string &name){
 	opendfx::Accel *accel = new opendfx::Accel(name);
+	accels.push_back(accel);
+	accelCount ++;
+	return accel;
+}
+
+opendfx::Accel* Graph::addInputNode(const std::string &name){
+	opendfx::Accel *accel = new opendfx::Accel(name, opendfx::acceltype::inputNode);
+	accels.push_back(accel);
+	return accel;
+}
+
+opendfx::Accel* Graph::addOutputNode(const std::string &name){
+	opendfx::Accel *accel = new opendfx::Accel(name, opendfx::acceltype::outputNode);
 	accels.push_back(accel);
 	return accel;
 }
@@ -82,6 +96,9 @@ int Graph::delAccel(opendfx::Accel *accel){
 	for (std::vector<opendfx::Link *>::iterator it = links.begin() ; it != links.end(); ++it)
 	{
 		if ((*it)->getAccel() == accel){
+			if (accel->getType() == 0){
+				accelCount --;
+			}
 			(*it)->setDeleteFlag(true);
 		}
 	}
@@ -111,7 +128,7 @@ int Graph::delLink(opendfx::Link *link){
 }
 
 int Graph::countAccel(){
-	return accels.size();
+	return accelCount;
 }
 
 int Graph::countBuffer(){

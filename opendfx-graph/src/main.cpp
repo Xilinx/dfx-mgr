@@ -2,7 +2,6 @@
 #include <iostream>
 #include "graph.hpp"
 #include "graphManager.hpp"
-//#include "accel.hpp"
 
 int main(int argc, char **argv) {
 	opendfx::GraphManager gManager;
@@ -10,9 +9,9 @@ int main(int argc, char **argv) {
 
 	for(int i = 0; i < 10; i++){
 		graph[i] = new opendfx::Graph{"G", i};
-		auto input00   = graph[i]->addAccel("INPUT");
+		auto input00   = graph[i]->addInputNode("INPUT");
 		auto accel01   = graph[i]->addAccel("AES");
-		auto output02  = graph[i]->addAccel("OUTPUT");
+		auto output02  = graph[i]->addOutputNode("OUTPUT");
 		auto buffer00  = graph[i]->addBuffer("BUFF");
 		auto buffer01  = graph[i]->addBuffer("BUFF");
 		auto link00    = graph[i]->addOutputBuffer(input00,  buffer00);
@@ -23,10 +22,10 @@ int main(int argc, char **argv) {
 	}
 	gManager.listGraphs();
 	for(int i = 0; i < 10; i++){
+		std::cout << "###################\n";
 		gManager.stageGraphs();
-		//gManager.listGraphs();
+		gManager.listGraphs();
 	}
-	//std::cout << "###################\n";
 	//std::cout << graph.toJson();
 	//gManager.listGraphs();
 	//std::cout << "###################\n";

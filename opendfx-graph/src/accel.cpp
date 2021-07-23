@@ -9,7 +9,8 @@
 
 using opendfx::Accel;
 
-Accel::Accel(const std::string &name) : name(name) {
+
+Accel::Accel(const std::string &name, int type) : name(name), type(type) {
 	utils::setID(id, strid);
 	linkRefCount = 0;
 }
