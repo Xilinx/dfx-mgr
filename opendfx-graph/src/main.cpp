@@ -1,11 +1,22 @@
 // main.cpp
 #include <iostream>
+#include <dlfcn.h>
+#include "device.h"
 #include "graph.hpp"
 #include "graphManager.hpp"
 
 int main(int argc, char **argv) {
 	opendfx::GraphManager gManager;
 	opendfx::Graph *graph[10];
+
+	Device_t* device;
+	DeviceConfig_t *config;
+	void *fallbackDriver = dlopen("./drivers/fallback/src/libfallback_shared.so", RTLD_NOW);
+	REGISTER registerDev = (REGISTER) dlsym(fallbackDriver, "registerDriver");
+	registerDev(&device, &config);
+	device->open();
+	dlclose(fallbackDriver);
+
 
 	for(int i = 0; i < 10; i++){
 		graph[i] = new opendfx::Graph{"G", i};
