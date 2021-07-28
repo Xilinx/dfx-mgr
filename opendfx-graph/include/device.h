@@ -26,8 +26,7 @@ typedef struct DeviceConfig {
 
 /* Accelerator devices interface */
 typedef struct Device {
-    int (*open )(void);
-  //  int (*open )(DeviceConfig_t *config);
+    int (*open )(DeviceConfig_t *config);
     int (*close)(DeviceConfig_t *config);
     //int (*transfer)(acapd_chnl_t *chnl, acapd_dma_config_t *config);
     //int (*stop)(acapd_chnl_t *chnl);
@@ -37,3 +36,4 @@ typedef struct Device {
 
 
 typedef int (*REGISTER)(Device_t**, DeviceConfig_t**);
+typedef int (*UNREGISTER)(Device_t**, DeviceConfig_t**);

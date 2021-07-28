@@ -13,10 +13,12 @@ int main(int argc, char **argv) {
 	DeviceConfig_t *config;
 	void *fallbackDriver = dlopen("./drivers/fallback/src/libfallback_shared.so", RTLD_NOW);
 	REGISTER registerDev = (REGISTER) dlsym(fallbackDriver, "registerDriver");
+	UNREGISTER unregisterDev = (UNREGISTER) dlsym(fallbackDriver, "unregisterDriver");
 	registerDev(&device, &config);
-	device->open();
+	device->open(config);
+	device->close(config);
+	unregisterDev(&device, &config);
 	dlclose(fallbackDriver);
-
 
 	for(int i = 0; i < 10; i++){
 		graph[i] = new opendfx::Graph{"G", i};
@@ -37,10 +39,6 @@ int main(int argc, char **argv) {
 		gManager.stageGraphs();
 		gManager.listGraphs();
 	}
-	//std::cout << graph.toJson();
-	//gManager.listGraphs();
-	//std::cout << "###################\n";
-	//gManager.delGraph(graph1);
-	//gManager.listGraphs();
+
 	return 0;
 }
