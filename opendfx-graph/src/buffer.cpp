@@ -4,7 +4,9 @@
 #include <stdlib.h>
 #include "buffer.hpp"
 #include "utils.hpp"
+#include "nlohmann/json.hpp"
 
+using json = nlohmann::json;
 using opendfx::Buffer;
 
 Buffer::Buffer(const std::string &name) : name(name) {
@@ -31,15 +33,16 @@ int Buffer::getLinkRefCount(){
 }
 
 std::string Buffer::toJson(bool withDetail){
-	std::stringstream jsonStream;
-	jsonStream << "{\n";
-	jsonStream << "\t\"id\"\t: "   << strid << ",\n";
+	json document;
+	document["id"]      = strid;
 	if(withDetail){
-		jsonStream << "\t\"linkRefCount\"\t: "   << linkRefCount << ",\n";
-		jsonStream << "\t\"deleteFlag\"\t: "   << deleteFlag << ",\n";
+		document["linkRefCount"] = linkRefCount;
+		document["deleteFlag"] = deleteFlag;
 	}
-	jsonStream << "\t\"name\"\t: " << name;
-	jsonStream << "}";
+	document["name"]    = name;
+	std::stringstream jsonStream;
+	jsonStream << document.dump(true);
+
 	return jsonStream.str();
 }
 

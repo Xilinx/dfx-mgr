@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.2.1)
 project(opendfx-graph)
 
 # creates the variable EXEC and sets it to hello
-set(EXEC dfxgraph)
+set(LIB dfxgraph)
 
 # set the C++14 standard
 set(CMAKE_CXX_STANDARD 14)
@@ -18,12 +18,12 @@ include_directories(include)
 file(GLOB SOURCES src/*.cpp)
 
 # compiles the files defined by SOURCES to generante the executable defined by EXEC
-add_executable(${EXEC} ${SOURCES})
+#add_executable(${EXEC} ${SOURCES})
 
-add_library(${EXEC}_static STATIC ${SOURCES})
-add_library(${EXEC}_shared SHARED ${SOURCES})
+add_library(${LIB}_static STATIC ${SOURCES})
+add_library(${LIB}_shared SHARED ${SOURCES})
 
-target_link_libraries(${EXEC} dl)
+#target_link_libraries(${EXEC} dl)
 
 add_subdirectory (drivers)
 add_subdirectory (test)

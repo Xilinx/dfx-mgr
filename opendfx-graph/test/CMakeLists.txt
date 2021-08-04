@@ -1,8 +1,8 @@
-set(EXEC testDFX)
 
-file(GLOB SOURCES *.c)
+add_executable(testGraph testGraph.cpp)
+add_executable(testGraphAPI testGraphAPI.c)
+add_executable(testJson testJson.cpp)
 
-add_executable(${EXEC} ${SOURCES})
-
-
-target_link_libraries(${EXEC} dfxgraph_shared dl)
+target_link_libraries(testGraph dfxgraph_shared dl)
+target_link_libraries(testGraphAPI dfxgraph_shared dl)
+target_link_libraries(testJson dfxgraph_shared dl)

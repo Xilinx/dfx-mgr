@@ -5,7 +5,9 @@
 #include "accel.hpp"
 #include "buffer.hpp"
 #include "utils.hpp"
+#include "nlohmann/json.hpp"
 
+using json = nlohmann::json;
 using opendfx::Link;
 
 Link::Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir) : accel(accel), buffer(buffer), dir(dir) {
@@ -46,14 +48,15 @@ int Link::info() {
 }
 
 std::string Link::toJson(bool withDetail){
-	std::stringstream jsonStream;
-	jsonStream << "{\n";
-	jsonStream << "\t\"id\"\t: "    << strid          << ",\n";
+	json document;
+	document["id"]      = strid;
 	if(withDetail){
-		jsonStream << "\t\"deleteFlag\"\t: "    << deleteFlag          << ",\n";
+		document["deleteFlag"] = deleteFlag;
 	}
-	jsonStream << "\t\"accel\"\t: " << accel->getId()  << ",\n";
-	jsonStream << "\t\"buffer\"\t: "<< buffer->getId(); 
-	jsonStream << "}";
+	document["accel"]    = accel->getId();
+	document["buffer"]    = buffer->getId();
+	std::stringstream jsonStream;
+	jsonStream << document.dump(true);
+
 	return jsonStream.str();
 }

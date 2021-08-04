@@ -6,7 +6,9 @@
 #include <algorithm>
 #include "accel.hpp"
 #include "utils.hpp"
+#include "nlohmann/json.hpp"
 
+using json = nlohmann::json;
 using opendfx::Accel;
 
 
@@ -36,14 +38,16 @@ int Accel::getLinkRefCount(){
 }
 
 std::string Accel::toJson(bool withDetail){
-	std::stringstream jsonStream;
-	jsonStream << "{\n";
-	jsonStream << "\t\"id\"\t: "   << strid << ",\n";
+	json document;
+	document["id"]      = strid;
 	if(withDetail){
-		jsonStream << "\t\"linkRefCount\"\t: "   << linkRefCount << ",\n";
+		document["linkRefCount"] = linkRefCount;
 	}
-	jsonStream << "\t\"name\"\t: " << name;
-	jsonStream << "}";
+	document["name"]    = name;
+	document["type"]    = type;
+	std::stringstream jsonStream;
+	jsonStream << document.dump(true);
+
 	return jsonStream.str();
 }
 
