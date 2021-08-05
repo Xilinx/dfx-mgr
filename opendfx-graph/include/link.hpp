@@ -14,6 +14,7 @@ namespace opendfx {
 
 	public:
 		explicit Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir);
+		explicit Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir, const std::string &strid);
 		int info();
 		inline bool operator==(const Link& rhs) const {
 		    return (this->id == rhs.id && this->strid == rhs.strid);

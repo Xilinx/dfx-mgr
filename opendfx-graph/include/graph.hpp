@@ -34,7 +34,7 @@ namespace opendfx {
 			int countAccel();
 			int countBuffer();
 			int countLink();
-			opendfx::Accel * getAccelByID(std::string strid);
+			opendfx::Accel  * getAccelByID(std::string strid);
 			opendfx::Buffer * getBufferByID(std::string strid);
 			int listAccels();
 			int listBuffers();
@@ -43,7 +43,7 @@ namespace opendfx {
 			std::string jsonBuffers(bool withDetail = false);
 			std::string jsonLinks(bool withDetail = false);
 			std::string toJson(bool withDetail = false);
-			int fromJson(std::string jsonstr);
+			std::string fromJson(std::string jsonstr);
 
 			int setDeleteFlag(bool deleteFlag);
 			bool getDeleteFlag() const;

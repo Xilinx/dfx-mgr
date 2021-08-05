@@ -1,16 +1,8 @@
-// main.cpp
-#include <iostream>
-#include <dlfcn.h>
-#include <iomanip>
-#include "device.h"
-#include "graph.hpp"
-#include "graphManager.hpp"
+#include <stdio.h>
+#include "graph_api.h"
 
-int main(int argc, char **argv) {
-	opendfx::Graph *graph;
-
-	graph = new opendfx::Graph{"G"};
-	std::string strid = graph->fromJson("{\
+int testJson(void){	GRAPH_HANDLE gHandle	= Graph_CreateWithPriority("test", 2);
+	char * strid = Graph_fromJson(gHandle, "{\
        \"accels\": [\
         {\
          \"id\": \"3561\",\
@@ -67,8 +59,14 @@ int main(int argc, char **argv) {
        ],\
        \"name\": \"G\"\
       }");
-	std::cout << std::setw(4) << graph->toJson() << std::endl;
-	std::cout << strid << std::endl;
-
+	printf("%s\n", Graph_toJson(gHandle));
+	printf("%s\n", strid);
+	return 0;
+}
+int main(void){
+	printf("Testing Graph JSON API ...\n");
+	testJson();
+	printf("... Done\n");
+	
 	return 0;
 }

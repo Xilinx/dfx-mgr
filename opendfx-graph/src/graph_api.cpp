@@ -167,6 +167,14 @@ char * Graph_toJson(GRAPH_HANDLE gHandle){
 	return cstr;
 }
 
+char * Graph_fromJson(GRAPH_HANDLE gHandle, char * jsonstr){
+	opendfx::Graph *graph = (opendfx::Graph *) gHandle;
+	std::string str = graph->fromJson(jsonstr);
+	char *cstr = new char[str.length() + 1];
+	strcpy(cstr, str.c_str());
+	return cstr;
+
+}
 
 char * Graph_jsonAccelsDbg(GRAPH_HANDLE gHandle){
 	opendfx::Graph *graph = (opendfx::Graph *) gHandle;

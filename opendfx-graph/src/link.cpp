@@ -18,6 +18,12 @@ Link::Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir) : accel(acce
 	utils::setID(id, strid);
 }
 
+Link::Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir, const std::string &strid) : accel(accel), buffer(buffer), dir(dir), strid(strid) {
+	deleteFlag = false;
+	accel->addLinkRefCount();
+	buffer->addLinkRefCount();
+}
+
 opendfx::Accel* Link::getAccel() const{
 	return this->accel;
 }
@@ -54,7 +60,8 @@ std::string Link::toJson(bool withDetail){
 		document["deleteFlag"] = deleteFlag;
 	}
 	document["accel"]    = accel->getId();
-	document["buffer"]    = buffer->getId();
+	document["buffer"]   = buffer->getId();
+	document["dir"]      = dir;
 	std::stringstream jsonStream;
 	jsonStream << document.dump(true);
 

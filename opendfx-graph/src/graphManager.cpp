@@ -6,6 +6,7 @@
 #include <time.h>
 #include <algorithm>
 #include <vector>
+#include "utils.hpp"
 #include "graph.hpp"
 #include "graphManager.hpp"
 
@@ -17,11 +18,12 @@ GraphManager::GraphManager(){
 	char * block;
 	short size = 1;
 	std::ifstream urandom("/dev/urandom", std::ios::in|std::ios::binary); // Seed initialisation based on /dev/urandom
-	urandom >> i;
+	urandom.read((char*)&i, sizeof(i));
 	srand(i ^ time(0));
 	urandom.close();
+	//std::cout << i << " : " << time(0) << std::endl;
 
-	id = rand() % 0x10000;
+	id = rand() % 0x100000000;
 }
 
 int GraphManager::addGraph(opendfx::Graph *graph){
@@ -93,13 +95,10 @@ opendfx::Graph GraphManager::mergeGraphs(){
 	return graph0;
 }
 
-#define MAX_SLOT 3
-
-int GraphManager::stageGraphs(){
-	int remainingSlots = MAX_SLOT;
+int GraphManager::stageGraphs(int slots=3){
+	int remainingSlots = slots;
 	int accelCounts = 0;
 	std::vector<opendfx::Graph *>*graphs;
-	//std::cout << remainingSlots << " : " << accelCounts << "\n";
 
 	for (int i = 0; i < 3; i++){
 		switch(i){
@@ -114,7 +113,6 @@ int GraphManager::stageGraphs(){
 		{
 			opendfx::Graph* graph = *it;
 			accelCounts = graph->countAccel();
-			//std::cout << "##" << graph->getPriority() << "\n";
 			if (remainingSlots >= accelCounts && accelCounts > 0){
 				remainingSlots = remainingSlots - accelCounts;
 				stagedGraphs.push_back(graph);

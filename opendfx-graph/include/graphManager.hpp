@@ -21,7 +21,7 @@ namespace opendfx {
 			int delGraph(opendfx::Graph *graph);
 			int listGraphs();
 			Graph mergeGraphs();
-			int stageGraphs();
+			int stageGraphs(int slots=3);
 			int scheduleGraph();
 
 		private:

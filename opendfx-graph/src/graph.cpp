@@ -11,21 +11,21 @@
 #include "buffer.hpp"
 #include "link.hpp"
 #include "nlohmann/json.hpp"
+#include "utils.hpp"
 
 using json = nlohmann::json;
 using opendfx::Graph;
 
 Graph::Graph(const std::string &name, int priority) : m_name(name) {
 	int i;
+	char * block;
+	short size = 1;
 	std::ifstream urandom("/dev/urandom", std::ios::in|std::ios::binary); // Seed initialisation based on /dev/urandom
-	urandom >> i;
+	urandom.read((char*)&i, sizeof(i));
 	srand(i ^ time(0));
 	urandom.close();
 
-	id = rand() % 0x10000;
-	std::stringstream stream;
-	stream << std::hex << id;
-	strid = stream.str();
+	utils::setID(id, strid);
 	if (priority < 3 && priority >= 0){
 		this->priority = priority;
 	}
@@ -33,11 +33,9 @@ Graph::Graph(const std::string &name, int priority) : m_name(name) {
 		this->priority = 0;
 	}
 	accelCount = 0;
-	//std::cout << strid << "\n";
 }
 
 std::string Graph::info() const {
-	//std::cout << "Graph ID: " << strid << "\n";
 	return "Graph ID: " + strid;
 }
 
@@ -45,8 +43,6 @@ std::string Graph::getInfo() const {
 	std::stringstream stream;
 	stream << "{\"name\": \"" << m_name << "_" << strid << "\", \"priority\": " << priority << "}";
 	return stream.str();
-
-	//return "{\"name\": \"" + m_name + "_" + strid + "\", \"priority\": " + priority + "}";
 }
 
 opendfx::Accel* Graph::addAccel(const std::string &name){
@@ -282,34 +278,33 @@ std::string Graph::toJson(bool withDetail){
 	return jsonStream.str();
 }
 
-int Graph::fromJson(std::string jsonstr){
+std::string Graph::fromJson(std::string jsonstr){
 	json document = json::parse(jsonstr);
 	//document.at("id").get_to(strid);
 	document.at("name").get_to(m_name);
 	json accelsObj = document["accels"];
 	for (json::iterator it = accelsObj.begin(); it != accelsObj.end(); ++it) {
 		json accelObj = *it;
-		opendfx::Accel *accel = new opendfx::Accel(accelObj["name"].get<std::string>(), accelObj["type"].get<int>());
+		opendfx::Accel *accel = new opendfx::Accel(accelObj["name"].get<std::string>(), accelObj["type"].get<int>(), accelObj["id"].get<std::string>());
 		accels.push_back(accel);
 	}
 	json buffersObj = document["buffers"];
 	for (json::iterator it = buffersObj.begin(); it != buffersObj.end(); ++it) {
 		json bufferObj = *it;
 
-		opendfx::Buffer *buffer = new opendfx::Buffer(bufferObj["name"].get<std::string>());
+		opendfx::Buffer *buffer = new opendfx::Buffer(bufferObj["name"].get<std::string>(), bufferObj["id"].get<std::string>());
 		buffers.push_back(buffer);
 	}
 	json linksObj = document["links"];
 	for (json::iterator it = linksObj.begin(); it != linksObj.end(); ++it) {
 		json linkObj = *it;
 
-		opendfx::Accel * accel = getAccelByID(linkObj["accel"].get<std::string>());
-		//opendfx::Buffer * buffer = getBufferByID(linkObj["buffer"].get<std::string>());
-		//std::cout << accel->info();
-		//opendfx::Link *link = new opendfx::Link(accel, buffer, opendfx::direction::toAccel);
-		//links.push_back(link);
+		opendfx::Accel * accel   = getAccelByID (linkObj["accel" ].get<std::string>());
+		opendfx::Buffer * buffer = getBufferByID(linkObj["buffer"].get<std::string>());
+		opendfx::Link *link      = new opendfx::Link(accel, buffer, linkObj["dir"].get<int>(), linkObj["id"].get<std::string>());
+		links.push_back(link);
 	}
-	return 0;
+	return strid;
 }
 
 int Graph::setDeleteFlag(bool deleteFlag){

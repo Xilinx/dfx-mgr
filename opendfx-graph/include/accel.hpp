@@ -11,6 +11,7 @@ namespace opendfx {
 	class Accel {
 		public:
 			explicit Accel(const std::string &name, int type = opendfx::acceltype::accelNode);
+			explicit Accel(const std::string &name, int type, const std::string &strid);
 			std::string info() const;
 			std::string getName() const;
 			int addLinkRefCount();
@@ -36,6 +37,7 @@ namespace opendfx {
 		private:
 			std::string name;
 			int id;
+			int gid;
 			int linkRefCount;
 			std::string strid;
 			bool deleteFlag;

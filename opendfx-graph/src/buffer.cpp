@@ -13,9 +13,15 @@ Buffer::Buffer(const std::string &name) : name(name) {
 	utils::setID(id, strid);
 	linkRefCount = 0;
 }
+
+Buffer::Buffer(const std::string &name, const std::string &strid) : name(name), strid(strid) {
+	linkRefCount = 0;
+}
+
 std::string Buffer::info() const {
 	return "Buffer name: " + name + "_" + strid;
 }
+
 std::string Buffer::getName() const {
 	return name;
 }

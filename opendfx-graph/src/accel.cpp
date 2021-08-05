@@ -17,6 +17,10 @@ Accel::Accel(const std::string &name, int type) : name(name), type(type) {
 	linkRefCount = 0;
 }
 
+Accel::Accel(const std::string &name, int type, const std::string &strid) : name(name), type(type), strid(strid) {
+	linkRefCount = 0;
+}
+
 std::string Accel::info() const {
 	return "Accel name: " + name + "_" + strid;
 }

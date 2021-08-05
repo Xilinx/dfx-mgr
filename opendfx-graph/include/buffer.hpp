@@ -10,6 +10,7 @@ class Buffer {
 
 	public:
 		explicit Buffer(const std::string &name);
+		explicit Buffer(const std::string &name, const std::string &strid);
 		std::string info() const;
 		std::string getName() const;
 		int addLinkRefCount();

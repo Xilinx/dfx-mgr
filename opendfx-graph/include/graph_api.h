@@ -27,7 +27,6 @@ LINK_HANDLE		Graph_addInputBuffer	(GRAPH_HANDLE gHandle, ACCEL_HANDLE	aHandle, B
 LINK_HANDLE		Graph_addOutputBuffer	(GRAPH_HANDLE gHandle, ACCEL_HANDLE	aHandle, BUFFER_HANDLE	bHandle);
 LINK_HANDLE		Graph_addLinkByHandle	(GRAPH_HANDLE gHandle, LINK_HANDLE	lHandle);
 
-
 int				Graph_delAccel			(GRAPH_HANDLE gHandle, ACCEL_HANDLE aHandle);
 int				Graph_delBuffer			(GRAPH_HANDLE gHandle, BUFFER_HANDLE bHandle);
 int				Graph_delLink			(GRAPH_HANDLE gHandle, LINK_HANDLE	lHandle);
@@ -43,6 +42,7 @@ char *			Graph_jsonAccels		(GRAPH_HANDLE gHandle);
 char *        	Graph_jsonBuffers		(GRAPH_HANDLE gHandle);
 char *        	Graph_jsonLinks			(GRAPH_HANDLE gHandle);
 char *        	Graph_toJson			(GRAPH_HANDLE gHandle);
+char *			Graph_fromJson			(GRAPH_HANDLE gHandle, char * jsonstr);
 
 char *			Graph_jsonAccelsDbg		(GRAPH_HANDLE gHandle);
 char *        	Graph_jsonBuffersDbg	(GRAPH_HANDLE gHandle);
