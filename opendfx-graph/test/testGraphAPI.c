@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "graph_api.h"
+#include "utils.h"
 
 int testGraph(void){
 	GRAPH_HANDLE gHandle	= Graph_CreateWithPriority("test", 2);
@@ -19,7 +20,9 @@ int testGraph(void){
 	Graph_delAccel (gHandle, outputHandle_02);
 	Graph_delBuffer(gHandle, bHandle_01);
 	Graph_delLink  (gHandle, lHandle_03);
-
+	_unused(lHandle_00);
+	_unused(lHandle_01);
+	_unused(lHandle_02);
 
 	char* infostr =  Graph_getInfo(gHandle);
 	printf("%s\n", infostr);
