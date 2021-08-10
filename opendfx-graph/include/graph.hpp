@@ -4,6 +4,7 @@
 
 #include <string>
 #include <vector>
+#include <mutex>
 #include <accel.hpp>
 #include <buffer.hpp>
 #include <link.hpp>
@@ -26,8 +27,8 @@ namespace opendfx {
 			Link* connectInputBuffer (Accel *accel, Buffer *buffer);
 			Link* connectOutputBuffer(Accel *accel, Buffer *buffer);
 			Link* addLink(Link *link);
-			int copyGraph(Graph &graph);
-			int cutGraph (Graph &graph);
+			int copyGraph(Graph *graph);
+			int cutGraph (Graph *graph);
 			int delAccel(Accel *accel);
 			int delBuffer(Buffer *buffer);
 			int delLink(Link *link);
@@ -53,8 +54,8 @@ namespace opendfx {
 			static inline bool staticGetDeleteFlag(Graph *graph) {
 				return graph->getDeleteFlag();
 			};
-			opendfx::Graph operator + (opendfx::Graph& graph);
-			Graph operator - (Graph &graph);
+			Graph* operator + (Graph* graph);
+			Graph* operator - (Graph *graph);
 		private:
 			std::string m_name;
 			int id;
@@ -65,6 +66,8 @@ namespace opendfx {
 			std::vector<opendfx::Link *> links;
 			bool deleteFlag;
 			int accelCount;
+			//std::mutex graph_mutex;
+			std::mutex graph_mutex;
 	};
 } // #end of graph
 

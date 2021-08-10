@@ -46,58 +46,77 @@ std::string Graph::getInfo() const {
 }
 
 opendfx::Accel* Graph::addAccel(const std::string &name){
+	graph_mutex.lock();
 	opendfx::Accel *accel = new opendfx::Accel(name);
 	accels.push_back(accel);
 	accelCount ++;
+	graph_mutex.unlock();
 	return accel;
 }
 
 opendfx::Accel* Graph::addInputNode(const std::string &name){
+	graph_mutex.lock();
 	opendfx::Accel *accel = new opendfx::Accel(name, opendfx::acceltype::inputNode);
 	accels.push_back(accel);
+	graph_mutex.unlock();
 	return accel;
 }
 
 opendfx::Accel* Graph::addOutputNode(const std::string &name){
+	graph_mutex.lock();
 	opendfx::Accel *accel = new opendfx::Accel(name, opendfx::acceltype::outputNode);
 	accels.push_back(accel);
+	graph_mutex.unlock();
 	return accel;
 }
 
 opendfx::Accel* Graph::addAccel(opendfx::Accel *accel){
+	graph_mutex.lock();
 	accels.push_back(accel);
+	graph_mutex.unlock();
 	return accel;
 }
 
 opendfx::Buffer* Graph::addBuffer(const std::string &name){
+	graph_mutex.lock();
 	opendfx::Buffer *buffer= new opendfx::Buffer(name);
 	buffers.push_back(buffer);
+	graph_mutex.unlock();
 	return buffer;
 }
 
 opendfx::Buffer* Graph::addBuffer(opendfx::Buffer *buffer){
+	graph_mutex.lock();
 	buffers.push_back(buffer);
+	graph_mutex.unlock();
 	return buffer;
 }
 
 opendfx::Link* Graph::connectInputBuffer(opendfx::Accel *accel, opendfx::Buffer *buffer){
+	graph_mutex.lock();
 	opendfx::Link *link = new opendfx::Link(accel, buffer, opendfx::direction::toAccel);
 	links.push_back(link);
+	graph_mutex.unlock();
 	return link;
 }
 
 opendfx::Link* Graph::connectOutputBuffer(opendfx::Accel *accel, opendfx::Buffer *buffer){
+	graph_mutex.lock();
 	opendfx::Link *link = new opendfx::Link(accel, buffer, opendfx::direction::fromAccel);
 	links.push_back(link);
+	graph_mutex.unlock();
 	return link;
 }
 
 opendfx::Link* Graph::addLink(opendfx::Link *link){
+	graph_mutex.lock();
 	links.push_back(link);
+	graph_mutex.unlock();
 	return link;
 }
 
 int Graph::delAccel(opendfx::Accel *accel){
+	graph_mutex.lock();
 	for (std::vector<opendfx::Link *>::iterator it = links.begin() ; it != links.end(); ++it)
 	{
 		if ((*it)->getAccel() == accel){
@@ -110,10 +129,12 @@ int Graph::delAccel(opendfx::Accel *accel){
 	accel->setDeleteFlag(true);
 	links.erase(std::remove_if(links.begin(), links.end(), Link::staticGetDeleteFlag), links.end());
 	accels.erase(std::remove_if(accels.begin(), accels.end(), Accel::staticGetDeleteFlag), accels.end());
+	graph_mutex.unlock();
 	return 0;
 }
 
 int Graph::delBuffer(opendfx::Buffer *buffer){
+	graph_mutex.lock();
 	for (std::vector<opendfx::Link *>::iterator it = links.begin() ; it != links.end(); ++it)
 	{
 		if ((*it)->getBuffer() == buffer){
@@ -123,12 +144,15 @@ int Graph::delBuffer(opendfx::Buffer *buffer){
 	buffer->setDeleteFlag(true);
 	links.erase(std::remove_if(links.begin(), links.end(), Link::staticGetDeleteFlag), links.end());
 	buffers.erase(std::remove_if(buffers.begin(), buffers.end(), Buffer::staticGetDeleteFlag), buffers.end());
+	graph_mutex.unlock();
 	return 0;
 }
 
 int Graph::delLink(opendfx::Link *link){
+	graph_mutex.lock();
 	link->setDeleteFlag(true);
 	links.erase(std::remove_if(links.begin(), links.end(), Link::staticGetDeleteFlag), links.end());
+	graph_mutex.unlock();
 	return 0;
 }
 
@@ -146,7 +170,7 @@ int Graph::countLink(){
 
 opendfx::Accel * Graph::getAccelByID(std::string strid)
 {
-	std::cout << "#############" << std::endl;
+	graph_mutex.lock();
 	for (std::vector<opendfx::Accel *>::iterator it = accels.begin() ; it != accels.end(); ++it)
 	{
 		opendfx::Accel* accel = *it;
@@ -157,11 +181,13 @@ opendfx::Accel * Graph::getAccelByID(std::string strid)
 			return accel;
 		}
 	}
+	graph_mutex.unlock();
 	return NULL;
 }
 
 opendfx::Buffer * Graph::getBufferByID(std::string strid)
 {
+	graph_mutex.lock();
 	for (std::vector<opendfx::Buffer *>::iterator it = buffers.begin() ; it != buffers.end(); ++it)
 	{
 		opendfx::Buffer* buffer = *it;
@@ -170,6 +196,7 @@ opendfx::Buffer * Graph::getBufferByID(std::string strid)
 			return buffer;
 		}
 	}
+	graph_mutex.unlock();
 	return NULL;
 }
 
@@ -208,6 +235,7 @@ int Graph::listLinks()
 
 std::string Graph::jsonAccels(bool withDetail)
 {
+	graph_mutex.lock();
 	std::stringstream jsonStream;
 	jsonStream << "[ ";
 	bool first = true;
@@ -223,11 +251,13 @@ std::string Graph::jsonAccels(bool withDetail)
 		jsonStream << "\t" << (*it)->toJson(withDetail);
 	}
 	jsonStream << "]";
+	graph_mutex.unlock();
 	return jsonStream.str();
 }
 
 std::string Graph::jsonBuffers(bool withDetail)
 {
+	graph_mutex.lock();
 	std::stringstream jsonStream;
 	jsonStream << "[ ";
 	bool first = true;
@@ -243,11 +273,13 @@ std::string Graph::jsonBuffers(bool withDetail)
 		jsonStream << "\t" << (*it)->toJson(withDetail);
 	}
 	jsonStream << "]";
+	graph_mutex.unlock();
 	return jsonStream.str();
 }
 
 std::string Graph::jsonLinks(bool withDetail)
 {
+	graph_mutex.lock();
 	std::stringstream jsonStream;
 	jsonStream << "[ ";
 	bool first = true;
@@ -263,10 +295,12 @@ std::string Graph::jsonLinks(bool withDetail)
 		jsonStream << "\t" << (*it)->toJson(withDetail);
 	}
 	jsonStream << "]";
+	graph_mutex.unlock();
 	return jsonStream.str();
 }
 
 std::string Graph::toJson(bool withDetail){
+	graph_mutex.lock();
 	json document;
 	document["id"]      = strid;
 	document["name"]    = m_name;
@@ -275,10 +309,12 @@ std::string Graph::toJson(bool withDetail){
 	document["links"]   = json::parse(jsonLinks(withDetail));
 	std::stringstream jsonStream;
 	jsonStream << document.dump(true);
+	graph_mutex.unlock();
 	return jsonStream.str();
 }
 
 std::string Graph::fromJson(std::string jsonstr){
+	graph_mutex.lock();
 	json document = json::parse(jsonstr);
 	//document.at("id").get_to(strid);
 	document.at("name").get_to(m_name);
@@ -304,6 +340,7 @@ std::string Graph::fromJson(std::string jsonstr){
 		opendfx::Link *link      = new opendfx::Link(accel, buffer, linkObj["dir"].get<int>(), linkObj["id"].get<std::string>());
 		links.push_back(link);
 	}
+	graph_mutex.unlock();
 	return strid;
 }
 
@@ -316,41 +353,44 @@ bool Graph::getDeleteFlag() const{
 	return this->deleteFlag;
 }
 
-Graph Graph::operator + (Graph &graph){
-	Graph ograph("merged");
-	ograph.copyGraph(*this);
-	ograph.copyGraph(graph);
+Graph* Graph::operator + (Graph *graph){
+	Graph *ograph = new Graph("merged");
+	ograph->copyGraph(this);
+	ograph->copyGraph(graph);
 	return ograph;
 }
 
-Graph Graph::operator - (Graph &graph){
-	Graph ograph("merged");
-	ograph.copyGraph(*this);
-	ograph.cutGraph(graph);
+Graph* Graph::operator - (Graph *graph){
+	Graph *ograph = new Graph("merged");
+	ograph->copyGraph(this);
+	ograph->cutGraph(graph);
 	return ograph;
 }
 
-int Graph::copyGraph(opendfx::Graph &graph){
-	for (std::vector<opendfx::Accel  *>::iterator it = graph.accels.begin() ; it != graph.accels.end() ; ++it)
+int Graph::copyGraph(opendfx::Graph *graph){
+	graph_mutex.lock();
+	for (std::vector<opendfx::Accel  *>::iterator it = graph->accels.begin() ; it != graph->accels.end() ; ++it)
 	{
 		opendfx::Accel* accel = *it;
 		addAccel(accel);
 	}
-	for (std::vector<opendfx::Buffer *>::iterator it = graph.buffers.begin(); it != graph.buffers.end(); ++it)
+	for (std::vector<opendfx::Buffer *>::iterator it = graph->buffers.begin(); it != graph->buffers.end(); ++it)
 	{
 		opendfx::Buffer* buffer = *it;
 		addBuffer(buffer);
 	}
-	for (std::vector<opendfx::Link   *>::iterator it = graph.links.begin()  ; it != graph.links.end()  ; ++it)
+	for (std::vector<opendfx::Link   *>::iterator it = graph->links.begin()  ; it != graph->links.end()  ; ++it)
 	{
 		opendfx::Link* link = *it;
 		addLink(link);
 	}
+	graph_mutex.unlock();
 	return 0;
 }
 
-int Graph::cutGraph(opendfx::Graph &graph){
-	for (std::vector<opendfx::Accel  *>::iterator it = graph.accels.begin() ; it != graph.accels.end() ; ++it)
+int Graph::cutGraph(opendfx::Graph *graph){
+	graph_mutex.lock();
+	for (std::vector<opendfx::Accel  *>::iterator it = graph->accels.begin() ; it != graph->accels.end() ; ++it)
 	{
 		for (std::vector<opendfx::Accel  *>::iterator itt = this->accels.begin() ; itt != this->accels.end() ; ++itt)
 		{
@@ -360,7 +400,7 @@ int Graph::cutGraph(opendfx::Graph &graph){
 			}
 		}
 	}
-	for (std::vector<opendfx::Buffer *>::iterator it = graph.buffers.begin(); it != graph.buffers.end(); ++it)
+	for (std::vector<opendfx::Buffer *>::iterator it = graph->buffers.begin(); it != graph->buffers.end(); ++it)
 	{
 		for (std::vector<opendfx::Buffer *>::iterator itt = this->buffers.begin(); itt != this->buffers.end(); ++itt)
 		{
@@ -370,7 +410,7 @@ int Graph::cutGraph(opendfx::Graph &graph){
 			}
 		}
 	}
-	for (std::vector<opendfx::Link   *>::iterator it = graph.links.begin()  ; it != graph.links.end()  ; ++it)
+	for (std::vector<opendfx::Link   *>::iterator it = graph->links.begin()  ; it != graph->links.end()  ; ++it)
 	{
 		for (std::vector<opendfx::Link   *>::iterator itt = this->links.begin()  ; itt != this->links.end()  ; ++itt)
 		{
@@ -380,5 +420,6 @@ int Graph::cutGraph(opendfx::Graph &graph){
 			}
 		}
 	}
+	graph_mutex.unlock();
 	return 0;
 }

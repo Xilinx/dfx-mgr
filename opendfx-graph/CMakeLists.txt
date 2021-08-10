@@ -1,6 +1,9 @@
 # only for cmake --version >= 3.5.1
 cmake_minimum_required(VERSION 3.2.1)
 
+set (CMAKE_BUILD_TYPE "Debug")
+MESSAGE( STATUS "CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE}" )
+
 # project name
 project(opendfx-graph)
 

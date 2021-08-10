@@ -2,6 +2,9 @@
 #include <iostream>
 #include <dlfcn.h>
 #include <iomanip>
+#include <thread>
+#include <signal.h>
+#include <atomic>
 #include "device.h"
 #include "graph.hpp"
 #include "graphManager.hpp"
@@ -9,6 +12,7 @@
 #define MAX_SLOTS 3 
 int main(int argc, char **argv) {
 	opendfx::GraphManager gManager;
+	std::cout << "main\n";
 	opendfx::Graph *graph[10];
 	int N = 10;
 
@@ -26,12 +30,17 @@ int main(int argc, char **argv) {
 		auto link02    = graph[i]->connectOutputBuffer(accel01,  buffer01);
 		auto link03    = graph[i]->connectInputBuffer (output02, buffer01);
 		gManager.addGraph(graph[i]);
+		//std::cout << graph[i]->countAccel() << std::endl;
 	}
-	gManager.listGraphs();
-	for(int i = 0; i < N; i++){
-		gManager.stageGraphs(slots = MAX_SLOTS);
-		gManager.listGraphs();
-	}
+	int ret = gManager.startServices(MAX_SLOTS);	
+	//gManager.listGraphs();
+	//for(int i = 0; i < N; i++){
+	//	std::cout << "##################\n" << std::endl;
+	//	gManager.stageGraphs(MAX_SLOTS);
+	//	gManager.listGraphs();
+	//}
 
+	gManager.stopServices();
+	std::cout << "main\n";
 	return 0;
 }
