@@ -13,8 +13,8 @@ namespace opendfx {
 	class Link {
 
 	public:
-		explicit Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir);
-		explicit Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir, const std::string &strid);
+		explicit Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir, std::string parentGraphId);
+		explicit Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir, std::string parentGraphId, const std::string &strid);
 		int info();
 		inline bool operator==(const Link& rhs) const {
 		    return (this->id == rhs.id && this->strid == rhs.strid);
@@ -34,6 +34,7 @@ namespace opendfx {
 		int dir;
 		int id;
 		std::string strid;
+		std::string parentGraphId;
 		bool deleteFlag;
 	};
 } 

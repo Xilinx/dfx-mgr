@@ -24,7 +24,7 @@ namespace opendfx {
 			int addGraph(opendfx::Graph *graph);
 			int delGraph(opendfx::Graph *graph);
 			int listGraphs();
-			Graph* mergeGraphs();
+			int mergeGraphs();
 			int stageGraphs(int slots=3);
 			int scheduleGraph();
 			int startServices(int slots=3);
@@ -36,7 +36,7 @@ namespace opendfx {
 			//std::vector<opendfx::Graph *> graphsQueue1;
 			//td::vector<opendfx::Graph *> graphsQueue2;
 			std::vector<opendfx::Graph *> stagedGraphs;
-			std::mutex stagedGraphs_mutex;
+			opendfx::Graph mergedGraph{"Merged"};
 			int id;
 			std::string strid;
 			//std::queue<opendfx::Graph *> graphsQueues[3];

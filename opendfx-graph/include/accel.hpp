@@ -10,13 +10,16 @@ namespace opendfx {
 
 	class Accel {
 		public:
-			explicit Accel(const std::string &name, int type = opendfx::acceltype::accelNode);
-			explicit Accel(const std::string &name, int type, const std::string &strid);
+			explicit Accel(const std::string &name, std::string parentGraphId, int type = opendfx::acceltype::accelNode);
+			explicit Accel(const std::string &name, std::string parentGraphId, int type, const std::string &strid);
 			std::string info() const;
 			std::string getName() const;
 			int addLinkRefCount();
 			int subsLinkRefCount();
 			int getLinkRefCount();
+			inline std::string getParentGraphId(){
+				return this->parentGraphId;
+			}
 			inline bool operator==(const Accel& rhs) const {
 				return (this->id == rhs.id && this->strid == rhs.strid);
 			}
@@ -40,6 +43,7 @@ namespace opendfx {
 			int gid;
 			int linkRefCount;
 			std::string strid;
+			std::string parentGraphId;
 			bool deleteFlag;
 			int type;
 	};

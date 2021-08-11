@@ -10,7 +10,7 @@
 using json = nlohmann::json;
 using opendfx::Link;
 
-Link::Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir) : accel(accel), buffer(buffer), dir(dir) {
+Link::Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir, std::string parentGraphId) : accel(accel), buffer(buffer), dir(dir), parentGraphId(parentGraphId) {
 	deleteFlag = false;
 	accel->addLinkRefCount();
 	buffer->addLinkRefCount();
@@ -18,7 +18,7 @@ Link::Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir) : accel(acce
 	utils::setID(id, strid);
 }
 
-Link::Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir, const std::string &strid) : accel(accel), buffer(buffer), dir(dir), strid(strid) {
+Link::Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir, std::string parentGraphId, const std::string &strid) : accel(accel), buffer(buffer), dir(dir), parentGraphId(parentGraphId), strid(strid) {
 	deleteFlag = false;
 	accel->addLinkRefCount();
 	buffer->addLinkRefCount();
@@ -58,6 +58,7 @@ std::string Link::toJson(bool withDetail){
 	document["id"]      = strid;
 	if(withDetail){
 		document["deleteFlag"] = deleteFlag;
+		document["parentGraphId"]    = parentGraphId;
 	}
 	document["accel"]    = accel->getId();
 	document["buffer"]   = buffer->getId();

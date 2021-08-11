@@ -12,7 +12,7 @@
 #define MAX_SLOTS 3 
 int main(int argc, char **argv) {
 	opendfx::GraphManager gManager;
-	std::cout << "main\n";
+	std::cout << "# main\n";
 	opendfx::Graph *graph[10];
 	int N = 10;
 

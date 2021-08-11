@@ -51,7 +51,19 @@ namespace opendfx {
 			inline int getPriority() {
 				return priority;
 			};
-			static inline bool staticGetDeleteFlag(Graph *graph) {
+			inline int setScheduled(bool scheduled){
+				this->scheduled = scheduled;
+			}
+			inline bool getScheduled(){
+				return this->scheduled;
+			}
+			inline int lockAccess(){
+				graph_mutex.lock();
+			}
+			inline int unlockAccess(){
+				graph_mutex.unlock();
+			}
+			inline bool staticGetDeleteFlag(Graph *graph) {
 				return graph->getDeleteFlag();
 			};
 			Graph* operator + (Graph* graph);
@@ -60,13 +72,13 @@ namespace opendfx {
 			std::string m_name;
 			int id;
 			int priority;
+			bool scheduled;
 			std::string strid;
 			std::vector<opendfx::Accel *> accels;
 			std::vector<opendfx::Buffer *> buffers;
 			std::vector<opendfx::Link *> links;
 			bool deleteFlag;
 			int accelCount;
-			//std::mutex graph_mutex;
 			std::mutex graph_mutex;
 	};
 } // #end of graph

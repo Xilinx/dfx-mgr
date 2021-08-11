@@ -66,19 +66,23 @@ int GraphManager::listGraphs()
 	return 0;
 }
 
-opendfx::Graph* GraphManager::mergeGraphs(){
-	opendfx::Graph *graph0 = new opendfx::Graph{"Merged"};
-	stagedGraphs_mutex.lock();
+int GraphManager::mergeGraphs(){
+	mergedGraph.lockAccess();
 	for (std::vector<opendfx::Graph *>::iterator it = stagedGraphs.begin() ; it != stagedGraphs.end(); ++it)
 	{
 		opendfx::Graph* graph = *it;
-		graph0->copyGraph(graph);
+		if (!graph->getScheduled()){
+			mergedGraph.copyGraph(graph);
+			graph->setScheduled(true);
+			std::cout << "scheduled ..." << std::endl;
+			std::cout << "No of accels  = " << mergedGraph.countAccel() << std::endl;
+			std::cout << "No of buffers = " << mergedGraph.countBuffer() << std::endl; 
+			std::cout << "No of links   = " << mergedGraph.countLink() << std::endl; 
+			std::cout << mergedGraph.toJson(true) << std::endl;
+		}
 	}
-	stagedGraphs_mutex.unlock();
-	std::cout << "\nNo of accels  = " << graph0->countAccel();
-	std::cout << "\nNo of buffers = " << graph0->countBuffer(); 
-	std::cout << "\nNo of links   = " << graph0->countLink(); 
-	return graph0;
+	mergedGraph.unlockAccess();
+	return 0;
 }
 
 int GraphManager::stageGraphs(int slots){
@@ -86,23 +90,17 @@ int GraphManager::stageGraphs(int slots){
 	int accelCounts = 0;
 	std::vector<opendfx::Graph *>*graphs;
 	while(1){
-		//std::cout  << "stageGraph\n" ;
-		//listGraphs();
 		for (int i = 0; i < 3; i++){
 			graphQueue_mutex.lock();
 			graphs = &graphsQueue[3-i-1];
 			if (remainingSlots > 0){
-				//std::cout << graphs->size() << std::endl;
 				for (std::vector<opendfx::Graph *>::iterator it = graphs->begin() ; it != graphs->end(); ++it)
 				{
 					opendfx::Graph* graph = *it;
-					//std::cout << "##" << graph->countAccel() << std::endl;
 					accelCounts = graph->countAccel();
 					if (remainingSlots >= accelCounts && accelCounts > 0){
 						remainingSlots = remainingSlots - accelCounts;
-						stagedGraphs_mutex.lock();
 						stagedGraphs.push_back(graph);
-						stagedGraphs_mutex.unlock();
 						graphs->erase(std::remove(graphs->begin(), graphs->end(), graph), graphs->end());
 					}
 					else{
@@ -110,14 +108,16 @@ int GraphManager::stageGraphs(int slots){
 					}
 				}
 			}
-			//std::cout << "stageGraph done ...\n";
 			graphQueue_mutex.unlock();
 		}
+		mergeGraphs();
 	}
 	return 0;
 }
 
 int GraphManager::scheduleGraph(){
+	while(1){
+	}
 	return 0;
 }
 

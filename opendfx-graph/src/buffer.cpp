@@ -9,12 +9,12 @@
 using json = nlohmann::json;
 using opendfx::Buffer;
 
-Buffer::Buffer(const std::string &name) : name(name) {
+Buffer::Buffer(const std::string &name, std::string parentGraphId) : name(name), parentGraphId(parentGraphId)  {
 	utils::setID(id, strid);
 	linkRefCount = 0;
 }
 
-Buffer::Buffer(const std::string &name, const std::string &strid) : name(name), strid(strid) {
+Buffer::Buffer(const std::string &name, std::string parentGraphId, const std::string &strid) : name(name), parentGraphId(parentGraphId), strid(strid) {
 	linkRefCount = 0;
 }
 
@@ -44,6 +44,7 @@ std::string Buffer::toJson(bool withDetail){
 	if(withDetail){
 		document["linkRefCount"] = linkRefCount;
 		document["deleteFlag"] = deleteFlag;
+		document["parentGraphId"]    = parentGraphId;
 	}
 	document["name"]    = name;
 	std::stringstream jsonStream;
