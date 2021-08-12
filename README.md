@@ -44,7 +44,7 @@ the corresponding path to cmake in build.sh.
   $ cd build
   $ ../build.sh
 ```
-After build succesfully completes, library can be found under `build/usr/local/lib`
+After build successfully completes, library can be found under `build/usr/local/lib`
 and binary can be under `build/usr/local/bin`.
 
 ## Known limitations

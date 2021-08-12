@@ -351,6 +351,8 @@ int initBaseDesign(struct basePLDesign *base, const char *shell_path)
 				base->load_base_design = 0;
 		}
 	}
+	if (!strcmp(base->type,"XRT_FLAT"))
+		base->num_slots = 1;
 	return 0;
 }
 

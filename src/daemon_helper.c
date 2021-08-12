@@ -65,7 +65,7 @@ struct basePLDesign *findBaseDesign_path(const char *path){
     for (i = 0; i < MAX_WATCH; i++) {
         if (base_designs[i].base_path[0] != '\0') {
             if(!strcmp(base_designs[i].base_path, path)) {
-                    acapd_print("%s: Found base design %s\n",__func__,base_designs[i].base_path);
+                    acapd_debug("%s: Found base design %s\n",__func__,base_designs[i].base_path);
                     return &base_designs[i];
 			}
             for (j=0;j <10; j++){
@@ -386,6 +386,13 @@ char *listAccelerators()
         if (base_designs[i].base_path[0] != '\0' && base_designs[i].num_slots > 0) {
             for (j = 0; j < 10; j++) {
                 if (base_designs[i].accel_list[j].path[0] != '\0') {
+					int slots;
+					/* Internally flat shell is treated as one slot to make the code generic and save info of the active design */
+					if (!strcmp(base_designs[i].type,"XRT_FLAT"))
+						slots = 0;
+					else
+						slots = base_designs[i].num_slots;
+
                     if (base_designs[i].active) {
                         char active_slots[20] = "";
                         char tmp[4];
@@ -398,15 +405,15 @@ char *listAccelerators()
                         }
                         if (strcmp(active_slots, ""))
                             sprintf(msg,"%32s%32s%15s%10d%20s\n",base_designs[i].accel_list[j].name, base_designs[i].name,
-                                                                base_designs[i].type, base_designs[i].num_slots,active_slots);
+																	base_designs[i].type, slots,active_slots);
                         else
                             sprintf(msg,"%32s%32s%15s%10d%20d\n",base_designs[i].accel_list[j].name,base_designs[i].name,
-                                                    base_designs[i].type,base_designs[i].num_slots,-1);
+																		base_designs[i].type, slots,-1);
 						strcat(res,msg);
                     }
                     else {
                         sprintf(msg,"%32s%32s%15s%10d%20d\n",base_designs[i].accel_list[j].name,base_designs[i].name,
-                                                base_designs[i].type,base_designs[i].num_slots,-1);
+																			base_designs[i].type, slots,-1);
 						strcat(res,msg);
                     }
                 }
@@ -540,8 +547,12 @@ void add_base_design(char *name, char *path, char *parent, int wd)
         return;
     }
     for (i = 0; i < MAX_WATCH; i++) {
+		if (!strcmp(base_designs[i].base_path,path)){
+			acapd_debug("Base design %s already exists\n",path);
+			return;
+		}
         if (base_designs[i].base_path[0] == '\0') {
-            acapd_debug("adding base design %s\n",path);
+            acapd_debug("Adding base design %s\n",path);
             strncpy(base_designs[i].name, name, sizeof(base_designs[i].name)-1);
             base_designs[i].name[sizeof(base_designs[i].name) - 1] = '\0';
             strncpy(base_designs[i].base_path, path, sizeof(base_designs[i].base_path)-1);
@@ -721,7 +732,7 @@ void *threadFunc()
                     acapd_debug("%s: add inotify watch on %s\n",__func__,new_dir);
                     wd = inotify_add_watch(inotifyFd, new_dir, IN_ALL_EVENTS);
                     if (wd == -1)
-                        printf("inotify_add_watch failed on %s\n",new_dir);
+                        acapd_perror("inotify_add_watch failed on %s\n",new_dir);
                     add_to_watch(wd, new_dir);
                     add_base_design(event->name, new_dir, parent, wd);
 
@@ -729,7 +740,7 @@ void *threadFunc()
 				else if(!strcmp(event->name,"shell.json")) {
 					parent = wd_to_pathname(event->wd);
 					base = findBaseDesign_path(parent);
-					sprintf(fname,"%s/%s",parent,"shell.json");
+					sprintf(fname,"%s/%s",parent,event->name);
 					initBaseDesign(base, fname);
 					parse_packages(base,parent);
 				}
@@ -740,7 +751,6 @@ void *threadFunc()
                     break;
                 sprintf(new_dir,"%s/%s",parent, event->name);
                 acapd_debug("Removing watch on %s parent %s\n",event->name, parent);
-                acapd_debug("%s:removing watch on  %s \n",__func__,new_dir);
                 remove_watch(new_dir);
                 remove_base_design(new_dir, parent);
             }
@@ -751,16 +761,27 @@ void *threadFunc()
                 sprintf(new_dir,"%s/%s",parent, event->name);
                 remove_base_design(new_dir, parent);
             }
-            else if((event->mask & IN_MOVED_TO) && (event->mask & IN_ISDIR)) {
-                char * parent = wd_to_pathname(event->wd);
-                if (parent == NULL)
-                    break;
-                sprintf(new_dir,"%s/%s",parent, event->name);
-                add_base_design(event->name, new_dir, parent, event->wd);
-				base = findBaseDesign_path(new_dir);
-				sprintf(fname,"%s/%s",new_dir,"shell.json");
-				initBaseDesign(base, fname);
-				parse_packages(base,new_dir);
+            else if(event->mask & IN_MOVED_TO){
+				/*
+				 * 'dnf install' creates tmp filenames and then does 'mv' to desired filenames.
+				 * Hence IN_CREATE notif will be on tmp filenames, add logic in MOVED_TO notification for
+				 * shell.json
+				 */
+				if(event->mask & IN_ISDIR || !strcmp(event->name,"shell.json")){
+					char * parent = wd_to_pathname(event->wd);
+					if (parent == NULL)
+						break;
+					if (event->mask & IN_ISDIR){
+						sprintf(new_dir,"%s/%s",parent, event->name);
+						add_base_design(event->name, new_dir, parent, event->wd);
+					} else {
+						sprintf(new_dir,"%s",parent);
+					}
+					base = findBaseDesign_path(new_dir);
+					sprintf(fname,"%s/%s",new_dir,"shell.json");
+					initBaseDesign(base, fname);
+					parse_packages(base,new_dir);
+				}
             }
             p += sizeof(struct inotify_event) + event->len;
         }

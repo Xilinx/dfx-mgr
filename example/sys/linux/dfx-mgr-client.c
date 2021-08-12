@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
 		if (ret <= 0)
 			printf("No message recieved\n");
 		if (atoi(recv_message.data) == 0)
-			printf("Accelerator succesfully removed.\n");
+			printf("Accelerator successfully removed.\n");
 		else
 			printf("Error trying to remove accelerator.\n");
 	} else if(!strcmp(argv[1],"-listPackage")) {
