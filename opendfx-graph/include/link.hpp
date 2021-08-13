@@ -33,8 +33,8 @@ namespace opendfx {
 		opendfx::Buffer *buffer;
 		int dir;
 		int id;
-		std::string strid;
 		std::string parentGraphId;
+		std::string strid;
 		bool deleteFlag;
 	};
 } 

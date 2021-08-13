@@ -5,8 +5,11 @@
 #include "device.h"
 #include "graph.hpp"
 #include "graphManager.hpp"
+#include "utils.hpp"
 
 int main(int argc, char **argv) {
+	_unused(argc);
+	_unused(argv);
 	opendfx::Graph *graph;
 
 	graph = new opendfx::Graph{"G"};

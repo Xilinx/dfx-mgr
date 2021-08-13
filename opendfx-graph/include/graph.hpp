@@ -8,6 +8,8 @@
 #include <accel.hpp>
 #include <buffer.hpp>
 #include <link.hpp>
+#include <sys/socket.h>
+#include <dfx-mgr/dfxmgr_client.h>
 
 
 namespace opendfx {
@@ -53,21 +55,25 @@ namespace opendfx {
 			};
 			inline int setScheduled(bool scheduled){
 				this->scheduled = scheduled;
+				return 0;
 			}
 			inline bool getScheduled(){
 				return this->scheduled;
 			}
 			inline int lockAccess(){
 				graph_mutex.lock();
+				return 0;
 			}
 			inline int unlockAccess(){
 				graph_mutex.unlock();
+				return 0;
 			}
 			inline bool staticGetDeleteFlag(Graph *graph) {
 				return graph->getDeleteFlag();
 			};
 			Graph* operator + (Graph* graph);
 			Graph* operator - (Graph *graph);
+			int submit(void);
 		private:
 			std::string m_name;
 			int id;
@@ -80,6 +86,7 @@ namespace opendfx {
 			bool deleteFlag;
 			int accelCount;
 			std::mutex graph_mutex;
+			socket_t * domainSocket;
 	};
 } // #end of graph
 

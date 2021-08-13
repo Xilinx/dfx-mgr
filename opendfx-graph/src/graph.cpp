@@ -6,20 +6,22 @@
 #include <time.h>
 #include <algorithm>
 #include <vector>
+#include <sys/socket.h>
 #include "graph.hpp"
 #include "accel.hpp"
 #include "buffer.hpp"
 #include "link.hpp"
 #include "nlohmann/json.hpp"
 #include "utils.hpp"
+#include <dfx-mgr/dfxmgr_client.h>
 
 using json = nlohmann::json;
 using opendfx::Graph;
 
 Graph::Graph(const std::string &name, int priority) : m_name(name) {
 	int i;
-	char * block;
-	short size = 1;
+	//char * block;
+	//short size = 1;
 	std::ifstream urandom("/dev/urandom", std::ios::in|std::ios::binary); // Seed initialisation based on /dev/urandom
 	urandom.read((char*)&i, sizeof(i));
 	srand(i ^ time(0));
@@ -270,7 +272,7 @@ std::string Graph::fromJson(std::string jsonstr){
 	for (json::iterator it = buffersObj.begin(); it != buffersObj.end(); ++it) {
 		json bufferObj = *it;
 
-		opendfx::Buffer *buffer = new opendfx::Buffer(bufferObj["name"].get<std::string>(), bufferObj["id"].get<std::string>());
+		opendfx::Buffer *buffer = new opendfx::Buffer(bufferObj["name"].get<std::string>(), strid, bufferObj["id"].get<std::string>());
 		buffers.push_back(buffer);
 	}
 	json linksObj = document["links"];
@@ -358,5 +360,27 @@ int Graph::cutGraph(opendfx::Graph *graph){
 			}
 		}
 	}
+	return 0;
+}
+
+int Graph::submit(void){
+	int fd[25];
+	int fdcount = 0; 
+	
+	this->domainSocket = (socket_t *)malloc(sizeof(socket_t));
+	int status = initSocket(domainSocket);
+	if (status < 0){
+		return -1;
+	}
+	
+	std::string str = toJson();
+	char *cstr = new char[str.length() + 1];
+	strcpy(cstr, str.c_str());
+	
+	status = graphClientSubmit(domainSocket, cstr, str.length(), fd, &fdcount);
+	if (status < 0){
+		return -1;
+	}
+	std::cout << fdcount << std::endl;
 	return 0;
 }

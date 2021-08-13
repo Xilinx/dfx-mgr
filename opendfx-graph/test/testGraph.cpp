@@ -5,8 +5,11 @@
 #include "device.h"
 #include "graph.hpp"
 #include "graphManager.hpp"
+#include "utils.hpp"
 
 int main(int argc, char **argv) {
+	_unused(argc);
+	_unused(argv);
 	opendfx::GraphManager gManager;
 	opendfx::Graph *graph[10];
 
@@ -35,6 +38,10 @@ int main(int argc, char **argv) {
 		auto link01    = graph[i]->connectInputBuffer (accel01,  buffer00);
 		auto link02    = graph[i]->connectOutputBuffer(accel01,  buffer01);
 		auto link03    = graph[i]->connectInputBuffer (output02, buffer01);
+		_unused(link00);
+		_unused(link01);
+		_unused(link02);
+		_unused(link03);
 		std::cout << std::setw(4) << graph[i]->toJson() << std::endl;
 		gManager.addGraph(graph[i]);
 	}

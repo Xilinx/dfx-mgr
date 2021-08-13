@@ -18,6 +18,7 @@ include (CheckIncludeFiles)
 include (CheckCSourceCompiles)
 include (collect)
 include (options)
+include_directories(opendfx-graph/include)
 
 foreach(_inc_path ${CMAKE_INCLUDE_PATH})
   collect (PROJECT_INC_DIRS "${_inc_path}")

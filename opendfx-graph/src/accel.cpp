@@ -12,12 +12,12 @@ using json = nlohmann::json;
 using opendfx::Accel;
 
 
-Accel::Accel(const std::string &name, std::string parentGraphId, int type) : name(name), parentGraphId(parentGraphId), type(type) {
+Accel::Accel(const std::string &name, std::string &parentGraphId, int type) : name(name), parentGraphId(parentGraphId), type(type) {
 	utils::setID(id, strid);
 	linkRefCount = 0;
 }
 
-Accel::Accel(const std::string &name, std::string parentGraphId, int type, const std::string &strid) : name(name), parentGraphId(parentGraphId), type(type), strid(strid) {
+Accel::Accel(const std::string &name, std::string &parentGraphId, int type, const std::string &strid) : name(name), parentGraphId(parentGraphId), type(type), strid(strid) {
 	linkRefCount = 0;
 }
 
@@ -31,10 +31,12 @@ std::string Accel::getName() const {
 
 int Accel::addLinkRefCount(){
 	this->linkRefCount ++;
+	return 0;
 }
 
 int Accel::subsLinkRefCount(){
 	this->linkRefCount --;
+	return 0;
 }
 
 int Accel::getLinkRefCount(){

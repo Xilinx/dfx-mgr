@@ -9,8 +9,8 @@ namespace opendfx {
 class Buffer {
 
 	public:
-		explicit Buffer(const std::string &name, std::string parentGraphId);
-		explicit Buffer(const std::string &name, std::string parentGraphId, const std::string &strid);
+		explicit Buffer(const std::string &name, std::string &parentGraphId);
+		explicit Buffer(const std::string &name, std::string &parentGraphId, const std::string &strid);
 		std::string info() const;
 		std::string getName() const;
 		int addLinkRefCount();
@@ -31,8 +31,8 @@ class Buffer {
 	private:
 		std::string name;
 		int id;
-		std::string strid;
 		std::string parentGraphId;
+		std::string strid;
 		int linkRefCount;
 		bool deleteFlag;
 	};

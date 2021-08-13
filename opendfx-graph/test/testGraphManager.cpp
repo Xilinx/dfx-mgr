@@ -8,9 +8,12 @@
 #include "device.h"
 #include "graph.hpp"
 #include "graphManager.hpp"
+#include "utils.hpp"
 
 #define MAX_SLOTS 3 
 int main(int argc, char **argv) {
+	_unused(argc);
+	_unused(argv);
 	opendfx::GraphManager gManager;
 	std::cout << "# main\n";
 	opendfx::Graph *graph[10];
@@ -29,10 +32,15 @@ int main(int argc, char **argv) {
 		auto link01    = graph[i]->connectInputBuffer (accel01,  buffer00);
 		auto link02    = graph[i]->connectOutputBuffer(accel01,  buffer01);
 		auto link03    = graph[i]->connectInputBuffer (output02, buffer01);
+		_unused(link00);
+		_unused(link01);
+		_unused(link02);
+		_unused(link03);
 		gManager.addGraph(graph[i]);
 		//std::cout << graph[i]->countAccel() << std::endl;
 	}
 	int ret = gManager.startServices(MAX_SLOTS);	
+	_unused(ret);
 	//gManager.listGraphs();
 	//for(int i = 0; i < N; i++){
 	//	std::cout << "##################\n" << std::endl;

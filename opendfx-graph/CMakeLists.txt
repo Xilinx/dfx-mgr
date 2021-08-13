@@ -15,6 +15,10 @@ set(CMAKE_CXX_STANDARD 14)
 
 # I../includes
 include_directories(include)
+#include_directories(../src)
+
+collector_list  (_list PROJECT_INC_DIRS)
+include_directories (${_list} ${CMAKE_CURRENT_SOURCE_DIR})
 
 
 # puts all .cpp files inside src to the SOURCES variable
@@ -25,6 +29,12 @@ file(GLOB SOURCES src/*.cpp)
 
 add_library(${LIB}_static STATIC ${SOURCES})
 add_library(${LIB}_shared SHARED ${SOURCES})
+
+target_link_libraries(${LIB}_shared dfx-mgr-shared dl pthread)
+target_link_libraries(${LIB}_static dfx-mgr-static dl pthread)
+
+#install (TARGETS ${LIB}_static LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install (TARGETS ${LIB}_shared LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 #target_link_libraries(${EXEC} dl)
 

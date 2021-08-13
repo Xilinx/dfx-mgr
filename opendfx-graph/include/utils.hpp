@@ -7,4 +7,8 @@
 namespace utils{
 	int setID(int & id, std::string & strid);
 } 
+
+
+#define _unused(x) ((void)(x))
+
 #endif // UTILS_HPP_

@@ -18,8 +18,8 @@ using opendfx::GraphManager;
 GraphManager::GraphManager(){
 	int i;
 	//srand(time(0)); // Seed initialisation based on time
-	char * block;
-	short size = 1;
+	//char * block;
+	//short size = 1;
 	std::ifstream urandom("/dev/urandom", std::ios::in|std::ios::binary); // Seed initialisation based on /dev/urandom
 	urandom.read((char*)&i, sizeof(i));
 	srand(i ^ time(0));
