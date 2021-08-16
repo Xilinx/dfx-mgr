@@ -20,6 +20,10 @@ namespace opendfx {
 			inline std::string getParentGraphId(){
 				return this->parentGraphId;
 			}
+			inline int setBSize(int bSize){
+				this->bSize = bSize;
+				return 0;
+			}
 			inline bool operator==(const Accel& rhs) const {
 				return (this->id == rhs.id && this->strid == rhs.strid);
 			}
@@ -46,6 +50,7 @@ namespace opendfx {
 			int type;
 			std::string strid;
 			bool deleteFlag;
+			int bSize;
 	};
 
 	//inline bool Accel::operator==(const Accel* lhs, const Accel* rhs) {

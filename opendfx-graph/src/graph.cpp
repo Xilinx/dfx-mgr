@@ -54,14 +54,16 @@ opendfx::Accel* Graph::addAccel(const std::string &name){
 	return accel;
 }
 
-opendfx::Accel* Graph::addInputNode(const std::string &name){
+opendfx::Accel* Graph::addInputNode(const std::string &name, int bSize){
 	opendfx::Accel *accel = new opendfx::Accel(name, strid, opendfx::acceltype::inputNode);
+	accel->setBSize(bSize);
 	accels.push_back(accel);
 	return accel;
 }
 
-opendfx::Accel* Graph::addOutputNode(const std::string &name){
+opendfx::Accel* Graph::addOutputNode(const std::string &name, int bSize){
 	opendfx::Accel *accel = new opendfx::Accel(name, strid, opendfx::acceltype::outputNode);
+	accel->setBSize(bSize);
 	accels.push_back(accel);
 	return accel;
 }
@@ -74,8 +76,10 @@ opendfx::Accel* Graph::addAccel(opendfx::Accel *accel){
 	return accel;
 }
 
-opendfx::Buffer* Graph::addBuffer(const std::string &name){
+opendfx::Buffer* Graph::addBuffer(const std::string &name, int bSize, int bType){
 	opendfx::Buffer *buffer= new opendfx::Buffer(name, strid);
+	buffer->setBSize(bSize);
+	buffer->setBType(bType);
 	buffers.push_back(buffer);
 	return buffer;
 }
@@ -85,14 +89,24 @@ opendfx::Buffer* Graph::addBuffer(opendfx::Buffer *buffer){
 	return buffer;
 }
 
-opendfx::Link* Graph::connectInputBuffer(opendfx::Accel *accel, opendfx::Buffer *buffer){
+opendfx::Link* Graph::connectInputBuffer(opendfx::Accel *accel, opendfx::Buffer *buffer,
+		int offset, int transactionSize, int transactionIndex, int channel){
 	opendfx::Link *link = new opendfx::Link(accel, buffer, opendfx::direction::toAccel, strid);
+	link->setOffset(offset);
+	link->setTransactionSize(transactionSize);
+	link->setTransactionIndex(transactionIndex);
+	link->setChannel(channel);
 	links.push_back(link);
 	return link;
 }
 
-opendfx::Link* Graph::connectOutputBuffer(opendfx::Accel *accel, opendfx::Buffer *buffer){
+opendfx::Link* Graph::connectOutputBuffer(opendfx::Accel *accel, opendfx::Buffer *buffer,
+		int offset, int transactionSize, int transactionIndex, int channel){
 	opendfx::Link *link = new opendfx::Link(accel, buffer, opendfx::direction::fromAccel, strid);
+	link->setOffset(offset);
+	link->setTransactionSize(transactionSize);
+	link->setTransactionIndex(transactionIndex);
+	link->setChannel(channel);
 	links.push_back(link);
 	return link;
 }
@@ -266,6 +280,7 @@ std::string Graph::fromJson(std::string jsonstr){
 	for (json::iterator it = accelsObj.begin(); it != accelsObj.end(); ++it) {
 		json accelObj = *it;
 		opendfx::Accel *accel = new opendfx::Accel(accelObj["name"].get<std::string>(), strid, accelObj["type"].get<int>(), accelObj["id"].get<std::string>());
+		accel->setBSize(accelObj["bSize"].get<int>());
 		accels.push_back(accel);
 	}
 	json buffersObj = document["buffers"];
@@ -273,6 +288,8 @@ std::string Graph::fromJson(std::string jsonstr){
 		json bufferObj = *it;
 
 		opendfx::Buffer *buffer = new opendfx::Buffer(bufferObj["name"].get<std::string>(), strid, bufferObj["id"].get<std::string>());
+		buffer->setBSize(bufferObj["bSize"].get<int>());
+		buffer->setBType(bufferObj["bType"].get<int>());
 		buffers.push_back(buffer);
 	}
 	json linksObj = document["links"];
@@ -282,6 +299,10 @@ std::string Graph::fromJson(std::string jsonstr){
 		opendfx::Accel * accel   = getAccelByID (linkObj["accel" ].get<std::string>());
 		opendfx::Buffer * buffer = getBufferByID(linkObj["buffer"].get<std::string>());
 		opendfx::Link *link      = new opendfx::Link(accel, buffer, linkObj["dir"].get<int>(), linkObj["id"].get<std::string>());
+		link->setOffset(linkObj["offset"].get<int>());
+		link->setTransactionSize(linkObj["transactionSize"].get<int>());
+		link->setTransactionIndex(linkObj["transactionIndex"].get<int>());
+		link->setChannel(linkObj["channel"].get<int>());
 		links.push_back(link);
 	}
 	return strid;

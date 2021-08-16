@@ -14,7 +14,7 @@ SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
 
 set (_deps "dfx" "websockets" "dfxgraph_shared" "dl" "pthread")
 
-foreach (_app load_accel accel-bzip2 accel-shm accel-aes accel-container dfx-mgr-client dfx-mgrd dfx-mgrd2)
+foreach (_app load_accel accel-bzip2 accel-shm accel-aes accel-container dfx-mgr-client dfx-mgrd dfx-mgrd2 graphTest6)
   set (_src ${CMAKE_CURRENT_SOURCE_DIR}/${_app}.c)
   if (WITH_SHARED_LIB)
     add_executable (${_app}-share ${_src})

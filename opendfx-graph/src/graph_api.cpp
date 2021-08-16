@@ -43,21 +43,21 @@ ACCEL_HANDLE    Graph_addAccelByName    (GRAPH_HANDLE gHandle, const char* name)
 	return (ACCEL_HANDLE) accel;
 }
 
-ACCEL_HANDLE    Graph_addInputNode      (GRAPH_HANDLE gHandle, const char* name){
+ACCEL_HANDLE    Graph_addInputNode      (GRAPH_HANDLE gHandle, const char* name, int bSize){
 	opendfx::Graph *graph = (opendfx::Graph *) gHandle;
-	auto accel   = graph->addInputNode(name);
+	auto accel   = graph->addInputNode(name, bSize);
 	return (ACCEL_HANDLE) accel;
 }
 
-ACCEL_HANDLE    Graph_addOutputNode     (GRAPH_HANDLE gHandle, const char* name){
+ACCEL_HANDLE    Graph_addOutputNode     (GRAPH_HANDLE gHandle, const char* name, int bSize){
 	opendfx::Graph *graph = (opendfx::Graph *) gHandle;
-	auto accel   = graph->addOutputNode(name);
+	auto accel   = graph->addOutputNode(name, bSize);
 	return (ACCEL_HANDLE) accel;
 }
 
-BUFFER_HANDLE   Graph_addBufferByName   (GRAPH_HANDLE gHandle, const char* name){
+BUFFER_HANDLE   Graph_addBufferByName   (GRAPH_HANDLE gHandle, const char* name, int bSize, int bType){
 	opendfx::Graph *graph = (opendfx::Graph *) gHandle;
-	auto buffer   = graph->addBuffer(name);
+	auto buffer   = graph->addBuffer(name, bSize, bType);
 	return (BUFFER_HANDLE) buffer;
 }
 
@@ -65,19 +65,21 @@ BUFFER_HANDLE   Graph_addBufferByName   (GRAPH_HANDLE gHandle, const char* name)
 //}
 
 
-LINK_HANDLE     Graph_connectInputBuffer(GRAPH_HANDLE gHandle, ACCEL_HANDLE aHandle, BUFFER_HANDLE  bHandle){
+LINK_HANDLE     Graph_connectInputBuffer(GRAPH_HANDLE gHandle, ACCEL_HANDLE aHandle, BUFFER_HANDLE  bHandle,
+										int offset, int transactionSize, int transactionIndex, int channel){
 	opendfx::Graph *graph = (opendfx::Graph *) gHandle;
 	opendfx::Accel *accel = (opendfx::Accel *) aHandle;
 	opendfx::Buffer *buffer = (opendfx::Buffer *) bHandle;
-	auto link   = graph->connectInputBuffer(accel, buffer);
+	auto link   = graph->connectInputBuffer(accel, buffer, offset, transactionSize, transactionIndex, channel);
 	return (LINK_HANDLE) link;
 }
 
-LINK_HANDLE     Graph_connectOutputBuffer(GRAPH_HANDLE gHandle, ACCEL_HANDLE aHandle, BUFFER_HANDLE  bHandle){
+LINK_HANDLE     Graph_connectOutputBuffer(GRAPH_HANDLE gHandle, ACCEL_HANDLE aHandle, BUFFER_HANDLE  bHandle,
+										int offset, int transactionSize, int transactionIndex, int channel){
 	opendfx::Graph *graph = (opendfx::Graph *) gHandle;
 	opendfx::Accel *accel = (opendfx::Accel *) aHandle;
 	opendfx::Buffer *buffer = (opendfx::Buffer *) bHandle;
-	auto link   = graph->connectOutputBuffer(accel, buffer);
+	auto link   = graph->connectOutputBuffer(accel, buffer, offset, transactionSize, transactionIndex, channel);
 	return (LINK_HANDLE) link;
 }
 

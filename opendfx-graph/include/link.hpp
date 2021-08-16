@@ -28,6 +28,22 @@ namespace opendfx {
 		}
 		inline std::string getId() const { return this->strid; }
 		std::string toJson(bool withDetail = false);
+		inline int setOffset(int offset){
+			this->offset = offset;
+			return 0;
+		}
+		inline int setTransactionSize(int transactionSize){
+			this->transactionSize = transactionSize;
+			return 0;
+		}
+		inline int setTransactionIndex(int transactionIndex){
+			this->transactionIndex = transactionIndex;
+			return 0;
+		}
+		inline int setChannel(int channel){
+			this->channel = channel;
+			return 0;
+		}
 	private:
 		opendfx::Accel *accel;
 		opendfx::Buffer *buffer;
@@ -36,6 +52,10 @@ namespace opendfx {
 		std::string parentGraphId;
 		std::string strid;
 		bool deleteFlag;
+		int offset;
+		int transactionSize;
+		int transactionIndex;
+		int channel;
 	};
 } 
 #endif // LINK_HPP_

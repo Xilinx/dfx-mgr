@@ -52,6 +52,7 @@ std::string Accel::toJson(bool withDetail){
 	}
 	document["name"]    = name;
 	document["type"]    = type;
+	document["bSize"]    = bSize;
 	std::stringstream jsonStream;
 	jsonStream << document.dump(true);
 

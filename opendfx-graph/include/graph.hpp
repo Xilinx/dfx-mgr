@@ -22,12 +22,14 @@ namespace opendfx {
 			std::string getInfo() const;
 			Accel* addAccel(const std::string &name);
 			Accel* addAccel(Accel *accel);
-			Accel* addInputNode(const std::string &name);
-			Accel* addOutputNode(const std::string &name);
-			Buffer* addBuffer(const std::string &name);
+			Accel* addInputNode(const std::string &name, int bSize);
+			Accel* addOutputNode(const std::string &name, int bSize);
+			Buffer* addBuffer(const std::string &name, int bSize, int bType);
 			Buffer* addBuffer(Buffer *buffer);
-			Link* connectInputBuffer (Accel *accel, Buffer *buffer);
-			Link* connectOutputBuffer(Accel *accel, Buffer *buffer);
+			Link* connectInputBuffer (Accel *accel, Buffer *buffer,
+				int offset, int transactionSize, int transactionIndex, int channel);
+			Link* connectOutputBuffer(Accel *accel, Buffer *buffer,
+				int offset, int transactionSize, int transactionIndex, int channel);
 			Link* addLink(Link *link);
 			int copyGraph(Graph *graph);
 			int cutGraph (Graph *graph);

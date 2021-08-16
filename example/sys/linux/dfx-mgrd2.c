@@ -29,10 +29,11 @@
 #include <stdbool.h>
 #include <sys/select.h>
 #include <dfx-mgr/dfxmgr_client.h>
+#include <dfx-mgr/print.h>
 //#include <dfx-mgr/sys/linux/graph/jobScheduler.h>
 //#include <dfx-mgr/sys/linux/graph/abstractGraph.h>
-#include "graph_api.h"
 #include "utils.h"
+#include "graph_api.h"
 #define WATCH_PATH_LEN 256
 #define MAX_WATCH 50
 #define MAX_CLIENTS 200
@@ -54,7 +55,6 @@ void error (char *msg)
 
 #define GRAPH_INIT                1
 #define GRAPH_INIT_DONE           11
-#define HEADERSIZE 24
 
 int main (int argc, char **argv)
 {
@@ -65,6 +65,8 @@ int main (int argc, char **argv)
 	char *msg;
 	int buff_fd[25];
 	int buff_fd_cnt = 0;
+	GRAPH_HANDLE gHandle;
+	char * strid;
 
 	signal(SIGINT, intHandler);
 	_unused(argc);
@@ -140,9 +142,14 @@ int main (int argc, char **argv)
 						switch (recv_message.id) {
 
 							case GRAPH_INIT:
-								//acapd_debug("daemon recieved GRAPH_INIT\n");
+								acapd_debug("daemon recieved GRAPH_INIT\n");
+								gHandle = Graph_CreateWithPriority("test", 2);
+								strid = Graph_fromJson(gHandle, recv_message.data);
+								printf("%s\n", Graph_toJson(gHandle));
+								printf("%s\n", strid);
 								//buff_fd_cnt = abstractGraphServerConfig(scheduler, 
 								//	recv_message.data, recv_message.size, buff_fd);
+								//GRAPH_HANDLE gHandle; // = Graph_CreateWithPriority("test", 2);
 								memcpy(buff_fd, "hello", sizeof("hello"));
 								buff_fd_cnt = sizeof("hello");
 								

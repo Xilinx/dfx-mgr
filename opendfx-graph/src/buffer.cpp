@@ -49,6 +49,8 @@ std::string Buffer::toJson(bool withDetail){
 		document["parentGraphId"]    = parentGraphId;
 	}
 	document["name"]    = name;
+	document["bSize"]    = bSize;
+	document["bType"]    = bType;
 	std::stringstream jsonStream;
 	jsonStream << document.dump(true);
 

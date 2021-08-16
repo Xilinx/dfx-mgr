@@ -28,6 +28,14 @@ class Buffer {
 		}
 		inline std::string getId() const { return this->strid; }
 		std::string toJson(bool withDetail = false);
+		inline int setBSize(int bSize){
+			this->bSize = bSize;
+			return 0;
+		}
+		inline int setBType(int bType){
+			this->bType = bType;
+			return 0;
+		}
 	private:
 		std::string name;
 		int id;
@@ -35,6 +43,8 @@ class Buffer {
 		std::string strid;
 		int linkRefCount;
 		bool deleteFlag;
+		int bSize;
+		int bType;
 	};
 } // #end of wrapper
 #endif // BUFFER_HPP_

@@ -63,6 +63,10 @@ std::string Link::toJson(bool withDetail){
 	document["accel"]    = accel->getId();
 	document["buffer"]   = buffer->getId();
 	document["dir"]      = dir;
+	document["offset"]   = offset;
+	document["transactionSize"]   = transactionSize;
+	document["transactionIndex"]   = transactionIndex;
+	document["channel"]   = channel;
 	std::stringstream jsonStream;
 	jsonStream << document.dump(true);
 
