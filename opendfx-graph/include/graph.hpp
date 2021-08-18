@@ -58,12 +58,12 @@ namespace opendfx {
 			inline int getPriority() {
 				return priority;
 			};
-			inline int setScheduled(bool scheduled){
-				this->scheduled = scheduled;
+			inline int setStaged(bool staged){
+				this->staged = staged;
 				return 0;
 			}
-			inline bool getScheduled(){
-				return this->scheduled;
+			inline bool getStaged(){
+				return this->staged;
 			}
 			inline int lockAccess(){
 				graph_mutex.lock();
@@ -84,7 +84,7 @@ namespace opendfx {
 			std::string m_name;
 			int id;
 			int priority;
-			bool scheduled;
+			bool staged;
 			std::string strid;
 			std::vector<opendfx::Accel *> accels;
 			std::vector<opendfx::Buffer *> buffers;

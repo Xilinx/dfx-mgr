@@ -21,7 +21,7 @@ extern "C" {
 #define QUIT                      0
 #define GRAPH_INIT                1
 #define GRAPH_FINALISE            2
-#define GRAPH_SCHEDULED           3
+#define GRAPH_STAGED              3
 #define GRAPH_GET_IOBUFF          4
 #define GRAPH_SET_IOBUFF          5
 #define LOAD_ACCEL              6
@@ -31,7 +31,7 @@ extern "C" {
 
 #define GRAPH_INIT_DONE           11
 #define GRAPH_FINALISE_DONE       12
-#define GRAPH_SCHEDULED_DONE      13
+#define GRAPH_STAGED_DONE         13
 
 #define MAX_CLIENTS 200
 

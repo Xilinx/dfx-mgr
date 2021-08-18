@@ -96,14 +96,14 @@ int GraphManager::mergeGraphs(){
 	for (std::vector<opendfx::Graph *>::iterator it = stagedGraphs.begin() ; it != stagedGraphs.end(); ++it)
 	{
 		opendfx::Graph* graph = *it;
-		if (!graph->getScheduled()){
+		if (!graph->getStaged()){
 			mergedGraph.copyGraph(graph);
-			graph->setScheduled(true);
+			graph->setStaged(true);
 			std::cout << "scheduled ..." << std::endl;
 			std::cout << "No of accels  = " << mergedGraph.countAccel() << std::endl;
 			std::cout << "No of buffers = " << mergedGraph.countBuffer() << std::endl; 
 			std::cout << "No of links   = " << mergedGraph.countLink() << std::endl; 
-			std::cout << mergedGraph.toJson(true) << std::endl;
+			//std::cout << mergedGraph.toJson(true) << std::endl;
 		}
 	}
 	mergedGraph.unlockAccess();

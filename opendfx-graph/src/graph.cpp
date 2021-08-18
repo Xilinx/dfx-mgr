@@ -323,6 +323,10 @@ std::string Graph::fromJson(std::string jsonstr){
 		link->setChannel(linkObj["channel"].get<int>());
 		links.push_back(link);
 	}
+
+	//std::cout << "#No of accels  = " << countAccel() << std::endl;
+	//std::cout << "#No of buffers = " << countBuffer() << std::endl; 
+	//std::cout << "#No of links   = " << countLink() << std::endl; 
 	return strid;
 }
 
@@ -442,14 +446,16 @@ int Graph::isScheduled(void){
 	struct message send_message, recv_message;
     int ret;
 	int size;	
-	
+	int* status;
+	int fd[25];
+	int fdcount = 0; 
 	//std::string str = toJson();
 	size = strid.length();
 	char *cstr = new char[size + 1];
 	strcpy(cstr, strid.c_str());
 	
     memset(&send_message, '\0', sizeof(struct message));
-    send_message.id = GRAPH_SCHEDULED;
+    send_message.id = GRAPH_STAGED;
     send_message.size = size;
     send_message.fdcount = 0;
     memcpy(send_message.data, cstr, size);
@@ -459,11 +465,12 @@ int Graph::isScheduled(void){
         return -1;
     }
     memset(&recv_message, '\0', sizeof(struct message));
-    //size = sock_fd_read(domainSocket->sock_fd, &recv_message, fd, &fdcount);
-    //if (size <= 0){
-    //    return -1;
-	//}
-	//std::cout << recv_message.data << std::endl; 
+    size = sock_fd_read(domainSocket->sock_fd, &recv_message, fd, &fdcount);
+    if (size <= 0){
+        return -1;
+	}
+	status = (int *)recv_message.data; 
+	std::cout << *status << std::endl; 
 	
 	return 0;
 }
