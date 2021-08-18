@@ -52,6 +52,9 @@ namespace opendfx {
 
 			int setDeleteFlag(bool deleteFlag);
 			bool getDeleteFlag() const;
+			inline std::string getStrid() {
+				return strid;
+			};
 			inline int getPriority() {
 				return priority;
 			};
@@ -76,6 +79,7 @@ namespace opendfx {
 			Graph* operator + (Graph* graph);
 			Graph* operator - (Graph *graph);
 			int submit(void);
+			int isScheduled(void);
 		private:
 			std::string m_name;
 			int id;

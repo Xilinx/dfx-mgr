@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: MIT
  */
+
 //#include <libwebsockets.h>
 #include <string.h>
 #include <signal.h>
@@ -53,8 +54,8 @@ void error (char *msg)
 	exit (1);
 }
 
-#define GRAPH_INIT                1
-#define GRAPH_INIT_DONE           11
+//#define GRAPH_INIT                1
+//#define GRAPH_INIT_DONE           11
 
 int main (int argc, char **argv)
 {
@@ -66,6 +67,8 @@ int main (int argc, char **argv)
 	int buff_fd[25];
 	int buff_fd_cnt = 0;
 	GRAPH_HANDLE gHandle;
+	GRAPH_MANAGER_HANDLE gmHandle = GraphManager_Create(3);
+	GraphManager_startServices(gmHandle);
 	char * strid;
 
 	signal(SIGINT, intHandler);
@@ -139,26 +142,34 @@ int main (int argc, char **argv)
                    	{
 						// data from client
 						memset (&send_message, '\0', sizeof (struct message));
+						//acapd_debug("Recieved packet with ID : %d\n", recv_message.id);
 						switch (recv_message.id) {
 
 							case GRAPH_INIT:
 								acapd_debug("daemon recieved GRAPH_INIT\n");
 								gHandle = Graph_CreateWithPriority("test", 2);
+								GraphManager_addGraph(gmHandle, gHandle);
 								strid = Graph_fromJson(gHandle, recv_message.data);
-								printf("%s\n", Graph_toJson(gHandle));
-								printf("%s\n", strid);
+								//printf("%s\n", Graph_toJson(gHandle));
+								printf(" #### %s\n", strid);
 								//buff_fd_cnt = abstractGraphServerConfig(scheduler, 
 								//	recv_message.data, recv_message.size, buff_fd);
 								//GRAPH_HANDLE gHandle; // = Graph_CreateWithPriority("test", 2);
-								memcpy(buff_fd, "hello", sizeof("hello"));
-								buff_fd_cnt = sizeof("hello");
-								
+								//memcpy(buff_fd, "hello", sizeof("hello"));
+								buff_fd_cnt = 0;
+								memcpy(send_message.data, strid, strlen(strid));					
 								send_message.id = GRAPH_INIT_DONE;
 								send_message.fdcount = buff_fd_cnt;
-								send_message.size = 0;
+								send_message.size = strlen(strid);
 								sock_fd_write(fd, &send_message, 
 											HEADERSIZE + send_message.size,
 											buff_fd, buff_fd_cnt);
+								break;
+							case GRAPH_SCHEDULED:
+								acapd_debug("Recieved graph scheduled packet\n");
+								int status = GraphManager_ifGraphStaged(gmHandle, recv_message.data);
+								acapd_debug("%s : %d\n", recv_message.data, status);
+								_unused(status);
 								break;
 							case GRAPH_FINALISE:
 								//acapd_debug("daemon recieved graph_finalise\n");

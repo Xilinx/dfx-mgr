@@ -7,6 +7,21 @@
 #include <algorithm>
 #include <vector>
 #include <sys/socket.h>
+
+//#include <string.h>
+//#include <signal.h>
+//#include <stdbool.h>
+//#include <stdint.h>
+//#include <sys/select.h>
+//#include <sys/types.h>
+//#include <sys/un.h>
+//#include <fcntl.h>
+//#include <errno.h>
+#include <unistd.h>
+//#include <sys/ioctl.h>
+//#include <sys/mman.h>
+//#include <sys/stat.h>
+
 #include "graph.hpp"
 #include "accel.hpp"
 #include "buffer.hpp"
@@ -168,10 +183,10 @@ opendfx::Accel * Graph::getAccelByID(std::string strid)
 	for (std::vector<opendfx::Accel *>::iterator it = accels.begin() ; it != accels.end(); ++it)
 	{
 		opendfx::Accel* accel = *it;
-			std::cout << accel->getId() << " : " << strid << std::endl;
+			//std::cout << accel->getId() << " : " << strid << std::endl;
 		if (accel->getId() == strid){
-			std::cout << accel->getId() << " : " << strid << std::endl;
-			std::cout << ' ' << accel->info() << '\n';
+			//std::cout << accel->getId() << " : " << strid << std::endl;
+			//std::cout << ' ' << accel->info() << '\n';
 			return accel;
 		}
 	}
@@ -184,7 +199,7 @@ opendfx::Buffer * Graph::getBufferByID(std::string strid)
 	{
 		opendfx::Buffer* buffer = *it;
 		if (buffer->getId() == strid){
-			std::cout << buffer->getId() << " : " << strid << std::endl;
+			//std::cout << buffer->getId() << " : " << strid << std::endl;
 			return buffer;
 		}
 	}
@@ -280,6 +295,9 @@ std::string Graph::fromJson(std::string jsonstr){
 	for (json::iterator it = accelsObj.begin(); it != accelsObj.end(); ++it) {
 		json accelObj = *it;
 		opendfx::Accel *accel = new opendfx::Accel(accelObj["name"].get<std::string>(), strid, accelObj["type"].get<int>(), accelObj["id"].get<std::string>());
+		if (accelObj["type"].get<int>() == opendfx::acceltype::accelNode){
+			accelCount ++;
+		}
 		accel->setBSize(accelObj["bSize"].get<int>());
 		accels.push_back(accel);
 	}
@@ -385,10 +403,12 @@ int Graph::cutGraph(opendfx::Graph *graph){
 }
 
 int Graph::submit(void){
+	struct message send_message, recv_message;
+    int ret;
 	int fd[25];
 	int fdcount = 0; 
-	
-	this->domainSocket = (socket_t *)malloc(sizeof(socket_t));
+	int size;	
+	domainSocket = (socket_t *)malloc(sizeof(socket_t));
 	int status = initSocket(domainSocket);
 	if (status < 0){
 		return -1;
@@ -398,10 +418,52 @@ int Graph::submit(void){
 	char *cstr = new char[str.length() + 1];
 	strcpy(cstr, str.c_str());
 	
-	status = graphClientSubmit(domainSocket, cstr, str.length(), fd, &fdcount);
-	if (status < 0){
-		return -1;
+    memset(&send_message, '\0', sizeof(struct message));
+    send_message.id = GRAPH_INIT;
+    send_message.size = str.length();
+    send_message.fdcount = 0;
+    memcpy(send_message.data, cstr, str.length());
+    ret = write(domainSocket->sock_fd, &send_message, HEADERSIZE + send_message.size);
+    if (ret < 0){
+        std::cout << __func__ << " : socket write failed" << std::endl;
+        return -1;
+    }
+    memset(&recv_message, '\0', sizeof(struct message));
+    size = sock_fd_read(domainSocket->sock_fd, &recv_message, fd, &fdcount);
+    if (size <= 0){
+        return -1;
 	}
-	std::cout << fdcount << std::endl;
+	strid = recv_message.data; 
+	std::cout << strid << std::endl;
+	return 0;
+}
+
+int Graph::isScheduled(void){
+	struct message send_message, recv_message;
+    int ret;
+	int size;	
+	
+	//std::string str = toJson();
+	size = strid.length();
+	char *cstr = new char[size + 1];
+	strcpy(cstr, strid.c_str());
+	
+    memset(&send_message, '\0', sizeof(struct message));
+    send_message.id = GRAPH_SCHEDULED;
+    send_message.size = size;
+    send_message.fdcount = 0;
+    memcpy(send_message.data, cstr, size);
+    ret = write(domainSocket->sock_fd, &send_message, HEADERSIZE + send_message.size);
+    if (ret < 0){
+        std::cout << __func__ << " : socket write failed" << std::endl;
+        return -1;
+    }
+    memset(&recv_message, '\0', sizeof(struct message));
+    //size = sock_fd_read(domainSocket->sock_fd, &recv_message, fd, &fdcount);
+    //if (size <= 0){
+    //    return -1;
+	//}
+	//std::cout << recv_message.data << std::endl; 
+	
 	return 0;
 }

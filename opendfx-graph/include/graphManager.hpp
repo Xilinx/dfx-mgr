@@ -19,16 +19,18 @@ namespace opendfx {
 	class GraphManager {
 
 		public:
-			explicit GraphManager();
+			explicit GraphManager(int slots);
 			std::string getInfo() const;
-			int addGraph(opendfx::Graph *graph);
-			int delGraph(opendfx::Graph *graph);
+			int addGraph(opendfx::Graph* graph);
+			int delGraph(opendfx::Graph* graph);
 			int listGraphs();
 			int mergeGraphs();
-			int stageGraphs(int slots=3);
+			int stageGraphs();
 			int scheduleGraph();
-			int startServices(int slots=3);
+			int startServices();
 			int stopServices();
+			opendfx::Graph* getStagedGraphByID(std::string &strid);
+			bool ifGraphStaged(std::string &strid);
 
 		private:
 			std::vector<opendfx::Graph *> graphsQueue[3];
@@ -38,6 +40,7 @@ namespace opendfx {
 			std::vector<opendfx::Graph *> stagedGraphs;
 			opendfx::Graph mergedGraph{"Merged"};
 			int id;
+			int slots;
 			std::string strid;
 			//std::queue<opendfx::Graph *> graphsQueues[3];
 			std::thread * stageGraphThread;

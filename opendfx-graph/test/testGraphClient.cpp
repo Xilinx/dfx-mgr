@@ -15,6 +15,7 @@
 #define BUFFER_SIZE 16*1024*1024
 #define TRANSACTION_SIZE  32*1024*1024
 #define DDR_BASED 0
+
 int main(int argc, char **argv) {
 	_unused(argc);
 	_unused(argv);
@@ -41,6 +42,12 @@ int main(int argc, char **argv) {
 		_unused(link02);
 		_unused(link03);
 	}
+	for(int i = 0; i < N; i++){
+		std::cout << "checking schedules \n";
+		graph[i]->isScheduled();
+	
+	}
+	
 	std::cout << "Client test done ... \n";
 	return 0;
 }

@@ -19,7 +19,7 @@
 int main(int argc, char **argv) {
 	_unused(argc);
 	_unused(argv);
-	opendfx::GraphManager gManager;
+	opendfx::GraphManager gManager{3};
 	std::cout << "# main\n";
 	opendfx::Graph *graph[10];
 	int N = 10;
@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
 		gManager.addGraph(graph[i]);
 		//std::cout << graph[i]->countAccel() << std::endl;
 	}
-	int ret = gManager.startServices(MAX_SLOTS);	
+	int ret = gManager.startServices();	
 	_unused(ret);
 	//gManager.listGraphs();
 	//for(int i = 0; i < N; i++){

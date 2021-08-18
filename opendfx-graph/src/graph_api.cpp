@@ -1,6 +1,7 @@
 #ifdef __cplusplus
 #include <iostream>
 #include "graph.hpp"
+#include "graphManager.hpp"
 #endif
 
 #include <stdlib.h>
@@ -210,6 +211,80 @@ char * Graph_toJsonDbg(GRAPH_HANDLE gHandle){
 	return cstr;
 }
 
+
+GRAPH_MANAGER_HANDLE GraphManager_Create(int slots){
+	opendfx::GraphManager *graphManager = new opendfx::GraphManager(slots);
+	return (GRAPH_MANAGER_HANDLE) graphManager;	
+}
+
+GRAPH_MANAGER_HANDLE GraphManager_Distroy(GRAPH_MANAGER_HANDLE gmHandle){
+	opendfx::GraphManager *graphManager = (opendfx::GraphManager *) gmHandle;
+	delete (graphManager);
+	return 0;
+}
+
+//char *			GraphManager_getInfo(GRAPH_MANAGER_HANDLE gmHandle){
+//	opendfx::GraphManager *graphManager = (opendfx::GraphManager *) gmHandle;
+//	std::string str = graphManager->getInfo();
+//	char *cstr = new char[str.length() + 1];
+//	strcpy(cstr, str.c_str());
+//	return cstr;
+//}
+
+int				GraphManager_addGraph(GRAPH_MANAGER_HANDLE gmHandle, GRAPH_HANDLE gHandle){
+	opendfx::GraphManager *graphManager = (opendfx::GraphManager *) gmHandle;
+	opendfx::Graph *graph = (opendfx::Graph *) gHandle;
+	return graphManager->addGraph(graph);
+}
+
+int				GraphManager_delGraph(GRAPH_MANAGER_HANDLE gmHandle, GRAPH_HANDLE gHandle){
+	opendfx::GraphManager *graphManager = (opendfx::GraphManager *) gmHandle;
+	opendfx::Graph *graph = (opendfx::Graph *) gHandle;
+	return graphManager->delGraph(graph);
+}
+
+int				GraphManager_listGraphs(GRAPH_MANAGER_HANDLE gmHandle){
+	opendfx::GraphManager *graphManager = (opendfx::GraphManager *) gmHandle;
+	return graphManager->listGraphs();
+}
+
+int				GraphManager_mergeGraphs(GRAPH_MANAGER_HANDLE gmHandle){
+	opendfx::GraphManager *graphManager = (opendfx::GraphManager *) gmHandle;
+	return graphManager->mergeGraphs();
+}
+
+int				GraphManager_stageGraphs(GRAPH_MANAGER_HANDLE gmHandle){
+	opendfx::GraphManager *graphManager = (opendfx::GraphManager *) gmHandle;
+	return graphManager->mergeGraphs();
+}
+
+int				GraphManager_scheduleGraph(GRAPH_MANAGER_HANDLE gmHandle){
+	opendfx::GraphManager *graphManager = (opendfx::GraphManager *) gmHandle;
+	return graphManager->scheduleGraph();
+}
+
+int				GraphManager_startServices(GRAPH_MANAGER_HANDLE gmHandle){
+	opendfx::GraphManager *graphManager = (opendfx::GraphManager *) gmHandle;
+	return graphManager->startServices();
+}
+
+int				GraphManager_stopServices(GRAPH_MANAGER_HANDLE gmHandle){
+	opendfx::GraphManager *graphManager = (opendfx::GraphManager *) gmHandle;
+	return graphManager->stopServices();
+}
+
+GRAPH_HANDLE 	GraphManager_getStagedGraphByID(GRAPH_MANAGER_HANDLE gmHandle, char* strid){
+	std::string sstrid(strid);
+	opendfx::GraphManager *graphManager = (opendfx::GraphManager *) gmHandle;
+	opendfx::Graph *graph = graphManager->getStagedGraphByID(sstrid);
+	return (GRAPH_HANDLE) graph;	
+}
+
+int 			GraphManager_ifGraphStaged(GRAPH_MANAGER_HANDLE gmHandle, char* strid){
+	std::string sstrid(strid);
+	opendfx::GraphManager *graphManager = (opendfx::GraphManager *) gmHandle;
+	return (int) graphManager->ifGraphStaged(sstrid);
+}
 
 #ifdef __cplusplus
 }

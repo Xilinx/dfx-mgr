@@ -16,7 +16,7 @@
 int main(int argc, char **argv) {
 	_unused(argc);
 	_unused(argv);
-	opendfx::GraphManager gManager;
+	opendfx::GraphManager gManager{3};
 	opendfx::Graph *graph[10];
 
 	Device_t* device;

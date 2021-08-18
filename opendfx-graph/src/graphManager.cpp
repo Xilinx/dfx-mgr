@@ -15,7 +15,7 @@
 
 using opendfx::GraphManager;
 
-GraphManager::GraphManager(){
+GraphManager::GraphManager(int slots) : slots(slots) {
 	int i;
 	//srand(time(0)); // Seed initialisation based on time
 	//char * block;
@@ -49,6 +49,31 @@ int GraphManager::delGraph(opendfx::Graph *graph){
 	return 0;
 }
 
+opendfx::Graph* GraphManager::getStagedGraphByID(std::string &strid)
+{
+	opendfx::Graph* rgraph = NULL;
+	graphQueue_mutex.lock();
+	for (std::vector<opendfx::Graph *>::iterator it = stagedGraphs.begin() ; it != stagedGraphs.end(); ++it)
+	{
+	opendfx::Graph* graph = *it;
+		if (graph->getStrid() == strid){
+			rgraph = *it;
+			break;
+		}
+	}
+	graphQueue_mutex.unlock();
+	return rgraph;
+}
+
+bool GraphManager::ifGraphStaged(std::string &strid){
+	opendfx::Graph* graph = getStagedGraphByID(strid);
+	if (graph == NULL){
+		return false;
+	}
+	else{
+		return true;
+	}
+}
 
 int GraphManager::listGraphs()
 {
@@ -85,10 +110,11 @@ int GraphManager::mergeGraphs(){
 	return 0;
 }
 
-int GraphManager::stageGraphs(int slots){
+int GraphManager::stageGraphs(){
 	int remainingSlots = slots;
 	int accelCounts = 0;
 	std::vector<opendfx::Graph *>*graphs;
+	std::cout << "service started ..." << std::endl;
 	while(1){
 		for (int i = 0; i < 3; i++){
 			graphQueue_mutex.lock();
@@ -98,10 +124,16 @@ int GraphManager::stageGraphs(int slots){
 				{
 					opendfx::Graph* graph = *it;
 					accelCounts = graph->countAccel();
-					if (remainingSlots >= accelCounts && accelCounts > 0){
+					if (remainingSlots > 0 && remainingSlots >= accelCounts && accelCounts > 0){
+						std::cout << "##" <<  std::endl;
 						remainingSlots = remainingSlots - accelCounts;
+						std::cout << "staged : " << graph->getStrid() << std::endl;
 						stagedGraphs.push_back(graph);
+						std::cout << "###" << std::endl;
 						graphs->erase(std::remove(graphs->begin(), graphs->end(), graph), graphs->end());
+						if(graphs->size() == 0){
+							break;
+						}
 					}
 					else{
 						break;
@@ -112,6 +144,7 @@ int GraphManager::stageGraphs(int slots){
 		}
 		mergeGraphs();
 	}
+	std::cout << "service done" << std::endl;
 	return 0;
 }
 
@@ -143,9 +176,9 @@ int GraphManager::scheduleGraph(){
   }
   */
 
-int GraphManager::startServices(int slots){
+int GraphManager::startServices(){
 	//main_thread = pthread_self();
-	stageGraphThread = new std::thread(&GraphManager::stageGraphs, this, slots);
+	stageGraphThread = new std::thread(&GraphManager::stageGraphs, this);
 	// sighandler<sigaction>(SIGINT, sigint_handler);
 	return 0;
 }

@@ -31,6 +31,7 @@ extern "C" {
 
 #define GRAPH_INIT_DONE           11
 #define GRAPH_FINALISE_DONE       12
+#define GRAPH_SCHEDULED_DONE      13
 
 #define MAX_CLIENTS 200
 

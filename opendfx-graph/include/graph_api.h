@@ -52,6 +52,25 @@ char *			Graph_jsonAccelsDbg		(GRAPH_HANDLE gHandle);
 char *        	Graph_jsonBuffersDbg	(GRAPH_HANDLE gHandle);
 char *        	Graph_jsonLinksDbg		(GRAPH_HANDLE gHandle);
 char *        	Graph_toJsonDbg			(GRAPH_HANDLE gHandle);
+
+
+typedef void *GRAPH_MANAGER_HANDLE;
+
+GRAPH_MANAGER_HANDLE GraphManager_Create(int slots);
+GRAPH_MANAGER_HANDLE GraphManager_Distroy(GRAPH_MANAGER_HANDLE gmHandle);
+//char *			GraphManager_getInfo(GRAPH_MANAGER_HANDLE gmHandle);
+int				GraphManager_addGraph(GRAPH_MANAGER_HANDLE gmHandle, GRAPH_HANDLE gHandle);
+int				GraphManager_delGraph(GRAPH_MANAGER_HANDLE gmHandle, GRAPH_HANDLE gHandle);
+int				GraphManager_listGraphs(GRAPH_MANAGER_HANDLE gmHandle);
+int				GraphManager_mergeGraphs(GRAPH_MANAGER_HANDLE gmHandle);
+int				GraphManager_stageGraphs(GRAPH_MANAGER_HANDLE gmHandle);
+int				GraphManager_scheduleGraph(GRAPH_MANAGER_HANDLE gmHandle);
+int				GraphManager_startServices(GRAPH_MANAGER_HANDLE gmHandle);
+int				GraphManager_stopServices(GRAPH_MANAGER_HANDLE gmHandle);
+GRAPH_HANDLE 	GraphManager_getStagedGraphByID(GRAPH_MANAGER_HANDLE gmHandle, char* strid);
+int 			GraphManager_ifGraphStaged(GRAPH_MANAGER_HANDLE gmHandle, char* strid);
+
+
 #ifdef __cplusplus
 }
 #endif
