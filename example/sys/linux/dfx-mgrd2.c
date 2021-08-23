@@ -69,7 +69,7 @@ int main (int argc, char **argv)
 	GRAPH_HANDLE gHandle;
 	GRAPH_MANAGER_HANDLE gmHandle = GraphManager_Create(3);
 	GraphManager_startServices(gmHandle);
-	char * strid;
+	int id;
 
 	signal(SIGINT, intHandler);
 	_unused(argc);
@@ -146,28 +146,29 @@ int main (int argc, char **argv)
 						switch (recv_message.id) {
 
 							case GRAPH_INIT:
-								acapd_debug("daemon recieved GRAPH_INIT\n");
+								acapd_debug("daemon recieved GRAPH_INIT");
 								gHandle = Graph_CreateWithPriority("test", 2);
-								strid = Graph_fromJson(gHandle, recv_message.data);
+								id = Graph_fromJson(gHandle, recv_message.data);
 								GraphManager_addGraph(gmHandle, gHandle);
 								//printf("%s\n", Graph_toJson(gHandle));
-								printf(" #### %s\n", strid);
 								//buff_fd_cnt = abstractGraphServerConfig(scheduler, 
 								//	recv_message.data, recv_message.size, buff_fd);
 								//GRAPH_HANDLE gHandle; // = Graph_CreateWithPriority("test", 2);
 								//memcpy(buff_fd, "hello", sizeof("hello"));
 								buff_fd_cnt = 0;
-								memcpy(send_message.data, strid, strlen(strid));					
+								memcpy(send_message.data, &id, sizeof(id));					
 								send_message.id = GRAPH_INIT_DONE;
 								send_message.fdcount = buff_fd_cnt;
-								send_message.size = strlen(strid);
+								send_message.size = sizeof(id);
 								sock_fd_write(fd, &send_message, 
 											HEADERSIZE + send_message.size,
 											buff_fd, buff_fd_cnt);
 								break;
 							case GRAPH_STAGED:
-								acapd_debug("Recieved graph scheduled packet\n");
-								status = GraphManager_ifGraphStaged(gmHandle, recv_message.data);
+								acapd_debug("Recieved graph scheduled packet");
+								int * idptr = (int *) recv_message.data;
+								id = *idptr;
+								status = GraphManager_ifGraphStaged(gmHandle, id);
 								//acapd_debug("%s : %d\n", recv_message.data, status);
 								buff_fd_cnt = 0;
 								size = sizeof(status);

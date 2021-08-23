@@ -36,6 +36,7 @@ int main(int argc, char **argv) {
 		auto link01    = graph[i]->connectInputBuffer (accel01,  buffer00, 0x00, TRANSACTION_SIZE, 1, 0);
 		auto link02    = graph[i]->connectOutputBuffer(accel01,  buffer01, 0x00, TRANSACTION_SIZE, 1, 0);
 		auto link03    = graph[i]->connectInputBuffer (output02, buffer01, 0x00, TRANSACTION_SIZE, 2, 0);
+		std::cout << graph[i]->toJson() << std::endl;;
 		graph[i]->submit();
 		_unused(link00);
 		_unused(link01);

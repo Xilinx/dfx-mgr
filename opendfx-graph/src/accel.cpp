@@ -4,25 +4,31 @@
 #include <stdlib.h>
 #include <time.h>
 #include <algorithm>
+#include <fcntl.h>
+//#include <sys/socket.h>
 #include "accel.hpp"
 #include "utils.hpp"
 #include "nlohmann/json.hpp"
+#include <dfx-mgr/sys/linux/graph/layer0/xrtbuffer.h>
 
 using json = nlohmann::json;
 using opendfx::Accel;
 
 
-Accel::Accel(const std::string &name, std::string &parentGraphId, int type) : name(name), parentGraphId(parentGraphId), type(type) {
-	utils::setID(id, strid);
+Accel::Accel(const std::string &name, int parentGraphId, int type) : name(name), parentGraphId(parentGraphId), type(type) {
+	id = utils::genID();
 	linkRefCount = 0;
+	semaphore = id ^ parentGraphId; 
 }
 
-Accel::Accel(const std::string &name, std::string &parentGraphId, int type, const std::string &strid) : name(name), parentGraphId(parentGraphId), type(type), strid(strid) {
+Accel::Accel(const std::string &name, int parentGraphId, int type, int id) : name(name), id(id), parentGraphId(parentGraphId), type(type) {
 	linkRefCount = 0;
+	//id = stoi (strid, 0, 16);
+	semaphore = id ^ parentGraphId; 
 }
 
 std::string Accel::info() const {
-	return "Accel name: " + name + "_" + strid;
+	return "Accel name: " + name + "_" + utils::int2str(id);
 }
 
 std::string Accel::getName() const {
@@ -45,7 +51,7 @@ int Accel::getLinkRefCount(){
 
 std::string Accel::toJson(bool withDetail){
 	json document;
-	document["id"]      = strid;
+	document["id"]      = utils::int2str(id);
 	if(withDetail){
 		document["linkRefCount"] = linkRefCount;
 		document["parentGraphId"]    = parentGraphId;
@@ -66,4 +72,28 @@ int Accel::setDeleteFlag(bool deleteFlag){
 
 bool Accel::getDeleteFlag() const{
 	return this->deleteFlag;
+}
+
+int Accel::stage(int xrt_fd){
+	//_unused(xrt_fd);
+	int status;
+	if (type == opendfx::acceltype::inputNode || type == opendfx::acceltype::outputNode){
+		status = xrt_allocateBuffer(xrt_fd, bSize, &handle,
+				&ptr, &phyAddr, &fd);
+		if(status < 0){
+			printf( "error @ config allocation\n");
+			return status;
+		}
+		char SemaphoreName[100];
+		memset(SemaphoreName, '\0', 100);
+		sprintf(SemaphoreName, "%x", semaphore);
+		semptr = sem_open(SemaphoreName, 
+				O_CREAT,       
+				S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,   
+				0);
+		if (semptr == ((void*) -1)){ 
+			std::cout << "sem_open" << std::endl;
+		}
+	} 
+	return 0;
 }

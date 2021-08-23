@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
 	opendfx::GraphManager gManager{3};
 	opendfx::Graph *graph[10];
 
-	Device_t* device;
+	/*Device_t* device;
 	DeviceConfig_t *config;
 	void *fallbackDriver = dlopen("./drivers/fallback/src/libfallback_shared.so", RTLD_NOW);
 	REGISTER registerDev = (REGISTER) dlsym(fallbackDriver, "registerDriver");
@@ -28,11 +28,12 @@ int main(int argc, char **argv) {
 	device->open(config);
 	device->close(config);
 	unregisterDev(&device, &config);
-	dlclose(fallbackDriver);
+	dlclose(fallbackDriver);*/
 	int N = 2;
 
 	for(int i = 0; i < N; i++){
 		graph[i] = new opendfx::Graph{"G", i};
+		std::cout << "@@@###@@@" << std::endl;
 		auto input00   = graph[i]->addInputNode("INPUT", IONODE_SIZE);
 		auto accel01   = graph[i]->addAccel("AES");
 		auto output02  = graph[i]->addOutputNode("OUTPUT", IONODE_SIZE);
@@ -44,6 +45,7 @@ int main(int argc, char **argv) {
 		auto link01    = graph[i]->connectInputBuffer (accel01,  buffer00, 0x00, TRANSACTION_SIZE, 1, 0);
 		auto link02    = graph[i]->connectOutputBuffer(accel01,  buffer01, 0x00, TRANSACTION_SIZE, 1, 0);
 		auto link03    = graph[i]->connectInputBuffer (output02, buffer01, 0x00, TRANSACTION_SIZE, 2, 0);
+		std::cout << "@@@###@@@" << std::endl;
 		_unused(link00);
 		_unused(link01);
 		_unused(link02);

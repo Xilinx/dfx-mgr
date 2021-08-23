@@ -2,7 +2,7 @@
 #include "graph_api.h"
 
 int testJson(void){	GRAPH_HANDLE gHandle	= Graph_CreateWithPriority("test", 2);
-	char * strid = Graph_fromJson(gHandle, "{\
+	int id = Graph_fromJson(gHandle, "{\
        \"accels\": [\
         {\
          \"id\": \"3561\",\
@@ -60,7 +60,7 @@ int testJson(void){	GRAPH_HANDLE gHandle	= Graph_CreateWithPriority("test", 2);
        \"name\": \"G\"\
       }");
 	printf("%s\n", Graph_toJson(gHandle));
-	printf("%s\n", strid);
+	printf("%d\n", id);
 	return 0;
 }
 int main(void){

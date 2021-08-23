@@ -3,6 +3,7 @@
 #define ACCEL_HPP_
 
 #include <string>
+#include <semaphore.h>
 
 namespace opendfx {
 
@@ -10,14 +11,14 @@ namespace opendfx {
 
 	class Accel {
 		public:
-			explicit Accel(const std::string &name, std::string &parentGraphId, int type = opendfx::acceltype::accelNode);
-			explicit Accel(const std::string &name, std::string &parentGraphId, int type, const std::string &strid);
+			explicit Accel(const std::string &name, int parentGraphId, int type = opendfx::acceltype::accelNode);
+			explicit Accel(const std::string &name, int parentGraphId, int type, const int id);
 			std::string info() const;
 			std::string getName() const;
 			int addLinkRefCount();
 			int subsLinkRefCount();
 			int getLinkRefCount();
-			inline std::string getParentGraphId(){
+			inline int getParentGraphId(){
 				return this->parentGraphId;
 			}
 			inline int setBSize(int bSize){
@@ -25,14 +26,14 @@ namespace opendfx {
 				return 0;
 			}
 			inline bool operator==(const Accel& rhs) const {
-				return (this->id == rhs.id && this->strid == rhs.strid);
+				return (this->id == rhs.id);
 			}
 			int setDeleteFlag(bool deleteFlag);
 			bool getDeleteFlag() const;
 			static inline bool staticGetDeleteFlag(Accel *accel) {
 				return accel->getDeleteFlag();
 			}
-			inline std::string getId() const { return this->strid; }
+			inline int getId() const { return this->id; }
 			std::string toJson(bool withDetail = false);
 			inline int getType(){
 				return type;
@@ -41,16 +42,24 @@ namespace opendfx {
 				this->type = type;
 				return 0;
 			};
+			int stage(int xrt_fd);
 		private:
 			std::string name;
 			int id;
 			int gid;
 			int linkRefCount;
-			std::string parentGraphId;
+			int parentGraphId;
 			int type;
-			std::string strid;
 			bool deleteFlag;
 			int bSize;
+
+			int fd;     // File descriptor
+		    int handle; // Buffer XRT Handeler
+		    uint8_t* ptr;   // Buffer Ptr
+		    unsigned long phyAddr; // Buffer Physical Address
+		    int semaphore;
+		    sem_t* semptr;
+			bool staged;
 	};
 
 	//inline bool Accel::operator==(const Accel* lhs, const Accel* rhs) {

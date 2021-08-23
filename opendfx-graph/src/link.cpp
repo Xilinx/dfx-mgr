@@ -10,15 +10,15 @@
 using json = nlohmann::json;
 using opendfx::Link;
 
-Link::Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir, std::string parentGraphId) : accel(accel), buffer(buffer), dir(dir), parentGraphId(parentGraphId) {
+Link::Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir, int parentGraphId) : accel(accel), buffer(buffer), dir(dir), parentGraphId(parentGraphId) {
 	deleteFlag = false;
 	accel->addLinkRefCount();
 	buffer->addLinkRefCount();
 	//std::cout << accel.toJson(true); 
-	utils::setID(id, strid);
+	id = utils::genID();
 }
 
-Link::Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir, std::string parentGraphId, const std::string &strid) : accel(accel), buffer(buffer), dir(dir), parentGraphId(parentGraphId), strid(strid) {
+Link::Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir, int parentGraphId, int id) : accel(accel), buffer(buffer), dir(dir), id(id), parentGraphId(parentGraphId) {
 	deleteFlag = false;
 	accel->addLinkRefCount();
 	buffer->addLinkRefCount();
@@ -44,10 +44,10 @@ bool Link::getDeleteFlag() const{
 int Link::info() {
 	std::string resp;
 	if(dir == opendfx::direction::toAccel){
-		std::cout << strid << "Link: buffer:" + buffer->getName() + " -> accel:" + accel->getName() << std::endl;
+		std::cout << utils::int2str(id) << "Link: buffer:" + buffer->getName() + " -> accel:" + accel->getName() << std::endl;
 	}
 	else{
-		std::cout << strid << "Link: accel:" + accel->getName() + " -> buffer:" + buffer->getName() << std::endl;
+		std::cout << utils::int2str(id) << "Link: accel:" + accel->getName() + " -> buffer:" + buffer->getName() << std::endl;
 	}
 
 	return 0;
@@ -55,13 +55,13 @@ int Link::info() {
 
 std::string Link::toJson(bool withDetail){
 	json document;
-	document["id"]      = strid;
+	document["id"]      = utils::int2str(id);
 	if(withDetail){
 		document["deleteFlag"] = deleteFlag;
 		document["parentGraphId"]    = parentGraphId;
 	}
-	document["accel"]    = accel->getId();
-	document["buffer"]   = buffer->getId();
+	document["accel"]    = utils::int2str(accel->getId());
+	document["buffer"]   = utils::int2str(buffer->getId());
 	document["dir"]      = dir;
 	document["offset"]   = offset;
 	document["transactionSize"]   = transactionSize;

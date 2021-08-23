@@ -13,11 +13,11 @@ namespace opendfx {
 	class Link {
 
 	public:
-		explicit Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir, std::string parentGraphId);
-		explicit Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir, std::string parentGraphId, const std::string &strid);
+		explicit Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir, int parentGraphId);
+		explicit Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir, int parentGraphId, int id);
 		int info();
 		inline bool operator==(const Link& rhs) const {
-		    return (this->id == rhs.id && this->strid == rhs.strid);
+		    return (this->id == rhs.id);
 		}
 		opendfx::Accel* getAccel() const;
 		opendfx::Buffer* getBuffer() const;
@@ -26,7 +26,7 @@ namespace opendfx {
 		static inline bool staticGetDeleteFlag(Link *link) {
 			return link->getDeleteFlag();
 		}
-		inline std::string getId() const { return this->strid; }
+		inline int getId() const { return this->id; }
 		std::string toJson(bool withDetail = false);
 		inline int setOffset(int offset){
 			this->offset = offset;
@@ -49,8 +49,7 @@ namespace opendfx {
 		opendfx::Buffer *buffer;
 		int dir;
 		int id;
-		std::string parentGraphId;
-		std::string strid;
+		int parentGraphId;
 		bool deleteFlag;
 		int offset;
 		int transactionSize;

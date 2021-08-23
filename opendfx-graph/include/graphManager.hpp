@@ -29,8 +29,8 @@ namespace opendfx {
 			int scheduleGraph();
 			int startServices();
 			int stopServices();
-			opendfx::Graph* getStagedGraphByID(std::string &strid);
-			bool ifGraphStaged(std::string &strid);
+			opendfx::Graph* getStagedGraphByID(int id);
+			bool ifGraphStaged(int id);
 
 		private:
 			std::vector<opendfx::Graph *> graphsQueue[3];
@@ -41,7 +41,6 @@ namespace opendfx {
 			opendfx::Graph mergedGraph{"Merged"};
 			int id;
 			int slots;
-			std::string strid;
 			//std::queue<opendfx::Graph *> graphsQueues[3];
 			std::thread * stageGraphThread;
 			static volatile std::atomic<bool> quit;

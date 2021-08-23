@@ -49,14 +49,14 @@ int GraphManager::delGraph(opendfx::Graph *graph){
 	return 0;
 }
 
-opendfx::Graph* GraphManager::getStagedGraphByID(std::string &strid)
+opendfx::Graph* GraphManager::getStagedGraphByID(int id)
 {
 	opendfx::Graph* rgraph = NULL;
 	graphQueue_mutex.lock();
 	for (std::vector<opendfx::Graph *>::iterator it = stagedGraphs.begin() ; it != stagedGraphs.end(); ++it)
 	{
 	opendfx::Graph* graph = *it;
-		if (graph->getStrid() == strid){
+		if (graph->getId() == id){
 			rgraph = *it;
 			break;
 		}
@@ -65,8 +65,8 @@ opendfx::Graph* GraphManager::getStagedGraphByID(std::string &strid)
 	return rgraph;
 }
 
-bool GraphManager::ifGraphStaged(std::string &strid){
-	opendfx::Graph* graph = getStagedGraphByID(strid);
+bool GraphManager::ifGraphStaged(int id){
+	opendfx::Graph* graph = getStagedGraphByID(id);
 	if (graph == NULL){
 		return false;
 	}
@@ -98,6 +98,7 @@ int GraphManager::mergeGraphs(){
 		opendfx::Graph* graph = *it;
 		if (!graph->getStaged()){
 			mergedGraph.copyGraph(graph);
+			graph->allocateIOBuffers();
 			graph->setStaged(true);
 			std::cout << "scheduled ..." << std::endl;
 			std::cout << "No of accels  = " << mergedGraph.countAccel() << std::endl;
@@ -127,7 +128,7 @@ int GraphManager::stageGraphs(){
 					if (remainingSlots > 0 && remainingSlots >= accelCounts && accelCounts > 0){
 						std::cout << "##" <<  std::endl;
 						remainingSlots = remainingSlots - accelCounts;
-						std::cout << "staged : " << graph->getStrid() << std::endl;
+						std::cout << "staged : " << utils::int2str(graph->getId()) << std::endl;
 						stagedGraphs.push_back(graph);
 						std::cout << "###" << std::endl;
 						graphs->erase(std::remove(graphs->begin(), graphs->end(), graph), graphs->end());

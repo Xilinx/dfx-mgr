@@ -46,7 +46,7 @@ char *			Graph_jsonAccels		(GRAPH_HANDLE gHandle);
 char *        	Graph_jsonBuffers		(GRAPH_HANDLE gHandle);
 char *        	Graph_jsonLinks			(GRAPH_HANDLE gHandle);
 char *        	Graph_toJson			(GRAPH_HANDLE gHandle);
-char *			Graph_fromJson			(GRAPH_HANDLE gHandle, char * jsonstr);
+int				Graph_fromJson			(GRAPH_HANDLE gHandle, char * jsonstr);
 
 char *			Graph_jsonAccelsDbg		(GRAPH_HANDLE gHandle);
 char *        	Graph_jsonBuffersDbg	(GRAPH_HANDLE gHandle);
@@ -67,8 +67,8 @@ int				GraphManager_stageGraphs(GRAPH_MANAGER_HANDLE gmHandle);
 int				GraphManager_scheduleGraph(GRAPH_MANAGER_HANDLE gmHandle);
 int				GraphManager_startServices(GRAPH_MANAGER_HANDLE gmHandle);
 int				GraphManager_stopServices(GRAPH_MANAGER_HANDLE gmHandle);
-GRAPH_HANDLE 	GraphManager_getStagedGraphByID(GRAPH_MANAGER_HANDLE gmHandle, char* strid);
-int 			GraphManager_ifGraphStaged(GRAPH_MANAGER_HANDLE gmHandle, char* strid);
+GRAPH_HANDLE 	GraphManager_getStagedGraphByID(GRAPH_MANAGER_HANDLE gmHandle, int id);
+int 			GraphManager_ifGraphStaged(GRAPH_MANAGER_HANDLE gmHandle, int id);
 
 
 #ifdef __cplusplus

@@ -9,24 +9,22 @@ namespace opendfx {
 class Buffer {
 
 	public:
-		explicit Buffer(const std::string &name, std::string &parentGraphId);
-		explicit Buffer(const std::string &name, std::string &parentGraphId, const std::string &strid);
+		explicit Buffer(const std::string &name, int parentGraphId);
+		explicit Buffer(const std::string &name, int parentGraphId, int id);
 		std::string info() const;
 		std::string getName() const;
 		int addLinkRefCount();
 		int subsLinkRefCount();
 		int getLinkRefCount();
 		inline bool operator==(const Buffer& rhs) const {
-			std::cout << info() <<  " : " << rhs.info() << "\n";
-			std::cout << this->name <<  " : " << rhs.name << "\n";
-		    return (this->id == rhs.id && this->strid == rhs.strid);
+		    return (this->id == rhs.id);
 		}
 		int setDeleteFlag(bool deleteFlag);
 		bool getDeleteFlag() const;
 		static inline bool staticGetDeleteFlag(Buffer *buffer) {
 			return buffer->getDeleteFlag();
 		}
-		inline std::string getId() const { return this->strid; }
+		inline int getId() const { return this->id; }
 		std::string toJson(bool withDetail = false);
 		inline int setBSize(int bSize){
 			this->bSize = bSize;
@@ -39,8 +37,7 @@ class Buffer {
 	private:
 		std::string name;
 		int id;
-		std::string parentGraphId;
-		std::string strid;
+		int parentGraphId;
 		int linkRefCount;
 		bool deleteFlag;
 		int bSize;

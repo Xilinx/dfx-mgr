@@ -39,8 +39,8 @@ namespace opendfx {
 			int countAccel();
 			int countBuffer();
 			int countLink();
-			opendfx::Accel  * getAccelByID(std::string strid);
-			opendfx::Buffer * getBufferByID(std::string strid);
+			opendfx::Accel  * getAccelByID(int id);
+			opendfx::Buffer * getBufferByID(int id);
 			int listAccels();
 			int listBuffers();
 			int listLinks();
@@ -48,12 +48,12 @@ namespace opendfx {
 			std::string jsonBuffers(bool withDetail = false);
 			std::string jsonLinks(bool withDetail = false);
 			std::string toJson(bool withDetail = false);
-			std::string fromJson(std::string jsonstr);
+			int fromJson(std::string jsonstr);
 
 			int setDeleteFlag(bool deleteFlag);
 			bool getDeleteFlag() const;
-			inline std::string getStrid() {
-				return strid;
+			inline int getId() {
+				return id;
 			};
 			inline int getPriority() {
 				return priority;
@@ -80,12 +80,12 @@ namespace opendfx {
 			Graph* operator - (Graph *graph);
 			int submit(void);
 			int isScheduled(void);
+			int allocateIOBuffers(void);
 		private:
 			std::string m_name;
 			int id;
 			int priority;
 			bool staged;
-			std::string strid;
 			std::vector<opendfx::Accel *> accels;
 			std::vector<opendfx::Buffer *> buffers;
 			std::vector<opendfx::Link *> links;
@@ -93,6 +93,7 @@ namespace opendfx {
 			int accelCount;
 			std::mutex graph_mutex;
 			socket_t * domainSocket;
+			int xrt_fd;
 	};
 } // #end of graph
 

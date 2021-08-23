@@ -6,6 +6,9 @@
 
 namespace utils{
 	int setID(int & id, std::string & strid);
+	int genID();
+	std::string int2str(int id);
+	int str2int(std::string strid);
 } 
 
 

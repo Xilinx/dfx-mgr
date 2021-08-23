@@ -170,13 +170,9 @@ char * Graph_toJson(GRAPH_HANDLE gHandle){
 	return cstr;
 }
 
-char * Graph_fromJson(GRAPH_HANDLE gHandle, char * jsonstr){
+int Graph_fromJson(GRAPH_HANDLE gHandle, char * jsonstr){
 	opendfx::Graph *graph = (opendfx::Graph *) gHandle;
-	std::string str = graph->fromJson(jsonstr);
-	char *cstr = new char[str.length() + 1];
-	strcpy(cstr, str.c_str());
-	return cstr;
-
+	return  graph->fromJson(jsonstr);
 }
 
 char * Graph_jsonAccelsDbg(GRAPH_HANDLE gHandle){
@@ -273,17 +269,15 @@ int				GraphManager_stopServices(GRAPH_MANAGER_HANDLE gmHandle){
 	return graphManager->stopServices();
 }
 
-GRAPH_HANDLE 	GraphManager_getStagedGraphByID(GRAPH_MANAGER_HANDLE gmHandle, char* strid){
-	std::string sstrid(strid);
+GRAPH_HANDLE 	GraphManager_getStagedGraphByID(GRAPH_MANAGER_HANDLE gmHandle, int id){
 	opendfx::GraphManager *graphManager = (opendfx::GraphManager *) gmHandle;
-	opendfx::Graph *graph = graphManager->getStagedGraphByID(sstrid);
+	opendfx::Graph *graph = graphManager->getStagedGraphByID(id);
 	return (GRAPH_HANDLE) graph;	
 }
 
-int 			GraphManager_ifGraphStaged(GRAPH_MANAGER_HANDLE gmHandle, char* strid){
-	std::string sstrid(strid);
+int 			GraphManager_ifGraphStaged(GRAPH_MANAGER_HANDLE gmHandle, int id){
 	opendfx::GraphManager *graphManager = (opendfx::GraphManager *) gmHandle;
-	return (int) graphManager->ifGraphStaged(sstrid);
+	return (int) graphManager->ifGraphStaged(id);
 }
 
 #ifdef __cplusplus
