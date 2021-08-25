@@ -41,7 +41,7 @@ typedef struct Buffers Buffers_t;
 #define EMPTY 0
 #define INQUEUE 1
 #define FULL  2
-struct Buffer{
+struct DFXBuffer{
 	int index; // Serial No of Buffer
 	int type;  //
 	int fd;    // File descriptor from ACAPD
@@ -62,7 +62,7 @@ struct Buffer{
 	char name[1024]; // Buffer Name Identifier
 };
 
-typedef struct Buffer Buffer_t;
+typedef struct DFXBuffer DFXBuffer_t;
 
 extern int printBuffer(Buffers_t* buffers, int slot);
 extern int initXrtBuffer(int slot, Buffers_t* buffers);

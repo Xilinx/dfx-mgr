@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ */
 // graph.hpp
 #ifndef GRAPH_HPP_
 #define GRAPH_HPP_
@@ -80,7 +85,13 @@ namespace opendfx {
 			Graph* operator - (Graph *graph);
 			int submit(void);
 			int isScheduled(void);
-			int allocateIOBuffers(void);
+			int allocateIOBuffers();
+			int deallocateIOBuffers();
+			int allocateBuffers();
+			int deallocateBuffers();
+			int allocateAccelResources();
+			int deallocateAccelResources();
+
 		private:
 			std::string m_name;
 			int id;

@@ -1,10 +1,18 @@
+/*
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ */
 // buffer.hpp
 #ifndef BUFFER_HPP_
 #define BUFFER_HPP_
 
 #include <string>
+#include <semaphore.h>
 
 namespace opendfx {
+
+	enum buffertype {DDR_BASED=0, STREAM_BASED=1};
 
 class Buffer {
 
@@ -17,7 +25,7 @@ class Buffer {
 		int subsLinkRefCount();
 		int getLinkRefCount();
 		inline bool operator==(const Buffer& rhs) const {
-		    return (this->id == rhs.id);
+			return (this->id == rhs.id);
 		}
 		int setDeleteFlag(bool deleteFlag);
 		bool getDeleteFlag() const;
@@ -34,6 +42,8 @@ class Buffer {
 			this->bType = bType;
 			return 0;
 		}
+		int allocateBuffer(int xrt_fd);
+		int deallocateBuffer(int xrt_fd);
 	private:
 		std::string name;
 		int id;
@@ -42,6 +52,13 @@ class Buffer {
 		bool deleteFlag;
 		int bSize;
 		int bType;
-	};
+
+		int fd;     // File descriptor
+		int handle; // Buffer XRT Handeler
+		uint8_t* ptr;   // Buffer Ptr
+		unsigned long phyAddr; // Buffer Physical Address
+		int semaphore;
+		sem_t* semptr;
+};
 } // #end of wrapper
 #endif // BUFFER_HPP_

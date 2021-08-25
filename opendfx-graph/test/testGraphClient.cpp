@@ -14,7 +14,8 @@
 #define IONODE_SIZE 32*1024*1024
 #define BUFFER_SIZE 16*1024*1024
 #define TRANSACTION_SIZE  32*1024*1024
-#define DDR_BASED 0
+#define DDR_BASED opendfx::buffertype::DDR_BASED
+#define STREAM_BASED opendfx::buffertype::STREAM_BASED
 
 int main(int argc, char **argv) {
 	_unused(argc);

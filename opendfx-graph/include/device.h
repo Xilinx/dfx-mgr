@@ -8,6 +8,9 @@
  * @file    device.h
  * @brief   Accelerator devices
  */
+ 
+#ifndef DEVICE_HPP_
+#define DEVICE_HPP_
 
 typedef struct DeviceConfig {
     char name[128];
@@ -37,3 +40,5 @@ typedef struct Device {
 
 typedef int (*REGISTER)(Device_t**, DeviceConfig_t**);
 typedef int (*UNREGISTER)(Device_t**, DeviceConfig_t**);
+
+#endif // DEVICE_HPP_

@@ -47,7 +47,7 @@ int fallback_S2MMStatus(void* dmconfig_a){
 	return 0;
 }
 
-int fallback_MM2SData(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t size, uint8_t firstLast, uint8_t tid){
+int fallback_MM2SData(void* dmconfig_a, DFXBuffer_t* data, uint64_t offset, uint64_t size, uint8_t firstLast, uint8_t tid){
 	//INFO("\n");
 	_unused(firstLast);
 	_unused(offset);
@@ -70,7 +70,7 @@ int fallback_MM2SData(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_
 	return 0;
 }
 
-int fallback_S2MMData(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t size, uint8_t firstLast){
+int fallback_S2MMData(void* dmconfig_a, DFXBuffer_t* data, uint64_t offset, uint64_t size, uint8_t firstLast){
 	//INFO("\n");
 	_unused(offset);
 	_unused(firstLast);
@@ -90,7 +90,7 @@ int fallback_S2MMData(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_
 	return 0;
 }
 
-int fallback_S2MMDone(void* dmconfig_a, Buffer_t* data){
+int fallback_S2MMDone(void* dmconfig_a, DFXBuffer_t* data){
 	//INFO("\n");
 	fallback_DMConfig_t* dmconfig = (fallback_DMConfig_t*)dmconfig_a;
 	_unused(data);
@@ -99,7 +99,7 @@ int fallback_S2MMDone(void* dmconfig_a, Buffer_t* data){
 	return status;
 }
 
-int fallback_MM2SDone(void* dmconfig_a, Buffer_t* data){
+int fallback_MM2SDone(void* dmconfig_a, DFXBuffer_t* data){
 	//INFO("\n");
 	fallback_DMConfig_t* dmconfig = (fallback_DMConfig_t*)dmconfig_a;
 	_unused(data);

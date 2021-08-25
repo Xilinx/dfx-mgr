@@ -279,7 +279,7 @@ int delBuffNode(BuffNode_t** buffNode, int drm_fd){
 	return 0;
 }
 
-int printBuffInfo(Buffer_t buffer, char* json){
+int printBuffInfo(DFXBuffer_t buffer, char* json){
 	//INFO("\n"); 
 	int len = sprintf(json, "{\"node\": \"%s_%x\", \"type\": %d, ", buffer.name, buffer.index, buffer.type); 
 	len += sprintf(json + len, "\"fd\": %d, \"size\": %d, \"handle\": %d, ", buffer.fd, buffer.size, buffer.handle);

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ */
 // wrapper.cpp
 #include <iostream>
 #include <fstream>
@@ -481,8 +486,50 @@ int Graph::allocateIOBuffers()
 {
 	for (std::vector<opendfx::Accel *>::iterator it = accels.begin() ; it != accels.end(); ++it)
 	{
-		(*it)->stage(xrt_fd);
+		(*it)->allocateBuffer(xrt_fd);
 	}
 	return 0;
 }
 
+int Graph::deallocateIOBuffers()
+{
+	for (std::vector<opendfx::Accel *>::iterator it = accels.begin() ; it != accels.end(); ++it)
+	{
+		(*it)->deallocateBuffer(xrt_fd);
+	}
+	return 0;
+}
+
+int Graph::allocateBuffers(){
+	for (std::vector<opendfx::Buffer *>::iterator it = buffers.begin() ; it != buffers.end(); ++it)
+	{
+		(*it)->allocateBuffer(xrt_fd);
+	}
+	return 0;
+}
+
+int Graph::deallocateBuffers(){
+	for (std::vector<opendfx::Buffer *>::iterator it = buffers.begin() ; it != buffers.end(); ++it)
+	{
+		(*it)->deallocateBuffer(xrt_fd);
+	}
+	return 0;
+}
+
+int Graph::allocateAccelResources()
+{
+	for (std::vector<opendfx::Accel *>::iterator it = accels.begin() ; it != accels.end(); ++it)
+	{
+		(*it)->allocateAccelResource();
+	}
+	return 0;
+}
+
+int Graph::deallocateAccelResources()
+{
+	for (std::vector<opendfx::Accel *>::iterator it = accels.begin() ; it != accels.end(); ++it)
+	{
+		(*it)->deallocateAccelResource();
+	}
+	return 0;
+}

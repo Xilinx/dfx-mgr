@@ -1,1 +1,4 @@
+add_subdirectory (AIEXrtDma)
 add_subdirectory (fallback)
+add_subdirectory (sihaDma)
+add_subdirectory (sihaXrtDma)

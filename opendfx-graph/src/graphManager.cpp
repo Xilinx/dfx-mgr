@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ */
 // graphManager.cpp
 #include <iostream>
 #include <fstream>
@@ -99,6 +104,8 @@ int GraphManager::mergeGraphs(){
 		if (!graph->getStaged()){
 			mergedGraph.copyGraph(graph);
 			graph->allocateIOBuffers();
+			graph->allocateBuffers();
+			graph->allocateAccelResources();
 			graph->setStaged(true);
 			std::cout << "scheduled ..." << std::endl;
 			std::cout << "No of accels  = " << mergedGraph.countAccel() << std::endl;

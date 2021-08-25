@@ -1,9 +1,15 @@
+/*
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ */
 // accel.hpp
 #ifndef ACCEL_HPP_
 #define ACCEL_HPP_
 
 #include <string>
 #include <semaphore.h>
+#include "device.h"
 
 namespace opendfx {
 
@@ -42,7 +48,10 @@ namespace opendfx {
 				this->type = type;
 				return 0;
 			};
-			int stage(int xrt_fd);
+			int allocateBuffer(int xrt_fd);
+			int deallocateBuffer(int xrt_fd);
+			int allocateAccelResource();
+			int deallocateAccelResource();
 		private:
 			std::string name;
 			int id;
@@ -52,6 +61,14 @@ namespace opendfx {
 			int type;
 			bool deleteFlag;
 			int bSize;
+			std::string dmaLib;
+			std::string fallbackLib;
+			int InterRMCompatible;
+			Device_t* device;
+    		DeviceConfig_t *config;
+    		REGISTER registerDev;
+   			UNREGISTER unregisterDev;
+			void *dmDriver;
 
 			int fd;     // File descriptor
 		    int handle; // Buffer XRT Handeler

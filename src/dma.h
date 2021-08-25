@@ -16,14 +16,14 @@
 extern "C" {
 #endif
 
-/** \defgroup dma DMA Interfaces
- *  @{ */
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <dfx-mgr/device.h>
 #include <dfx-mgr/print.h>
 #include <dfx-mgr/helper.h>
+/** \defgroup dma DMA Interfaces
+ *  @{ */
+
 /**
  * @brief ACAPD DMA transaction direction
  */

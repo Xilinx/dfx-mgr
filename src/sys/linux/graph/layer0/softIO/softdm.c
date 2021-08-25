@@ -37,7 +37,7 @@ int soft_S2MMStatus(void* dmconfig_a){
 	return 0;
 }
 
-int soft_MM2SData(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t size, uint8_t firstLast, uint8_t tid){
+int soft_MM2SData(void* dmconfig_a, DFXBuffer_t* data, uint64_t offset, uint64_t size, uint8_t firstLast, uint8_t tid){
 	_unused(tid);
 	soft_DMConfig_t* dmconfig = (soft_DMConfig_t*)dmconfig_a;
 	memcpy((uint8_t*)dmconfig->data, ((uint8_t*)data->ptr) + offset, size);
@@ -48,7 +48,7 @@ int soft_MM2SData(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t si
 	return 0;
 }
 
-int soft_S2MMData(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t size, uint8_t firstLast){
+int soft_S2MMData(void* dmconfig_a, DFXBuffer_t* data, uint64_t offset, uint64_t size, uint8_t firstLast){
 	soft_DMConfig_t* dmconfig = (soft_DMConfig_t*)dmconfig_a;
 	if(firstLast){
 		//int val;
@@ -60,13 +60,13 @@ int soft_S2MMData(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t si
 	return 0;
 }
 
-int soft_S2MMDone(void* dmconfig_a, Buffer_t* data){
+int soft_S2MMDone(void* dmconfig_a, DFXBuffer_t* data){
 	_unused(dmconfig_a);
 	_unused(data);
 	return 1;
 }
 
-int soft_MM2SDone(void* dmconfig_a, Buffer_t* data){
+int soft_MM2SDone(void* dmconfig_a, DFXBuffer_t* data){
 	_unused(dmconfig_a);
 	_unused(data);
 	return 1;

@@ -49,7 +49,7 @@ struct AccelNode{
 };
 
 struct BuffNode{
-	Buffer_t buffer; // Buffer Node Link List structure contains all the Buffer nodes
+	DFXBuffer_t buffer; // Buffer Node Link List structure contains all the Buffer nodes
 	int status;
 	int readStatus;
 	struct BuffNode *head;
@@ -125,7 +125,7 @@ extern int printAccelNodes(AccelNode_t *accelNode, char* json);
 extern int printAccelNodesInfo(AccelNode_t *accelNode, char* json);
 extern BuffNode_t* addBuffNode(BuffNode_t** buffNode, BuffNode_t* nextBuff);
 extern int delBuffNode(BuffNode_t** buffNode, int drm_fd);
-extern int printBuffInfo(Buffer_t buffer, char* json);
+extern int printBuffInfo(DFXBuffer_t buffer, char* json);
 extern int printBuffNodes(BuffNode_t *buffNode, char* json);
 extern int printBuffNodesInfo(BuffNode_t *buffNode, char* json);
 extern Link_t* addLink(Link_t** link, Link_t* nextLink);

@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ */
 // link.cpp
 #include <iostream>
 #include <sstream>
