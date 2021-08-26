@@ -17,6 +17,7 @@
 #include "graph.hpp"
 #include "graphManager.hpp"
 #include <signal.h>
+#include <dfx-mgr/daemon_helper.h>
 
 using opendfx::GraphManager;
 
@@ -30,7 +31,7 @@ GraphManager::GraphManager(int slots) : slots(slots) {
 	srand(i ^ time(0));
 	urandom.close();
 	//std::cout << i << " : " << time(0) << std::endl;
-
+	dfx_init();
 	id = rand() % 0x100000000;
 }
 
@@ -106,6 +107,9 @@ int GraphManager::mergeGraphs(){
 			graph->allocateIOBuffers();
 			graph->allocateBuffers();
 			graph->allocateAccelResources();
+			graph->createExecutionDependencyList();
+			graph->getExecutionDependencyList();
+			
 			graph->setStaged(true);
 			std::cout << "scheduled ..." << std::endl;
 			std::cout << "No of accels  = " << mergedGraph.countAccel() << std::endl;

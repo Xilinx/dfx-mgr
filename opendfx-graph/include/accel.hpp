@@ -77,6 +77,8 @@ namespace opendfx {
 		    int semaphore;
 		    sem_t* semptr;
 			bool staged;
+		
+			int slot;
 	};
 
 	//inline bool Accel::operator==(const Accel* lhs, const Accel* rhs) {

@@ -135,6 +135,7 @@ int sys_accel_config(acapd_accel_t *accel)
 		}
 		strncpy(config_path, env_config_path, sizeof(config_path));
 	}
+	acapd_debug("%s: Json Path %s \n",__func__,config_path);
 	parseAccelJson(accel, config_path);
 	if (sys_needs_load_accel(accel) == 0) {
 		for (int i = 0; i < accel->num_ip_devs; i++) {

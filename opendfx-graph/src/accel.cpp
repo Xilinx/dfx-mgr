@@ -5,6 +5,8 @@
  */
 // accel.cpp
 #include <iostream>
+#include <dlfcn.h>
+#include <iomanip>
 #include <sstream>
 #include <stdlib.h>
 #include <time.h>
@@ -16,6 +18,7 @@
 #include "nlohmann/json.hpp"
 #include <dfx-mgr/sys/linux/graph/layer0/xrtbuffer.h>
 #include <dfx-mgr/accel.h>
+#include <dfx-mgr/daemon_helper.h>
 
 using json = nlohmann::json;
 using opendfx::Accel;
@@ -127,29 +130,88 @@ int Accel::allocateAccelResource(){
 		char *cname = new char[name.length() + 1];
 		strcpy(cname, name.c_str());
 		std::string metadata(getAccelMetadata(cname));
-		std::cout << metadata << std::endl;
+		//std::cout << metadata << std::endl;
+		json document = json::parse(metadata);
+		json accelMetadataObj = document["accel_metadata"];
+		std::string dmaType;
+		accelMetadataObj.at("DMA_type").get_to(dmaType);
+		if (dmaType == "HLS_MULTICHANNEL_DMA"){
+			dmaLib = "/media/test/dfx-mgr/build/opendfx-graph/drivers/sihaDma/src/libsihaDma_shared.so";
+		}else if(dmaType == "SOFT_DMA"){
+			dmaLib = "/media/test/dfx-mgr/build/opendfx-graph/drivers/fallback/src/libfallback_shared.so";
+		}
+		json fallbackObj = accelMetadataObj["fallback"];
+		std::string behaviour;
+		std::string fallbackLib;
+		fallbackObj.at("Behaviour").get_to(behaviour);
+		fallbackObj.at("fallback_Lib").get_to(fallbackLib);
+		json interrmObj = accelMetadataObj["Inter_RM"];
+		std::string compatible;
+		interrmObj.at("Compatible").get_to(compatible);
+		if (compatible == "True"){
+			InterRMCompatible = 1;
+		}
+		else if (compatible == "False"){
+			InterRMCompatible = 0;
+		}
+		else{
+			InterRMCompatible = 0;
+		}
+		std::cout << "load accelerator" << std::endl;
+		slot = load_accelerator(cname);
+		std::cout << "load accelerator" << std::endl;
+		if(slot >= 0){
+			std::cout << "loading hardware accel" << std::endl;
+			dmDriver = dlopen(dmaLib.c_str(), RTLD_NOW);
+			registerDev = (REGISTER) dlsym(dmDriver, "registerDriver");
+			unregisterDev = (UNREGISTER) dlsym(dmDriver, "unregisterDriver");
+			registerDev(&device, &config);
+			config->slot = slot;
+			//device->open(config);
+			std::string accelConfig = "AccelConfig";
+			char *cAccelConfig = new char[accelConfig.length() + 1];
+			strcpy(cAccelConfig, accelConfig.c_str());
+			std::string dma_hls = "rm_comm_box";
+			char *cDma_hls = new char[dma_hls.length() + 1];
+			strcpy(cDma_hls, dma_hls.c_str());
+			int AccelConfig_fd = getFD(slot, cAccelConfig);
+			if (AccelConfig_fd < 0){
+				printf("No AccelConfig dev found\n");
+				return -1;
+			}
+			int dma_hls_fd = getFD(slot, cDma_hls);
+			if (dma_hls_fd < 0){
+				printf("No dma_hls dev found\n");
+				return -1;
+			}
+			/*pldevices->slot[slot] = slotNum[slot];
+			status = mapPlDevicesAccel(pldevices, slot);
+			if (status < 0){
+				INFO("mapPlDevices Failed !!\n");
+				return -1;
+			}*/
+
+		}
+		else if(fallbackLib != "None"){
+			std::cout << "loading soft accel" << std::endl;
+			dmDriver = dlopen(fallbackLib.c_str(), RTLD_NOW);
+			registerDev = (REGISTER) dlsym(dmDriver, "registerDriver");
+			unregisterDev = (UNREGISTER) dlsym(dmDriver, "unregisterDriver");
+			registerDev(&device, &config);
+			device->open(config);
+		}
+		else {
+			return -1;
+		}
 	}
-	/*if (type == opendfx::acceltype::inputNode || type == opendfx::acceltype::outputNode){
-	  status = xrt_allocateBuffer(xrt_fd, bSize, &handle,
-	  &ptr, &phyAddr, &fd);
-	  if(status < 0){
-	  printf( "error @ config allocation\n");
-	  return status;
-	  }
-	  char SemaphoreName[100];
-	  memset(SemaphoreName, '\0', 100);
-	  sprintf(SemaphoreName, "%x", semaphore);
-	  semptr = sem_open(SemaphoreName, 
-	  O_CREAT,       
-	  S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,   
-	  0);
-	  if (semptr == ((void*) -1)){ 
-	  std::cout << "sem_open" << std::endl;
-	  }
-	  } */
 	return 0;
 }
 
 int Accel::deallocateAccelResource(){
+	if (type == opendfx::acceltype::accelNode){
+		device->close(config);
+		unregisterDev(&device, &config);
+		dlclose(dmDriver);
+	}
 	return 0;
 }

@@ -294,13 +294,8 @@ int Graph::fromJson(std::string jsonstr){
 	json document = json::parse(jsonstr);
 	document.at("name").get_to(m_name);
 	json accelsObj = document["accels"];
-	std::cout << "0###" << std::endl;
 	for (json::iterator it = accelsObj.begin(); it != accelsObj.end(); ++it) {
 		json accelObj = *it;
-		std::cout << accelObj["name"].get<std::string>() << std::endl;
-		std::cout << id << std::endl;
-		std::cout << accelObj["type"].get<int>() << std::endl;
-		std::cout << accelObj["id"].get<std::string>() << std::endl;
 		opendfx::Accel *accel = new opendfx::Accel(accelObj["name"].get<std::string>(), id, accelObj["type"].get<int>(), utils::str2int(accelObj["id"].get<std::string>()));
 		if (accelObj["type"].get<int>() == opendfx::acceltype::accelNode){
 			accelCount ++;
@@ -308,17 +303,14 @@ int Graph::fromJson(std::string jsonstr){
 		accel->setBSize(accelObj["bSize"].get<int>());
 		accels.push_back(accel);
 	}
-	std::cout << "1###" << std::endl;
 	json buffersObj = document["buffers"];
 	for (json::iterator it = buffersObj.begin(); it != buffersObj.end(); ++it) {
 		json bufferObj = *it;
-
 		opendfx::Buffer *buffer = new opendfx::Buffer(bufferObj["name"].get<std::string>(), id, utils::str2int(bufferObj["id"].get<std::string>()));
 		buffer->setBSize(bufferObj["bSize"].get<int>());
 		buffer->setBType(bufferObj["bType"].get<int>());
 		buffers.push_back(buffer);
 	}
-	std::cout << "2###" << std::endl;
 	json linksObj = document["links"];
 	for (json::iterator it = linksObj.begin(); it != linksObj.end(); ++it) {
 		json linkObj = *it;
@@ -530,6 +522,30 @@ int Graph::deallocateAccelResources()
 	for (std::vector<opendfx::Accel *>::iterator it = accels.begin() ; it != accels.end(); ++it)
 	{
 		(*it)->deallocateAccelResource();
+	}
+	return 0;
+}
+
+int Graph::createExecutionDependencyList(){
+	std::cout << "creating Execution Dependency List .." << std::endl;
+	for (std::vector<opendfx::Link   *>::iterator it = links.begin()  ; it != links.end()  ; ++it)
+	{
+		opendfx::Link* link = *it; 
+		std::cout << "## " << link->getId() << std::endl;
+		opendfx::ExecutionDependency* eDependency = new opendfx::ExecutionDependency(link);
+		std::cout << "#$ " << eDependency->getLink()->getId() << std::endl;
+		executionDependencyList.push_back(eDependency);
+	
+	}
+	return 0;
+}
+
+int Graph::getExecutionDependencyList(){
+	std::cout << "Execution Dependency Info .." << std::endl;
+	for (std::vector<opendfx::ExecutionDependency *>::iterator it = executionDependencyList.begin()  ; it != executionDependencyList.end()  ; ++it)
+	{
+		opendfx::ExecutionDependency *eDependency = *it; 
+		std::cout << eDependency->getInfo(); 
 	}
 	return 0;
 }

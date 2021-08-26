@@ -14,6 +14,8 @@
 
 typedef struct DeviceConfig {
     char name[128];
+    void *privConfig;
+    int slot;
     //acapd_device_t *dev; /**< pointer to the DMA device */
     //int chnl_id; /**< hardware channel id of a data mover controller */
     //acapd_dir_t dir; /**< DMA channel direction */

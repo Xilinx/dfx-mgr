@@ -12,6 +12,7 @@
 #include <mutex>
 #include <accel.hpp>
 #include <buffer.hpp>
+#include <executionDependency.hpp>
 #include <link.hpp>
 #include <sys/socket.h>
 #include <dfx-mgr/dfxmgr_client.h>
@@ -91,6 +92,8 @@ namespace opendfx {
 			int deallocateBuffers();
 			int allocateAccelResources();
 			int deallocateAccelResources();
+			int createExecutionDependencyList();
+			int getExecutionDependencyList();
 
 		private:
 			std::string m_name;
@@ -100,6 +103,7 @@ namespace opendfx {
 			std::vector<opendfx::Accel *> accels;
 			std::vector<opendfx::Buffer *> buffers;
 			std::vector<opendfx::Link *> links;
+			std::vector<opendfx::ExecutionDependency *> executionDependencyList;
 			bool deleteFlag;
 			int accelCount;
 			std::mutex graph_mutex;
