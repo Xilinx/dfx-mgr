@@ -331,7 +331,7 @@ int getFD(int slot, char *name)
 		int n = strlen(dev_name);
 		while (j < n){
 			if (dev_name[j] == '.') {
-				strncpy(substr, (dev_name + j +1),(n - 1 - j));
+				strncpy(substr, (dev_name + j +1),(n - j));
 				break;
 			}
 			j += 1;
