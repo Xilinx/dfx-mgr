@@ -109,6 +109,9 @@ int GraphManager::mergeGraphs(){
 			graph->allocateAccelResources();
 			graph->createExecutionDependencyList();
 			graph->getExecutionDependencyList();
+			graph->createScheduleList();
+			//graph->getScheduleListInfo();
+			graph->execute();
 			
 			graph->setStaged(true);
 			std::cout << "scheduled ..." << std::endl;

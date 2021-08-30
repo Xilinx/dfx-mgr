@@ -102,6 +102,15 @@ int Accel::allocateBuffer(int xrt_fd){
 		if (semptr == ((void*) -1)){ 
 			std::cout << "sem_open" << std::endl;
 		}
+		dmaLib = "/media/test/dfx-mgr/build/opendfx-graph/drivers/softDma/src/libsoftDma_shared.so";	
+        dmDriver = dlopen(dmaLib.c_str(), RTLD_NOW);
+        registerDev = (REGISTER) dlsym(dmDriver, "registerDriver");
+        unregisterDev = (UNREGISTER) dlsym(dmDriver, "unregisterDriver");
+        registerDev(&device, &config);
+        config->semptr  = semptr;
+        config->ptr     = ptr;
+        config->phyAddr = phyAddr;
+        device->open(config);
 	} 
 	return 0;
 }
@@ -167,30 +176,7 @@ int Accel::allocateAccelResource(){
 			unregisterDev = (UNREGISTER) dlsym(dmDriver, "unregisterDriver");
 			registerDev(&device, &config);
 			config->slot = slot;
-			//device->open(config);
-			std::string accelConfig = "AccelConfig";
-			char *cAccelConfig = new char[accelConfig.length() + 1];
-			strcpy(cAccelConfig, accelConfig.c_str());
-			std::string dma_hls = "rm_comm_box";
-			char *cDma_hls = new char[dma_hls.length() + 1];
-			strcpy(cDma_hls, dma_hls.c_str());
-			int AccelConfig_fd = getFD(slot, cAccelConfig);
-			if (AccelConfig_fd < 0){
-				printf("No AccelConfig dev found\n");
-				return -1;
-			}
-			int dma_hls_fd = getFD(slot, cDma_hls);
-			if (dma_hls_fd < 0){
-				printf("No dma_hls dev found\n");
-				return -1;
-			}
-			/*pldevices->slot[slot] = slotNum[slot];
-			status = mapPlDevicesAccel(pldevices, slot);
-			if (status < 0){
-				INFO("mapPlDevices Failed !!\n");
-				return -1;
-			}*/
-
+			device->open(config);
 		}
 		else if(fallbackLib != "None"){
 			std::cout << "loading soft accel" << std::endl;

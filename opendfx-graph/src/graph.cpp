@@ -27,6 +27,7 @@
 //#include <sys/mman.h>
 //#include <sys/stat.h>
 
+//#include "device.h"
 #include "graph.hpp"
 #include "accel.hpp"
 #include "buffer.hpp"
@@ -409,7 +410,7 @@ int Graph::cutGraph(opendfx::Graph *graph){
 
 int Graph::submit(void){
 	struct message send_message, recv_message;
-    int ret;
+	int ret;
 	int fd[25];
 	int fdcount = 0; 
 	int size;	
@@ -418,25 +419,25 @@ int Graph::submit(void){
 	if (status < 0){
 		return -1;
 	}
-	
+
 	std::string str = toJson();
 	char *cstr = new char[str.length() + 1];
 	strcpy(cstr, str.c_str());
-	
-    memset(&send_message, '\0', sizeof(struct message));
-    send_message.id = GRAPH_INIT;
-    send_message.size = str.length();
-    send_message.fdcount = 0;
-    memcpy(send_message.data, cstr, str.length());
-    ret = write(domainSocket->sock_fd, &send_message, HEADERSIZE + send_message.size);
-    if (ret < 0){
-        std::cout << __func__ << " : socket write failed" << std::endl;
-        return -1;
-    }
-    memset(&recv_message, '\0', sizeof(struct message));
-    size = sock_fd_read(domainSocket->sock_fd, &recv_message, fd, &fdcount);
-    if (size <= 0){
-        return -1;
+
+	memset(&send_message, '\0', sizeof(struct message));
+	send_message.id = GRAPH_INIT;
+	send_message.size = str.length();
+	send_message.fdcount = 0;
+	memcpy(send_message.data, cstr, str.length());
+	ret = write(domainSocket->sock_fd, &send_message, HEADERSIZE + send_message.size);
+	if (ret < 0){
+		std::cout << __func__ << " : socket write failed" << std::endl;
+		return -1;
+	}
+	memset(&recv_message, '\0', sizeof(struct message));
+	size = sock_fd_read(domainSocket->sock_fd, &recv_message, fd, &fdcount);
+	if (size <= 0){
+		return -1;
 	}
 	int *idptr = (int*)recv_message.data;
 	id = *idptr; 
@@ -446,31 +447,31 @@ int Graph::submit(void){
 
 int Graph::isScheduled(void){
 	struct message send_message, recv_message;
-    int ret;
+	int ret;
 	int size;	
 	int* status;
 	int fd[25];
 	int fdcount = 0; 
-	
-    memset(&send_message, '\0', sizeof(struct message));
-    send_message.id = GRAPH_STAGED;
-    send_message.size = sizeof(id);
-    send_message.fdcount = 0;
+
+	memset(&send_message, '\0', sizeof(struct message));
+	send_message.id = GRAPH_STAGED;
+	send_message.size = sizeof(id);
+	send_message.fdcount = 0;
 	std::cout << "@@" << std::endl;
-    memcpy(send_message.data, &id, sizeof(id));
-    ret = write(domainSocket->sock_fd, &send_message, HEADERSIZE + send_message.size);
-    if (ret < 0){
-        std::cout << __func__ << " : socket write failed" << std::endl;
-        return -1;
-    }
-    memset(&recv_message, '\0', sizeof(struct message));
-    size = sock_fd_read(domainSocket->sock_fd, &recv_message, fd, &fdcount);
-    if (size <= 0){
-        return -1;
+	memcpy(send_message.data, &id, sizeof(id));
+	ret = write(domainSocket->sock_fd, &send_message, HEADERSIZE + send_message.size);
+	if (ret < 0){
+		std::cout << __func__ << " : socket write failed" << std::endl;
+		return -1;
+	}
+	memset(&recv_message, '\0', sizeof(struct message));
+	size = sock_fd_read(domainSocket->sock_fd, &recv_message, fd, &fdcount);
+	if (size <= 0){
+		return -1;
 	}
 	status = (int *)recv_message.data; 
 	std::cout << *status << std::endl; 
-	
+
 	return 0;
 }
 
@@ -531,29 +532,74 @@ int Graph::createExecutionDependencyList(){
 	for (std::vector<opendfx::Link   *>::iterator it = links.begin()  ; it != links.end()  ; ++it)
 	{
 		opendfx::Link* link = *it; 
-		link->setAccounted(1);
-		link->info();
 		opendfx::ExecutionDependency* eDependency = new opendfx::ExecutionDependency(link);
 		executionDependencyList.push_back(eDependency);
 	}
-	
+
 	for (std::vector<opendfx::ExecutionDependency *>::iterator it = executionDependencyList.begin()  ; it != executionDependencyList.end()  ; ++it)
 	{
 		opendfx::ExecutionDependency *eDependency = *it; 
 		opendfx::Link* link = eDependency->getLink(); 
 		for (std::vector<opendfx::Link   *>::iterator itt = links.begin()  ; itt != links.end()  ; ++itt)
 		{
-				opendfx::Link* dependentLink = *itt;
-				if (link->getDir() == opendfx::direction::toAccel && dependentLink->getDir() == opendfx::direction::fromAccel &&
+			opendfx::Link* dependentLink = *itt;
+			if (link->getDir() == opendfx::direction::toAccel && dependentLink->getDir() == opendfx::direction::fromAccel &&
 					link->getTransactionIndex() == dependentLink->getTransactionIndex()){
-					eDependency->addDependency(dependentLink);
-				}
-				if (link->getDir() == opendfx::direction::fromAccel && dependentLink->getDir() == opendfx::direction::toAccel &&
+				eDependency->addDependency(dependentLink);
+			}
+			if (link->getDir() == opendfx::direction::fromAccel && dependentLink->getDir() == opendfx::direction::toAccel &&
 					link->getTransactionIndex() == dependentLink->getTransactionIndex()){
-					eDependency->addDependency(dependentLink);
-				}
-	
+				eDependency->addDependency(dependentLink);
+			}
+
 		}
+	}
+	return 0;
+}
+
+int Graph::createScheduleList(){
+	int index = 0, size = 0, last = 0, first = 0;
+	int pending = 0;
+	std::cout << "Creating Schedule List" << std::endl;
+	while(1){
+		for (std::vector<opendfx::ExecutionDependency *>::iterator it = executionDependencyList.begin()  ; it != executionDependencyList.end()  ; ++it)
+		{
+			opendfx::ExecutionDependency *eDependency = *it; 
+			opendfx::Link* link = eDependency->getLink();
+			size = link->getTransactionSize() - link->getTransactionSizeScheduled();
+			if(size > link->getBuffer()->getBSize()){
+				size = link->getBuffer()->getBSize();
+			}
+			if(size > 0){
+				if(link->getTransactionSizeScheduled() <= 0){
+					first = 1;
+				}
+				else{
+					first = 0;
+				}
+				link->setTransactionSizeScheduled(size + link->getTransactionSizeScheduled());
+				if(link->getTransactionSize() - link->getTransactionSizeScheduled() <= 0){
+					last = 1;
+				}
+				else{
+					last = 0;
+				} 
+				opendfx::Schedule* schedule = new opendfx::Schedule(eDependency, index, size, link->getOffset(), last, first);
+				index ++;
+				scheduleList.push_back(schedule);
+				pending += size;
+			}
+		}
+		if (pending == 0) break;
+		pending = 0;
+	}
+	return 0;
+}
+
+int Graph::getScheduleListInfo(){
+	for (std::vector<opendfx::Schedule *>::iterator it = scheduleList.begin()  ; it != scheduleList.end()  ; ++it){
+		opendfx::Schedule * schedule = *it;
+		schedule->getInfo();
 	}
 	return 0;
 }
@@ -565,5 +611,72 @@ int Graph::getExecutionDependencyList(){
 		opendfx::ExecutionDependency *eDependency = *it; 
 		std::cout << eDependency->getInfo(); 
 	}
+	return 0;
+}
+
+int Graph::execute(){
+	std::cout << "Executing .." << std::endl;
+	for (std::vector<opendfx::Schedule *>::iterator it = scheduleList.begin()  ; it != scheduleList.end()  ; ++it){
+		opendfx::Schedule * schedule = *it;
+		ExecutionDependency *eDependency = schedule->getEDependency();
+        int index = schedule->getIndex();
+        int size = schedule->getSize();
+        int offset = schedule->getOffset();
+        int status = schedule->getStatus();
+        int last = schedule->getLast();
+        int first = schedule->getFirst();
+		opendfx::Link* link = eDependency->getLink();
+		opendfx::Accel* accel = link->getAccel();
+		opendfx::Buffer* buffer = link->getBuffer();
+		Device_t* device = accel->getDevice();
+    	DeviceConfig_t *deviceConfig = accel->getConfig();
+    	BuffConfig_t *buffConfig = buffer->getConfig();
+		if (eDependency->isDependent()){
+			std::cout << "Depends on other link" << std::endl;
+			if (link->getDir() == opendfx::direction::fromAccel){
+				if (getMM2SStatus() == 1){
+					accel->setS2MMStatus(1);
+					device->S2MMData(deviceConfig, buffConfig, offset, size, first);
+				}
+				if (getMM2SStatus() == 2){
+					accel->setS2MMStatus(2);
+					if(device->S2MMDone(deviceConfig)){
+					}
+					else{
+					}
+				}
+			}
+			else{
+				accel->setMM2SStatus(1);
+				if (getS2MMStatus() == 1){
+					device->MM2SData(deviceConfig, buffConfig, offset, size, first, link->getChannel());
+					accel->setMM2SStatus(2);
+				}
+				if (getS2MMStatus() == 2){
+					accel->setMM2SStatus(3);
+					if(device->MM2SDone(deviceConfig)){
+					}
+					else{
+					}
+				}
+			}
+		}
+		else{
+			std::cout << "Don't depends on other link" << std::endl;
+			if (link->getDir() == opendfx::direction::fromAccel){
+				device->S2MMData(deviceConfig, buffConfig, offset, size, first);
+				device->S2MMDone(deviceConfig);
+			}
+			else{
+				device->MM2SData(deviceConfig, buffConfig, offset, size, first, link->getChannel());
+				device->MM2SDone(deviceConfig);
+			}
+		}
+		_unused(index);
+		_unused(status);
+		_unused(last);
+		schedule->getInfo();
+	}
+	
 	return 0;
 }

@@ -52,6 +52,18 @@ namespace opendfx {
 			int deallocateBuffer(int xrt_fd);
 			int allocateAccelResource();
 			int deallocateAccelResource();
+			inline Device_t* getDevice() const { return this->device; }
+			inline DeviceConfig_t* getConfig() const { return this->config; }
+			inline int getS2MMStatus() const { return this->S2MMStatus; }
+			inline int setS2MMStatus(int S2MMStatus){
+				this->S2MMStatus = S2MMStatus;
+				return 0;
+			};
+			inline int getMM2SStatus() const { return this->MM2SStatus; }
+			inline int setMM2SStatus(int MM2SStatus){
+				this->MM2SStatus = MM2SStatus;
+				return 0;
+			};
 		private:
 			std::string name;
 			int id;
@@ -79,6 +91,8 @@ namespace opendfx {
 			bool staged;
 		
 			int slot;
+			int S2MMStatus;
+			int MM2SStatus;
 	};
 
 	//inline bool Accel::operator==(const Accel* lhs, const Accel* rhs) {

@@ -9,6 +9,7 @@
 
 #include <string>
 #include <semaphore.h>
+#include "device.h"
 
 namespace opendfx {
 
@@ -38,6 +39,8 @@ class Buffer {
 			this->bSize = bSize;
 			return 0;
 		}
+		inline int getBSize(){ return this->bSize;}
+		inline BuffConfig_t* getConfig(){ return this->config;}
 		inline int setBType(int bType){
 			this->bType = bType;
 			return 0;
@@ -59,6 +62,7 @@ class Buffer {
 		unsigned long phyAddr; // Buffer Physical Address
 		int semaphore;
 		sem_t* semptr;
+		BuffConfig_t *config;
 };
 } // #end of wrapper
 #endif // BUFFER_HPP_

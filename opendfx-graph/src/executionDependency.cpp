@@ -62,3 +62,12 @@ std::string ExecutionDependency::getInfo(){
 	stream << std::endl;
 	return stream.str();
 }
+
+using opendfx::Schedule;
+
+Schedule::Schedule(opendfx::ExecutionDependency *eDependency, int index, int size, int offset, int last, int first):eDependency(eDependency), index(index), size(size), offset(offset), last(last), first(first) {};
+
+int Schedule::getInfo(){
+	std::cout << eDependency->getInfo() << " : " << index << " : " << eDependency->getLink()->getTransactionSizeScheduled() << " : " << size << " : " << offset << " : " << last << " : " << first << std::endl;
+	return 0;
+}

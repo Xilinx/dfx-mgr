@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include "buffer.hpp"
+//#include "device.h"
 #include "utils.hpp"
 #include "nlohmann/json.hpp"
 #include <dfx-mgr/sys/linux/graph/layer0/xrtbuffer.h>
@@ -20,11 +21,13 @@ Buffer::Buffer(const std::string &name, int parentGraphId) : name(name), parentG
 	id = utils::genID();
 	linkRefCount = 0;
 	semaphore = id ^ parentGraphId; 
+	config = (BuffConfig_t*) malloc(sizeof(BuffConfig_t));
 }
 
 Buffer::Buffer(const std::string &name, int parentGraphId, int id) : name(name), id(id), parentGraphId(parentGraphId) {
 	linkRefCount = 0;
 	semaphore = id ^ parentGraphId; 
+	config = (BuffConfig_t*) malloc(sizeof(BuffConfig_t));
 }
 
 std::string Buffer::info() const {
@@ -96,6 +99,9 @@ int Buffer::allocateBuffer(int xrt_fd){
 	if (semptr == ((void*) -1)){ 
 		std::cout << "sem_open" << std::endl;
 	}
+	config->ptr = ptr;   // Buffer Ptr
+    config->phyAddr = phyAddr; // Buffer Physical Address
+    config->semptr = semptr;
 	return 0;
 }
 

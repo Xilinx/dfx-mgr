@@ -28,12 +28,35 @@ namespace opendfx {
 			int addDependency(opendfx::Link *dependentLink);
 			std::string getInfo();
 			inline opendfx::Link* getLink(){return this->link;} 
-			//inline int getLayerIndex(){return this->layerIndex;} 
+			inline bool isDependent(){
+				std::cout <<  this->dependentLinks.size() << std::endl;
+				return this->dependentLinks.size() > 0;} 
 
 		private:
 			opendfx::Link* link;
 			std::vector<opendfx::Link *> dependentLinks;
 			//int layerIndex;
+	};
+
+	class Schedule {
+		public:
+			explicit Schedule(opendfx::ExecutionDependency *eDependency, int index, int size, int offset, int last, int first);
+			inline int getIndex(){return this->index;}
+			inline int getSize(){return this->size;}
+			inline int getOffset(){return this->offset;}
+			inline int getStatus(){return this->status;}
+			inline int getLast(){return this->last;}
+			inline int getFirst(){return this->first;}
+			int getInfo();
+			inline opendfx::ExecutionDependency* getEDependency(){return this->eDependency;} 
+		private:
+			ExecutionDependency *eDependency;
+			int index;
+			int size;
+			int offset;
+			int status;
+			int last;
+			int first;
 	};
 } 
 

@@ -94,6 +94,9 @@ namespace opendfx {
 			int deallocateAccelResources();
 			int createExecutionDependencyList();
 			int getExecutionDependencyList();
+			int createScheduleList();
+			int getScheduleListInfo();
+			int execute();
 
 		private:
 			std::string m_name;
@@ -104,6 +107,7 @@ namespace opendfx {
 			std::vector<opendfx::Buffer *> buffers;
 			std::vector<opendfx::Link *> links;
 			std::vector<opendfx::ExecutionDependency *> executionDependencyList;
+			std::vector<opendfx::Schedule *> scheduleList;
 			bool deleteFlag;
 			int accelCount;
 			std::mutex graph_mutex;

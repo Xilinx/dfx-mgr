@@ -19,15 +19,15 @@ Link::Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir, int parentGr
 	deleteFlag = false;
 	accel->addLinkRefCount();
 	buffer->addLinkRefCount();
-	//std::cout << accel.toJson(true); 
 	id = utils::genID();
-	accounted = 0;
+	transactionSizeScheduled = 0;
 }
 
 Link::Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir, int parentGraphId, int id) : accel(accel), buffer(buffer), dir(dir), id(id), parentGraphId(parentGraphId) {
 	deleteFlag = false;
 	accel->addLinkRefCount();
 	buffer->addLinkRefCount();
+	transactionSizeScheduled = 0;
 }
 
 opendfx::Accel* Link::getAccel() const{
