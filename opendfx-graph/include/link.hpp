@@ -32,6 +32,7 @@ namespace opendfx {
 			return link->getDeleteFlag();
 		}
 		inline int getId() const { return this->id; }
+		inline int getDir() const { return this->dir; }
 		std::string toJson(bool withDetail = false);
 		inline int setOffset(int offset){
 			this->offset = offset;
@@ -41,6 +42,9 @@ namespace opendfx {
 			this->transactionSize = transactionSize;
 			return 0;
 		}
+		inline int getTransactionIndex(){
+			return this->transactionIndex;
+		}
 		inline int setTransactionIndex(int transactionIndex){
 			this->transactionIndex = transactionIndex;
 			return 0;
@@ -48,6 +52,20 @@ namespace opendfx {
 		inline int setChannel(int channel){
 			this->channel = channel;
 			return 0;
+		}
+		inline int setLayerIndex(int layerIndex){
+			this->layerIndex = layerIndex;
+			return 0;
+		}
+		inline int getLayerIndex(){
+			return this->layerIndex;
+		}
+		inline int setAccounted(int accounted){
+			this->accounted = accounted;
+			return 0;
+		}
+		inline int getAccounted(){
+			return this->accounted;
 		}
 	private:
 		opendfx::Accel *accel;
@@ -60,6 +78,8 @@ namespace opendfx {
 		int transactionSize;
 		int transactionIndex;
 		int channel;
+		int layerIndex;
+		int accounted;
 	};
 } 
 #endif // LINK_HPP_

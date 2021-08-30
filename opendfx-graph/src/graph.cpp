@@ -531,11 +531,29 @@ int Graph::createExecutionDependencyList(){
 	for (std::vector<opendfx::Link   *>::iterator it = links.begin()  ; it != links.end()  ; ++it)
 	{
 		opendfx::Link* link = *it; 
-		std::cout << "## " << link->getId() << std::endl;
+		link->setAccounted(1);
+		link->info();
 		opendfx::ExecutionDependency* eDependency = new opendfx::ExecutionDependency(link);
-		std::cout << "#$ " << eDependency->getLink()->getId() << std::endl;
 		executionDependencyList.push_back(eDependency);
+	}
 	
+	for (std::vector<opendfx::ExecutionDependency *>::iterator it = executionDependencyList.begin()  ; it != executionDependencyList.end()  ; ++it)
+	{
+		opendfx::ExecutionDependency *eDependency = *it; 
+		opendfx::Link* link = eDependency->getLink(); 
+		for (std::vector<opendfx::Link   *>::iterator itt = links.begin()  ; itt != links.end()  ; ++itt)
+		{
+				opendfx::Link* dependentLink = *itt;
+				if (link->getDir() == opendfx::direction::toAccel && dependentLink->getDir() == opendfx::direction::fromAccel &&
+					link->getTransactionIndex() == dependentLink->getTransactionIndex()){
+					eDependency->addDependency(dependentLink);
+				}
+				if (link->getDir() == opendfx::direction::fromAccel && dependentLink->getDir() == opendfx::direction::toAccel &&
+					link->getTransactionIndex() == dependentLink->getTransactionIndex()){
+					eDependency->addDependency(dependentLink);
+				}
+	
+		}
 	}
 	return 0;
 }

@@ -24,14 +24,16 @@ namespace opendfx {
 	class ExecutionDependency {
 
 		public:
-			explicit ExecutionDependency(opendfx::Link *link);
+			explicit ExecutionDependency(opendfx::Link *link); //, int layerIndex);
 			int addDependency(opendfx::Link *dependentLink);
 			std::string getInfo();
 			inline opendfx::Link* getLink(){return this->link;} 
+			//inline int getLayerIndex(){return this->layerIndex;} 
 
 		private:
 			opendfx::Link* link;
 			std::vector<opendfx::Link *> dependentLinks;
+			//int layerIndex;
 	};
 } 
 

@@ -21,6 +21,7 @@ Link::Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir, int parentGr
 	buffer->addLinkRefCount();
 	//std::cout << accel.toJson(true); 
 	id = utils::genID();
+	accounted = 0;
 }
 
 Link::Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir, int parentGraphId, int id) : accel(accel), buffer(buffer), dir(dir), id(id), parentGraphId(parentGraphId) {
