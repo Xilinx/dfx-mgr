@@ -47,7 +47,7 @@ int softDma_MM2SData(DeviceConfig_t *config, BuffConfig_t *buffer, uint64_t offs
     _unused(firstLast);
     _unused(tid);
 	memcpy((uint8_t*)config->ptr, ((uint8_t*)buffer->ptr) + offset, size);
-	INFO("Soft MM2SData\n");
+	acapd_debug("Soft MM2S\n");
 	//if(firstLast){
 	//	sem_post(dmconfig->semptr);
 	//	//INFO("######## Soft MM2SData last #############");
@@ -64,7 +64,7 @@ int softDma_S2MMData(DeviceConfig_t *config, BuffConfig_t *buffer, uint64_t offs
 	//	sem_wait(dmconfig->semptr);
 	//}
 	memcpy(((uint8_t*)buffer->ptr) + offset, (uint8_t*)config->ptr, size);
-	INFO("Soft S2MMData\n");
+	acapd_debug("Soft S2MM\n");
 	return 0;
 }
 

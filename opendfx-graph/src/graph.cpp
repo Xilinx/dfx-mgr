@@ -56,6 +56,7 @@ Graph::Graph(const std::string &name, int priority) : m_name(name) {
 		this->priority = 0;
 	}
 	accelCount = 0;
+	status = opendfx::graphStatus::GraphIdle;
 }
 
 std::string Graph::info() const {
@@ -123,7 +124,7 @@ opendfx::Link* Graph::connectInputBuffer(opendfx::Accel *accel, opendfx::Buffer 
 }
 
 opendfx::Link* Graph::connectOutputBuffer(opendfx::Accel *accel, opendfx::Buffer *buffer,
-		int offset, int transactionSize, int transactionIndex, int channel){
+	int offset, int transactionSize, int transactionIndex, int channel){
 	opendfx::Link *link = new opendfx::Link(accel, buffer, opendfx::direction::fromAccel, id);
 	link->setOffset(offset);
 	link->setTransactionSize(transactionSize);
@@ -415,8 +416,8 @@ int Graph::submit(void){
 	int fdcount = 0; 
 	int size;	
 	domainSocket = (socket_t *)malloc(sizeof(socket_t));
-	int status = initSocket(domainSocket);
-	if (status < 0){
+	int sock = initSocket(domainSocket);
+	if (sock < 0){
 		return -1;
 	}
 
@@ -449,7 +450,7 @@ int Graph::isScheduled(void){
 	struct message send_message, recv_message;
 	int ret;
 	int size;	
-	int* status;
+	int* statusP;
 	int fd[25];
 	int fdcount = 0; 
 
@@ -469,8 +470,8 @@ int Graph::isScheduled(void){
 	if (size <= 0){
 		return -1;
 	}
-	status = (int *)recv_message.data; 
-	std::cout << *status << std::endl; 
+	statusP = (int *)recv_message.data; 
+	std::cout << *statusP << std::endl; 
 
 	return 0;
 }
@@ -615,14 +616,12 @@ int Graph::getExecutionDependencyList(){
 }
 
 int Graph::removeCompletedSchedule(){
-	std::cout << "deleting schedule" << std::endl;
 	scheduleList.erase(std::remove_if(scheduleList.begin(), scheduleList.end(), Schedule::staticGetDeleteFlag), scheduleList.end());
 	return 0;
 }
 
 int Graph::execute(){
 	usleep(1000);
-	std::cout << "##############  Schedule ###############" << std::endl;
 	for (std::vector<opendfx::Schedule *>::iterator it = scheduleList.begin()  ; it != scheduleList.end()  ; ++it)
 	{
 		opendfx::Schedule * schedule = *it;
@@ -630,7 +629,7 @@ int Graph::execute(){
 		int index = schedule->getIndex();
 		int size = schedule->getSize();
 		int offset = schedule->getOffset();
-		int status = schedule->getStatus();
+		//int status = schedule->getStatus();
 		int last = schedule->getLast();
 		int first = schedule->getFirst();
 		opendfx::Link* link = eDependency->getLink();
@@ -642,10 +641,6 @@ int Graph::execute(){
 		if (link->getDir() == opendfx::direction::fromAccel){
 			//std::cout << "S2MM Current Index : " << accel->getS2MMCurrentIndex() << std::endl;
 			//std::cout << "S2MM Index : " << index << std::endl;
-			std::cout << schedule->getDeleteFlag() << " " << index << " : " << accel->getCurrentIndex() << " [S2MM] ";
-			std::cout << accel->getMM2SCurrentIndex() << " MM2S : " << accel->getMM2SStatus() << " : ";
-			std::cout << accel->getS2MMCurrentIndex() << " S2MM : " << accel->getS2MMStatus() << " : ";
-			std::cout << "Buffer : " << buffer->getStatus() << std::endl;
 
 			if (accel->getS2MMStatus() == opendfx::status::Idle){
 				if(buffer->getStatus() == opendfx::bufferStatus::BuffIsEmpty){
@@ -655,6 +650,10 @@ int Graph::execute(){
 							accel->setS2MMStatus(opendfx::status::Busy);
 							buffer->setStatus(opendfx::bufferStatus::BuffIsBusy);
 							device->S2MMData(deviceConfig, buffConfig, offset, size, first);
+							std::cout << schedule->getDeleteFlag() << " " << index << " : " << accel->getCurrentIndex() << " [S2MM] ";
+							std::cout << accel->getMM2SCurrentIndex() << " MM2S : " << accel->getMM2SStatus() << " : ";
+							std::cout << accel->getS2MMCurrentIndex() << " S2MM : " << accel->getS2MMStatus() << " : ";
+							std::cout << "Buffer : " << buffer->getStatus() << "Transaction"<< std::endl;
 						}
 					}
 					else
@@ -663,6 +662,10 @@ int Graph::execute(){
 						accel->setCurrentIndex(link->getTransactionIndex());
 						accel->setS2MMStatus(opendfx::status::Busy);
 						device->S2MMData(deviceConfig, buffConfig, offset, size, first);
+						std::cout << schedule->getDeleteFlag() << " " << index << " : " << accel->getCurrentIndex() << " [S2MM] ";
+						std::cout << accel->getMM2SCurrentIndex() << " MM2S : " << accel->getMM2SStatus() << " : ";
+						std::cout << accel->getS2MMCurrentIndex() << " S2MM : " << accel->getS2MMStatus() << " : ";
+						std::cout << "Buffer : " << buffer->getStatus() << "Transaction"<< std::endl;
 						//device->S2MMDone(deviceConfig);
 					}
 				}
@@ -677,13 +680,15 @@ int Graph::execute(){
 							accel->setS2MMStatus(opendfx::status::Idle);
 							buffer->setStatus(opendfx::bufferStatus::BuffIsFull);
 							schedule->setDeleteFlag(true);
+							std::cout << schedule->getDeleteFlag() << " " << index << " : " << accel->getCurrentIndex() << " [S2MM] ";
+							std::cout << accel->getMM2SCurrentIndex() << " MM2S : " << accel->getMM2SStatus() << " : ";
+							std::cout << accel->getS2MMCurrentIndex() << " S2MM : " << accel->getS2MMStatus() << " : ";
+							std::cout << "Buffer : " << buffer->getStatus() << "Done"<< std::endl;
 						}
 						else{
 							accel->setS2MMStatus(opendfx::status::Busy);
 							buffer->setStatus(opendfx::bufferStatus::BuffIsBusy);
 						}
-					}
-					else if (accel->getS2MMStatus() == opendfx::status::Done){
 					}
 				}
 			}
@@ -691,15 +696,9 @@ int Graph::execute(){
 		else{
 			//std::cout << "MM2S Current Index : " << accel->getMM2SCurrentIndex() << std::endl;
 			//std::cout << "MM2S Index : " << index << std::endl;
-			std::cout << schedule->getDeleteFlag() << " " << index << " : " << accel->getCurrentIndex() << " [MM2S] ";
-			std::cout << accel->getMM2SCurrentIndex() << " MM2S : " << accel->getMM2SStatus() << " : ";
-			std::cout << accel->getS2MMCurrentIndex() << " S2MM : " << accel->getS2MMStatus() << " : ";
-			std::cout << "Buffer : " << buffer->getStatus() << std::endl;
 			if (accel->getMM2SStatus() == opendfx::status::Idle){
 				if(buffer->getStatus() == opendfx::bufferStatus::BuffIsFull){
-					std::cout << index << ": mm2s" << std::endl;
 					accel->setMM2SCurrentIndex(index);
-					std::cout << index << ": mm2s : " << accel->getMM2SCurrentIndex() << std::endl;
 					accel->setCurrentIndex(link->getTransactionIndex());
 					if(eDependency->isDependent()){
 						accel->setMM2SStatus(opendfx::status::Ready);
@@ -707,6 +706,10 @@ int Graph::execute(){
 					else{
 						accel->setMM2SStatus(opendfx::status::Busy);
 						device->MM2SData(deviceConfig, buffConfig, offset, size, first, link->getChannel());
+						std::cout << schedule->getDeleteFlag() << " " << index << " : " << accel->getCurrentIndex() << " [MM2S] ";
+						std::cout << accel->getMM2SCurrentIndex() << " MM2S : " << accel->getMM2SStatus() << " : ";
+						std::cout << accel->getS2MMCurrentIndex() << " S2MM : " << accel->getS2MMStatus() << " : ";
+						std::cout << "Buffer : " << buffer->getStatus() << "Transaction"<< std::endl;
 					}
 				}
 			}
@@ -719,6 +722,10 @@ int Graph::execute(){
 									accel->setMM2SStatus(opendfx::status::Busy);
 									buffer->setStatus(opendfx::bufferStatus::BuffIsBusy);
 									device->MM2SData(deviceConfig, buffConfig, offset, size, first, link->getChannel());
+									std::cout << schedule->getDeleteFlag() << " " << index << " : " << accel->getCurrentIndex() << " [MM2S] ";
+									std::cout << accel->getMM2SCurrentIndex() << " MM2S : " << accel->getMM2SStatus() << " : ";
+									std::cout << accel->getS2MMCurrentIndex() << " S2MM : " << accel->getS2MMStatus() << " : ";
+									std::cout << "Buffer : " << buffer->getStatus() << "Transaction"<< std::endl;
 								}
 								else{
 									std::cout << "Don't depends on other link" << std::endl;
@@ -732,6 +739,10 @@ int Graph::execute(){
 							accel->setMM2SStatus(opendfx::status::Idle);
 							buffer->setStatus(opendfx::bufferStatus::BuffIsEmpty);
 							schedule->setDeleteFlag(true);
+							std::cout << schedule->getDeleteFlag() << " " << index << " : " << accel->getCurrentIndex() << " [MM2S] ";
+							std::cout << accel->getMM2SCurrentIndex() << " MM2S : " << accel->getMM2SStatus() << " : ";
+							std::cout << accel->getS2MMCurrentIndex() << " S2MM : " << accel->getS2MMStatus() << " : ";
+							std::cout << "Buffer : " << buffer->getStatus() << "Done"<< std::endl;
 						}
 						else{
 							accel->setMM2SStatus(opendfx::status::Busy);
@@ -742,17 +753,17 @@ int Graph::execute(){
 				}
 			}
 		}
-		_unused(index);
-		_unused(status);
+		//_unused(index);
+		//_unused(status);
 		_unused(last);
-		_unused(size);
-		_unused(offset);
-		_unused(first);
-		_unused(buffConfig);
-		_unused(device);
-		_unused(deviceConfig);
+		//_unused(size);
+		//_unused(offset);
+		//_unused(first);
+		//_unused(buffConfig);
+		//_unused(device);
+		//_unused(deviceConfig);
 	}
 
 
-return scheduleList.size();
+	return scheduleList.size();
 }

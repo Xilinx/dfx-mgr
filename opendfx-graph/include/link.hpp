@@ -76,9 +76,9 @@ namespace opendfx {
 		//	this->accounted = accounted;
 		//	return 0;
 		//}
-		//inline int getAccounted(){
-		//	return this->accounted;
-		//}
+		inline int getParentGraphId(){
+			return this->parentGraphId;
+		}
 	private:
 		opendfx::Accel *accel;
 		opendfx::Buffer *buffer;

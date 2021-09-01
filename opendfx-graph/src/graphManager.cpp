@@ -97,29 +97,53 @@ int GraphManager::listGraphs()
 	return 0;
 }
 
+int GraphManager::executeStagedGraphs(){
+	for (std::vector<opendfx::Graph *>::iterator it = stagedGraphs.begin() ; it != stagedGraphs.end(); ++it)
+	{
+		opendfx::Graph* tGraph = *it;
+		if (tGraph->execute() == 0){
+			tGraph->setStatus(opendfx::graphStatus::GraphExecuted);
+		}
+		tGraph->removeCompletedSchedule();
+	}
+	return 0;
+}
+int GraphManager::unstageGraphs(){
+	for (std::vector<opendfx::Graph *>::iterator it = stagedGraphs.begin() ; it != stagedGraphs.end(); ++it)
+	{
+		opendfx::Graph* tGraph = *it;
+		if(tGraph->getStatus() == opendfx::graphStatus::GraphExecuted){
+			tGraph->setStatus(opendfx::graphStatus::GraphUnstaged);
+			tGraph->deallocateAccelResources();
+			tGraph->deallocateBuffers();
+			tGraph->deallocateIOBuffers();
+			this->stagedGraphs.erase(it);
+			delete tGraph;
+			break;
+		}
+	}
+
+	return 0;
+}
+
 int GraphManager::mergeGraphs(){
 	mergedGraph.lockAccess();
 	for (std::vector<opendfx::Graph *>::iterator it = stagedGraphs.begin() ; it != stagedGraphs.end(); ++it)
 	{
 		opendfx::Graph* graph = *it;
-		if (!graph->getStaged()){
-			mergedGraph.copyGraph(graph);
+		if (graph->getStatus() == opendfx::graphStatus::GraphIdle){
 			graph->allocateIOBuffers();
 			graph->allocateBuffers();
 			graph->allocateAccelResources();
 			graph->createExecutionDependencyList();
 			graph->getExecutionDependencyList();
 			graph->createScheduleList();
-			//graph->getScheduleListInfo();
-			while(graph->execute()){
-				graph->removeCompletedSchedule();
-			}
-			graph->setStaged(true);
+			mergedGraph.copyGraph(graph);
+			graph->setStatus(opendfx::graphStatus::GraphStaged);
 			std::cout << "scheduled ..." << std::endl;
 			std::cout << "No of accels  = " << mergedGraph.countAccel() << std::endl;
 			std::cout << "No of buffers = " << mergedGraph.countBuffer() << std::endl; 
 			std::cout << "No of links   = " << mergedGraph.countLink() << std::endl; 
-			//std::cout << mergedGraph.toJson(true) << std::endl;
 		}
 	}
 	mergedGraph.unlockAccess();
@@ -159,6 +183,8 @@ int GraphManager::stageGraphs(){
 			graphQueue_mutex.unlock();
 		}
 		mergeGraphs();
+		executeStagedGraphs();
+		unstageGraphs();
 	}
 	std::cout << "service done" << std::endl;
 	return 0;

@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
 	_unused(argv);
 	std::cout << "# main\n";
 	opendfx::Graph *graph[10];
-	int N = 1;
+	int N = 4;
 
 	for(int i = 0; i < N; i++){
 		graph[i] = new opendfx::Graph{"G", i};

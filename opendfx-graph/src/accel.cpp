@@ -208,6 +208,7 @@ int Accel::deallocateAccelResource(){
 		device->close(config);
 		unregisterDev(&device, &config);
 		dlclose(dmDriver);
+		remove_accelerator(slot);			
 	}
 	return 0;
 }

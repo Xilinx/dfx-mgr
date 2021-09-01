@@ -20,6 +20,7 @@
 
 namespace opendfx {
 
+	enum graphStatus {GraphIdle=0, GraphStaged=1, GraphExecuted=2, GraphUnstaged=3};
 	class Graph {
 
 		public:
@@ -64,12 +65,12 @@ namespace opendfx {
 			inline int getPriority() {
 				return priority;
 			};
-			inline int setStaged(bool staged){
-				this->staged = staged;
+			inline int setStatus(int status){
+				this->status = status;
 				return 0;
 			}
-			inline bool getStaged(){
-				return this->staged;
+			inline int getStatus(){
+				return this->status;
 			}
 			inline int lockAccess(){
 				graph_mutex.lock();
@@ -96,14 +97,13 @@ namespace opendfx {
 			int getExecutionDependencyList();
 			int createScheduleList();
 			int getScheduleListInfo();
-			int execute();
 			int removeCompletedSchedule();
+			int execute();
 
 		private:
 			std::string m_name;
 			int id;
 			int priority;
-			bool staged;
 			std::vector<opendfx::Accel *> accels;
 			std::vector<opendfx::Buffer *> buffers;
 			std::vector<opendfx::Link *> links;
@@ -114,6 +114,8 @@ namespace opendfx {
 			std::mutex graph_mutex;
 			socket_t * domainSocket;
 			int xrt_fd;
+			bool executionDone;
+			int status;
 	};
 } // #end of graph
 

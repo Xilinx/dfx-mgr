@@ -75,7 +75,10 @@ int sihaDma_open(DeviceConfig_t *config){
 }
 
 int sihaDma_close(DeviceConfig_t *config){
-	_unused(config);
+    sihaDmaConfig_t *sihaCfg = (sihaDmaConfig_t*) config->privConfig;
+    
+	munmap(sihaCfg->AccelConfig, 0x9000);
+	munmap(sihaCfg->dma_hls, 0x20000);
 	printf("sihaDma close \n");
 	return 0;
 }
@@ -140,19 +143,19 @@ int sihaDma_S2MMStatus(DeviceConfig_t *config){
 
 int sihaDma_MM2SData(DeviceConfig_t *config, BuffConfig_t *buffer, uint64_t offset, uint64_t size, uint8_t firstLast, uint8_t tid){
     sihaDmaConfig_t *sihaCfg = (sihaDmaConfig_t*) config->privConfig;
-	acapd_debug("MM2S %x\n", MM2S);
+	acapd_debug("SihaDMA MM2S\n");
 	_unused(firstLast);
 	uint64_t address = buffer->phyAddr + offset;
 	*(volatile uint32_t*)(sihaCfg->mm2s_ADDR_LOW)  = address & 0xFFFFFFFF;
 	*(volatile uint32_t*)(sihaCfg->mm2s_ADDR_HIGH) = (address >> 32) & 0xFFFFFFFF;
-	acapd_debug("ADDR_LOW : %x\n", address & 0xffffffff);
-	acapd_debug("ADDR_HIGH: %x\n", (address >> 32) & 0xffffffff);
-	acapd_debug("SIZE_LOW : %x\n", (size >> 4) & 0xffffffff);
-	acapd_debug("SIZE_HIGH: %x\n", (size >> 36) & 0xffffffff);
-	acapd_debug("TID      : %x\n", tid);
-	acapd_debug("GIER     : %x\n", 0x01);
-	acapd_debug("IIER     : %x\n", 0x03);
-	acapd_debug("APCR     : %x\n", 0x01 << AP_START);
+	//acapd_debug("ADDR_LOW : %x\n", address & 0xffffffff);
+	//acapd_debug("ADDR_HIGH: %x\n", (address >> 32) & 0xffffffff);
+	//acapd_debug("SIZE_LOW : %x\n", (size >> 4) & 0xffffffff);
+	//acapd_debug("SIZE_HIGH: %x\n", (size >> 36) & 0xffffffff);
+	//acapd_debug("TID      : %x\n", tid);
+	//acapd_debug("GIER     : %x\n", 0x01);
+	//acapd_debug("IIER     : %x\n", 0x03);
+	//acapd_debug("APCR     : %x\n", 0x01 << AP_START);
 	*(volatile uint32_t*)(sihaCfg->mm2s_SIZE_LOW)  = (size >> 4) & 0xFFFFFFFF;
 	*(volatile uint32_t*)(sihaCfg->mm2s_SIZE_HIGH) = (size >> 36) & 0xFFFFFFFF;
 	*(volatile uint32_t*)(sihaCfg->mm2s_TID)       = tid;
@@ -164,18 +167,18 @@ int sihaDma_MM2SData(DeviceConfig_t *config, BuffConfig_t *buffer, uint64_t offs
 
 int sihaDma_S2MMData(DeviceConfig_t *config, BuffConfig_t *buffer, uint64_t offset, uint64_t size, uint8_t firstLast){
     sihaDmaConfig_t *sihaCfg = (sihaDmaConfig_t*) config->privConfig;
-	acapd_debug("S2MM %x\n", S2MM);
+	acapd_debug("SihaDMA S2MM\n");
 	_unused(firstLast);
 	uint64_t address = buffer->phyAddr + offset;
 	*(uint32_t*)(sihaCfg->s2mm_ADDR_LOW)  = address & 0xFFFFFFFF;
 	*(uint32_t*)(sihaCfg->s2mm_ADDR_HIGH) = (address >> 32) & 0xFFFFFFFF;
-	acapd_debug("ADDR_LOW : %x\n", address & 0xffffffff);
-	acapd_debug("ADDR_HIGH: %x\n", (address >> 32) & 0xffffffff);
-	acapd_debug("SIZE_LOW : %x\n", (size >> 4) & 0xffffffff);
-	acapd_debug("SIZE_HIGH: %x\n", (size >> 36) & 0xffffffff);
-	acapd_debug("GIER     : %x\n", 0x01);
-	acapd_debug("IIER     : %x\n", 0x03);
-	acapd_debug("APCR     : %x\n", 0x01 << AP_START);
+	//acapd_debug("ADDR_LOW : %x\n", address & 0xffffffff);
+	//acapd_debug("ADDR_HIGH: %x\n", (address >> 32) & 0xffffffff);
+	//acapd_debug("SIZE_LOW : %x\n", (size >> 4) & 0xffffffff);
+	//acapd_debug("SIZE_HIGH: %x\n", (size >> 36) & 0xffffffff);
+	//acapd_debug("GIER     : %x\n", 0x01);
+	//acapd_debug("IIER     : %x\n", 0x03);
+	//acapd_debug("APCR     : %x\n", 0x01 << AP_START);
 	*(uint32_t*)(sihaCfg->s2mm_SIZE_LOW)  = (size >> 4) & 0xFFFFFFFF;
 	*(uint32_t*)(sihaCfg->s2mm_SIZE_HIGH) = (size >> 36) & 0xFFFFFFFF;
 	*(uint32_t*)(sihaCfg->s2mm_GIER)      = 0x1;
@@ -189,7 +192,7 @@ int sihaDma_S2MMDone(DeviceConfig_t *config){
 	int status, res;
 	status = *(uint32_t*)(uint32_t*)(sihaCfg->s2mm_APCR);
 	res = status ? ((status >> AP_DONE) | (status >> AP_IDLE)) & 0x1 : 1;
-	acapd_debug("S2MM Status : %x %x\n", status, res);
+	//acapd_debug("S2MM Status : %x %x\n", status, res);
 	//if(res){
 	//	data->writeStatus += 1;
 	//}
@@ -202,7 +205,7 @@ int sihaDma_MM2SDone(DeviceConfig_t *config){
 	int status, res;
 	status = *(volatile uint32_t*)(uint32_t*)(sihaCfg->mm2s_APCR);
 	res = status ? ((status >> AP_DONE) | (status >> AP_IDLE)) & 0x1 : 1;
-	acapd_debug("MM2S Status : %x %x\n", status, res);
+	//acapd_debug("MM2S Status : %x %x\n", status, res);
 	//if(res){
 	//	data->readStatus += 1;
 	//	if(data->readStatus == 2*data->readerCount){

@@ -26,11 +26,13 @@ namespace opendfx {
 			int listGraphs();
 			int mergeGraphs();
 			int stageGraphs();
+			int unstageGraphs();
 			int scheduleGraph();
 			int startServices();
 			int stopServices();
 			opendfx::Graph* getStagedGraphByID(int id);
 			bool ifGraphStaged(int id);
+			int executeStagedGraphs();
 
 		private:
 			std::vector<opendfx::Graph *> graphsQueue[3];
