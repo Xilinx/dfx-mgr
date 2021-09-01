@@ -97,6 +97,7 @@ namespace opendfx {
 			int createScheduleList();
 			int getScheduleListInfo();
 			int execute();
+			int removeCompletedSchedule();
 
 		private:
 			std::string m_name;

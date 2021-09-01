@@ -111,8 +111,9 @@ int GraphManager::mergeGraphs(){
 			graph->getExecutionDependencyList();
 			graph->createScheduleList();
 			//graph->getScheduleListInfo();
-			graph->execute();
-			
+			while(graph->execute()){
+				graph->removeCompletedSchedule();
+			}
 			graph->setStaged(true);
 			std::cout << "scheduled ..." << std::endl;
 			std::cout << "No of accels  = " << mergedGraph.countAccel() << std::endl;

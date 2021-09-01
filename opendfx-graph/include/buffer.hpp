@@ -14,6 +14,7 @@
 namespace opendfx {
 
 	enum buffertype {DDR_BASED=0, STREAM_BASED=1};
+	enum bufferStatus {BuffIsEmpty=0, BuffIsFull=1, BuffIsBusy=2, BuffIsStream=3};
 
 class Buffer {
 
@@ -40,6 +41,11 @@ class Buffer {
 			return 0;
 		}
 		inline int getBSize(){ return this->bSize;}
+		inline int getStatus(){ return this->status;}
+		inline int setStatus(int status){ 
+			this->status = status; 
+			return 0;
+		}
 		inline BuffConfig_t* getConfig(){ return this->config;}
 		inline int setBType(int bType){
 			this->bType = bType;
@@ -63,6 +69,9 @@ class Buffer {
 		int semaphore;
 		sem_t* semptr;
 		BuffConfig_t *config;
+		//bool empty;
+		//bool full;
+		int status;
 };
 } // #end of wrapper
 #endif // BUFFER_HPP_

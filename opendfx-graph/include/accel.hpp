@@ -14,6 +14,7 @@
 namespace opendfx {
 
 	enum acceltype {accelNode=0, inputNode=1, outputNode=2, hwAccelNode=3, softAccelNode=4, aiAccelNode=5};
+	enum status {Idle=0, Ready=1, Busy=2, Done=3};
 
 	class Accel {
 		public:
@@ -64,6 +65,21 @@ namespace opendfx {
 				this->MM2SStatus = MM2SStatus;
 				return 0;
 			};
+			inline int getS2MMCurrentIndex() const { return this->S2MMCurrentIndex; }
+			inline int setS2MMCurrentIndex(int S2MMCurrentIndex){
+				this->S2MMCurrentIndex = S2MMCurrentIndex;
+				return 0;
+			};
+			inline int getMM2SCurrentIndex() const { return this->MM2SCurrentIndex; }
+			inline int setMM2SCurrentIndex(int MM2SCurrentIndex){
+				this->MM2SCurrentIndex = MM2SCurrentIndex;
+				return 0;
+			};
+			inline int getCurrentIndex() const { return this->CurrentIndex; }
+			inline int setCurrentIndex(int CurrentIndex){
+				this->CurrentIndex = CurrentIndex;
+				return 0;
+			};
 		private:
 			std::string name;
 			int id;
@@ -93,6 +109,9 @@ namespace opendfx {
 			int slot;
 			int S2MMStatus;
 			int MM2SStatus;
+			int S2MMCurrentIndex;
+			int	MM2SCurrentIndex;
+			int	CurrentIndex;
 	};
 
 	//inline bool Accel::operator==(const Accel* lhs, const Accel* rhs) {

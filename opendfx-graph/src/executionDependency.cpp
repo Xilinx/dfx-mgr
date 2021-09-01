@@ -65,7 +65,9 @@ std::string ExecutionDependency::getInfo(){
 
 using opendfx::Schedule;
 
-Schedule::Schedule(opendfx::ExecutionDependency *eDependency, int index, int size, int offset, int last, int first):eDependency(eDependency), index(index), size(size), offset(offset), last(last), first(first) {};
+Schedule::Schedule(opendfx::ExecutionDependency *eDependency, int index, int size, int offset, int last, int first):eDependency(eDependency), index(index), size(size), offset(offset), last(last), first(first) {
+	deleteFlag = false;
+};
 
 int Schedule::getInfo(){
 	std::cout << eDependency->getInfo() << " : " << index << " : " << eDependency->getLink()->getTransactionSizeScheduled() << " : " << size << " : " << offset << " : " << last << " : " << first << std::endl;

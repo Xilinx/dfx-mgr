@@ -22,12 +22,14 @@ Buffer::Buffer(const std::string &name, int parentGraphId) : name(name), parentG
 	linkRefCount = 0;
 	semaphore = id ^ parentGraphId; 
 	config = (BuffConfig_t*) malloc(sizeof(BuffConfig_t));
+	status = opendfx::bufferStatus::BuffIsEmpty;
 }
 
 Buffer::Buffer(const std::string &name, int parentGraphId, int id) : name(name), id(id), parentGraphId(parentGraphId) {
 	linkRefCount = 0;
 	semaphore = id ^ parentGraphId; 
 	config = (BuffConfig_t*) malloc(sizeof(BuffConfig_t));
+	status = opendfx::bufferStatus::BuffIsEmpty;
 }
 
 std::string Buffer::info() const {

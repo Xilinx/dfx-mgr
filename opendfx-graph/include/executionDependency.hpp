@@ -29,7 +29,7 @@ namespace opendfx {
 			std::string getInfo();
 			inline opendfx::Link* getLink(){return this->link;} 
 			inline bool isDependent(){
-				std::cout <<  this->dependentLinks.size() << std::endl;
+				//std::cout <<  this->dependentLinks.size() << std::endl;
 				return this->dependentLinks.size() > 0;} 
 
 		private:
@@ -42,6 +42,10 @@ namespace opendfx {
 		public:
 			explicit Schedule(opendfx::ExecutionDependency *eDependency, int index, int size, int offset, int last, int first);
 			inline int getIndex(){return this->index;}
+			inline int setIndex(int index){
+				this->index = index;
+				return 0;
+			}
 			inline int getSize(){return this->size;}
 			inline int getOffset(){return this->offset;}
 			inline int getStatus(){return this->status;}
@@ -49,6 +53,16 @@ namespace opendfx {
 			inline int getFirst(){return this->first;}
 			int getInfo();
 			inline opendfx::ExecutionDependency* getEDependency(){return this->eDependency;} 
+			inline bool getDeleteFlag(){return this->deleteFlag;}
+			inline int setDeleteFlag(bool deleteFlag){
+				this->deleteFlag = deleteFlag;
+				return 0;
+			}
+			static inline bool staticGetDeleteFlag(Schedule *schedule) {
+            return schedule->getDeleteFlag();
+        }
+
+
 		private:
 			ExecutionDependency *eDependency;
 			int index;
@@ -57,6 +71,7 @@ namespace opendfx {
 			int status;
 			int last;
 			int first;
+			int deleteFlag;
 	};
 } 
 

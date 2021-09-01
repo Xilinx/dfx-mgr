@@ -28,12 +28,22 @@ Accel::Accel(const std::string &name, int parentGraphId, int type) : name(name),
 	id = utils::genID();
 	linkRefCount = 0;
 	semaphore = id ^ parentGraphId; 
+	S2MMStatus = 0;
+	MM2SStatus = 0;
+	S2MMCurrentIndex = 0;
+	MM2SCurrentIndex = 0;
+	CurrentIndex = 0;
 }
 
 Accel::Accel(const std::string &name, int parentGraphId, int type, int id) : name(name), id(id), parentGraphId(parentGraphId), type(type) {
 	linkRefCount = 0;
 	//id = stoi (strid, 0, 16);
 	semaphore = id ^ parentGraphId; 
+	S2MMStatus = 0;
+	MM2SStatus = 0;
+	S2MMCurrentIndex = 0;
+	MM2SCurrentIndex = 0;
+	CurrentIndex = 0;
 }
 
 std::string Accel::info() const {
