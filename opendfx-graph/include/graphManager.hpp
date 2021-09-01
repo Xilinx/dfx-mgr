@@ -36,6 +36,7 @@ namespace opendfx {
 
 		private:
 			std::vector<opendfx::Graph *> graphsQueue[3];
+			std::vector<opendfx::Graph *> unstagedGraphs;
 			std::mutex graphQueue_mutex;
 			//std::vector<opendfx::Graph *> graphsQueue1;
 			//td::vector<opendfx::Graph *> graphsQueue2;

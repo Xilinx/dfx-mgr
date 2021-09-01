@@ -118,7 +118,7 @@ int GraphManager::unstageGraphs(){
 			tGraph->deallocateBuffers();
 			tGraph->deallocateIOBuffers();
 			this->stagedGraphs.erase(it);
-			delete tGraph;
+			//delete tGraph;
 			break;
 		}
 	}
@@ -184,7 +184,25 @@ int GraphManager::stageGraphs(){
 		}
 		mergeGraphs();
 		executeStagedGraphs();
-		unstageGraphs();
+		graphQueue_mutex.lock();
+		for (std::vector<opendfx::Graph *>::iterator it = stagedGraphs.begin() ; it != stagedGraphs.end(); ++it)
+		{
+			opendfx::Graph* tGraph = *it;
+			if(tGraph->getStatus() == opendfx::graphStatus::GraphExecuted){
+				tGraph->setStatus(opendfx::graphStatus::GraphUnstaged);
+				tGraph->deallocateAccelResources();
+				tGraph->deallocateBuffers();
+				tGraph->deallocateIOBuffers();
+				this->stagedGraphs.erase(it);
+				accelCounts = tGraph->countAccel();
+				remainingSlots = remainingSlots + accelCounts;
+				unstagedGraphs.push_back(tGraph);
+				//delete tGraph;
+				break;
+			}
+		}
+
+		graphQueue_mutex.unlock();
 	}
 	std::cout << "service done" << std::endl;
 	return 0;
@@ -219,9 +237,7 @@ int GraphManager::scheduleGraph(){
   */
 
 int GraphManager::startServices(){
-	//main_thread = pthread_self();
 	stageGraphThread = new std::thread(&GraphManager::stageGraphs, this);
-	// sighandler<sigaction>(SIGINT, sigint_handler);
 	return 0;
 }
 

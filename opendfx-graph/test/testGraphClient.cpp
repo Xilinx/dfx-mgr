@@ -5,6 +5,7 @@
 #include <thread>
 #include <signal.h>
 #include <atomic>
+#include <unistd.h>
 #include "device.h"
 #include "graph.hpp"
 #include "graphManager.hpp"
@@ -22,7 +23,7 @@ int main(int argc, char **argv) {
 	_unused(argv);
 	std::cout << "# main\n";
 	opendfx::Graph *graph[10];
-	int N = 4;
+	int N = 10;
 
 	for(int i = 0; i < N; i++){
 		graph[i] = new opendfx::Graph{"G", i};
@@ -47,9 +48,12 @@ int main(int argc, char **argv) {
 	for(int i = 0; i < N; i++){
 		std::cout << "checking schedules \n";
 		graph[i]->isScheduled();
-	
+		//while(!graph[i]->isScheduled()){
+		//	usleep(1000);
+		//};
+
 	}
-	
+
 	std::cout << "Client test done ... \n";
 	return 0;
 }

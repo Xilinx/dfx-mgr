@@ -458,7 +458,7 @@ int Graph::isScheduled(void){
 	send_message.id = GRAPH_STAGED;
 	send_message.size = sizeof(id);
 	send_message.fdcount = 0;
-	std::cout << "@@" << std::endl;
+	//std::cout << "@@" << std::endl;
 	memcpy(send_message.data, &id, sizeof(id));
 	ret = write(domainSocket->sock_fd, &send_message, HEADERSIZE + send_message.size);
 	if (ret < 0){

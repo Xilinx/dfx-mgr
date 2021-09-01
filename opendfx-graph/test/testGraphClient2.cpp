@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
 	}
 	for(int i = 0; i < N; i++){
 		std::cout << "checking schedules \n";
-		graph[i]->isScheduled();
+		while(!graph[i]->isScheduled());
 	
 	}
 	
