@@ -275,9 +275,9 @@ GRAPH_HANDLE 	GraphManager_getStagedGraphByID(GRAPH_MANAGER_HANDLE gmHandle, int
 	return (GRAPH_HANDLE) graph;	
 }
 
-int 			GraphManager_ifGraphStaged(GRAPH_MANAGER_HANDLE gmHandle, int id){
+int 			GraphManager_ifGraphStaged(GRAPH_MANAGER_HANDLE gmHandle, int id, int **fd, int **ids, int *size){
 	opendfx::GraphManager *graphManager = (opendfx::GraphManager *) gmHandle;
-	return (int) graphManager->ifGraphStaged(id);
+	return (int) graphManager->ifGraphStaged(id, fd, ids, size);
 }
 
 #ifdef __cplusplus

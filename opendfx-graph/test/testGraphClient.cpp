@@ -23,35 +23,41 @@ int main(int argc, char **argv) {
 	_unused(argv);
 	std::cout << "# main\n";
 	opendfx::Graph *graph[10];
-	int N = 10;
+	int priority;
+	int N = 3;
+	int M = 1;
 
-	for(int i = 0; i < N; i++){
-		graph[i] = new opendfx::Graph{"G", i};
-		auto input00   = graph[i]->addInputNode("INPUT", IONODE_SIZE);
-		auto accel01   = graph[i]->addAccel("AES128");
-		auto output02  = graph[i]->addOutputNode("OUTPUT", IONODE_SIZE);
+	for(int j = 0; j < M; j++){
+		for(int i = 0; i < N; i++){
+			priority = i % 3;
+			graph[i] = new opendfx::Graph{"G", priority, true};
+			auto input00   = graph[i]->addInputNode("INPUT", IONODE_SIZE);
+			auto accel01   = graph[i]->addAccel("AES128");
+			auto output02  = graph[i]->addOutputNode("OUTPUT", IONODE_SIZE);
 
-		auto buffer00  = graph[i]->addBuffer("BUFF", BUFFER_SIZE, DDR_BASED);
-		auto buffer01  = graph[i]->addBuffer("BUFF", BUFFER_SIZE, DDR_BASED);
+			auto buffer00  = graph[i]->addBuffer("BUFF", BUFFER_SIZE, DDR_BASED);
+			auto buffer01  = graph[i]->addBuffer("BUFF", BUFFER_SIZE, DDR_BASED);
 
-		auto link00    = graph[i]->connectOutputBuffer(input00,  buffer00, 0x00, TRANSACTION_SIZE, 0, 0);
-		auto link01    = graph[i]->connectInputBuffer (accel01,  buffer00, 0x00, TRANSACTION_SIZE, 1, 0);
-		auto link02    = graph[i]->connectOutputBuffer(accel01,  buffer01, 0x00, TRANSACTION_SIZE, 1, 0);
-		auto link03    = graph[i]->connectInputBuffer (output02, buffer01, 0x00, TRANSACTION_SIZE, 2, 0);
-		std::cout << graph[i]->toJson() << std::endl;;
-		graph[i]->submit();
-		_unused(link00);
-		_unused(link01);
-		_unused(link02);
-		_unused(link03);
-	}
-	for(int i = 0; i < N; i++){
-		std::cout << "checking schedules \n";
-		graph[i]->isScheduled();
-		//while(!graph[i]->isScheduled()){
-		//	usleep(1000);
-		//};
+			auto link00    = graph[i]->connectOutputBuffer(input00,  buffer00, 0x00, TRANSACTION_SIZE, 0, 0);
+			auto link01    = graph[i]->connectInputBuffer (accel01,  buffer00, 0x00, TRANSACTION_SIZE, 1, 0);
+			auto link02    = graph[i]->connectOutputBuffer(accel01,  buffer01, 0x00, TRANSACTION_SIZE, 1, 0);
+			auto link03    = graph[i]->connectInputBuffer (output02, buffer01, 0x00, TRANSACTION_SIZE, 2, 0);
+			std::cout << graph[i]->toJson() << std::endl;;
+			graph[i]->submit();
+			_unused(link00);
+			_unused(link01);
+			_unused(link02);
+			_unused(link03);
+		}
+		for(int i = 0; i < N; i++){
+			std::cout << "checking schedules \n";
+			//graph[i]->isScheduled();
+			//delete graph[i];
+			while(!graph[i]->isScheduled()){
+				usleep(100000);
+			};
 
+		}
 	}
 
 	std::cout << "Client test done ... \n";

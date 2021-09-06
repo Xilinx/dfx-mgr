@@ -31,7 +31,7 @@ namespace opendfx {
 			int startServices();
 			int stopServices();
 			opendfx::Graph* getStagedGraphByID(int id);
-			bool ifGraphStaged(int id);
+			bool ifGraphStaged(int id, int **fd, int **ids, int *size);
 			int executeStagedGraphs();
 
 		private:

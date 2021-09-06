@@ -39,7 +39,7 @@
 using json = nlohmann::json;
 using opendfx::Graph;
 
-Graph::Graph(const std::string &name, int priority) : m_name(name) {
+Graph::Graph(const std::string &name, int priority, bool bypass) : m_name(name), bypass(bypass) {
 	int i;
 	//char * block;
 	//short size = 1;
@@ -91,6 +91,33 @@ opendfx::Accel* Graph::addOutputNode(const std::string &name, int bSize){
 	return accel;
 }
 
+int Graph::getIODescriptors(int **fd, int **id, int *size){
+	int count = accels.size() - accelCount;
+	int *ioid = (int*) malloc(sizeof(int) * count);
+	int *iofd = (int*) malloc(sizeof(int) * count);
+	int i = 0;
+	std::cout <<  "$$$$$$$$$$$$$$$$" << accelCount << ":" << accels.size() << std::endl;
+	_unused(fd);
+	_unused(id);
+	_unused(size);
+	for (std::vector<opendfx::Accel *>::iterator it = accels.begin() ; it != accels.end(); ++it)
+	{
+		opendfx::Accel* accel = *it;
+		if (accel->getType() == opendfx::acceltype::inputNode || accel->getType() == opendfx::acceltype::outputNode){
+			ioid[i] = accel->getId();
+			iofd[i] = accel->getFd();
+			std::cout << "id : " << ioid[i] << std::endl;
+			std::cout << "fd : " << iofd[i] << std::endl;
+			i++;
+		}
+	}
+
+	*id = ioid;
+	*fd = iofd;
+	*size = count;
+	return 0;
+}
+
 opendfx::Accel* Graph::addAccel(opendfx::Accel *accel){
 	accels.push_back(accel);
 	if (accel->getType() == opendfx::acceltype::accelNode){
@@ -124,7 +151,7 @@ opendfx::Link* Graph::connectInputBuffer(opendfx::Accel *accel, opendfx::Buffer 
 }
 
 opendfx::Link* Graph::connectOutputBuffer(opendfx::Accel *accel, opendfx::Buffer *buffer,
-	int offset, int transactionSize, int transactionIndex, int channel){
+		int offset, int transactionSize, int transactionIndex, int channel){
 	opendfx::Link *link = new opendfx::Link(accel, buffer, opendfx::direction::fromAccel, id);
 	link->setOffset(offset);
 	link->setTransactionSize(transactionSize);
@@ -284,6 +311,8 @@ std::string Graph::toJson(bool withDetail){
 	json document;
 	document["id"]      = utils::int2str(id);
 	document["name"]    = m_name;
+	document["bypass"]  = bypass;
+	document["priority"]  = priority;
 	document["accels"]  = json::parse(jsonAccels(withDetail));
 	document["buffers"] = json::parse(jsonBuffers(withDetail));	
 	document["links"]   = json::parse(jsonLinks(withDetail));
@@ -295,6 +324,8 @@ std::string Graph::toJson(bool withDetail){
 int Graph::fromJson(std::string jsonstr){
 	json document = json::parse(jsonstr);
 	document.at("name").get_to(m_name);
+	document.at("bypass").get_to(bypass);
+	document.at("priority").get_to(priority);
 	json accelsObj = document["accels"];
 	for (json::iterator it = accelsObj.begin(); it != accelsObj.end(); ++it) {
 		json accelObj = *it;
@@ -471,9 +502,13 @@ int Graph::isScheduled(void){
 		return -1;
 	}
 	statusP = (int *)recv_message.data; 
-	std::cout << *statusP << std::endl; 
-
-	return 0;
+	std::cout << "@@@" << *statusP << std::endl; 
+	if (*statusP == 1){
+		for (int i=0; i < fdcount; i++){
+			std::cout << fd[i] << std::endl;
+		}
+	}
+	return *statusP;
 }
 
 int Graph::allocateIOBuffers()
@@ -621,6 +656,79 @@ int Graph::removeCompletedSchedule(){
 }
 
 int Graph::execute(){
+	if (bypass == true && countAccel() == 1){	
+		return Graph::executeBypass();
+	}
+	else{
+		return Graph::executeScheduler();
+	}
+}
+
+int Graph::executeBypass(){
+	std::cout << "!!##########################################" << std::endl;
+	//std::cout << accels[0]->info() << std::endl;
+	for (std::vector<opendfx::Schedule *>::iterator it = scheduleList.begin()  ; it != scheduleList.end()  ; ++it){
+		opendfx::Schedule * schedule = *it;
+		opendfx::Schedule * lastSchedule;
+		//int index = schedule->getIndex();
+		int size = schedule->getSize();
+		int offset = schedule->getOffset();
+		//int last = schedule->getLast();
+		int first = schedule->getFirst();
+		ExecutionDependency *eDependency = schedule->getEDependency();
+		opendfx::Link* link = eDependency->getLink();
+		opendfx::Accel* accel = link->getAccel();
+		opendfx::Buffer* buffer = link->getBuffer();
+		Device_t* device = accel->getDevice();
+		DeviceConfig_t *deviceConfig = accel->getConfig();
+		BuffConfig_t *buffConfig = buffer->getConfig();
+		if (link->getDir() == opendfx::direction::fromAccel){
+			if(eDependency->isDependent()){
+				int lastSize = lastSchedule->getSize();
+				int lastOffset = lastSchedule->getOffset();
+				int lastFirst = lastSchedule->getFirst();
+				ExecutionDependency *lastEDependency = lastSchedule->getEDependency();
+				opendfx::Link* lastLink = lastEDependency->getLink();
+				opendfx::Accel* lastAccel = lastLink->getAccel();
+				opendfx::Buffer* lastBuffer = lastLink->getBuffer();
+				Device_t* lastDevice = lastAccel->getDevice();
+				DeviceConfig_t *lastDeviceConfig = lastAccel->getConfig();
+				BuffConfig_t *lastBuffConfig = lastBuffer->getConfig();
+				device->S2MMData(deviceConfig, buffConfig, offset, size, first);
+				device->S2MMData(deviceConfig, buffConfig, offset, size, first);
+				lastDevice->MM2SData(lastDeviceConfig, lastBuffConfig, lastOffset, lastSize, lastFirst, lastLink->getChannel());
+				while(device->S2MMDone(deviceConfig) <= 0){
+				}
+				while(lastDevice->S2MMDone(lastDeviceConfig) <= 0){
+				}
+				schedule->setDeleteFlag(true);
+				lastSchedule->setDeleteFlag(true);
+
+			}
+			else{
+				device->S2MMData(deviceConfig, buffConfig, offset, size, first);
+				while(device->S2MMDone(deviceConfig) <= 0){
+				}
+				schedule->setDeleteFlag(true);
+			}
+		}
+		else if (link->getDir() == opendfx::direction::toAccel){
+			if(eDependency->isDependent()){
+				lastSchedule = schedule;
+			}
+			else{
+				device->MM2SData(deviceConfig, buffConfig, offset, size, first, link->getChannel());
+				while(device->MM2SDone(deviceConfig) <= 0){
+				}
+				schedule->setDeleteFlag(true);
+			}
+		}
+	}
+	std::cout << "############################################" << std::endl;
+	return scheduleList.size();
+}
+int Graph::executeScheduler(){
+	//int Graph::execute(){
 	usleep(1000);
 	for (std::vector<opendfx::Schedule *>::iterator it = scheduleList.begin()  ; it != scheduleList.end()  ; ++it)
 	{
@@ -629,7 +737,6 @@ int Graph::execute(){
 		int index = schedule->getIndex();
 		int size = schedule->getSize();
 		int offset = schedule->getOffset();
-		//int status = schedule->getStatus();
 		int last = schedule->getLast();
 		int first = schedule->getFirst();
 		opendfx::Link* link = eDependency->getLink();
@@ -639,9 +746,6 @@ int Graph::execute(){
 		DeviceConfig_t *deviceConfig = accel->getConfig();
 		BuffConfig_t *buffConfig = buffer->getConfig();
 		if (link->getDir() == opendfx::direction::fromAccel){
-			//std::cout << "S2MM Current Index : " << accel->getS2MMCurrentIndex() << std::endl;
-			//std::cout << "S2MM Index : " << index << std::endl;
-
 			if (accel->getS2MMStatus() == opendfx::status::Idle){
 				if(buffer->getStatus() == opendfx::bufferStatus::BuffIsEmpty){
 					if(eDependency->isDependent()){
@@ -694,8 +798,6 @@ int Graph::execute(){
 			}
 		}
 		else{
-			//std::cout << "MM2S Current Index : " << accel->getMM2SCurrentIndex() << std::endl;
-			//std::cout << "MM2S Index : " << index << std::endl;
 			if (accel->getMM2SStatus() == opendfx::status::Idle){
 				if(buffer->getStatus() == opendfx::bufferStatus::BuffIsFull){
 					accel->setMM2SCurrentIndex(index);
@@ -753,15 +855,7 @@ int Graph::execute(){
 				}
 			}
 		}
-		//_unused(index);
-		//_unused(status);
 		_unused(last);
-		//_unused(size);
-		//_unused(offset);
-		//_unused(first);
-		//_unused(buffConfig);
-		//_unused(device);
-		//_unused(deviceConfig);
 	}
 
 

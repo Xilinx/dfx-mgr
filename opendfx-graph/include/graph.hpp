@@ -24,7 +24,7 @@ namespace opendfx {
 	class Graph {
 
 		public:
-			explicit Graph(const std::string &name, int priority = 0);
+			explicit Graph(const std::string &name, int priority = 0, bool bypass = false);
 			std::string info() const;
 			std::string getInfo() const;
 			Accel* addAccel(const std::string &name);
@@ -99,7 +99,9 @@ namespace opendfx {
 			int getScheduleListInfo();
 			int removeCompletedSchedule();
 			int execute();
-
+			int executeBypass();
+			int executeScheduler();
+			int getIODescriptors(int **fd, int **id, int *size);
 		private:
 			std::string m_name;
 			int id;
@@ -116,6 +118,7 @@ namespace opendfx {
 			int xrt_fd;
 			bool executionDone;
 			int status;
+			bool bypass;
 	};
 } // #end of graph
 

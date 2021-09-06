@@ -70,6 +70,7 @@ Schedule::Schedule(opendfx::ExecutionDependency *eDependency, int index, int siz
 };
 
 int Schedule::getInfo(){
+	std::cout << "@@@@@@@@@@@@@@@@@@@" << std::endl;
 	std::cout << eDependency->getInfo() << " : " << index << " : " << eDependency->getLink()->getTransactionSizeScheduled() << " : " << size << " : " << offset << " : " << last << " : " << first << std::endl;
 	return 0;
 }

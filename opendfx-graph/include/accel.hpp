@@ -80,6 +80,13 @@ namespace opendfx {
 				this->CurrentIndex = CurrentIndex;
 				return 0;
 			};
+
+			inline int getFd() const { std::cout << this->fd << std::endl; return this->fd; }
+			inline int setFd(int fd){
+				this->fd = fd;
+				return 0;
+			};
+			
 		private:
 			std::string name;
 			int id;

@@ -71,13 +71,17 @@ opendfx::Graph* GraphManager::getStagedGraphByID(int id)
 	return rgraph;
 }
 
-bool GraphManager::ifGraphStaged(int id){
+bool GraphManager::ifGraphStaged(int id, int **fd, int **ids, int *size){
+	//bool GraphManager::ifGraphStaged(int id){
 	opendfx::Graph* graph = getStagedGraphByID(id);
-	if (graph == NULL){
-		return false;
+	std::cout << "%%%%%%%%%%%%" << std::endl;
+	if (graph != NULL && graph->getStatus() == opendfx::graphStatus::GraphStaged){
+		std::cout << "%%%%%%%%%%%%" << std::endl;
+		graph->getIODescriptors(fd, ids, size);
+		return true;
 	}
 	else{
-		return true;
+		return false;
 	}
 }
 
@@ -101,9 +105,13 @@ int GraphManager::executeStagedGraphs(){
 	for (std::vector<opendfx::Graph *>::iterator it = stagedGraphs.begin() ; it != stagedGraphs.end(); ++it)
 	{
 		opendfx::Graph* tGraph = *it;
+
 		if (tGraph->execute() == 0){
 			tGraph->setStatus(opendfx::graphStatus::GraphExecuted);
 		}
+		//if (tGraph->executeBypass() == 0){
+		//	tGraph->setStatus(opendfx::graphStatus::GraphExecuted);
+		//}
 		tGraph->removeCompletedSchedule();
 	}
 	return 0;
@@ -118,7 +126,7 @@ int GraphManager::unstageGraphs(){
 			tGraph->deallocateBuffers();
 			tGraph->deallocateIOBuffers();
 			this->stagedGraphs.erase(it);
-			//delete tGraph;
+			delete tGraph;
 			break;
 		}
 	}

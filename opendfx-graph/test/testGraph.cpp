@@ -19,23 +19,13 @@ int main(int argc, char **argv) {
 	opendfx::GraphManager gManager{3};
 	opendfx::Graph *graph[10];
 
-	/*Device_t* device;
-	DeviceConfig_t *config;
-	void *fallbackDriver = dlopen("./drivers/fallback/src/libfallback_shared.so", RTLD_NOW);
-	REGISTER registerDev = (REGISTER) dlsym(fallbackDriver, "registerDriver");
-	UNREGISTER unregisterDev = (UNREGISTER) dlsym(fallbackDriver, "unregisterDriver");
-	registerDev(&device, &config);
-	device->open(config);
-	device->close(config);
-	unregisterDev(&device, &config);
-	dlclose(fallbackDriver);*/
-	int N = 2;
+	int N = 1;
 
 	for(int i = 0; i < N; i++){
 		graph[i] = new opendfx::Graph{"G", i};
 		std::cout << "@@@###@@@" << std::endl;
 		auto input00   = graph[i]->addInputNode("INPUT", IONODE_SIZE);
-		auto accel01   = graph[i]->addAccel("AES");
+		auto accel01   = graph[i]->addAccel("AES128");
 		auto output02  = graph[i]->addOutputNode("OUTPUT", IONODE_SIZE);
 
 		auto buffer00  = graph[i]->addBuffer("BUFF", BUFFER_SIZE, DDR_BASED);
@@ -54,9 +44,14 @@ int main(int argc, char **argv) {
 		gManager.addGraph(graph[i]);
 	}
 	gManager.listGraphs();
+	//int *fd, *id;
+	//int size;
 	for(int i = 0; i < N; i++){
 		std::cout << "###################\n";
 		gManager.stageGraphs();
+		//std::cout << "!!###################\n";
+		//graph[i]->getIODescriptors(&fd, &id, &size);
+		//std::cout << "!!###################\n";
 		gManager.listGraphs();
 	}
 

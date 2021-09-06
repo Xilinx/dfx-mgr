@@ -161,68 +161,80 @@ int main (int argc, char **argv)
 								send_message.fdcount = buff_fd_cnt;
 								send_message.size = sizeof(id);
 								sock_fd_write(fd, &send_message, 
-											HEADERSIZE + send_message.size,
-											buff_fd, buff_fd_cnt);
+										HEADERSIZE + send_message.size,
+										buff_fd, buff_fd_cnt);
 								break;
 							case GRAPH_STAGED:
 								acapd_debug("Recieved graph scheduled packet");
 								int * idptr = (int *) recv_message.data;
 								id = *idptr;
-								status = GraphManager_ifGraphStaged(gmHandle, id);
-								//acapd_debug("%s : %d\n", recv_message.data, status);
-								buff_fd_cnt = 0;
-								size = sizeof(status);
-								memcpy(send_message.data, &status, size);					
-								send_message.id = GRAPH_STAGED;
-								send_message.fdcount = 0;
-								send_message.size = size;
+								int *io_fd, *io_ids, io_size;
+								status = GraphManager_ifGraphStaged(gmHandle, id, &io_fd, &io_ids, &io_size);
+								if (status == true){
+									acapd_debug("%d\n", status);
+									acapd_debug("%d\n", io_size);
+									size = sizeof(int)* (io_size + 1);
+									memcpy(send_message.data, &status, sizeof(int));					
+									memcpy(&send_message.data[sizeof(int)], io_ids, size);					
+									send_message.id = GRAPH_STAGED;
+									send_message.fdcount = io_size;
+									send_message.size = size;
+								}
+								else{
+									acapd_debug("%d\n", status);
+									size = sizeof(int);
+									memcpy(send_message.data, &status, sizeof(int));					
+									send_message.id = GRAPH_STAGED;
+									send_message.fdcount = 0;
+									send_message.size = size;
+								}
 								sock_fd_write(fd, &send_message, 
-											HEADERSIZE + send_message.size,
-											buff_fd, buff_fd_cnt);
+										HEADERSIZE + send_message.size,
+										buff_fd, 0);
 								break;
 							case GRAPH_FINALISE:
 								//acapd_debug("daemon recieved graph_finalise\n");
 								//abstractGraphServerFinalise(scheduler, recv_message.data);
 								memcpy(send_message.data, recv_message.data, 
-									recv_message.size);
+										recv_message.size);
 								send_message.size = recv_message.size;
 								//send_message.id = GRAPH_FINALISE_DONE;
-								
+
 								if (write(fd, &send_message, HEADERSIZE +send_message.size) < 0)
 									printf("GRAPH_FINALISE write failed\n");
 								break;
 
-							/*case LOAD_ACCEL:
-								acapd_print("daemon loading accel %s \n",recv_message.data);
-								slot = load_accelerator(recv_message.data);
-								sprintf(send_message.data, "%d", slot);
-								send_message.size = 2;
-								if (write(fd, &send_message, HEADERSIZE + send_message.size) < 0)
-									acapd_perror("LOAD_ACCEL write failed\n");
-								break;
+								/*case LOAD_ACCEL:
+								  acapd_print("daemon loading accel %s \n",recv_message.data);
+								  slot = load_accelerator(recv_message.data);
+								  sprintf(send_message.data, "%d", slot);
+								  send_message.size = 2;
+								  if (write(fd, &send_message, HEADERSIZE + send_message.size) < 0)
+								  acapd_perror("LOAD_ACCEL write failed\n");
+								  break;
 
-							case REMOVE_ACCEL:
-								acapd_print("daemon removing accel at slot %d\n",atoi(recv_message.data));
-								ret = remove_accelerator(atoi(recv_message.data));
-								sprintf(send_message.data, "%d", ret);
-								send_message.size = 2;
-								if (write(fd, &send_message, HEADERSIZE+ send_message.size) < 0)
-									acapd_perror("REMOVE_ACCEL write failed\n");
-								break;
+								  case REMOVE_ACCEL:
+								  acapd_print("daemon removing accel at slot %d\n",atoi(recv_message.data));
+								  ret = remove_accelerator(atoi(recv_message.data));
+								  sprintf(send_message.data, "%d", ret);
+								  send_message.size = 2;
+								  if (write(fd, &send_message, HEADERSIZE+ send_message.size) < 0)
+								  acapd_perror("REMOVE_ACCEL write failed\n");
+								  break;
 
-							case LIST_PACKAGE:
-								msg = listAccelerators();
-								memcpy(send_message.data, msg, sizeof(send_message.data)); 
-								send_message.size = sizeof(send_message.data);
-								if (write(fd, &send_message, send_message.size) < 0)
-									acapd_perror("LIST_PACKAGE: write failed\n");
-								break;*/
-							/*case QUIT:
-								if (close (fd) == -1)
-									error ("close");
-								FD_CLR (fd, &fds);
-								break;
-							*/
+								  case LIST_PACKAGE:
+								  msg = listAccelerators();
+								  memcpy(send_message.data, msg, sizeof(send_message.data)); 
+								  send_message.size = sizeof(send_message.data);
+								  if (write(fd, &send_message, send_message.size) < 0)
+								  acapd_perror("LIST_PACKAGE: write failed\n");
+								  break;*/
+								/*case QUIT:
+								  if (close (fd) == -1)
+								  error ("close");
+								  FD_CLR (fd, &fds);
+								  break;
+								  */
 							default: 
 								printf("Unexpected message from client\n"); 
 						}
@@ -231,5 +243,5 @@ int main (int argc, char **argv)
 			} 
 		} 
 	} 
-    exit (EXIT_SUCCESS);
+	exit (EXIT_SUCCESS);
 }

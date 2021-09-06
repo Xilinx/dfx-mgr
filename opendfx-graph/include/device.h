@@ -15,11 +15,13 @@
 #include <dfx-mgr/print.h>
 #include <stdint.h>
 #include <semaphore.h>
+#include "xrt/xrt_bo.h"
 
 typedef struct BuffConfig{
     uint8_t* ptr;   // Buffer Ptr
     unsigned long phyAddr; // Buffer Physical Address
     sem_t* semptr;
+    xrtBufferHandle xrtBuffer;
 } BuffConfig_t;
 
 typedef struct DeviceConfig {

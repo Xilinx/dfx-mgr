@@ -68,7 +68,7 @@ int				GraphManager_scheduleGraph(GRAPH_MANAGER_HANDLE gmHandle);
 int				GraphManager_startServices(GRAPH_MANAGER_HANDLE gmHandle);
 int				GraphManager_stopServices(GRAPH_MANAGER_HANDLE gmHandle);
 GRAPH_HANDLE 	GraphManager_getStagedGraphByID(GRAPH_MANAGER_HANDLE gmHandle, int id);
-int 			GraphManager_ifGraphStaged(GRAPH_MANAGER_HANDLE gmHandle, int id);
+int 			GraphManager_ifGraphStaged(GRAPH_MANAGER_HANDLE gmHandle, int id, int **fd, int **ids, int *size);
 
 
 #ifdef __cplusplus
