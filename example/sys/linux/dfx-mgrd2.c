@@ -171,17 +171,21 @@ int main (int argc, char **argv)
 								int *io_fd, *io_ids, io_size;
 								status = GraphManager_ifGraphStaged(gmHandle, id, &io_fd, &io_ids, &io_size);
 								if (status == true){
-									acapd_debug("%d\n", status);
-									acapd_debug("%d\n", io_size);
+									//for(int i = 0 ; i < io_size; i++){
+									//	printf("### id = %x\n", io_ids[i]);
+									//	printf("### fd = %x\n", io_fd[i]);
+									//}
+									//acapd_debug("%d\n", status);
+									//acapd_debug("%d\n", io_size);
 									size = sizeof(int)* (io_size + 1);
 									memcpy(send_message.data, &status, sizeof(int));					
-									memcpy(&send_message.data[sizeof(int)], io_ids, size);					
+									memcpy(send_message.data + sizeof(int), io_ids, sizeof(int) * io_size);					
 									send_message.id = GRAPH_STAGED;
 									send_message.fdcount = io_size;
 									send_message.size = size;
 								}
 								else{
-									acapd_debug("%d\n", status);
+									//acapd_debug("%d\n", status);
 									size = sizeof(int);
 									memcpy(send_message.data, &status, sizeof(int));					
 									send_message.id = GRAPH_STAGED;

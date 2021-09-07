@@ -15,7 +15,7 @@
 #include <dfx-mgr/print.h>
 #include <stdint.h>
 #include <semaphore.h>
-#include "xrt/xrt_bo.h"
+#include <xrt/xrt_bo.h>
 
 typedef struct BuffConfig{
     uint8_t* ptr;   // Buffer Ptr

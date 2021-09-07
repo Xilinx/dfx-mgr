@@ -50,6 +50,7 @@ namespace opendfx {
 				return 0;
 			};
 			int allocateBuffer(int xrt_fd);
+			int reAllocateBuffer();
 			int deallocateBuffer(int xrt_fd);
 			int allocateAccelResource();
 			int deallocateAccelResource();
@@ -86,6 +87,9 @@ namespace opendfx {
 				this->fd = fd;
 				return 0;
 			};
+		    uint8_t* ptr;   // Buffer Ptr
+			int post();
+			int wait();
 			
 		private:
 			std::string name;
@@ -107,7 +111,6 @@ namespace opendfx {
 
 			int fd;     // File descriptor
 		    int handle; // Buffer XRT Handeler
-		    uint8_t* ptr;   // Buffer Ptr
 		    unsigned long phyAddr; // Buffer Physical Address
 		    int semaphore;
 		    sem_t* semptr;

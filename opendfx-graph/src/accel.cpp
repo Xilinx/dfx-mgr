@@ -125,6 +125,24 @@ int Accel::allocateBuffer(int xrt_fd){
 	return 0;
 }
 
+int Accel::reAllocateBuffer(){
+	char SemaphoreName[100];
+	if (type == opendfx::acceltype::inputNode || type == opendfx::acceltype::outputNode){
+		mapBuffer(fd, bSize, &ptr);
+		memset(SemaphoreName, '\0', 100);
+		sprintf(SemaphoreName, "%x", semaphore);
+		semptr = sem_open(SemaphoreName, 
+				O_CREAT,       
+				S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,   
+				0);
+		if (semptr == ((void*) -1)){ 
+			std::cout << "sem_open" << std::endl;
+		}
+		//sem_post(semptr);
+	} 
+	return 0;
+}
+
 int Accel::deallocateBuffer(int xrt_fd){
 	int status;
 	if (type == opendfx::acceltype::inputNode || type == opendfx::acceltype::outputNode){
@@ -211,4 +229,11 @@ int Accel::deallocateAccelResource(){
 		remove_accelerator(slot);			
 	}
 	return 0;
+}
+
+int Accel::post(){
+	return sem_post(semptr);
+}
+int Accel::wait(){
+	return sem_wait(semptr);
 }
