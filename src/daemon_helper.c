@@ -161,7 +161,7 @@ int load_accelerator(const char *accel_name)
     }
 
     /* Flat shell design are treated as with one slot */
-    else if(base != NULL && !strcmp(base->type,"XRT_FLAT")) {
+    else if(base != NULL && (!strcmp(base->type,"XRT_FLAT")|| !strcmp(base->type,"PL_FLAT"))) {
         if (base->slots == NULL) {
             base->slots = (slot_info_t **)malloc(sizeof(slot_info_t *) * base->num_slots);
             base->slots[0] = NULL;
@@ -190,7 +190,8 @@ int load_accelerator(const char *accel_name)
         platform.active_base = base;
 
         /* VART libary for SOM desings needs .xclbin path to be written to a file*/
-        update_env(pkg->path);
+		if(!strcmp(base->type,"XRT_FLAT"))
+			update_env(pkg->path);
         return 0;
     }
     for (i = 0; i < 10; i++){
@@ -200,7 +201,7 @@ int load_accelerator(const char *accel_name)
         }
     }
     /* For SIHA slotted architecture */
-    if(base != NULL && !strcmp(base->type,"SLOTTED")) {
+    if(base != NULL && !strcmp(base->type,"PL_DFX")) {
         if (platform.active_base != NULL && !platform.active_base->active && 
 				strcmp(platform.active_base->base_path, accel_info->parent_path)) {
 			acapd_print("All slots for base are empty, loading new base design\n");
@@ -388,7 +389,7 @@ char *listAccelerators()
                 if (base_designs[i].accel_list[j].path[0] != '\0') {
 					int slots;
 					/* Internally flat shell is treated as one slot to make the code generic and save info of the active design */
-					if (!strcmp(base_designs[i].type,"XRT_FLAT"))
+					if (!strcmp(base_designs[i].type,"XRT_FLAT") || !strcmp(base_designs[i].type,"PL_FLAT"))
 						slots = 0;
 					else
 						slots = base_designs[i].num_slots;
@@ -466,7 +467,7 @@ void parse_packages(struct basePLDesign *base, char *path)
     int i,wd;
 
 	/* For flat shell design there is no subfolder so assign the base path as the accel path */
-	if (!strcmp(base->type,"XRT_FLAT")) {
+	if (!strcmp(base->type,"XRT_FLAT") || !strcmp(base->type,"PL_FLAT")) {
 		acapd_debug("This is flat shell design\n");
         strcpy(base->accel_list[0].name, base->name);
         strcpy(base->accel_list[0].path, base->base_path);

@@ -337,6 +337,8 @@ int initBaseDesign(struct basePLDesign *base, const char *shell_path)
 		if (jsoneq(jsonData, &token[i],"shell_type") == 0) {
 			strncpy(base->type,strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), sizeof(base->type)-1);
 			base->type[sizeof(base->type)-1] = '\0';
+			if(strcmp(base->type,"XRT_FLAT") && strcmp(base->type,"PL_FLAT") && strcmp(base->type,"PL_DFX"))
+				acapd_perror("shell_type valid types are XRT_FLAT/PL_FLAT/PL_DFX\n");
 		}
 		if (jsoneq(jsonData, &token[i],"num_slots") == 0) {
 			base->num_slots = strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 10);
@@ -351,7 +353,7 @@ int initBaseDesign(struct basePLDesign *base, const char *shell_path)
 				base->load_base_design = 0;
 		}
 	}
-	if (!strcmp(base->type,"XRT_FLAT"))
+	if (!strcmp(base->type,"XRT_FLAT") || !strcmp(base->type,"PL_FLAT"))
 		base->num_slots = 1;
 	return 0;
 }
