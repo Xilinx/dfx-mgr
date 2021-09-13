@@ -99,7 +99,7 @@ void *jobScheduler_Task(void* carg){
 									switch(abstractAccel->type){
 										case HW_NODE:
 											//INFO("#####################\n");
-											jsonStr = getAccelMetadata(abstractAccel->name);
+											jsonStr = getAccelMetadata(abstractAccel->name,0);
 											//INFO("%s\n", jsonStr);
 											FALLBACKFUNCTION fallback = NULL;
 											//INFO("%s\n", abstractAccel->name);

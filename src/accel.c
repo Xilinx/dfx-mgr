@@ -48,7 +48,6 @@ int acapd_parse_config(acapd_accel_t *accel, const char *shell_config)
 int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int async)
 {
 	int ret;
-
 	acapd_assert(accel != NULL);
 	ret = acapd_parse_config(accel, shell_config);
 	if (ret < 0) {
@@ -61,7 +60,7 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 		return 0;
 	}
 	/* assert isolation before programming */
-	if (accel->type == SIHA_SHELL) {
+	if (!strcmp(accel->type, "SIHA_PL_DFX")) {
 		ret = acapd_shell_assert_isolation(accel);
 		if (ret < 0) {
 			acapd_perror("%s, failed to assert isolaction.\n",
@@ -88,7 +87,7 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 		accel->load_failure = ret;
 		return ret;
 	}
-	if (accel->status == ACAPD_ACCEL_STATUS_INUSE && accel->type == SIHA_SHELL) {
+	if (accel->status == ACAPD_ACCEL_STATUS_INUSE && !strcmp(accel->type,"SIHA_PL_DFX")) {
 		ret = acapd_shell_release_isolation(accel);
 		if (ret != 0) {
 			acapd_perror("%s: failed to release isolation.\n",__func__);
@@ -142,7 +141,7 @@ int remove_accel(acapd_accel_t *accel, unsigned int async)
 			accel->status = ACAPD_ACCEL_STATUS_UNLOADED;
 			return ACAPD_ACCEL_SUCCESS;
 		} else {
-			if (accel->type == SIHA_SHELL) {
+			if (!strcmp(accel->type,"SIHA_PL_DFX")) {
 				ret = acapd_shell_assert_isolation(accel);
 				if (ret < 0) {
 					acapd_perror("%s, failed to assert isolaction.\n",
@@ -273,13 +272,13 @@ void get_shell_clock_fd(int socket)
 	sys_get_fd(acapd_shell_clock_fd(),socket);
 }
 
-char *get_accel_path(const char *name)
+char *get_accel_path(const char *name, int slot)
 {
     char *base_path = malloc(sizeof(char)*1024);
     char *slot_path = malloc(sizeof(char)*1024);
     char *accel_path = malloc(sizeof(char)*1024);
-    DIR *d, *base_d,*accel_d;
-    struct dirent *dir, *base_dir,*accel_dir;
+    DIR *d, *base_d;
+    struct dirent *dir, *base_dir;
     struct stat info;
 
     d = opendir(FIRMWARE_PATH);
@@ -293,19 +292,12 @@ char *get_accel_path(const char *name)
 			while((base_dir = readdir(base_d)) != NULL) {
 				if (base_dir->d_type == DT_DIR && !strcmp(base_dir->d_name, name)) {
 					sprintf(accel_path,"%s/%s", base_path, base_dir->d_name);
-					accel_d = opendir(accel_path);
-					while((accel_dir = readdir(accel_d)) != NULL) {
-						if (!strcmp(accel_dir->d_name, ".") || !strcmp(accel_dir->d_name, ".."))
-							continue;
-						if (accel_dir->d_type == DT_DIR) {
-							sprintf(slot_path,"%s/%s", accel_path, accel_dir->d_name);
-							if (stat(slot_path,&info) != 0)
-								return NULL;
-							if (info.st_mode & S_IFDIR){
-								acapd_debug("Reading accel.json from %s\n",slot_path);
-								goto out;
-							}
-						}
+					sprintf(slot_path,"%s/%s_slot%d", accel_path, base_dir->d_name,slot);
+					if (stat(slot_path,&info) != 0)
+						return NULL;
+					if (info.st_mode & S_IFDIR){
+						acapd_debug("Reading accel.json from %s\n",slot_path);
+						goto out;
 					}
 				}
 			}
@@ -318,7 +310,7 @@ out:
 	return slot_path;
 }
 
-char * getAccelMetadata(char *package_name){
+char * getAccelMetadata(char *package_name, int slot){
 	char *filename = malloc(sizeof(char)*1024);
 	char *path;
 	FILE *fptr;
@@ -326,9 +318,9 @@ char * getAccelMetadata(char *package_name){
 	char *jsonData;
 	int ret;
 
-	path = get_accel_path(package_name);
+	path = get_accel_path(package_name, slot);
 	if (path == NULL) {
-		acapd_perror("No accel.json found for %s\n",package_name);
+		acapd_perror("No accel.json found for %s slot %d\n",package_name,slot);
 		return NULL;
 	}
 	sprintf(filename,"%s/accel.json",path);

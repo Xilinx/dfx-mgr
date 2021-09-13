@@ -7,7 +7,6 @@
 /*
  * @file    daemon_helper.h
  */
-
 #ifndef _ACAPD_DAEMON_HELPER_H
 #define _ACAPD_DAEMON_HELPER_H
 
@@ -30,7 +29,7 @@ void getShellFD();
 void getClockFD();
 char *listAccelerators();
 void getRMInfo();
-void *threadFunc();
+void *getXRTinfo(int slot);
 int dfx_init();
 int dfx_getFDs(int slot, int *fd);
 #ifdef __cplusplus

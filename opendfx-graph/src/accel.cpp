@@ -166,7 +166,7 @@ int Accel::allocateAccelResource(){
 	if (type == opendfx::acceltype::accelNode){
 		char *cname = new char[name.length() + 1];
 		strcpy(cname, name.c_str());
-		std::string metadata(getAccelMetadata(cname));
+		std::string metadata(getAccelMetadata(cname,0));
 		//std::cout << metadata << std::endl;
 		json document = json::parse(metadata);
 		json accelMetadataObj = document["accel_metadata"];
