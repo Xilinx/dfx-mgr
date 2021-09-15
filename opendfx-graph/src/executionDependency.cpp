@@ -63,6 +63,7 @@ std::string ExecutionDependency::getInfo(){
 	return stream.str();
 }
 
+
 using opendfx::Schedule;
 
 Schedule::Schedule(opendfx::ExecutionDependency *eDependency, int index, int size, int offset, int last, int first):eDependency(eDependency), index(index), size(size), offset(offset), last(last), first(first) {
@@ -72,5 +73,23 @@ Schedule::Schedule(opendfx::ExecutionDependency *eDependency, int index, int siz
 int Schedule::getInfo(){
 	std::cout << "@@@@@@@@@@@@@@@@@@@" << std::endl;
 	std::cout << eDependency->getInfo() << " : " << index << " : " << eDependency->getLink()->getTransactionSizeScheduled() << " : " << size << " : " << offset << " : " << last << " : " << first << std::endl;
+	return 0;
+}
+
+int Schedule::printCurrentStatus(){
+	ExecutionDependency *eDependency = getEDependency();
+	opendfx::Link* link = eDependency->getLink();
+	opendfx::Accel* accel = link->getAccel();
+	opendfx::Buffer* buffer = link->getBuffer();
+	std::cout << getDeleteFlag() << " " << index << " : " << accel->getCurrentIndex();
+	if (link->getDir() == opendfx::direction::fromAccel){
+		std::cout << " [S2MM] ";
+	}
+	else{
+		std::cout << " [MM2S] ";
+	}
+	std::cout << accel->getMM2SCurrentIndex() << " MM2S : " << accel->getMM2SStatus() << " : ";
+	std::cout << accel->getS2MMCurrentIndex() << " S2MM : " << accel->getS2MMStatus() << " : ";
+	std::cout << "Buffer : " << buffer->getStatus() << " Transaction"<< std::endl;
 	return 0;
 }

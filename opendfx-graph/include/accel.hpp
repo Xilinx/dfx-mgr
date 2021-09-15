@@ -87,9 +87,15 @@ namespace opendfx {
 				this->fd = fd;
 				return 0;
 			};
+			inline int setParentGraphId(int parentGraphId){
+				this->parentGraphId = parentGraphId;
+				semaphore = id ^ parentGraphId; 
+				return 0;
+			};
 		    uint8_t* ptr;   // Buffer Ptr
 			int post();
 			int wait();
+			int trywait();
 			
 		private:
 			std::string name;

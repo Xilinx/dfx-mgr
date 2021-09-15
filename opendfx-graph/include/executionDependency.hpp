@@ -61,6 +61,7 @@ namespace opendfx {
 			static inline bool staticGetDeleteFlag(Schedule *schedule) {
             return schedule->getDeleteFlag();
         }
+			int printCurrentStatus();
 
 
 		private:

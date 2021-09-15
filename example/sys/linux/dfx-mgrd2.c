@@ -171,15 +171,16 @@ int main (int argc, char **argv)
 								int *io_fd, *io_ids, io_size;
 								status = GraphManager_ifGraphStaged(gmHandle, id, &io_fd, &io_ids, &io_size);
 								if (status == true){
-									//for(int i = 0 ; i < io_size; i++){
-									//	printf("### id = %x\n", io_ids[i]);
-									//	printf("### fd = %x\n", io_fd[i]);
-									//}
+									for(int i = 0 ; i < io_size; i++){
+										printf("### id = %x\n", io_ids[i]);
+										printf("### fd = %x\n", io_fd[i]);
+										buff_fd[i] = io_fd[i];
+									}
 									//acapd_debug("%d\n", status);
 									//acapd_debug("%d\n", io_size);
 									size = sizeof(int)* (io_size + 1);
-									memcpy(send_message.data, &status, sizeof(int));					
-									memcpy(send_message.data + sizeof(int), io_ids, sizeof(int) * io_size);					
+									memcpy((char*)send_message.data, &status, sizeof(int));					
+									memcpy((char*)send_message.data + sizeof(int), io_ids, sizeof(int) * io_size);					
 									send_message.id = GRAPH_STAGED;
 									send_message.fdcount = io_size;
 									send_message.size = size;
@@ -194,7 +195,7 @@ int main (int argc, char **argv)
 								}
 								sock_fd_write(fd, &send_message, 
 										HEADERSIZE + send_message.size,
-										buff_fd, 0);
+										buff_fd, io_size);
 								break;
 							case GRAPH_FINALISE:
 								//acapd_debug("daemon recieved graph_finalise\n");

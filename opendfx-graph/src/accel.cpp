@@ -98,6 +98,7 @@ int Accel::allocateBuffer(int xrt_fd){
 	if (type == opendfx::acceltype::inputNode || type == opendfx::acceltype::outputNode){
 		status = xrt_allocateBuffer(xrt_fd, bSize, &handle,
 				&ptr, &phyAddr, &fd);
+		//std::cout << xrt_fd << fd << " " << bSize << " " << status << std::endl;
 		if(status < 0){
 			printf( "error @ config allocation\n");
 			return status;
@@ -105,6 +106,7 @@ int Accel::allocateBuffer(int xrt_fd){
 		char SemaphoreName[100];
 		memset(SemaphoreName, '\0', 100);
 		sprintf(SemaphoreName, "%x", semaphore);
+		//std::cout << "Semaphore : " << std::hex << semaphore << std::endl;
 		semptr = sem_open(SemaphoreName, 
 				O_CREAT,       
 				S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,   
@@ -126,11 +128,14 @@ int Accel::allocateBuffer(int xrt_fd){
 }
 
 int Accel::reAllocateBuffer(){
+	//std::cout << " reAllocateBuffer" << std::endl;
 	char SemaphoreName[100];
 	if (type == opendfx::acceltype::inputNode || type == opendfx::acceltype::outputNode){
 		mapBuffer(fd, bSize, &ptr);
+		//std::cout << fd << " " << bSize << " " << status << std::endl;
 		memset(SemaphoreName, '\0', 100);
 		sprintf(SemaphoreName, "%x", semaphore);
+		//std::cout << "Semaphore : " << std::hex << semaphore << std::endl;
 		semptr = sem_open(SemaphoreName, 
 				O_CREAT,       
 				S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH,   
@@ -138,7 +143,7 @@ int Accel::reAllocateBuffer(){
 		if (semptr == ((void*) -1)){ 
 			std::cout << "sem_open" << std::endl;
 		}
-		//sem_post(semptr);
+		//this->post();
 	} 
 	return 0;
 }
@@ -194,9 +199,9 @@ int Accel::allocateAccelResource(){
 		else{
 			InterRMCompatible = 0;
 		}
-		std::cout << "load accelerator" << std::endl;
+		//std::cout << "load accelerator" << std::endl;
 		slot = load_accelerator(cname);
-		std::cout << "load accelerator" << std::endl;
+		//std::cout << "load accelerator" << std::endl;
 		if(slot >= 0){
 			std::cout << "loading hardware accel" << std::endl;
 			dmDriver = dlopen(dmaLib.c_str(), RTLD_NOW);
@@ -234,6 +239,11 @@ int Accel::deallocateAccelResource(){
 int Accel::post(){
 	return sem_post(semptr);
 }
+
 int Accel::wait(){
 	return sem_wait(semptr);
+}
+
+int Accel::trywait(){
+	return sem_trywait(semptr);
 }
