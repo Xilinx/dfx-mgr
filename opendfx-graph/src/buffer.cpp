@@ -108,6 +108,7 @@ int Buffer::allocateBuffer(int xrt_fd){
 }
 
 int Buffer::deallocateBuffer(int xrt_fd){
+	std::cout << "deallocateBuffer" << std::endl;
 	int status;
 	if (bType == opendfx::buffertype::DDR_BASED){
 		status = xrt_deallocateBuffer(xrt_fd, bSize, &handle, &ptr, &phyAddr);

@@ -810,7 +810,7 @@ int Graph::executeScheduler(){
 									std::cout << "Buffer : " << buffer->getStatus() << "Transaction"<< std::endl;
 								}
 								else{
-									std::cout << "blocked" << std::endl;
+								//	std::cout << "blocked" << std::endl;
 								}
 							}
 						}
@@ -825,7 +825,7 @@ int Graph::executeScheduler(){
 								std::cout << "Buffer : " << buffer->getStatus() << "Transaction"<< std::endl;
 							}
 							else{
-								std::cout << "blocked" << std::endl;
+						//		std::cout << "blocked" << std::endl;
 							}
 						}
 					}

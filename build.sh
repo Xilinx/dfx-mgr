@@ -1,12 +1,10 @@
 #!/bin/bash
-set -x
-CHROOT="/scratch/abajpai/openacap/versal/software/platform_repo/sysroot/sysroots/cortexa72-cortexa53-xilinx-linux"
 
 
 cmake ../ \
 	-DCMAKE_TOOLCHAIN_FILE=versal-linux \
-	-DCMAKE_INCLUDE_PATH="$(pwd)/../include;$(pwd)/../recipe-sysroot/usr/include;${CHROOT}/usr/include;${CHROOT}/usr/include/xrt" \
-	-DCMAKE_LIBRARY_PATH="${CHROOT}/usr/lib" \
+	-DCMAKE_INCLUDE_PATH="$(pwd)/../include;$(pwd)/../recipe-sysroot/usr/include;$(pwd)/../recipe-sysroot/usr/include/xrt;${XILINX_VITIS}/aietools/include" \
+	-DCMAKE_LIBRARY_PATH="$(pwd)/../recipe-sysroot/lib;$(pwd)/../recipe-sysroot/usr/lib;${XILINX_VITIS}/aietools/lib/aarch64.o" \
 	-DCMAKE_PREFIX_PATH="$(pwd)/../recipe-sysroot" \
 	-DCMAKE_SYSROOT="$(pwd)/../recipe-sysroot" \
 

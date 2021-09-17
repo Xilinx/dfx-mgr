@@ -9,6 +9,8 @@ namespace utils{
 	int genID();
 	std::string int2str(int id);
 	int str2int(std::string strid);
+	int printBuffer(uint32_t *data, int size);
+	int printBuffer(int *data, int size);
 } 
 
 

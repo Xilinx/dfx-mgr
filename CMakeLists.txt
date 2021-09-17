@@ -43,9 +43,9 @@ link_directories (${_list})
 
 
 add_subdirectory (src)
+add_subdirectory (example)
 add_subdirectory (opendfx-graph)
 
 #if (WITH_EXAMPLE)
-add_subdirectory (example)
 #endif (WITH_EXAMPLE)
 # vim: expandtab:ts=2:sw=2:smartindent

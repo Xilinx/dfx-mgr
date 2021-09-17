@@ -63,7 +63,7 @@ int softDma_S2MMData(DeviceConfig_t *config, BuffConfig_t *buffer, uint64_t offs
 	int status;
 	if(firstLast){
 		status = sem_trywait(config->semptr);
-		printf("softDma_S2MMData : %d\n", status);
+		//printf("softDma_S2MMData : %d\n", status);
 		if(status < 0){
 			return -1;
 		}

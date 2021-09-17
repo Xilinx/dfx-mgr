@@ -122,7 +122,9 @@ int GraphManager::unstageGraphs(){
 		opendfx::Graph* tGraph = *it;
 		if(tGraph->getStatus() == opendfx::graphStatus::GraphExecuted){
 			tGraph->setStatus(opendfx::graphStatus::GraphUnstaged);
+		std::cout << "### @@@ !!!" << std::endl;
 			tGraph->deallocateAccelResources();
+		std::cout << "### @@@ !!!" << std::endl;
 			tGraph->deallocateBuffers();
 			tGraph->deallocateIOBuffers();
 			this->stagedGraphs.erase(it);
@@ -172,7 +174,7 @@ int GraphManager::stageGraphs(){
 				{
 					opendfx::Graph* graph = *it;
 					accelCounts = graph->countAccel();
-					if (remainingSlots > 0 && remainingSlots >= accelCounts && accelCounts > 0){
+					if (remainingSlots > 0 && remainingSlots >= accelCounts){ // && accelCounts > 0){
 						std::cout << "##" <<  std::endl;
 						remainingSlots = remainingSlots - accelCounts;
 						std::cout << "staged : " << utils::int2str(graph->getId()) << std::endl;
@@ -198,7 +200,9 @@ int GraphManager::stageGraphs(){
 			opendfx::Graph* tGraph = *it;
 			if(tGraph->getStatus() == opendfx::graphStatus::GraphExecuted){
 				tGraph->setStatus(opendfx::graphStatus::GraphUnstaged);
+				std::cout << "### @@@ !!!" << std::endl;
 				tGraph->deallocateAccelResources();
+				std::cout << "### @@@ !!!" << std::endl;
 				tGraph->deallocateBuffers();
 				tGraph->deallocateIOBuffers();
 				this->stagedGraphs.erase(it);

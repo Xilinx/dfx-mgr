@@ -56,9 +56,9 @@ int main(int argc, char **argv) {
 	std::cout << "checking schedules \n";
 	while(!graph->isScheduled());
 
-	uint8_t *A = input00->ptr;
+	uint32_t *A = (uint32_t*)input00->ptr;
 	std::cout << A[0] << "Copying data ... \n";
-	for(int i = 0; i < TRANSACTION_SIZE; i++){
+	for(int i = 0; i < TRANSACTION_SIZE/8; i++){
 		A[i] = i;
 	}
 	
@@ -68,5 +68,7 @@ int main(int argc, char **argv) {
 	//std::cout << input00->trywait() << std::endl;	
 	output02->wait();	
 	std::cout << "Client test done ... \n";
+	utils::printBuffer((uint32_t*)input00->ptr, 0x100);
+	utils::printBuffer((uint32_t*)output02->ptr, 0x100);
 	return 0;
 }
