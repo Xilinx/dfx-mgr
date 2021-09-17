@@ -174,25 +174,25 @@ int Accel::allocateAccelResource(){
 		char *cname = new char[name.length() + 1];
 		strcpy(cname, name.c_str());
 		if(name == "AIE_MAT_MUL"){
-				std::cout << "loading AIE accel" << std::endl;
-				dmaLib = "dfx-mgr/build/opendfx-graph/drivers/AIEXrtDma/src/libAIEXrtDma_shared.so";
-				//dmaLib = "dfx-mgr/build/opendfx-graph/drivers/softDma/src/libsoftDma_shared.so";
-				dmDriver = dlopen(dmaLib.c_str(), RTLD_NOW | RTLD_GLOBAL);
-				if(dmDriver == NULL){
-					 printf( "Could not open file : %s\n", dlerror() );
-				}
-				std::cout << dmDriver << std::endl;
-				registerDev = (REGISTER) dlsym(dmDriver, "registerDriver");
-				std::cout << registerDev << std::endl;
-				unregisterDev = (UNREGISTER) dlsym(dmDriver, "unregisterDriver");
-				std::cout << unregisterDev << std::endl;
-				std::cout << "loading AIE accel" << std::endl;
-				registerDev(&device, &config);
-				std::cout << "loading AIE accel" << std::endl;
-				config->slot = slot;
-				std::cout << "loading AIE accel" << std::endl;
-				device->open(config);
-				std::cout << "loading AIE accel" << std::endl;
+			std::cout << "loading AIE accel" << std::endl;
+			dmaLib = "dfx-mgr/build/opendfx-graph/drivers/AIEXrtDma/src/libAIEXrtDma_shared.so";
+			//dmaLib = "dfx-mgr/build/opendfx-graph/drivers/softDma/src/libsoftDma_shared.so";
+			dmDriver = dlopen(dmaLib.c_str(), RTLD_NOW | RTLD_GLOBAL);
+			if(dmDriver == NULL){
+				printf( "Could not open file : %s\n", dlerror() );
+			}
+			std::cout << dmDriver << std::endl;
+			registerDev = (REGISTER) dlsym(dmDriver, "registerDriver");
+			std::cout << registerDev << std::endl;
+			unregisterDev = (UNREGISTER) dlsym(dmDriver, "unregisterDriver");
+			std::cout << unregisterDev << std::endl;
+			std::cout << "loading AIE accel" << std::endl;
+			registerDev(&device, &config);
+			std::cout << "loading AIE accel" << std::endl;
+			config->slot = slot;
+			std::cout << "loading AIE accel" << std::endl;
+			device->open(config);
+			std::cout << "loading AIE accel" << std::endl;
 		}
 		else{ 
 			std::string metadata(getAccelMetadata(cname));
@@ -256,8 +256,8 @@ int Accel::deallocateAccelResource(){
 		device->close(config);
 		unregisterDev(&device, &config);
 		dlclose(dmDriver);
-		
-        if(name == "AIE_MAT_MUL"){
+
+		if(name == "AIE_MAT_MUL"){
 		}
 		else{
 			remove_accelerator(slot);			

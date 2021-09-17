@@ -684,7 +684,7 @@ int Graph::executeBypass(){
 	//std::cout << accels[0]->info() << std::endl;
 	for (std::vector<opendfx::Schedule *>::iterator it = scheduleList.begin()  ; it != scheduleList.end()  ; ++it){
 		opendfx::Schedule * schedule = *it;
-		opendfx::Schedule * lastSchedule;
+		opendfx::Schedule * lastSchedule = *it;
 		//int index = schedule->getIndex();
 		int size = schedule->getSize();
 		int offset = schedule->getOffset();

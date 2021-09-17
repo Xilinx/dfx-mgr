@@ -37,7 +37,7 @@ static int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
 
 int parseAccelJson(acapd_accel_t *accel, char *filename)
 {
-	FILE *fptr;
+	struct stat s;
 	long numBytes;
 	jsmn_parser parser;
 	jsmntok_t token[128];
@@ -46,12 +46,19 @@ int parseAccelJson(acapd_accel_t *accel, char *filename)
 	char *dma_ops;
 	uint32_t buff_size = 0;
 	acapd_device_t *dma_dev;
-	
+	FILE *fptr;
+
 	fptr = fopen(filename, "r");
 	if (fptr == NULL){
-		acapd_debug("%s: Cannot open accel.json, %s\n",__func__,strerror(errno));
+		acapd_perror("%s: Cannot open %s\n",__func__,filename);
 		return -1;
 	}
+	
+	if (stat(filename,&s) != 0 || !S_ISREG(s.st_mode)){
+		acapd_perror("could not open %s\n",filename);
+		return -1;
+	}
+    numBytes = s.st_size;
 	
 	dma_dev = (acapd_device_t *)calloc(1, sizeof(*dma_dev));
 	if (dma_dev == NULL) {
@@ -60,10 +67,6 @@ int parseAccelJson(acapd_accel_t *accel, char *filename)
 	}
 	dma_ops = (char *)calloc(64, sizeof(char));
 
-	fseek(fptr, 0L, SEEK_END);
-	numBytes = ftell(fptr);
-	fseek(fptr, 0L, SEEK_SET);
-
 	jsonData = (char *)calloc(numBytes, sizeof(char));
 	if (jsonData == NULL)
 		return -1;
@@ -71,7 +74,6 @@ int parseAccelJson(acapd_accel_t *accel, char *filename)
 	if (ret < numBytes)
 		acapd_perror("%s: Error reading Accel.json\n",__func__);
 	fclose(fptr);
-	acapd_praw("jsonData read:\n %s\n",jsonData);
 
 	jsmn_init(&parser);
 	ret = jsmn_parse(&parser, jsonData, numBytes, token, sizeof(token)/sizeof(token[0]));
@@ -82,13 +84,6 @@ int parseAccelJson(acapd_accel_t *accel, char *filename)
 	for(i=1; i < ret; i++){
 		if (token[i].type == JSMN_OBJECT)
 			continue;
-		if (jsoneq(jsonData, &token[i],"accel_type") == 0) {
-			char * type = strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start);
-			if (strcmp(type,"FLAT_SHELL") == 0)
-				accel->type = FLAT_SHELL;
-			else if(strcmp(type, "SIHA_SHELL") == 0)
-				accel->type = SIHA_SHELL;
-		}
 		if (jsoneq(jsonData, &token[i],"accel_devices") == 0){
 			int j;
 			int numDevices = token[i+1].size;
@@ -192,23 +187,29 @@ error:
 
 int parseShellJson(acapd_shell_t *shell, const char *filename)
 {
-	FILE *fptr;
 	long numBytes;
 	jsmn_parser parser;
 	jsmntok_t token[128];
 	int ret,i;
 	char *jsonData;
+	struct stat s;
+	FILE *fptr;
+
+	fptr = fopen(filename, "r");
+	if (fptr == NULL){
+		acapd_perror("%s: Cannot open %s\n",__func__,filename);
+		return -1;
+	}
+
 	acapd_device_t *dev;
 	acapd_device_t *clk_dev;
 	acapd_assert(shell != NULL);
 	acapd_assert(filename != NULL);
-	fptr = fopen(filename, "r");
-	if (fptr == NULL)
+	if (stat(filename,&s) != 0 || !S_ISREG(s.st_mode)){
+		acapd_perror("could not open %s\n",filename);
 		return -1;
-
-	fseek(fptr, 0L, SEEK_END);
-	numBytes = ftell(fptr);
-	fseek(fptr, 0L, SEEK_SET);
+	}
+    numBytes = s.st_size;
 
 	jsonData = (char *)calloc(numBytes, sizeof(char));
 	if (jsonData == NULL)
@@ -286,9 +287,7 @@ int parseShellJson(acapd_shell_t *shell, const char *filename)
 				}
 				i+=4;//increment to point to next slot
 			}
-			shell->num_slots = numSlots;
 			shell->slot_regs = slot_regs;
-			//shell->active_slots = (acapd_accel_t **)calloc(shell->num_slots, sizeof(acapd_accel_t *));
 		}
 	}
 	return 0;
@@ -296,22 +295,26 @@ int parseShellJson(acapd_shell_t *shell, const char *filename)
 
 int initBaseDesign(struct basePLDesign *base, const char *shell_path)
 {
-	FILE *fptr;
 	long numBytes;
 	jsmn_parser parser;
 	jsmntok_t token[128];
 	int ret,i;
 	char *jsonData;
-	
-	acapd_assert(shell_path != NULL);
+	struct stat s;
+	FILE *fptr;
+
 	fptr = fopen(shell_path, "r");
 	if (fptr == NULL){
-		acapd_perror("%s: could not open %s err %s \n",__func__,shell_path,strerror(errno));
+		acapd_perror("%s: Cannot open %s\n",__func__,shell_path);
 		return -1;
 	}
-	fseek(fptr, 0L, SEEK_END);
-	numBytes = ftell(fptr);
-	fseek(fptr, 0L, SEEK_SET);
+
+	acapd_assert(shell_path != NULL);
+	if (stat(shell_path,&s) != 0 || !S_ISREG(s.st_mode)){
+		acapd_perror("could not open %s\n",shell_path);
+		return -1;
+	}
+    numBytes = s.st_size;
 
 	jsonData = (char *)calloc(numBytes, sizeof(char));
 	if (jsonData == NULL){
@@ -338,8 +341,11 @@ int initBaseDesign(struct basePLDesign *base, const char *shell_path)
 			strncpy(base->type,strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), sizeof(base->type)-1);
 			base->type[sizeof(base->type)-1] = '\0';
 		}
-		if (jsoneq(jsonData, &token[i],"num_slots") == 0) {
-			base->num_slots = strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 10);
+		if (jsoneq(jsonData, &token[i],"num_pl_slots") == 0) {
+			base->num_pl_slots = strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 10);
+		}
+		if (jsoneq(jsonData, &token[i],"num_aie_slots") == 0) {
+			base->num_aie_slots = strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 10);
 		}
 		if (jsoneq(jsonData, &token[i],"uid") == 0) {
 			base->uid = strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 10);
@@ -354,24 +360,137 @@ int initBaseDesign(struct basePLDesign *base, const char *shell_path)
 	return 0;
 }
 
-void parse_config(char *config_path, struct daemon_config *config)
+int initAccel(accel_info_t *accel, const char *path)
 {
-    FILE *fptr;
+	long numBytes;
+	jsmn_parser parser;
+	jsmntok_t token[128];
+	int ret,i;
+	char *jsonData;
+	char json_path[256];
+	struct stat s;
+	FILE *fptr;
+
+	acapd_assert(path != NULL);
+	sprintf(json_path,"%s/accel.json",path);
+	fptr = fopen(json_path, "r");
+	if (fptr == NULL){
+		acapd_perror("%s: Cannot open %s\n",__func__,json_path);
+		return -1;
+	}
+	if (stat(json_path,&s) != 0 || !S_ISREG(s.st_mode)){
+		acapd_perror("could not open %s\n",json_path);
+		return -1;
+	}
+    numBytes = s.st_size;
+	
+	jsonData = (char *)calloc(numBytes, sizeof(char));
+	if (jsonData == NULL){
+		acapd_perror("%s: calloc failed\n",__func__);
+		return -1;
+	}
+	ret = fread(jsonData, sizeof(char), numBytes, fptr);
+	if (ret < numBytes)
+		acapd_perror("%s: Error reading accel.json\n",__func__);
+	fclose(fptr);
+
+	jsmn_init(&parser);
+	ret = jsmn_parse(&parser, jsonData, numBytes, token, sizeof(token)/sizeof(token[0]));
+	if (ret < 0){
+		acapd_perror("Failed to parse JSON: %d\n", ret);
+	}
+
+	for(i=1; i < ret; i++){
+		if (token[i].type == JSMN_OBJECT)
+			continue;
+		if (jsoneq(jsonData, &token[i],"accel_type") == 0) {
+			strncpy(accel->accel_type,strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), sizeof(accel->accel_type)-1);
+			if(strcmp(accel->accel_type,"SIHA_PL_DFX") && strcmp(accel->accel_type, "XRT_AIE_DFX") && strcmp(accel->accel_type,"XRT_PL_DFX"))
+				acapd_perror("accel_type valid values are SIHA_PL_DFX/XRT_AIE_DFX/XRT_PL_DFX\n");
+		}
+	}
+	return 0;
+}
+
+void parseAccelInput(xrt_device_info_t *aie, char *path)
+{
     long numBytes;
     jsmn_parser parser;
     jsmntok_t token[128];
     int ret,i;
     char *jsonData;
+	char json_path[256];
+	struct stat s;
+	FILE *fptr;
 
-	memset(config, 0, sizeof(struct daemon_config));
-    fptr = fopen(config_path, "r");
-    if (fptr == NULL){
-        acapd_perror("%s: could not open %s err %s \n",__func__,config_path,strerror(errno));
+	acapd_assert(path != NULL);
+	sprintf(json_path,"%s/accel.json",path);
+	printf("json_path %s\n",json_path);
+	fptr = fopen(json_path, "r");
+	if (fptr == NULL){
+		acapd_perror("%s: Cannot open  %s\n",__func__,json_path);
+		return;
+	}
+
+	if (stat(json_path,&s) != 0 || !S_ISREG(s.st_mode)){
+		acapd_perror("could not open %s\n",json_path);
+		return;
+	}
+    numBytes = s.st_size;
+	printf("filesize is %lu",numBytes);
+
+    jsonData = (char *)calloc(numBytes, sizeof(char));
+    if (jsonData == NULL){
+        acapd_perror("%s: calloc failed\n",__func__);
         return;
     }
-    fseek(fptr, 0L, SEEK_END);
-    numBytes = ftell(fptr);
-    fseek(fptr, 0L, SEEK_SET);
+    ret = fread(jsonData, sizeof(char), numBytes, fptr);
+    if (ret < numBytes)
+        acapd_perror("%s: Error reading %s\n",__func__,json_path);
+    fclose(fptr);
+
+    jsmn_init(&parser);
+    ret = jsmn_parse(&parser, jsonData, numBytes, token, sizeof(token)/sizeof(token[0]));
+    if (ret < 0){
+        acapd_perror("Failed to parse %s: %d\n", json_path, ret);
+    }
+    for(i=1; i < ret; i++){
+        if (token[i].type == JSMN_OBJECT)
+            continue;
+        if (jsoneq(jsonData, &token[i],"xrt_device_id") == 0) {
+			aie->xrt_device_id = strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 10);
+        }
+        //if (jsoneq(jsonData, &token[i],"Input_Buffer_Size") == 0) {
+		//	aie->input_size = strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 10);
+        //}
+        //if (jsoneq(jsonData, &token[i],"Output_Buffer_Size") == 0) {
+		//	aie->output_size = strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 10);
+        //}
+    }
+	return;
+}
+void parse_config(char *config_path, struct daemon_config *config)
+{
+    long numBytes;
+    jsmn_parser parser;
+    jsmntok_t token[128];
+    int ret,i;
+    char *jsonData;
+	struct stat s;
+	FILE *fptr;
+
+	fptr = fopen(config_path, "r");
+	if (fptr == NULL){
+		acapd_perror("%s: Cannot open %s\n",__func__,config_path);
+		return;
+	}
+
+	memset(config, 0, sizeof(struct daemon_config));
+	if (stat(config_path,&s) != 0 || !S_ISREG(s.st_mode)){
+		acapd_perror("could not open %s\n",config_path);
+		return;
+	}
+    numBytes = s.st_size;
 
     jsonData = (char *)calloc(numBytes, sizeof(char));
     if (jsonData == NULL){

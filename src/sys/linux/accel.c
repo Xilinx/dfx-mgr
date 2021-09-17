@@ -24,7 +24,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include "accel.h"
-#include "zynq_ioctl.h"
+#include <zynq_ioctl.h>
 #include "generic-device.h"
 
 #define MAX_BUFFERS 40
@@ -211,7 +211,7 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 		dfx_cfg_destroy(fpga_cfg_id);
 		return ACAPD_ACCEL_FAILURE;
 	}
-	if (accel->type == FLAT_SHELL) {
+	if ( !strcmp(accel->type,"XRT_FLAT") || !strcmp(accel->type, "PL_DFX")) {
 		acapd_print("Successfully loaded base design.\n");
 		return ACAPD_ACCEL_SUCCESS;
 	}

@@ -31,7 +31,6 @@ typedef struct acapd_shell {
 	acapd_device_t clock_dev;
 	char *type;
 	const acapd_shell_regs_t *slot_regs;
-	int num_slots;
 	int is_configured;
 } acapd_shell_t;
 
