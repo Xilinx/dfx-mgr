@@ -55,7 +55,7 @@ GMIO gmout[NUM_HW_ROWS] = {
 
 XGeMM my_graph;
 
-simulation::platform<NUM_HW_ROWS, NUM_HW_ROWS> platform(&gmin[0], &gmin[1],
+/*simulation::platform<NUM_HW_ROWS, NUM_HW_ROWS> platform(&gmin[0], &gmin[1],
 							&gmin[2], &gmin[3],
 							&gmin[4], &gmin[5],
 							&gmin[6], &gmin[7],
@@ -81,7 +81,7 @@ connect<> out4(my_graph.result[4], platform.sink[4]);
 connect<> out5(my_graph.result[5], platform.sink[5]);
 connect<> out6(my_graph.result[6], platform.sink[6]);
 connect<> out7(my_graph.result[7], platform.sink[7]);
-
+*/
 #if !defined(__AIESIM__) && !defined(__ADF_FRONTEND__)
 static std::vector<char>
 load_xclbin(xrtDeviceHandle device, const std::string& fnm)
@@ -89,7 +89,7 @@ load_xclbin(xrtDeviceHandle device, const std::string& fnm)
 	if (fnm.empty())
 		throw std::runtime_error("No XCLBIN specified");
 
-	/* Load bit stream */
+	// Load bit stream 
 	std::ifstream stream(fnm);
 	stream.seekg(0,stream.end);
 	size_t size = stream.tellg();
@@ -136,7 +136,7 @@ int aieMatMul_open(DeviceConfig_t *config){
 	std::cout << "[INFO] XCLBIN download complete" << std::endl;
 	
 	std::cout << "initialising graph ..." << std::endl;
-	/* Configure AIE */
+	// Configure AIE 
 	my_graph.init(); 
 
     config->privConfig = sihaCfg;
@@ -198,7 +198,7 @@ int matMulCompute(int *arrayA, int *arrayB, int *arrayC){
 	for (int i = 0; i < NUM_HW_ROWS; i++) {
 		gmin[i].gm2aie_nb(matAieA[i], MAT_A_CHUNK_SIZE);
 		gmin[i].gm2aie_nb(arrayBT, NUM_ELMNTS * sizeof(int));
-		/* Enable AIE cores */
+		// Enable AIE cores 
 		if (i == 0)
 			my_graph.run(1);
 		gmout[i].aie2gm_nb(matAieC[i], MAT_A_CHUNK_SIZE);
@@ -208,7 +208,7 @@ int matMulCompute(int *arrayA, int *arrayB, int *arrayC){
 		gmout[i].wait();
 	}
 	
-	/* Z-ordering */
+	// Z-ordering 
 	for (int i = 0; i < NUM_COLS / (WIN_SIZE / NUM_ROWS_PER_TILE); i++) {
 		for (int j = 0; j < NUM_HW_ROWS; j++) {
 			for (int k = 0; k < NUM_HW_COLS; k++) {
@@ -225,7 +225,7 @@ int matMulCompute(int *arrayA, int *arrayB, int *arrayC){
 	GMIO::free(arrayBT);
 	GMIO::free(arrayAieA);
 	GMIO::free(arrayAieC);
-	/* For sanity check compute the same on APU */
+	// For sanity check compute the same on APU 
 	return 1;
 }
 

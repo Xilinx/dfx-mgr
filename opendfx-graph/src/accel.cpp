@@ -176,8 +176,10 @@ int Accel::allocateAccelResource(){
 		if(name == "AIE_MAT_MUL"){
 				std::cout << "loading AIE accel" << std::endl;
 				dmaLib = "dfx-mgr/build/opendfx-graph/drivers/AIEXrtDma/src/libAIEXrtDma_shared.so";
+				std::cout << "@@@@@@@@@@@@@@" << std::endl;
 				//dmaLib = "dfx-mgr/build/opendfx-graph/drivers/softDma/src/libsoftDma_shared.so";
 				dmDriver = dlopen(dmaLib.c_str(), RTLD_NOW | RTLD_GLOBAL);
+				std::cout << "@@@@@@@@@@@@@@" << std::endl;
 				if(dmDriver == NULL){
 					 printf( "Could not open file : %s\n", dlerror() );
 				}
@@ -188,11 +190,11 @@ int Accel::allocateAccelResource(){
 				std::cout << unregisterDev << std::endl;
 				std::cout << "loading AIE accel" << std::endl;
 				registerDev(&device, &config);
-				std::cout << "loading AIE accel" << std::endl;
-				config->slot = slot;
-				std::cout << "loading AIE accel" << std::endl;
+				//std::cout << "loading AIE accel" << std::endl;
+				//config->slot = slot;
+				//std::cout << "loading AIE accel" << std::endl;
 				device->open(config);
-				std::cout << "loading AIE accel" << std::endl;
+				//std::cout << "loading AIE accel" << std::endl;
 		}
 		else{ 
 			std::string metadata(getAccelMetadata(cname));

@@ -86,6 +86,7 @@ int Buffer::allocateBuffer(int xrt_fd){
 
 		status = xrt_allocateBuffer(xrt_fd, bSize, &handle,
 				&ptr, &phyAddr, &fd);
+		std::cout << "allocate : " << phyAddr << std::endl; 
 		if(status < 0){
 			printf( "error @ config allocation\n");
 			return status;
@@ -108,7 +109,7 @@ int Buffer::allocateBuffer(int xrt_fd){
 }
 
 int Buffer::deallocateBuffer(int xrt_fd){
-	std::cout << "deallocateBuffer" << std::endl;
+	std::cout << "deallocateBuffer : " << phyAddr << std::endl;
 	int status;
 	if (bType == opendfx::buffertype::DDR_BASED){
 		status = xrt_deallocateBuffer(xrt_fd, bSize, &handle, &ptr, &phyAddr);

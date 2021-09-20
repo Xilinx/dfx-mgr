@@ -743,7 +743,7 @@ int Graph::executeBypass(){
 	return scheduleList.size();
 }
 int Graph::executeScheduler(){
-	//int Graph::execute(){
+	//std::cout << "executing graph ..." << std::endl;
 	usleep(1000);
 	for (std::vector<opendfx::Schedule *>::iterator it = scheduleList.begin()  ; it != scheduleList.end()  ; ++it)
 	{
