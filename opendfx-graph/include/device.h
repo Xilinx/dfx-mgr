@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <semaphore.h>
 #include <xrt/xrt_bo.h>
+//#include <dfx-mgr/model.h>
 
 typedef struct BuffConfig{
     uint8_t* ptr;   // Buffer Ptr
@@ -29,6 +30,10 @@ typedef struct DeviceConfig {
     void *privConfig;
     int slot;
 	int handle;
+	//xrt_device_info_t * aie; 
+	uint8_t *xrt_device_id;
+	xrtDeviceHandle *device_hdl;
+	xuid_t *xrt_uid;
     
     uint8_t* ptr;   // Buffer Ptr
     unsigned long phyAddr; // Buffer Physical Address

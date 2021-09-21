@@ -567,7 +567,7 @@ void parse_packages(struct basePLDesign *base,char *fname, char *path)
 {
     DIR *dir1,*dir2;
     struct dirent *d1,*d2;
-    char first_level[512],second_level[560],filename[640];
+    char first_level[512],second_level[800],filename[811];
 	struct stat stat_info;
 	accel_info_t *accel;
     int wd;

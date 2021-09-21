@@ -19,10 +19,16 @@
 #include <dfx-mgr/sys/linux/graph/layer0/xrtbuffer.h>
 #include <dfx-mgr/accel.h>
 #include <dfx-mgr/daemon_helper.h>
+//#include <dfx-mgr/model.h>
 
 using json = nlohmann::json;
 using opendfx::Accel;
 
+typedef struct xrt_device_info {
+	uint8_t xrt_device_id;
+	xrtDeviceHandle device_hdl;
+	xuid_t xrt_uid;
+} xrt_device_info_t;
 
 Accel::Accel(const std::string &name, int parentGraphId, int type) : name(name), parentGraphId(parentGraphId), type(type) {
 	id = utils::genID();
@@ -173,81 +179,87 @@ int Accel::allocateAccelResource(){
 	if (type == opendfx::acceltype::accelNode){
 		char *cname = new char[name.length() + 1];
 		strcpy(cname, name.c_str());
-		if(name == "AIE_MAT_MUL"){
-				std::cout << "loading AIE accel" << std::endl;
-				dmaLib = "dfx-mgr/build/opendfx-graph/drivers/AIEXrtDma/src/libAIEXrtDma_shared.so";
-				std::cout << "@@@@@@@@@@@@@@" << std::endl;
-				//dmaLib = "dfx-mgr/build/opendfx-graph/drivers/softDma/src/libsoftDma_shared.so";
-				dmDriver = dlopen(dmaLib.c_str(), RTLD_NOW | RTLD_GLOBAL);
-				std::cout << "@@@@@@@@@@@@@@" << std::endl;
-				if(dmDriver == NULL){
-					 printf( "Could not open file : %s\n", dlerror() );
-				}
-				std::cout << dmDriver << std::endl;
-				registerDev = (REGISTER) dlsym(dmDriver, "registerDriver");
-				std::cout << registerDev << std::endl;
-				unregisterDev = (UNREGISTER) dlsym(dmDriver, "unregisterDriver");
-				std::cout << unregisterDev << std::endl;
-				std::cout << "loading AIE accel" << std::endl;
-				registerDev(&device, &config);
-				//std::cout << "loading AIE accel" << std::endl;
-				//config->slot = slot;
-				//std::cout << "loading AIE accel" << std::endl;
-				device->open(config);
-				//std::cout << "loading AIE accel" << std::endl;
+		std::string metadata;
+		for(int i=0; i < 4; i++){
+			void * metadataPtr = getAccelMetadata(cname, i);
+			if(metadataPtr != NULL){
+				metadata = (char *)metadataPtr;
+				break;
+			}
 		}
-		else{ 
-			std::string metadata(getAccelMetadata(cname, 0));
-			//std::cout << metadata << std::endl;
-			json document = json::parse(metadata);
-			json accelMetadataObj = document["accel_metadata"];
-			std::string dmaType;
-			accelMetadataObj.at("DMA_type").get_to(dmaType);
-			if (dmaType == "HLS_MULTICHANNEL_DMA"){
-				dmaLib = "/media/test/dfx-mgr/build/opendfx-graph/drivers/sihaDma/src/libsihaDma_shared.so";
-			}else if(dmaType == "SOFT_DMA"){
-				dmaLib = "/media/test/dfx-mgr/build/opendfx-graph/drivers/fallback/src/libfallback_shared.so";
-			}
-			json fallbackObj = accelMetadataObj["fallback"];
-			std::string behaviour;
-			std::string fallbackLib;
-			fallbackObj.at("Behaviour").get_to(behaviour);
-			fallbackObj.at("fallback_Lib").get_to(fallbackLib);
-			json interrmObj = accelMetadataObj["Inter_RM"];
-			std::string compatible;
-			interrmObj.at("Compatible").get_to(compatible);
-			if (compatible == "True"){
-				InterRMCompatible = 1;
-			}
-			else if (compatible == "False"){
-				InterRMCompatible = 0;
-			}
-			else{
-				InterRMCompatible = 0;
-			}
-			//std::cout << "load accelerator" << std::endl;
-			slot = load_accelerator(cname);
-			//std::cout << "load accelerator" << std::endl;
-			if(slot >= 0){
-				std::cout << "loading hardware accel" << std::endl;
-				dmDriver = dlopen(dmaLib.c_str(), RTLD_NOW);
-				registerDev = (REGISTER) dlsym(dmDriver, "registerDriver");
-				unregisterDev = (UNREGISTER) dlsym(dmDriver, "unregisterDriver");
-				registerDev(&device, &config);
-				config->slot = slot;
-				device->open(config);
-			}
-			else if(fallbackLib != "None"){
-				std::cout << "loading soft accel" << std::endl;
-				dmDriver = dlopen(fallbackLib.c_str(), RTLD_NOW);
-				registerDev = (REGISTER) dlsym(dmDriver, "registerDriver");
-				unregisterDev = (UNREGISTER) dlsym(dmDriver, "unregisterDriver");
-				registerDev(&device, &config);
-				device->open(config);
-			}
-			else {
-				return -1;
-			}
+		std::cout << metadata << std::endl;
+		json document = json::parse(metadata);
+		json accelMetadataObj = document["accel_metadata"];
+		std::string dmaType;
+		accelMetadataObj.at("DMA_type").get_to(dmaType);
+		std::cout << "dmaType : " << dmaType << std::endl;
+		std::cout << "loading AIE accel" << std::endl;
+		//dmaLib = "dfx-mgr/build/opendfx-graph/drivers/AIEXrtDma/src/libAIEXrtDma_shared.so";
+		accelMetadataObj.at("dma_driver_lib").get_to(dmaLib);
+		//dmaLib = "dfx-mgr/build/opendfx-graph/drivers/softDma/src/libsoftDma_shared.so";
+		dmDriver = dlopen(dmaLib.c_str(), RTLD_NOW | RTLD_GLOBAL);
+		if(dmDriver == NULL){
+			 printf( "Could not open file : %s\n", dlerror() );
+		}
+		//		slot = load_accelerator(cname);
+		//		std::cout << dmDriver << std::endl;
+		//		registerDev = (REGISTER) dlsym(dmDriver, "registerDriver");
+		//		std::cout << registerDev << std::endl;
+		//		unregisterDev = (UNREGISTER) dlsym(dmDriver, "unregisterDriver");
+		//		std::cout << unregisterDev << std::endl;
+		//		std::cout << "loading AIE accel" << std::endl;
+		//		registerDev(&device, &config);
+		//		//config->aie = (xrt_device_info_t *)getXRTinfo(slot);
+		//		device->open(config);
+		//}
+		//	if (dmaType == "HLS_MULTICHANNEL_DMA"){
+		//		dmaLib = "/media/test/dfx-mgr/build/opendfx-graph/drivers/sihaDma/src/libsihaDma_shared.so";
+		//	}else if(dmaType == "SOFT_DMA"){
+		//		dmaLib = "/media/test/dfx-mgr/build/opendfx-graph/drivers/fallback/src/libfallback_shared.so";
+		//	}
+		json fallbackObj = accelMetadataObj["fallback"];
+		std::string behaviour;
+		std::string fallbackLib;
+		fallbackObj.at("Behaviour").get_to(behaviour);
+		fallbackObj.at("fallback_Lib").get_to(fallbackLib);
+		json interrmObj = accelMetadataObj["Inter_RM"];
+		std::string compatible;
+		interrmObj.at("Compatible").get_to(compatible);
+		if (compatible == "True"){
+			InterRMCompatible = 1;
+		}
+		else if (compatible == "False"){
+			InterRMCompatible = 0;
+		}
+		else{
+			InterRMCompatible = 0;
+		}
+		//std::cout << "load accelerator" << std::endl;
+		slot = load_accelerator(cname);
+		//std::cout << "load accelerator" << std::endl;
+		if(slot >= 0){
+			std::cout << "loading hardware accel" << std::endl;
+			dmDriver = dlopen(dmaLib.c_str(), RTLD_NOW);
+			registerDev = (REGISTER) dlsym(dmDriver, "registerDriver");
+			unregisterDev = (UNREGISTER) dlsym(dmDriver, "unregisterDriver");
+			registerDev(&device, &config);
+			xrt_device_info_t *aie = (xrt_device_info_t *)getXRTinfo(slot);
+			config->slot = slot;
+			config->xrt_device_id = &aie->xrt_device_id;
+			config->device_hdl = &aie->device_hdl;
+			config->xrt_uid = &aie->xrt_uid;
+			device->open(config);
+		}
+		else if(fallbackLib != "None"){
+			std::cout << "loading soft accel" << std::endl;
+			dmDriver = dlopen(fallbackLib.c_str(), RTLD_NOW);
+			registerDev = (REGISTER) dlsym(dmDriver, "registerDriver");
+			unregisterDev = (UNREGISTER) dlsym(dmDriver, "unregisterDriver");
+			registerDev(&device, &config);
+			device->open(config);
+		}
+		else {
+			return -1;
 		}
 	}
 	return 0;
@@ -258,12 +270,7 @@ int Accel::deallocateAccelResource(){
 		device->close(config);
 		unregisterDev(&device, &config);
 		dlclose(dmDriver);
-
-		if(name == "AIE_MAT_MUL"){
-		}
-		else{
-			remove_accelerator(slot);			
-		}
+		remove_accelerator(slot);			
 	}
 	return 0;
 }

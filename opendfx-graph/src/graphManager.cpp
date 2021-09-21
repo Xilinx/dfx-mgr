@@ -31,7 +31,7 @@ GraphManager::GraphManager(int slots) : slots(slots) {
 	srand(i ^ time(0));
 	urandom.close();
 	//std::cout << i << " : " << time(0) << std::endl;
-	dfx_init();
+	//dfx_init();
 	id = rand() % 0x100000000;
 }
 

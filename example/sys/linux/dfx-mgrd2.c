@@ -16,7 +16,6 @@
 //#include <dfx-mgr/assert.h>
 //#include <dfx-mgr/shell.h>
 //#include <dfx-mgr/model.h>
-//#include <dfx-mgr/daemon_helper.h>
 //#include <dfx-mgr/json-config.h>
 #include <sys/stat.h>
 #include <sys/inotify.h>
@@ -35,6 +34,7 @@
 //#include <dfx-mgr/sys/linux/graph/abstractGraph.h>
 #include "utils.h"
 #include "graph_api.h"
+#include <dfx-mgr/daemon_helper.h>
 #define WATCH_PATH_LEN 256
 #define MAX_WATCH 50
 #define MAX_CLIENTS 200
@@ -67,6 +67,7 @@ int main (int argc, char **argv)
 	int buff_fd[25];
 	int buff_fd_cnt = 0;
 	GRAPH_HANDLE gHandle;
+	dfx_init();
 	GRAPH_MANAGER_HANDLE gmHandle = GraphManager_Create(3);
 	GraphManager_startServices(gmHandle);
 	int id;

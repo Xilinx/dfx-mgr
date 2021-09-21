@@ -55,57 +55,6 @@ GMIO gmout[NUM_HW_ROWS] = {
 
 XGeMM my_graph;
 
-/*simulation::platform<NUM_HW_ROWS, NUM_HW_ROWS> platform(&gmin[0], &gmin[1],
-							&gmin[2], &gmin[3],
-							&gmin[4], &gmin[5],
-							&gmin[6], &gmin[7],
-							&gmout[0], &gmout[1],
-							&gmout[2], &gmout[3],
-							&gmout[4], &gmout[5],
-							&gmout[6], &gmout[7]);
-
-connect<> in0(platform.src[0], my_graph.matrix_ab[0]);
-connect<> in1(platform.src[1], my_graph.matrix_ab[1]);
-connect<> in2(platform.src[2], my_graph.matrix_ab[2]);
-connect<> in3(platform.src[3], my_graph.matrix_ab[3]);
-connect<> in4(platform.src[4], my_graph.matrix_ab[4]);
-connect<> in5(platform.src[5], my_graph.matrix_ab[5]);
-connect<> in6(platform.src[6], my_graph.matrix_ab[6]);
-connect<> in7(platform.src[7], my_graph.matrix_ab[7]);
-
-connect<> out0(my_graph.result[0], platform.sink[0]);
-connect<> out1(my_graph.result[1], platform.sink[1]);
-connect<> out2(my_graph.result[2], platform.sink[2]);
-connect<> out3(my_graph.result[3], platform.sink[3]);
-connect<> out4(my_graph.result[4], platform.sink[4]);
-connect<> out5(my_graph.result[5], platform.sink[5]);
-connect<> out6(my_graph.result[6], platform.sink[6]);
-connect<> out7(my_graph.result[7], platform.sink[7]);
-*/
-#if !defined(__AIESIM__) && !defined(__ADF_FRONTEND__)
-static std::vector<char>
-load_xclbin(xrtDeviceHandle device, const std::string& fnm)
-{
-	if (fnm.empty())
-		throw std::runtime_error("No XCLBIN specified");
-
-	// Load bit stream 
-	std::ifstream stream(fnm);
-	stream.seekg(0,stream.end);
-	size_t size = stream.tellg();
-	stream.seekg(0,stream.beg);
-
-	std::vector<char> header(size);
-	stream.read(header.data(),size);
-
-	auto top = reinterpret_cast<const axlf*>(header.data());
-	if (xrtDeviceLoadXclbin(device, top))
-		throw std::runtime_error("Bitstream download failed");
-
-	return header;
-}
-#endif
-
 
 AIEMatmul::AIEMatmul(const std::string &xclbinFilename) : xclbinFilename(xclbinFilename) {
 }
@@ -115,24 +64,9 @@ extern "C" {
 
 int aieMatMul_open(DeviceConfig_t *config){
     aieMatMulConfig_t *sihaCfg = (aieMatMulConfig_t*) malloc(sizeof(aieMatMulConfig_t));
-    AIEMatmul *handle = new AIEMatmul("/usr/bin/aie-matrix-multiplication.xclbin");
-    sihaCfg->matmulHandle = (AIEMATMUL_HANDLE) handle;
     sihaCfg->status = 0;
     
-    handle->dhdl = xrtDeviceOpen(0);
-	if (!handle->dhdl) {
-		std::cout << "[ERROR] Device open error" << std::endl;
-		return EXIT_FAILURE;
-	}
-
-	auto xclbin = load_xclbin(handle->dhdl, handle->xclbinFilename);
-	if(!xclbin.size()) {
-		std::cout << "[ERROR] XCLBIN load error" << std::endl;
-		return EXIT_FAILURE;
-	};
-	
-	auto top = reinterpret_cast<const axlf*>(xclbin.data());
-	adf::registerXRT(handle->dhdl, top->m_header.uuid);
+    adf::registerXRT(*(config->device_hdl), *(config->xrt_uid));
 	std::cout << "[INFO] XCLBIN download complete" << std::endl;
 	
 	std::cout << "initialising graph ..." << std::endl;
@@ -148,12 +82,10 @@ int aieMatMul_open(DeviceConfig_t *config){
 int aieMatMul_close(DeviceConfig_t *config){
     aieMatMulConfig_t *sihaCfg = (aieMatMulConfig_t*) config->privConfig;
     _unused(sihaCfg);
-    AIEMatmul *handle = (AIEMatmul*)sihaCfg->matmulHandle;
     
 	my_graph.end();
 #if !defined(__AIESIM__) && !defined(__ADF_FRONTEND__)
-	xrtDeviceClose(handle->dhdl);
-	_unused(handle);
+	xrtDeviceClose(*(config->device_hdl));
 #endif
 	printf("aieMatMul close \n");
 	return 0;
