@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
 	auto buffer00  = graph->addBuffer("BUFF", IONODE_SIZE, DDR_BASED);
 
 	graph->connectOutputBuffer(input00,  buffer00, 0x00, BUFFER_SIZE, 0, 0);
-	graph->connectInputBuffer (output01, buffer00, 0x00, BUFFER_SIZE, 0, 0);
+	graph->connectInputBuffer (output01, buffer00, 0x00, BUFFER_SIZE, 1, 0);
 	std::cout << graph->toJson() << std::endl;;
 	graph->submit();
 	std::cout << "checking schedules \n";
