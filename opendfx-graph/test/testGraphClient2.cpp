@@ -9,6 +9,7 @@
 #include "graph.hpp"
 #include "graphManager.hpp"
 #include "utils.hpp"
+#include <unistd.h>
 
 #define MAX_SLOTS 3 
 #define IONODE_SIZE 32*1024*1024
@@ -24,8 +25,8 @@ int main(int argc, char **argv) {
 
 	auto graph = new opendfx::Graph{"G", 0};
 	auto input00   = graph->addInputNode("INPUT", IONODE_SIZE);
-	auto accel01   = graph->addAccel("AES128");
-	auto accel02   = graph->addAccel("AES128");
+	auto accel01   = graph->addAccel("FIR");
+	auto accel02   = graph->addAccel("AES192");
 	auto accel03   = graph->addAccel("AES128");
 	auto output02  = graph->addOutputNode("OUTPUT", IONODE_SIZE);
 
@@ -54,7 +55,10 @@ int main(int argc, char **argv) {
 	_unused(link07);
 
 	std::cout << "checking schedules \n";
-	while(!graph->isScheduled());
+	while(!graph->isScheduled()){
+		sleep(1);
+		std::cout << "waiting ..." << std::endl;
+	}
 
 	uint32_t *A = (uint32_t*)input00->ptr;
 	std::cout << A[0] << "Copying data ... \n";
