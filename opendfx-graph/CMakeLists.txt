@@ -35,8 +35,8 @@ add_library(${LIB}_shared SHARED ${SOURCES})
 target_link_libraries(${LIB}_shared dfx-mgr-shared dl pthread)
 #target_link_libraries(${LIB}_static dfx-mgr-static dl pthread)
 
-#install (TARGETS ${LIB}_static LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 install (TARGETS ${LIB}_shared LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+#install (TARGETS ${LIB}_shared ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 #target_link_libraries(${EXEC} dl)
 

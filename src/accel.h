@@ -62,6 +62,7 @@ typedef struct {
     int fd;
     uint32_t handle;
     uint64_t PA;
+    uint64_t size;
 } acapd_buffer_t;
 
 
@@ -123,6 +124,7 @@ int sys_remove_base(int fpga_cfg_id);
 acapd_buffer_t *sys_alloc_buffer(uint64_t size);
 int sys_free_buffer(uint64_t pa);
 int sys_send_buff(uint64_t size, int socket);
+int sys_print_buffers();
 int sys_get_fds(acapd_accel_t *accel, int fd, int socket);
 void sys_get_fd(int fd, int socket);
 #endif /* ACAPD_INTERNAL */

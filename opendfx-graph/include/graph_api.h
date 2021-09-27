@@ -2,7 +2,11 @@
 #ifndef GRAPH_API_H_
 #define GRAPH_API_H_
 
+#include <stdint.h>
 #ifdef __cplusplus
+
+//#define <stdtypes.h>
+
 extern "C" {
 #endif
 
@@ -29,7 +33,7 @@ LINK_HANDLE     Graph_connectInputBuffer(GRAPH_HANDLE gHandle, ACCEL_HANDLE aHan
 										int offset, int transactionSize, int transactionIndex, int channel);
 LINK_HANDLE     Graph_connectOutputBuffer(GRAPH_HANDLE gHandle, ACCEL_HANDLE aHandle, BUFFER_HANDLE  bHandle,
 										int offset, int transactionSize, int transactionIndex, int channel);
-LINK_HANDLE		Graph_addLinkByHandle	(GRAPH_HANDLE gHandle, LINK_HANDLE	lHandle);
+//LINK_HANDLE		Graph_addLinkByHandle	(GRAPH_HANDLE gHandle, LINK_HANDLE	lHandle);
 
 int				Graph_delAccel			(GRAPH_HANDLE gHandle, ACCEL_HANDLE aHandle);
 int				Graph_delBuffer			(GRAPH_HANDLE gHandle, BUFFER_HANDLE bHandle);
@@ -52,7 +56,11 @@ char *			Graph_jsonAccelsDbg		(GRAPH_HANDLE gHandle);
 char *        	Graph_jsonBuffersDbg	(GRAPH_HANDLE gHandle);
 char *        	Graph_jsonLinksDbg		(GRAPH_HANDLE gHandle);
 char *        	Graph_toJsonDbg			(GRAPH_HANDLE gHandle);
+int 			Graph_submit			(GRAPH_HANDLE gHandle);
+int 			Graph_isScheduled		(GRAPH_HANDLE gHandle);
 
+int 			Data2IO					(ACCEL_HANDLE aHandle, uint8_t *ptr, int size);
+int 			IO2Data					(ACCEL_HANDLE aHandle, uint8_t *ptr, int size);
 
 typedef void *GRAPH_MANAGER_HANDLE;
 

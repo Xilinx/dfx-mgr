@@ -494,6 +494,7 @@ acapd_buffer_t * sys_alloc_buffer(uint64_t size)
 		goto err2;
 	}
 	buff->PA = boInfo.paddr;
+	buff->size = boInfo.size;
 	acapd_print("allocated BO size %lu paddr %lu\n",boInfo.size,buff->PA);
 
 	struct drm_prime_handle bo_h = {bo.handle, DRM_RDWR, -1};
@@ -528,6 +529,7 @@ int sys_free_buffer(uint64_t pa){
 	for (i = 0; i < MAX_BUFFERS; i++) {
 		if (buffer_list[i].PA == pa) {
 			acapd_print("Free buffer pa %lu \n",pa);
+			acapd_print("Free buffer size %d \n", buffer_list[i].size);
 			struct drm_gem_close closeInfo = {0, 0};
 			closeInfo.handle = buffer_list[i].handle;
 			ioctl(buffer_list[i].drm_fd, DRM_IOCTL_GEM_CLOSE, &closeInfo);
@@ -540,4 +542,12 @@ int sys_free_buffer(uint64_t pa){
 	}
 	acapd_perror("No buffer allocation found for pa %lu\n",pa);
 	return -1;
+}
+
+int sys_print_buffers(){
+	int i;
+	for (i = 0; i < MAX_BUFFERS; i++) {
+		acapd_print("buffer pa %lu \n", buffer_list[i].PA);
+	}
+	return 0;
 }

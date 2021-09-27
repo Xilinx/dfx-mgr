@@ -25,6 +25,7 @@ using json = nlohmann::json;
 using opendfx::Accel;
 
 typedef struct xrt_device_info {
+	char xclbin[100];
 	uint8_t xrt_device_id;
 	xrtDeviceHandle device_hdl;
 	xuid_t xrt_uid;
@@ -109,6 +110,7 @@ int Accel::allocateBuffer(int xrt_fd){
 			printf( "error @ config allocation\n");
 			return status;
 		}
+		std::cout << "allocateIOBuffer of size : " << bSize << std::endl;
 		char SemaphoreName[100];
 		memset(SemaphoreName, '\0', 100);
 		sprintf(SemaphoreName, "%x", semaphore);
@@ -157,9 +159,8 @@ int Accel::reAllocateBuffer(){
 int Accel::deallocateBuffer(int xrt_fd){
 	int status;
 	if (type == opendfx::acceltype::inputNode || type == opendfx::acceltype::outputNode){
-		std::cout << "deallocateIOBuffer" << std::endl;
+		std::cout << "deallocateIOBuffer of size : " << bSize << std::endl;
 		status = xrt_deallocateBuffer(xrt_fd, bSize, &handle, &ptr, &phyAddr);
-		std::cout << "#deallocateIOBuffer" << std::endl;
 		if(status < 0){
 			printf( "error @ deallocateBuffer\n");
 			return status;
@@ -188,29 +189,16 @@ int Accel::allocateAccelResource(){
 			}
 		}
 		std::cout << metadata << std::endl;
+		std::cout << "#################################" << std::endl;
+
 		json document = json::parse(metadata);
 		json accelMetadataObj = document["accel_metadata"];
 		std::string dmaType;
 		accelMetadataObj.at("DMA_type").get_to(dmaType);
 		std::cout << "dmaType : " << dmaType << std::endl;
 		std::cout << "loading AIE accel" << std::endl;
-		//dmaLib = "dfx-mgr/build/opendfx-graph/drivers/AIEXrtDma/src/libAIEXrtDma_shared.so";
 		accelMetadataObj.at("dma_driver_lib").get_to(dmaLib);
-		//dmaLib = "dfx-mgr/build/opendfx-graph/drivers/softDma/src/libsoftDma_shared.so";
-		dmDriver = dlopen(dmaLib.c_str(), RTLD_NOW | RTLD_GLOBAL);
-		if(dmDriver == NULL){
-			 printf( "Could not open file : %s\n", dlerror() );
-		}
-		//		slot = load_accelerator(cname);
-		//		std::cout << dmDriver << std::endl;
-		//		registerDev = (REGISTER) dlsym(dmDriver, "registerDriver");
-		//		std::cout << registerDev << std::endl;
-		//		unregisterDev = (UNREGISTER) dlsym(dmDriver, "unregisterDriver");
-		//		std::cout << unregisterDev << std::endl;
-		//		std::cout << "loading AIE accel" << std::endl;
-		//		registerDev(&device, &config);
-		//		//config->aie = (xrt_device_info_t *)getXRTinfo(slot);
-		//		device->open(config);
+		//
 		//}
 		//	if (dmaType == "HLS_MULTICHANNEL_DMA"){
 		//		dmaLib = "/media/test/dfx-mgr/build/opendfx-graph/drivers/sihaDma/src/libsihaDma_shared.so";
@@ -238,13 +226,14 @@ int Accel::allocateAccelResource(){
 		slot = load_accelerator(cname);
 		//std::cout << "load accelerator" << std::endl;
 		if(slot >= 0){
-			std::cout << "loading hardware accel" << std::endl;
+			std::cout << "loading driver from path : " << dmaLib << std::endl;
 			dmDriver = dlopen(dmaLib.c_str(), RTLD_NOW);
 			registerDev = (REGISTER) dlsym(dmDriver, "registerDriver");
 			unregisterDev = (UNREGISTER) dlsym(dmDriver, "unregisterDriver");
 			registerDev(&device, &config);
 			xrt_device_info_t *aie = (xrt_device_info_t *)getXRTinfo(slot);
 			config->slot = slot;
+			config->xclbin = aie->xclbin;
 			config->xrt_device_id = &aie->xrt_device_id;
 			config->device_hdl = &aie->device_hdl;
 			config->xrt_uid = &aie->xrt_uid;

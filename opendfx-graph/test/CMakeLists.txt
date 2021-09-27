@@ -9,6 +9,8 @@ add_executable(testGraphClient testGraphClient.cpp)
 add_executable(testGraphClient2 testGraphClient2.cpp)
 add_executable(testGraphClientAie testGraphClientAie.cpp)
 add_executable(testGraphClientNoAccel testGraphClientNoAccel.cpp)
+add_executable(libdfx_app libdfx_app.c)
+add_executable(testGraphClientFilter testGraphClientFilter.cpp)
 
 target_link_libraries(testGraph dfx-mgr-shared dfxgraph_shared dl pthread)
 target_link_libraries(testGraphAPI dfx-mgr-shared dfxgraph_shared dl pthread)
@@ -19,5 +21,6 @@ target_link_libraries(testGraphClient dfx-mgr-shared dfxgraph_shared dl pthread)
 target_link_libraries(testGraphClient2 dfx-mgr-shared dfxgraph_shared dl pthread)
 target_link_libraries(testGraphClientAie dfx-mgr-shared dfxgraph_shared dl pthread)
 target_link_libraries(testGraphClientNoAccel dfx-mgr-shared dfxgraph_shared dl pthread)
-
+target_link_libraries(libdfx_app dfx dl pthread)
+target_link_libraries(testGraphClientFilter dfx-mgr-shared dfxgraph_shared dl pthread opencv_imgcodecs opencv_core opencv_imgproc opencv_highgui)
 

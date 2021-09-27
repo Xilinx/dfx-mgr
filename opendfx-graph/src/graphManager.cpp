@@ -18,6 +18,7 @@
 #include "graphManager.hpp"
 #include <signal.h>
 #include <dfx-mgr/daemon_helper.h>
+#include <unistd.h>
 
 using opendfx::GraphManager;
 
@@ -165,13 +166,16 @@ int GraphManager::stageGraphs(){
 	int accelCounts = 0;
 	std::vector<opendfx::Graph *>*graphs;
 	std::cout << "service started ..." << std::endl;
+	int graphsInQueue = 0;
 	while(1){
+		graphsInQueue = 0;
 		for (int i = 0; i < 3; i++){
 			graphQueue_mutex.lock();
 			graphs = &graphsQueue[3-i-1];
 			if (remainingSlots > 0){
 				for (std::vector<opendfx::Graph *>::iterator it = graphs->begin() ; it != graphs->end(); ++it)
 				{
+					graphsInQueue ++;
 					opendfx::Graph* graph = *it;
 					accelCounts = graph->countAccel();
 					if (remainingSlots > 0 && remainingSlots >= accelCounts){ // && accelCounts > 0){
@@ -192,6 +196,7 @@ int GraphManager::stageGraphs(){
 			}
 			graphQueue_mutex.unlock();
 		}
+		graphsInQueue += stagedGraphs.size();
 		mergeGraphs();
 		executeStagedGraphs();
 		graphQueue_mutex.lock();
@@ -200,9 +205,7 @@ int GraphManager::stageGraphs(){
 			opendfx::Graph* tGraph = *it;
 			if(tGraph->getStatus() == opendfx::graphStatus::GraphExecuted){
 				tGraph->setStatus(opendfx::graphStatus::GraphUnstaged);
-				std::cout << "### @@@ !!!" << std::endl;
 				tGraph->deallocateAccelResources();
-				std::cout << "### @@@ !!!" << std::endl;
 				tGraph->deallocateBuffers();
 				tGraph->deallocateIOBuffers();
 				this->stagedGraphs.erase(it);
@@ -215,6 +218,10 @@ int GraphManager::stageGraphs(){
 		}
 
 		graphQueue_mutex.unlock();
+		//std::cout << graphsInQueue << std::endl;
+		if (graphsInQueue == 0){
+			sleep(1);
+		}
 	}
 	std::cout << "service done" << std::endl;
 	return 0;

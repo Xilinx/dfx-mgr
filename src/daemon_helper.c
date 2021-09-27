@@ -165,6 +165,7 @@ int load_aie(char *slot_path, xrt_device_info_t *aie){
 	ret = xclProbe();
 
 	aie->device_hdl = xrtDeviceOpen(aie->xrt_device_id); 
+	strcpy(aie->xclbin, xclbin_filepath); 
 	xrtXclbinHandle xclbin_hdl = xrtXclbinAllocFilename(xclbin_filepath);
     ret = xrtDeviceLoadXclbinHandle(aie->device_hdl, xclbin_hdl);
     ret = xrtXclbinGetUUID(xclbin_hdl, aie->xrt_uid);

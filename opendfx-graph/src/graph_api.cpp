@@ -208,6 +208,30 @@ char * Graph_toJsonDbg(GRAPH_HANDLE gHandle){
 }
 
 
+int	Graph_submit(GRAPH_HANDLE gHandle){
+	opendfx::Graph *graph = (opendfx::Graph *) gHandle;
+	return graph->submit();
+}
+
+int	Graph_isScheduled(GRAPH_HANDLE gHandle){
+	opendfx::Graph *graph = (opendfx::Graph *) gHandle;
+	return graph->isScheduled();
+}
+
+int Data2IO(ACCEL_HANDLE aHandle, uint8_t *ptr, int size){
+	opendfx::Accel *accel = (opendfx::Accel *) aHandle;
+	memcpy(accel->ptr, ptr, size);
+	accel->post();
+	return 0;
+}
+
+int IO2Data(ACCEL_HANDLE aHandle, uint8_t *ptr, int size){
+	opendfx::Accel *accel = (opendfx::Accel *) aHandle;
+	accel->wait();
+	memcpy(ptr, accel->ptr, size);
+	return 0;
+}
+
 GRAPH_MANAGER_HANDLE GraphManager_Create(int slots){
 	opendfx::GraphManager *graphManager = new opendfx::GraphManager(slots);
 	return (GRAPH_MANAGER_HANDLE) graphManager;	

@@ -22,6 +22,7 @@ extern "C" {
 #include <xrt/xrt_device.h>
 
 typedef struct xrt_device_info {
+	char xclbin[100];
 	uint8_t xrt_device_id;
 	xclDeviceHandle device_hdl;
 	xuid_t xrt_uid;

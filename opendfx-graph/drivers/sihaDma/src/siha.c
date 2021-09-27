@@ -218,6 +218,7 @@ int sihaDma_MM2SDone(DeviceConfig_t *config){
 }
 
 int registerDriver(Device_t** device, DeviceConfig_t** config){
+	printf("Registering SIHA DMA Driver ...\n");
 	Device_t *tDevice = (Device_t*)malloc(sizeof(Device_t)); 
 	DeviceConfig_t *tConfig = (DeviceConfig_t*)malloc(sizeof(DeviceConfig_t)); 
 	strcpy(tConfig->name, "sihaDma");

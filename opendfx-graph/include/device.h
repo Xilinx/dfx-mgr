@@ -31,6 +31,7 @@ typedef struct DeviceConfig {
     int slot;
 	int handle;
 	//xrt_device_info_t * aie; 
+	char *xclbin; 
 	uint8_t *xrt_device_id;
 	xrtDeviceHandle *device_hdl;
 	xuid_t *xrt_uid;

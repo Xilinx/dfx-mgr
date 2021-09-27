@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "graph_api.h"
 #include "utils.h"
+#include <stdint.h>
 
 #define MAX_SLOTS 3 
 #define IONODE_SIZE 32*1024*1024

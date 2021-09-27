@@ -169,7 +169,7 @@ int main (int argc, char **argv)
 								acapd_debug("Recieved graph scheduled packet");
 								int * idptr = (int *) recv_message.data;
 								id = *idptr;
-								int *io_fd, *io_ids, io_size;
+								int *io_fd, *io_ids, io_size = 0;
 								status = GraphManager_ifGraphStaged(gmHandle, id, &io_fd, &io_ids, &io_size);
 								if (status == true){
 									for(int i = 0 ; i < io_size; i++){
@@ -187,7 +187,7 @@ int main (int argc, char **argv)
 									send_message.size = size;
 								}
 								else{
-									//acapd_debug("%d\n", status);
+									acapd_debug("Not Staged !! %d\n", status);
 									size = sizeof(int);
 									memcpy(send_message.data, &status, sizeof(int));					
 									send_message.id = GRAPH_STAGED;
