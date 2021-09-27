@@ -40,7 +40,6 @@ install (TARGETS ${LIB}_shared LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 #target_link_libraries(${EXEC} dl)
 
-add_subdirectory (drivers)
 add_subdirectory (test)
 
 

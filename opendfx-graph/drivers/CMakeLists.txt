@@ -1,6 +1,0 @@
-add_subdirectory (AIEXrtDma)
-add_subdirectory (fallback)
-add_subdirectory (sihaDma)
-add_subdirectory (sihaXrtDma)
-add_subdirectory (softDma)
-add_subdirectory (XF2DFilter)
