@@ -11,7 +11,7 @@ link_directories (${_list})
 
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
 
-set (_deps "dfx" "websockets" "dfxgraph_shared" "dl" "pthread")
+set (_deps "dfx" "websockets" "dfxgraph" "dl" "pthread")
 
 foreach (_app  graphApp graphTest0 graphTest1 graphTest2 graphTest3 graphTest4 graphTest5)
   set (_src ${CMAKE_CURRENT_SOURCE_DIR}/${_app}.c)

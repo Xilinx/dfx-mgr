@@ -19,7 +19,9 @@
 #include <signal.h>
 #include <dfx-mgr/daemon_helper.h>
 #include <unistd.h>
+#include "nlohmann/json.hpp"
 
+using json = nlohmann::json;
 using opendfx::GraphManager;
 
 GraphManager::GraphManager(int slots) : slots(slots) {
@@ -138,7 +140,7 @@ int GraphManager::unstageGraphs(){
 }
 
 int GraphManager::mergeGraphs(){
-	mergedGraph.lockAccess();
+	opendfx::Graph mergedGraph{"Merged"};
 	for (std::vector<opendfx::Graph *>::iterator it = stagedGraphs.begin() ; it != stagedGraphs.end(); ++it)
 	{
 		opendfx::Graph* graph = *it;
@@ -149,15 +151,26 @@ int GraphManager::mergeGraphs(){
 			graph->createExecutionDependencyList();
 			graph->getExecutionDependencyList();
 			graph->createScheduleList();
-			mergedGraph.copyGraph(graph);
 			graph->setStatus(opendfx::graphStatus::GraphStaged);
-			std::cout << "scheduled ..." << std::endl;
-			std::cout << "No of accels  = " << mergedGraph.countAccel() << std::endl;
-			std::cout << "No of buffers = " << mergedGraph.countBuffer() << std::endl; 
-			std::cout << "No of links   = " << mergedGraph.countLink() << std::endl; 
 		}
+		mergedGraph.copyGraph(graph);
+		std::cout << "scheduled ..." << std::endl;
+		std::cout << "No of accels  = " << mergedGraph.countAccel() << std::endl;
+		std::cout << "No of buffers = " << mergedGraph.countBuffer() << std::endl; 
+		std::cout << "No of links   = " << mergedGraph.countLink() << std::endl; 
+	
 	}
-	mergedGraph.unlockAccess();
+	std::string dataToWrite = mergedGraph.toJson();
+	//std::stringstream jsonStream;
+	//jsonStream << document.dump(true);	
+	std::ofstream filePtr;
+	filePtr.open("/run/mergedGraph.json", std::ios::trunc);
+	//std::string dataToWrite = jsonStream.str();
+	//std::cout << dataToWrite << std::endl; 
+	filePtr << dataToWrite.c_str();
+
+	filePtr.close();
+	logQueues();
 	return 0;
 }
 
@@ -189,78 +202,124 @@ int GraphManager::stageGraphs(){
 							break;
 						}
 					}
-					else{
-						break;
+						else{
+							break;
+						}
 					}
 				}
+				graphQueue_mutex.unlock();
 			}
+			graphsInQueue += stagedGraphs.size();
+			mergeGraphs();
+			executeStagedGraphs();
+			graphQueue_mutex.lock();
+			for (std::vector<opendfx::Graph *>::iterator it = stagedGraphs.begin() ; it != stagedGraphs.end(); ++it)
+			{
+				opendfx::Graph* tGraph = *it;
+				if(tGraph->getStatus() == opendfx::graphStatus::GraphExecuted){
+					tGraph->setStatus(opendfx::graphStatus::GraphUnstaged);
+					tGraph->deallocateAccelResources();
+					tGraph->deallocateBuffers();
+					tGraph->deallocateIOBuffers();
+					this->stagedGraphs.erase(it);
+					accelCounts = tGraph->countAccel();
+					remainingSlots = remainingSlots + accelCounts;
+					unstagedGraphs.push_back(tGraph);
+					//delete tGraph;
+					break;
+				}
+			}
+
 			graphQueue_mutex.unlock();
-		}
-		graphsInQueue += stagedGraphs.size();
-		mergeGraphs();
-		executeStagedGraphs();
-		graphQueue_mutex.lock();
-		for (std::vector<opendfx::Graph *>::iterator it = stagedGraphs.begin() ; it != stagedGraphs.end(); ++it)
-		{
-			opendfx::Graph* tGraph = *it;
-			if(tGraph->getStatus() == opendfx::graphStatus::GraphExecuted){
-				tGraph->setStatus(opendfx::graphStatus::GraphUnstaged);
-				tGraph->deallocateAccelResources();
-				tGraph->deallocateBuffers();
-				tGraph->deallocateIOBuffers();
-				this->stagedGraphs.erase(it);
-				accelCounts = tGraph->countAccel();
-				remainingSlots = remainingSlots + accelCounts;
-				unstagedGraphs.push_back(tGraph);
-				//delete tGraph;
-				break;
+			//std::cout << graphsInQueue << std::endl;
+			if (graphsInQueue == 0){
+				sleep(1);
 			}
 		}
+		std::cout << "service done" << std::endl;
+		return 0;
+	}
 
-		graphQueue_mutex.unlock();
-		//std::cout << graphsInQueue << std::endl;
-		if (graphsInQueue == 0){
-			sleep(1);
+	int GraphManager::scheduleGraph(){
+		while(1){
 		}
+		return 0;
 	}
-	std::cout << "service done" << std::endl;
-	return 0;
-}
 
-int GraphManager::scheduleGraph(){
-	while(1){
+
+	int GraphManager::logQueues () {
+		json document;
+		json mergedQueueDoc;
+		for (std::vector<opendfx::Graph *>::iterator it = stagedGraphs.begin() ; it != stagedGraphs.end(); ++it){
+			opendfx::Graph* graph = *it;
+			json gDoc;
+			gDoc["id"]      = utils::int2str(graph->getId());
+			gDoc["name"]    = graph->getName();
+			gDoc["status"]	= graph->getStatus();
+			mergedQueueDoc.push_back(gDoc);
+		}
+		document["scheduled"] = mergedQueueDoc;
+		for (int i = 0; i < 3; i++){
+			json QueueDoc;
+			auto graphs = &graphsQueue[3-i-1];
+			for (std::vector<opendfx::Graph *>::iterator it = graphs->begin() ; it != graphs->end(); ++it)
+			{
+				opendfx::Graph* graph = *it;
+				json gDoc;
+				gDoc["id"]      = utils::int2str(graph->getId());
+				gDoc["name"]    = graph->getName();
+				gDoc["status"]	= graph->getStatus();
+				QueueDoc.push_back(gDoc);
+			}
+			switch(i){
+				case 0: document["queue0"] = QueueDoc;
+						break;
+				case 1: document["queue1"] = QueueDoc;
+						break;
+				case 2: document["queue2"] = QueueDoc;
+						break;
+			}
+		}
+		std::stringstream jsonStream;
+		jsonStream << document.dump(true);
+		std::ofstream filePtr;
+		filePtr.open("/run/queues.json", std::ios::trunc);
+
+		std::string dataToWrite = jsonStream.str();
+		//std::cout << dataToWrite << std::endl; 
+		filePtr << dataToWrite.c_str();
+
+		filePtr.close();
+		return 0;
 	}
-	return 0;
-}
+	/*void GraphManager::sigint_handler (int) {
+	  if (pthread_self() == main_thread) {
+	  std::cout << "\rQuitting.\n";
+	  quit = true;
+	  for (auto &t : all) pthread_kill(t.native_handle(), SIGINT);
+	  } else if (!quit) pthread_kill(main_thread, SIGINT);
+	  }
 
-/*void GraphManager::sigint_handler (int) {
-  if (pthread_self() == main_thread) {
-  std::cout << "\rQuitting.\n";
-  quit = true;
-  for (auto &t : all) pthread_kill(t.native_handle(), SIGINT);
-  } else if (!quit) pthread_kill(main_thread, SIGINT);
-  }
+	  template <decltype(signal)>
+	  void GraphManager::sighandler(int sig, sighandler_t handler) {
+	  signal(sig, handler);
+	  }
 
-  template <decltype(signal)>
-  void GraphManager::sighandler(int sig, sighandler_t handler) {
-  signal(sig, handler);
-  }
+	  template <decltype(sigaction)>
+	  void GraphManager::sighandler(int sig, sighandler_t handler) {
+	  struct sigaction sa = {};
+	  sa.sa_handler = handler;
+	  sa.sa_flags = SA_RESTART;
+	  sigaction(sig, &sa, NULL);
+	  }
+	  */
 
-  template <decltype(sigaction)>
-  void GraphManager::sighandler(int sig, sighandler_t handler) {
-  struct sigaction sa = {};
-  sa.sa_handler = handler;
-  sa.sa_flags = SA_RESTART;
-  sigaction(sig, &sa, NULL);
-  }
-  */
+	int GraphManager::startServices(){
+		stageGraphThread = new std::thread(&GraphManager::stageGraphs, this);
+		return 0;
+	}
 
-int GraphManager::startServices(){
-	stageGraphThread = new std::thread(&GraphManager::stageGraphs, this);
-	return 0;
-}
-
-int GraphManager::stopServices(){
-	stageGraphThread->join();
-	return 0;
-}
+	int GraphManager::stopServices(){
+		stageGraphThread->join();
+		return 0;
+	}

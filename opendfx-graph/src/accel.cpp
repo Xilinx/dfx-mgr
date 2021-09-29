@@ -20,6 +20,7 @@
 #include <dfx-mgr/accel.h>
 #include <dfx-mgr/daemon_helper.h>
 //#include <dfx-mgr/model.h>
+#include <sys/mman.h>
 
 using json = nlohmann::json;
 using opendfx::Accel;
@@ -81,10 +82,12 @@ std::string Accel::toJson(bool withDetail){
 	if(withDetail){
 		document["linkRefCount"] = linkRefCount;
 		document["parentGraphId"]    = parentGraphId;
+		document["deleteFlag"]    = deleteFlag;
 	}
 	document["name"]    = name;
 	document["type"]    = type;
 	document["bSize"]    = bSize;
+	document["slot"]    = slot;
 	std::stringstream jsonStream;
 	jsonStream << document.dump(true);
 
@@ -165,6 +168,25 @@ int Accel::deallocateBuffer(int xrt_fd){
 			printf( "error @ deallocateBuffer\n");
 			return status;
 		}
+		char SemaphoreName[100];
+		memset(SemaphoreName, '\0', 100);
+		sprintf(SemaphoreName, "%x", semaphore);
+		sem_close(semptr);
+		sem_unlink(SemaphoreName);
+		semptr = NULL;
+	}
+	return 0;
+}
+
+int Accel::reDeallocateBuffer(){
+	if (type == opendfx::acceltype::inputNode || type == opendfx::acceltype::outputNode){
+		std::cout << "reDeallocateIOBuffer of size : " << bSize << std::endl;
+		munmap(&ptr, bSize);
+		//status = xrt_deallocateBuffer(xrt_fd, bSize, &handle, &ptr, &phyAddr);
+		//if(status < 0){
+		//	printf( "error @ deallocateBuffer\n");
+		//	return status;
+		//}
 		char SemaphoreName[100];
 		memset(SemaphoreName, '\0', 100);
 		sprintf(SemaphoreName, "%x", semaphore);

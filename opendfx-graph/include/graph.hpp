@@ -62,6 +62,9 @@ namespace opendfx {
 			inline int getId() {
 				return id;
 			};
+			inline std::string getName() {
+				return m_name;
+			};
 			inline int getPriority() {
 				return priority;
 			};

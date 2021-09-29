@@ -52,6 +52,7 @@ namespace opendfx {
 			int allocateBuffer(int xrt_fd);
 			int reAllocateBuffer();
 			int deallocateBuffer(int xrt_fd);
+			int reDeallocateBuffer();
 			int allocateAccelResource();
 			int deallocateAccelResource();
 			inline Device_t* getDevice() const { return this->device; }

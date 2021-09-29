@@ -33,6 +33,7 @@ namespace opendfx {
 			opendfx::Graph* getStagedGraphByID(int id);
 			bool ifGraphStaged(int id, int **fd, int **ids, int *size);
 			int executeStagedGraphs();
+			int logQueues();
 
 		private:
 			std::vector<opendfx::Graph *> graphsQueue[3];
@@ -41,7 +42,7 @@ namespace opendfx {
 			//std::vector<opendfx::Graph *> graphsQueue1;
 			//td::vector<opendfx::Graph *> graphsQueue2;
 			std::vector<opendfx::Graph *> stagedGraphs;
-			opendfx::Graph mergedGraph{"Merged"};
+			//opendfx::Graph *mergedGraph; //{"Merged"};
 			int id;
 			int slots;
 			//std::queue<opendfx::Graph *> graphsQueues[3];
