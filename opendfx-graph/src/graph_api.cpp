@@ -12,6 +12,8 @@
 #include <sys/types.h>
 #include <sys/inotify.h>
 #include <unistd.h>
+#include <opencv2/opencv.hpp>
+#include <opencv2/highgui/highgui.hpp>
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,6 +33,7 @@ GRAPH_HANDLE Graph_CreateWithPriority(const char* name, int priority){
 
 int Graph_Distroy (GRAPH_HANDLE gHandle){
 	opendfx::Graph *graph = (opendfx::Graph *) gHandle;
+	//graph->redeallocateIOBuffers();
 	delete (graph);
 	return 0;
 }
@@ -213,6 +216,11 @@ char * Graph_toJsonDbg(GRAPH_HANDLE gHandle){
 }
 
 
+int redeallocateIOBuffers(GRAPH_HANDLE gHandle){
+	opendfx::Graph *graph = (opendfx::Graph *) gHandle;
+	return graph->redeallocateIOBuffers();
+}
+
 int	Graph_submit(GRAPH_HANDLE gHandle){
 	opendfx::Graph *graph = (opendfx::Graph *) gHandle;
 	return graph->submit();
@@ -369,6 +377,60 @@ int notify(char * path)
 	close( fd );
 	return 0;
 }
+
+cv::Mat srcImageR;
+
+int parseImage(char* fname, int width, int height, int* bufferSize, int* metadataSize){
+    srcImageR = cv::imread(fname, 0);
+
+    if (width == 0){
+		width = srcImageR.cols;
+	}
+    if (height == 0){
+		height = srcImageR.rows;
+	}
+	if ((width != srcImageR.cols) || (height != srcImageR.rows))
+		cv::resize(srcImageR, srcImageR, cv::Size(width, height));
+	
+	*bufferSize = srcImageR.rows * srcImageR.cols * sizeof(int16_t);
+	*metadataSize = sizeof(srcImageR.size());
+	return 0;
+}
+
+int copyImageBuffers(uint8_t* buffer, uint8_t* metadata){
+	// Load image
+	std::vector<int16_t> srcData;
+	srcData.assign(srcImageR.data, (srcImageR.data + srcImageR.total()));
+	cv::Mat src(srcImageR.rows, srcImageR.cols, CV_16SC1, (void*)srcData.data());
+	
+ 	auto meta = srcImageR.size();
+	memcpy(metadata, &meta, sizeof(srcImageR.size()));
+	memcpy(buffer, srcData.data(), srcImageR.rows * srcImageR.cols * sizeof(int16_t));
+	return 0;
+}
+
+int saveImage(uint8_t* buffer, int size, const char* fname){
+	// Allocate output buffer
+	std::vector<int16_t> dstData;
+	dstData.assign(srcImageR.rows * srcImageR.cols, 0);
+
+	cv::Mat dst(srcImageR.rows, srcImageR.cols, CV_16SC1, (void*)dstData.data());
+	cv::Mat dstOutImage(srcImageR.rows, srcImageR.cols, srcImageR.type());
+	
+	memcpy(dstData.data(), buffer, size);
+	//    Saturate the output values to [0,255]
+    dst = cv::max(dst, 0);
+    dst = cv::min(dst, 255);
+    
+    // Convert 16-bit output to 8-bit
+    dst.convertTo(dstOutImage, srcImageR.type());
+    
+    // Analyze output {
+    std::cout << "Analyzing diff\n";
+    cv::imwrite(fname, dstOutImage);
+	return 0;
+}
+
 #ifdef __cplusplus
 }
 #endif

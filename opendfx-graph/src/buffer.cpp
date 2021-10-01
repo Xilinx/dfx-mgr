@@ -23,6 +23,8 @@ Buffer::Buffer(const std::string &name, int parentGraphId) : name(name), parentG
 	semaphore = id ^ parentGraphId; 
 	config = (BuffConfig_t*) malloc(sizeof(BuffConfig_t));
 	status = opendfx::bufferStatus::BuffIsEmpty;
+	interRMReqIn = 0;
+	interRMReqOut = 0;
 }
 
 Buffer::Buffer(const std::string &name, int parentGraphId, int id) : name(name), id(id), parentGraphId(parentGraphId) {
@@ -30,6 +32,8 @@ Buffer::Buffer(const std::string &name, int parentGraphId, int id) : name(name),
 	semaphore = id ^ parentGraphId; 
 	config = (BuffConfig_t*) malloc(sizeof(BuffConfig_t));
 	status = opendfx::bufferStatus::BuffIsEmpty;
+	interRMReqIn = 0;
+	interRMReqOut = 0;
 }
 
 std::string Buffer::info() const {
@@ -82,7 +86,19 @@ bool Buffer::getDeleteFlag() const{
 
 int Buffer::allocateBuffer(int xrt_fd){
 	int status;
-	if (bType == opendfx::buffertype::DDR_BASED){
+	std::cout << bType << std::endl;
+	if (interRMReqIn == 1 && interRMReqOut == 1 && bType == buffertype::STREAM_BASED){
+		interRMEnabled = 1;
+		config->interRMSinks[0] = 0x20180000000;
+		config->interRMSinks[1] = 0x201C0000000;
+		config->interRMSinks[2] = 0x20200000000;
+		config->sinkSlot = sinkSlot;
+		config->sourceSlot = sourceSlot;
+		config->interRMEnabled = 1;
+		std::cout << "$$$$$" << config->sinkSlot << "@" << config->sourceSlot << std::endl; 
+	}
+	else{
+		interRMEnabled = 0;
 
 		status = xrt_allocateBuffer(xrt_fd, bSize, &handle,
 				&ptr, &phyAddr, &fd);
@@ -92,7 +108,11 @@ int Buffer::allocateBuffer(int xrt_fd){
 			printf( "error @ config allocation\n");
 			return status;
 		}
+		config->ptr = ptr;   // Buffer Ptr
+    	config->phyAddr = phyAddr; // Buffer Physical Address
+		config->interRMEnabled = 0;
 	}
+	std::cout << "allocating inter RM " << interRMEnabled << interRMReqIn << interRMReqOut << std::endl;
 	char SemaphoreName[100];
 	memset(SemaphoreName, '\0', 100);
 	sprintf(SemaphoreName, "%x", semaphore);
@@ -103,21 +123,23 @@ int Buffer::allocateBuffer(int xrt_fd){
 	if (semptr == ((void*) -1)){ 
 		std::cout << "sem_open" << std::endl;
 	}
-	config->ptr = ptr;   // Buffer Ptr
-    config->phyAddr = phyAddr; // Buffer Physical Address
     config->semptr = semptr;
 	return 0;
 }
 
 int Buffer::deallocateBuffer(int xrt_fd){
 	std::cout << "deallocateBuffer : " << phyAddr << std::endl;
-		std::cout << "deallocateBuffer of size : " << bSize << std::endl;
+	std::cout << "deallocateBuffer of size : " << bSize << std::endl;
 	int status;
-	if (bType == opendfx::buffertype::DDR_BASED){
-		status = xrt_deallocateBuffer(xrt_fd, bSize, &handle, &ptr, &phyAddr);
-		if(status < 0){
-			printf( "error @ deallocateBuffer\n");
-			return status;
+	if (interRMEnabled == 0){
+		if (ptr){
+			if (bType == opendfx::buffertype::DDR_BASED){
+				status = xrt_deallocateBuffer(xrt_fd, bSize, &handle, &ptr, &phyAddr);
+				if(status < 0){
+					printf( "error @ deallocateBuffer\n");
+					return status;
+				}
+			}
 		}
 	}
 	char SemaphoreName[100];
@@ -126,5 +148,6 @@ int Buffer::deallocateBuffer(int xrt_fd){
 	sem_close(semptr);
 	sem_unlink(SemaphoreName);
 	semptr = NULL;
+	ptr = NULL;
 	return 0;
 }

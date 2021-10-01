@@ -41,6 +41,8 @@ Accel::Accel(const std::string &name, int parentGraphId, int type) : name(name),
 	S2MMCurrentIndex = 0;
 	MM2SCurrentIndex = 0;
 	CurrentIndex = 0;
+	slot = -1;
+	ptr = NULL;
 }
 
 Accel::Accel(const std::string &name, int parentGraphId, int type, int id) : name(name), id(id), parentGraphId(parentGraphId), type(type) {
@@ -52,6 +54,8 @@ Accel::Accel(const std::string &name, int parentGraphId, int type, int id) : nam
 	S2MMCurrentIndex = 0;
 	MM2SCurrentIndex = 0;
 	CurrentIndex = 0;
+	slot = -1;
+	ptr = NULL;
 }
 
 std::string Accel::info() const {
@@ -163,36 +167,43 @@ int Accel::deallocateBuffer(int xrt_fd){
 	int status;
 	if (type == opendfx::acceltype::inputNode || type == opendfx::acceltype::outputNode){
 		std::cout << "deallocateIOBuffer of size : " << bSize << std::endl;
-		status = xrt_deallocateBuffer(xrt_fd, bSize, &handle, &ptr, &phyAddr);
-		if(status < 0){
-			printf( "error @ deallocateBuffer\n");
-			return status;
+		if (ptr){
+			status = xrt_deallocateBuffer(xrt_fd, bSize, &handle, &ptr, &phyAddr);
+			if(status < 0){
+				printf( "error @ deallocateBuffer\n");
+				return status;
+			}
+			char SemaphoreName[100];
+			memset(SemaphoreName, '\0', 100);
+			sprintf(SemaphoreName, "%x", semaphore);
+			sem_close(semptr);
+			sem_unlink(SemaphoreName);
+			semptr = NULL;
+			ptr = NULL;
 		}
-		char SemaphoreName[100];
-		memset(SemaphoreName, '\0', 100);
-		sprintf(SemaphoreName, "%x", semaphore);
-		sem_close(semptr);
-		sem_unlink(SemaphoreName);
-		semptr = NULL;
 	}
 	return 0;
 }
 
 int Accel::reDeallocateBuffer(){
 	if (type == opendfx::acceltype::inputNode || type == opendfx::acceltype::outputNode){
-		std::cout << "reDeallocateIOBuffer of size : " << bSize << std::endl;
-		munmap(&ptr, bSize);
-		//status = xrt_deallocateBuffer(xrt_fd, bSize, &handle, &ptr, &phyAddr);
-		//if(status < 0){
-		//	printf( "error @ deallocateBuffer\n");
-		//	return status;
-		//}
-		char SemaphoreName[100];
-		memset(SemaphoreName, '\0', 100);
-		sprintf(SemaphoreName, "%x", semaphore);
-		sem_close(semptr);
-		sem_unlink(SemaphoreName);
-		semptr = NULL;
+		if (ptr){
+			std::cout << "reDeallocateIOBuffer of size : " << bSize << std::endl;
+			unmapBuffer(fd, bSize, &ptr);
+			//munmap(&ptr, bSize);
+			//status = xrt_deallocateBuffer(xrt_fd, bSize, &handle, &ptr, &phyAddr);
+			//if(status < 0){
+			//	printf( "error @ deallocateBuffer\n");
+			//	return status;
+			//}
+			char SemaphoreName[100];
+			memset(SemaphoreName, '\0', 100);
+			sprintf(SemaphoreName, "%x", semaphore);
+			sem_close(semptr);
+			sem_unlink(SemaphoreName);
+			semptr = NULL;
+			ptr = NULL;
+		}
 	}
 	return 0;
 }
@@ -236,13 +247,10 @@ int Accel::allocateAccelResource(){
 		std::string compatible;
 		interrmObj.at("Compatible").get_to(compatible);
 		if (compatible == "True"){
-			InterRMCompatible = 1;
+			interRMCompatible = 1;
 		}
-		else if (compatible == "False"){
-			InterRMCompatible = 0;
-		}
-		else{
-			InterRMCompatible = 0;
+		else {
+			interRMCompatible = 0;
 		}
 		//std::cout << "load accelerator" << std::endl;
 		slot = load_accelerator(cname);
@@ -268,20 +276,23 @@ int Accel::allocateAccelResource(){
 			unregisterDev = (UNREGISTER) dlsym(dmDriver, "unregisterDriver");
 			registerDev(&device, &config);
 			device->open(config);
+			interRMCompatible = 0;
 		}
 		else {
 			return -1;
 		}
-	}
-	return 0;
+}
+return 0;
 }
 
 int Accel::deallocateAccelResource(){
 	if (type == opendfx::acceltype::accelNode){
-		device->close(config);
-		unregisterDev(&device, &config);
-		dlclose(dmDriver);
-		remove_accelerator(slot);			
+		if (slot >=0){
+			device->close(config);
+			unregisterDev(&device, &config);
+			dlclose(dmDriver);
+			remove_accelerator(slot);			
+		}
 	}
 	return 0;
 }

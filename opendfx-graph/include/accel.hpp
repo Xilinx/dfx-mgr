@@ -62,6 +62,12 @@ namespace opendfx {
 				this->S2MMStatus = S2MMStatus;
 				return 0;
 			};
+			inline int getiInterRMCompatible() const { return this->interRMCompatible; }
+			inline int getInterRMEnabled() const { return this->interRMEnabled; }
+			inline int setInterRMEnabled(int interRMEnabled) {
+				this->interRMEnabled = interRMEnabled;
+				return 0;
+			};
 			inline int getMM2SStatus() const { return this->MM2SStatus; }
 			inline int setMM2SStatus(int MM2SStatus){
 				this->MM2SStatus = MM2SStatus;
@@ -93,6 +99,7 @@ namespace opendfx {
 				semaphore = id ^ parentGraphId; 
 				return 0;
 			};
+			inline int getSlot() const { return this->slot; }
 		    uint8_t* ptr;   // Buffer Ptr
 			int post();
 			int wait();
@@ -109,7 +116,6 @@ namespace opendfx {
 			int bSize;
 			std::string dmaLib;
 			std::string fallbackLib;
-			int InterRMCompatible;
 			Device_t* device;
     		DeviceConfig_t *config;
     		REGISTER registerDev;
@@ -122,6 +128,8 @@ namespace opendfx {
 		    int semaphore;
 		    sem_t* semptr;
 			bool staged;
+			int interRMCompatible;
+			int interRMEnabled;
 		
 			int slot;
 			int S2MMStatus;

@@ -23,6 +23,10 @@ typedef struct BuffConfig{
     unsigned long phyAddr; // Buffer Physical Address
     sem_t* semptr;
     xrtBufferHandle xrtBuffer;
+	unsigned long interRMSinks[3];
+	int sinkSlot;
+	int sourceSlot;
+    int interRMEnabled;
 } BuffConfig_t;
 
 typedef struct DeviceConfig {

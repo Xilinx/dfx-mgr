@@ -146,18 +146,18 @@ int GraphManager::mergeGraphs(){
 		opendfx::Graph* graph = *it;
 		if (graph->getStatus() == opendfx::graphStatus::GraphIdle){
 			graph->allocateIOBuffers();
-			graph->allocateBuffers();
 			graph->allocateAccelResources();
+			graph->InterRMParser();
+			graph->allocateBuffers();
 			graph->createExecutionDependencyList();
-			graph->getExecutionDependencyList();
 			graph->createScheduleList();
 			graph->setStatus(opendfx::graphStatus::GraphStaged);
 		}
 		mergedGraph.copyGraph(graph);
-		std::cout << "scheduled ..." << std::endl;
-		std::cout << "No of accels  = " << mergedGraph.countAccel() << std::endl;
-		std::cout << "No of buffers = " << mergedGraph.countBuffer() << std::endl; 
-		std::cout << "No of links   = " << mergedGraph.countLink() << std::endl; 
+		//std::cout << "scheduled ..." << std::endl;
+		//std::cout << "No of accels  = " << mergedGraph.countAccel() << std::endl;
+		//std::cout << "No of buffers = " << mergedGraph.countBuffer() << std::endl; 
+		//std::cout << "No of links   = " << mergedGraph.countLink() << std::endl; 
 	
 	}
 	std::string dataToWrite = mergedGraph.toJson();

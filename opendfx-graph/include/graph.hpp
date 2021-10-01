@@ -25,6 +25,7 @@ namespace opendfx {
 
 		public:
 			explicit Graph(const std::string &name, int priority = 0, bool bypass = false);
+			~Graph();
 			std::string info() const;
 			std::string getInfo() const;
 			Accel* addAccel(const std::string &name);
@@ -62,6 +63,9 @@ namespace opendfx {
 			inline int getId() {
 				return id;
 			};
+			inline bool isAbstract() {
+				return abstract;
+			};
 			inline std::string getName() {
 				return m_name;
 			};
@@ -90,10 +94,12 @@ namespace opendfx {
 			Graph* operator - (Graph *graph);
 			int submit(void);
 			int isScheduled(void);
+			int InterRMParser();
 			int allocateIOBuffers();
 			int deallocateIOBuffers();
 			int allocateBuffers();
 			int deallocateBuffers();
+			int redeallocateIOBuffers();
 			int allocateAccelResources();
 			int deallocateAccelResources();
 			int createExecutionDependencyList();
@@ -122,6 +128,7 @@ namespace opendfx {
 			bool executionDone;
 			int status;
 			bool bypass;
+			bool abstract;
 	};
 } // #end of graph
 

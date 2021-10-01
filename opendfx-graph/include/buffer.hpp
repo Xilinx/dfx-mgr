@@ -53,6 +53,24 @@ class Buffer {
 		}
 		int allocateBuffer(int xrt_fd);
 		int deallocateBuffer(int xrt_fd);
+		inline int setInterRMReqIn(int interRMReqIn){ 
+			this->interRMReqIn += interRMReqIn; 
+			return 0;
+		}
+		inline int setInterRMReqOut(int interRMReqOut){ 
+			this->interRMReqOut += interRMReqOut; 
+			return 0;
+		}
+		inline int getInterRMEnabled(){ return this->interRMEnabled;}
+		inline int setSinkSlot(int sinkSlot){ 
+			this->sinkSlot += sinkSlot; 
+			return 0;
+		}
+		inline int getSinkSlot(){ return this->sinkSlot;}
+		inline int setSourceSlot(int sourceSlot){ 
+			this->sourceSlot += sourceSlot; 
+			return 0;
+		}
 	private:
 		std::string name;
 		int id;
@@ -69,6 +87,11 @@ class Buffer {
 		int semaphore;
 		sem_t* semptr;
 		BuffConfig_t *config;
+		int interRMReqIn;
+		int interRMReqOut;
+		int interRMEnabled;
+		int sinkSlot;
+		int sourceSlot;
 		//bool empty;
 		//bool full;
 		int status;

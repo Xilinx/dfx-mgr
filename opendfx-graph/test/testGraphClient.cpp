@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
 	opendfx::Accel  *input00[10];
 	opendfx::Accel *output02[10];
 	int priority;
-	int N = 10;
+	int N = 5;
 	int M = 1;
 
 	for(int j = 0; j < M; j++){

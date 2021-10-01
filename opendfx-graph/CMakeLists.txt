@@ -32,7 +32,7 @@ file(GLOB SOURCES src/*.cpp)
 add_library(${LIB} SHARED ${SOURCES})
 
 #target_link_libraries(${LIB}_shared dl pthread)
-target_link_libraries(${LIB} dfx-mgr-shared dl pthread)
+target_link_libraries(${LIB} dfx-mgr-shared dl pthread opencv_core opencv_highgui )
 #target_link_libraries(${LIB}_static dfx-mgr-static dl pthread)
 
 set_target_properties (${LIB} PROPERTIES
@@ -47,7 +47,7 @@ install (TARGETS ${LIB} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
 #target_link_libraries(${EXEC} dl)
 
 add_subdirectory (test)
-#add_subdirectory (drivers)
+add_subdirectory (drivers)
 
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}")
