@@ -14,7 +14,7 @@
 namespace opendfx {
 
 	enum acceltype {accelNode=0, inputNode=1, outputNode=2, hwAccelNode=3, softAccelNode=4, aiAccelNode=5};
-	enum status {Idle=0, Ready=1, Busy=2, Done=3};
+	enum status {Idle=0, Ready=1, Busy=2, Done=3, Stream=4, StreamReady=5, Staged=6};
 
 	class Accel {
 		public:

@@ -23,7 +23,8 @@
 int main(int argc, char **argv) {
 	_unused(argc);
 	_unused(argv);
-	std::cout << "# main\n";
+	std::cout << "# main\n" << BUFFER_SIZE;
+	int *arrayCS = (int*) malloc(BUFFER_SIZE);
 
 	auto graph = new opendfx::Graph{"G", 0};
 	auto input00   = graph->addInputNode("INPUT", IONODE_SIZE);
@@ -52,17 +53,21 @@ int main(int argc, char **argv) {
 
 	int *matA[NUM_ROWS];
 	int *matB[NUM_ROWS];
+	int *matC[NUM_ROWS];
+	int *matCS[NUM_ROWS];
 	
 	for (int i = 0; i < NUM_ROWS; i++) {
 		matA[i]  = (int *)(arrayA)  + i * NUM_COLS;
 		matB[i]  = (int *)(arrayB)  + i * NUM_COLS;
-		//matC[i]  = (int *)(arrayC)  + i * NUM_COLS;
+		matC[i]  = (int *)(arrayC)  + i * NUM_COLS;
+		matCS[i]  = (int *)(arrayCS)  + i * NUM_COLS;
 	}
 
 	for (int i = 0; i < NUM_ROWS; i++) {
 		for (int j = 0; j < NUM_COLS; j++) {
 			matA[i][j] = (i * NUM_COLS + j) % 10;
 			matB[i][j] = (i * NUM_COLS + j) % 10;
+			matCS[i][j] = 0;
 		}
 	}
 	std::cout << "Input Matrix Generated ... \n";
@@ -77,5 +82,33 @@ int main(int argc, char **argv) {
 	utils::printBuffer((int*)arrayB, 0x100);
 	utils::printBuffer((int*)arrayC, 0x100);
 
+
+	/* For sanity check compute the same on APU */
+	std::cout << "[INFO] Running sanity check" << std::endl;
+	for(int i = 0; i < NUM_ROWS; i++) {
+		for (int j = 0; j < NUM_COLS; j++) {
+			for (int k = 0; k < NUM_COLS; k++) {
+				matCS[i][j] += matA[i][k] * matB[k][j];
+			}
+		}
+	}
+
+	int pass = 1;
+	for (int i = 0; i < NUM_ROWS; i++) {
+		for (int j = 0; j < NUM_COLS; j++) {
+			if (matC[i][j] == matCS[i][j])
+				continue;
+
+			std::cout << "[ERROR] Data mismatch: "
+				  << "AIE[" << i << "][" << j << "] = "
+				  << matC[i][j] << " APU[" << i
+				  << "][" << j << "] =" << matCS[i][j]
+				  << std::endl;
+			pass = -1;
+		}
+	}
+	if(pass == 1){
+		std::cout << "Check Passed" << std::endl;
+	}
 	return 0;
 }

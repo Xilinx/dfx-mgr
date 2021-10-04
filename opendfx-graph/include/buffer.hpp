@@ -14,7 +14,7 @@
 namespace opendfx {
 
 	enum buffertype {DDR_BASED=0, STREAM_BASED=1};
-	enum bufferStatus {BuffIsEmpty=0, BuffIsFull=1, BuffIsBusy=2, BuffIsStream=3};
+	enum bufferStatus {BuffIsEmpty=0, BuffIsFull=1, BuffIsBusy=2, BuffIsStream=3, BuffIsStreamReady=4, BuffIsStreamBPass=5};
 
 class Buffer {
 

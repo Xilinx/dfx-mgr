@@ -786,40 +786,465 @@ int Graph::executeBypass(){
 	std::cout << "############################################" << std::endl;
 	return scheduleList.size();
 }
-int Graph::executeScheduler(){
-	//std::cout << "executing graph ..." << std::endl;
-	usleep(10000);
-	for (std::vector<opendfx::Schedule *>::iterator it = scheduleList.begin()  ; it != scheduleList.end()  ; ++it)
-	{
-		opendfx::Schedule * schedule = *it;
-		ExecutionDependency *eDependency = schedule->getEDependency();
-		int index = schedule->getIndex();
-		int size = schedule->getSize();
-		int offset = schedule->getOffset();
-		int last = schedule->getLast();
-		int first = schedule->getFirst();
-		opendfx::Link* link = eDependency->getLink();
-		opendfx::Accel* accel = link->getAccel();
-		opendfx::Buffer* buffer = link->getBuffer();
-		Device_t* device = accel->getDevice();
-		DeviceConfig_t *deviceConfig = accel->getConfig();
-		BuffConfig_t *buffConfig = buffer->getConfig();
-		if (link->getDir() == opendfx::direction::fromAccel){
-			//std::cout << ">>>" << index  << "B" << buffer->getStatus() << "A" << accel->getS2MMStatus() << std::endl;
-			//std::cout << buffConfig->interRMEnabled;
-			if (accel->getS2MMStatus() == opendfx::status::Idle){
+
+int Graph::processSchedule(opendfx::Schedule * schedule){
+	ExecutionDependency *eDependency = schedule->getEDependency();
+	int index = schedule->getIndex();
+	int size = schedule->getSize();
+	int offset = schedule->getOffset();
+	int last = schedule->getLast();
+	int first = schedule->getFirst();
+	opendfx::Link* link = eDependency->getLink();
+	opendfx::Accel* accel = link->getAccel();
+	opendfx::Buffer* buffer = link->getBuffer();
+	Device_t* device = accel->getDevice();
+	DeviceConfig_t *deviceConfig = accel->getConfig();
+	BuffConfig_t *buffConfig = buffer->getConfig();
+	//std::cout << "interRMEn :" << buffConfig->interRMEnabled << std::endl;
+	//std::cout << "slot :" << deviceConfig->slot << std::endl;
+	//std::cout << "sinkSlot :" << buffConfig->sinkSlot << std::endl;
+	//std::cout << "sourceSlot :" << buffConfig->sourceSlot << std::endl;
+
+	int printFlag = 0;
+	if (link->getDir() == opendfx::direction::fromAccel){
+		printFlag = 1;
+		if (accel->getS2MMStatus() == opendfx::status::Idle){
+			if (schedule->getDeleteFlag() != true){
 				if(buffer->getStatus() == opendfx::bufferStatus::BuffIsEmpty){
 					accel->setS2MMCurrentIndex(index);
-					accel->setCurrentIndex(link->getTransactionIndex());
-					accel->setS2MMStatus(opendfx::status::Ready);
+        	    	accel->setCurrentIndex(link->getTransactionIndex());
+					accel->setS2MMStatus(opendfx::status::Staged);
+					printFlag = 1;
+					std::cout << "==== Staged ===="<< std::endl;
 				}
 			}
-			else{
-				if (accel->getS2MMCurrentIndex() == index){
-					if (accel->getS2MMStatus() == opendfx::status::Ready){
+		}
+		else {
+			if (accel->getS2MMCurrentIndex() == index){
+				switch (accel->getS2MMStatus()){
+					case opendfx::status::Staged:
+						if (buffer->getInterRMEnabled()){
+							if(	buffer->getStatus() == opendfx::bufferStatus::BuffIsStreamReady){
+								accel->setS2MMStatus(opendfx::status::Stream);
+								printFlag = 1;
+								std::cout << "==== Ready ===="<< std::endl;
+							}
+						}else{
+							accel->setS2MMStatus(opendfx::status::Ready);
+							printFlag = 1;
+							std::cout << "==== Ready ===="<< std::endl;
+						}
+						break; 
+					case opendfx::status::Stream:
+						if ((accel->getMM2SStatus() == opendfx::status::Ready || 
+							accel->getMM2SStatus() == opendfx::status::Busy)&& 
+							buffer->getStatus() == opendfx::bufferStatus::BuffIsStreamReady){
+							device->S2MMData(deviceConfig, buffConfig, offset, size, first);
+                            accel->setS2MMStatus(opendfx::status::Busy);
+                            buffer->setStatus(opendfx::bufferStatus::BuffIsStream);
+                         	printFlag = 1;
+							std::cout << "==== Stream ===="<< std::endl;
+						}
+						break;
+					case opendfx::status::Ready:
+						if(eDependency->isDependent()){
+							if(accel->getMM2SStatus() == opendfx::status::Ready || 
+								accel->getMM2SStatus() == opendfx::status::Busy ){
+								if (device->S2MMData(deviceConfig, buffConfig, offset, size, first) >= 0){
+									printFlag = 1;
+									std::cout << "==== Transaction ===="<< std::endl;
+									accel->setS2MMStatus(opendfx::status::Busy);
+									if (buffer->getInterRMEnabled()){
+										buffer->setStatus(opendfx::bufferStatus::BuffIsStream);
+									}else{
+										buffer->setStatus(opendfx::bufferStatus::BuffIsBusy);
+									}
+								}
+							}
+						}
+						else{
+							if(device->S2MMData(deviceConfig, buffConfig, offset, size, first) >= 0){
+								printFlag = 1;
+								std::cout << "==== Transaction ===="<< std::endl;
+								accel->setS2MMStatus(opendfx::status::Busy);
+								if (buffer->getInterRMEnabled()){
+									buffer->setStatus(opendfx::bufferStatus::BuffIsStream);
+								}else{
+									buffer->setStatus(opendfx::bufferStatus::BuffIsBusy);
+								}
+							}
+						}
+						break;
+                	case opendfx::status::Busy:
+                        if(eDependency->isDependent()){
+                            if (accel->getMM2SStatus() == opendfx::status::Idle){
+                            	int ret = device->S2MMDone(deviceConfig);
+                                if(ret > 0){
+                                    printFlag = 1;
+                                    std::cout << "==== Done ====" << std::endl;
+                                    accel->setS2MMStatus(opendfx::status::Idle);
+                                    buffer->setStatus(opendfx::bufferStatus::BuffIsFull);
+                                    schedule->setDeleteFlag(true);
+                                }
+                            }
+                        }
+                        else{
+                            int ret = device->S2MMDone(deviceConfig);
+                            if(ret > 0){
+                                printFlag = 1;
+                                std::cout << "==== Done ====" << std::endl;
+                                accel->setS2MMStatus(opendfx::status::Idle);
+                                buffer->setStatus(opendfx::bufferStatus::BuffIsFull);
+                                schedule->setDeleteFlag(true);
+                            }
+                        }
+	                    break;
+
+				/*case opendfx::status::Stream: break;
+				case opendfx::status::StreamReady: 
+						if (accel->getMM2SStatus() == opendfx::status::Ready && buffer->getStatus() == opendfx::bufferStatus::BuffIsStreamBPass){
+							if (device->S2MMData(deviceConfig, buffConfig, offset, size, first) >= 0){
+								printFlag = 1;
+								std::cout << "==== Transaction ===="<< std::endl;
+								accel->setS2MMStatus(opendfx::status::Busy);
+								if (buffer->getInterRMEnabled()){
+									buffer->setStatus(opendfx::bufferStatus::BuffIsStream);
+								}else{
+									buffer->setStatus(opendfx::bufferStatus::BuffIsBusy);
+								}
+							}
+							printFlag = 1;
+						}
+					break;
+				case opendfx::status::Ready:
 						if(eDependency->isDependent()){
 							if(accel->getMM2SStatus() == opendfx::status::Ready && accel->getCurrentIndex() == link->getTransactionIndex()){
 								if (device->S2MMData(deviceConfig, buffConfig, offset, size, first) >= 0){
+									printFlag = 1;
+									std::cout << "==== Transaction ===="<< std::endl;
+									accel->setS2MMStatus(opendfx::status::Busy);
+									if (buffer->getInterRMEnabled()){
+										buffer->setStatus(opendfx::bufferStatus::BuffIsStream);
+									}else{
+										buffer->setStatus(opendfx::bufferStatus::BuffIsBusy);
+									}
+								}
+							}
+						else{
+							if(device->S2MMData(deviceConfig, buffConfig, offset, size, first) >= 0){
+								printFlag = 1;
+								std::cout << "==== Transaction ===="<< std::endl;
+								accel->setS2MMStatus(opendfx::status::Busy);
+								if (buffer->getInterRMEnabled()){
+									buffer->setStatus(opendfx::bufferStatus::BuffIsStream);
+								}else{
+									buffer->setStatus(opendfx::bufferStatus::BuffIsBusy);
+								}
+							}
+						}
+					}
+					break;
+				case opendfx::status::Busy:
+						if(eDependency->isDependent()){
+							if (accel->getMM2SStatus() == opendfx::status::Idle){
+								int ret = device->S2MMDone(deviceConfig);
+								if(ret > 0){
+									printFlag = 1;
+									std::cout << "==== Done ====" << std::endl;
+									accel->setS2MMStatus(opendfx::status::Idle);
+									buffer->setStatus(opendfx::bufferStatus::BuffIsFull);
+									schedule->setDeleteFlag(true);
+								}
+							}
+						}
+						else{
+							int ret = device->S2MMDone(deviceConfig);
+							if(ret > 0){
+								printFlag = 1;
+								std::cout << "==== Done ====" << std::endl;
+								accel->setS2MMStatus(opendfx::status::Idle);
+								buffer->setStatus(opendfx::bufferStatus::BuffIsFull);
+								schedule->setDeleteFlag(true);
+							}
+						}
+					break;*/
+				}
+			}
+		}
+		if (printFlag){
+			std::cout << "[S2MM] Index: " << index << " : " << accel->getS2MMCurrentIndex();
+			std::cout << "(" << accel->getCurrentIndex() << " : " << link->getTransactionIndex() << ")";
+			std::cout << " BuffStatus: " << buffer->getStatus();
+			std::cout << " AccelStatus: " << accel->getS2MMStatus();
+			std::cout << " Dependent: " << accel->getMM2SStatus() << std::endl;
+		}
+	}
+	else{
+		printFlag = 1;
+		if (accel->getMM2SStatus() == opendfx::status::Idle){
+			accel->setMM2SCurrentIndex(index);
+            accel->setCurrentIndex(link->getTransactionIndex());
+			accel->setMM2SStatus(opendfx::status::Staged);
+			std::cout << "==== Staged ===="<< std::endl;
+		}
+		else {
+			if (accel->getMM2SCurrentIndex() == index){
+				switch (accel->getMM2SStatus()){
+					case opendfx::status::Staged:
+						if (buffer->getInterRMEnabled()){
+							if(accel->getS2MMStatus() == opendfx::status::Ready ||
+								accel->getS2MMStatus() == opendfx::status::Stream ){
+								accel->setMM2SStatus(opendfx::status::Stream);
+								buffer->setStatus(opendfx::bufferStatus::BuffIsStreamReady);
+                                printFlag = 1;
+								std::cout << "==== Ready ===="<< std::endl;
+							}
+						}else { //if(buffer->getStatus() == opendfx::bufferStatus::BuffIsFull){
+								accel->setMM2SStatus(opendfx::status::Ready);
+                            	printFlag = 1;
+								std::cout << "==== Ready ===="<< std::endl;
+						}
+						break; 
+					case opendfx::status::Stream:
+						if(buffer->getStatus() == opendfx::bufferStatus::BuffIsStream){
+							accel->setMM2SStatus(opendfx::status::Ready);
+							device->MM2SData(deviceConfig, buffConfig, offset, size, last, link->getChannel());
+                            accel->setMM2SStatus(opendfx::status::Busy);
+                            printFlag = 1;
+							std::cout << "==== Stream ===="<< std::endl;
+						}
+						break;
+					case opendfx::status::Ready:
+						if(buffer->getStatus() == opendfx::bufferStatus::BuffIsStream ||
+                            buffer->getStatus() == opendfx::bufferStatus::BuffIsFull){
+                       		if(eDependency->isDependent()){
+                            	if (accel->getS2MMStatus() == opendfx::status::Busy){
+                                	if (device->MM2SData(deviceConfig, buffConfig, offset, size, last, link->getChannel()) >= 0){
+                                    	printFlag = 1;
+                                    	std::cout << "==== Transaction ====" << std::endl;
+										accel->setMM2SStatus(opendfx::status::Busy);
+										if (buffer->getInterRMEnabled()){
+										}else{
+											buffer->setStatus(opendfx::bufferStatus::BuffIsBusy);
+										}
+									}
+								}
+							}
+							else{
+								if (device->MM2SData(deviceConfig, buffConfig, offset, size, last, link->getChannel()) >= 0){
+									printFlag = 1;
+									std::cout << "==== Transaction ====" << std::endl;
+									accel->setMM2SStatus(opendfx::status::Busy);
+									if (buffer->getInterRMEnabled()){
+									}else{
+										buffer->setStatus(opendfx::bufferStatus::BuffIsBusy);
+									}
+								}
+							}
+						}
+						break;
+                    case opendfx::status::Busy:
+						if (buffer->getInterRMEnabled()){
+							if(buffer->getStatus() == opendfx::bufferStatus::BuffIsFull){
+        	        			int ret = device->MM2SDone(deviceConfig);
+                       			if(ret > 0){
+            	        			printFlag = 1;
+                           			std::cout << "==== Done ====" << std::endl;
+                           			accel->setMM2SStatus(opendfx::status::Idle);
+                           			buffer->setStatus(opendfx::bufferStatus::BuffIsEmpty);
+                           			schedule->setDeleteFlag(true);
+								}
+							}
+						}else{
+        	        		int ret = device->MM2SDone(deviceConfig);
+                       		if(ret > 0){
+            	        		printFlag = 1;
+                           		std::cout << "==== Done ====" << std::endl;
+                           		accel->setMM2SStatus(opendfx::status::Idle);
+                           		buffer->setStatus(opendfx::bufferStatus::BuffIsEmpty);
+                           		schedule->setDeleteFlag(true);
+							}
+                        }
+                        break;
+
+
+							/*case opendfx::status::Idle:
+							  if(buffer->getStatus() == opendfx::bufferStatus::BuffIsFull){
+							  printFlag = 1;
+							  std::cout << "==== Ready ===="<< std::endl;
+							  accel->setMM2SCurrentIndex(index);
+							  accel->setCurrentIndex(link->getTransactionIndex());
+							  accel->setMM2SStatus(opendfx::status::Ready);
+							  }
+							  if(buffer->getInterRMEnabled() && 
+							  buffer->getStatus() == opendfx::bufferStatus::BuffIsStreamFPass){
+							  printFlag = 1;
+							  std::cout << "==== Ready ===="<< std::endl;
+							  accel->setMM2SCurrentIndex(index);
+							  accel->setCurrentIndex(link->getTransactionIndex());
+							  accel->setMM2SStatus(opendfx::status::StreamReady);
+							  }
+							  break;
+							  case opendfx::status::Stream: 
+							  if (accel->getMM2SCurrentIndex() == index){
+							  if (buffer->getStatus() == opendfx::bufferStatus::BuffIsStream){
+							  buffer->setStatus(opendfx::bufferStatus::BuffIsStreamBPass);
+							  accel->setMM2SStatus(opendfx::status::Stream);
+							  printFlag = 1;
+							  }
+							  }
+							  break;
+							  case opendfx::status::StreamReady: 
+							  if (accel->getMM2SCurrentIndex() == index){
+							  if (accel->getS2MMStatus() == opendfx::status::Ready ||
+							  accel->getS2MMStatus() == opendfx::status::StreamReady){
+							  buffer->setStatus(opendfx::bufferStatus::BuffIsStreamBPass);
+							  accel->setMM2SStatus(opendfx::status::Ready);
+							  printFlag = 1;
+							  }
+							  }
+							  break;
+							  case opendfx::status::Ready:
+							  if (accel->getMM2SCurrentIndex() == index){
+							  if(buffer->getStatus() == opendfx::bufferStatus::BuffIsStream || 
+							  buffer->getStatus() == opendfx::bufferStatus::BuffIsFull){
+							  if(eDependency->isDependent()){
+							  if (accel->getS2MMStatus() == opendfx::status::Busy){
+							  if (device->MM2SData(deviceConfig, buffConfig, offset, size, last, link->getChannel()) >= 0){
+							  printFlag = 1;
+							  std::cout << "==== Transaction ====" << std::endl;
+							  accel->setMM2SStatus(opendfx::status::Busy);
+							  if (buffer->getInterRMEnabled()){
+							  buffer->setStatus(opendfx::bufferStatus::BuffIsStream);
+							  }else{
+							//buffer->setStatus(opendfx::bufferStatus::BuffIsBusy);
+							}
+							}
+							}
+							}
+							else{
+							if (device->MM2SData(deviceConfig, buffConfig, offset, size, last, link->getChannel()) >= 0){
+							printFlag = 1;
+							std::cout << "==== Transaction ====" << std::endl;
+							accel->setMM2SStatus(opendfx::status::Busy);
+							if (buffer->getInterRMEnabled()){
+							buffer->setStatus(opendfx::bufferStatus::BuffIsStream);
+							}else{
+							//buffer->setStatus(opendfx::bufferStatus::BuffIsBusy);
+							}
+							}
+							}
+							}
+							}
+							break;
+							case opendfx::status::Busy:
+							if (accel->getMM2SCurrentIndex() == index){
+							if(buffer->getStatus() == opendfx::bufferStatus::BuffIsFull){
+								int ret = device->MM2SDone(deviceConfig);
+								if(ret > 0){
+									printFlag = 1;
+									std::cout << "==== Done ====" << std::endl;
+									accel->setMM2SStatus(opendfx::status::Idle);
+									buffer->setStatus(opendfx::bufferStatus::BuffIsEmpty);
+									schedule->setDeleteFlag(true);
+								}
+							}
+						}
+						break;*/
+						}
+				}
+			}
+			_unused(size);
+			_unused(last);
+			_unused(offset);
+			_unused(first);
+			_unused(size);
+			_unused(device);
+			_unused(deviceConfig);
+			_unused(buffConfig);
+			if (printFlag){
+				std::cout << "[MM2S] Index: " << index << " : " << accel->getMM2SCurrentIndex();
+				std::cout << "(" << accel->getCurrentIndex() << " : " << link->getTransactionIndex() << ")";
+				std::cout << " BuffStatus: " << buffer->getStatus();
+				std::cout << " AccelStatus: " << accel->getMM2SStatus();
+				std::cout << " Dependent: " << accel->getS2MMStatus() << std::endl;
+			}
+		}
+		return 0;
+	}
+
+	int Graph::executeScheduler(){
+		//std::cout << "executing graph ..." << std::endl;
+		usleep(100000);
+		std::cout << "================= Down Loop ==================" << std::endl;
+		for (std::vector<opendfx::Schedule *>::iterator it = scheduleList.begin()  ; it != scheduleList.end()  ; ++it)
+		{
+			opendfx::Schedule * schedule = *it;
+			processSchedule(schedule);
+		}
+		std::cout << "================= Up Loop ==================" << std::endl;
+		for (std::vector<opendfx::Schedule *>::reverse_iterator it = scheduleList.rbegin()  ; it != scheduleList.rend()  ; ++it)
+		{
+			opendfx::Schedule * schedule = *it;
+			processSchedule(schedule);
+		}
+
+		return scheduleList.size();
+	}
+
+	int Graph::executeScheduler1(){
+		//std::cout << "executing graph ..." << std::endl;
+		usleep(100);
+		for (std::vector<opendfx::Schedule *>::iterator it = scheduleList.begin()  ; it != scheduleList.end()  ; ++it)
+		{
+			opendfx::Schedule * schedule = *it;
+			ExecutionDependency *eDependency = schedule->getEDependency();
+			int index = schedule->getIndex();
+			int size = schedule->getSize();
+			int offset = schedule->getOffset();
+			int last = schedule->getLast();
+			int first = schedule->getFirst();
+			opendfx::Link* link = eDependency->getLink();
+			opendfx::Accel* accel = link->getAccel();
+			opendfx::Buffer* buffer = link->getBuffer();
+			Device_t* device = accel->getDevice();
+			DeviceConfig_t *deviceConfig = accel->getConfig();
+			BuffConfig_t *buffConfig = buffer->getConfig();
+			if (link->getDir() == opendfx::direction::fromAccel){
+				std::cout << ">>>" << index  << "B" << buffer->getStatus() << "A" << accel->getS2MMStatus() << std::endl;
+				//std::cout << buffConfig->interRMEnabled;
+				if (accel->getS2MMStatus() == opendfx::status::Idle){
+					if(buffer->getStatus() == opendfx::bufferStatus::BuffIsEmpty){
+						accel->setS2MMCurrentIndex(index);
+						accel->setCurrentIndex(link->getTransactionIndex());
+						accel->setS2MMStatus(opendfx::status::Ready);
+					}
+				}
+				else{
+					if (accel->getS2MMCurrentIndex() == index){
+						if (accel->getS2MMStatus() == opendfx::status::Ready){
+							if(eDependency->isDependent()){
+								if(accel->getMM2SStatus() == opendfx::status::Ready && accel->getCurrentIndex() == link->getTransactionIndex()){
+									if (device->S2MMData(deviceConfig, buffConfig, offset, size, first) >= 0){
+										accel->setS2MMStatus(opendfx::status::Busy);
+										if (buffer->getInterRMEnabled()){
+											buffer->setStatus(opendfx::bufferStatus::BuffIsStream);
+										}else{
+											buffer->setStatus(opendfx::bufferStatus::BuffIsBusy);
+										}
+										std::cout << schedule->getDeleteFlag() << " " << index << " : " << accel->getCurrentIndex() << " [S2MM] ";
+										std::cout << accel->getMM2SCurrentIndex() << " MM2S : " << accel->getMM2SStatus() << " : ";
+										std::cout << accel->getS2MMCurrentIndex() << " S2MM : " << accel->getS2MMStatus() << " : ";
+										std::cout << "Buffer : " << buffer->getStatus() << "Transaction"<< std::endl;
+									}
+									else{
+									}
+								}
+							}
+							else
+							{
+								std::cout << buffConfig->interRMEnabled;
+								if(device->S2MMData(deviceConfig, buffConfig, offset, size, first) >= 0){
 									accel->setS2MMStatus(opendfx::status::Busy);
 									if (buffer->getInterRMEnabled()){
 										buffer->setStatus(opendfx::bufferStatus::BuffIsStream);
@@ -835,74 +1260,69 @@ int Graph::executeScheduler(){
 								}
 							}
 						}
-						else
-						{
-								std::cout << buffConfig->interRMEnabled;
-							if(device->S2MMData(deviceConfig, buffConfig, offset, size, first) >= 0){
+						else if (accel->getS2MMStatus() == opendfx::status::Busy){
+							int ret = device->S2MMDone(deviceConfig);
+							if(ret > 0){
+								accel->setS2MMStatus(opendfx::status::Idle);
+								buffer->setStatus(opendfx::bufferStatus::BuffIsFull);
+								schedule->setDeleteFlag(true);
+								std::cout << schedule->getDeleteFlag() << " " << index << " : " << accel->getCurrentIndex() << " [S2MM] ";
+								std::cout << accel->getMM2SCurrentIndex() << " MM2S : " << accel->getMM2SStatus() << " : ";
+								std::cout << accel->getS2MMCurrentIndex() << " S2MM : " << accel->getS2MMStatus() << " : ";
+								std::cout << "Buffer : " << buffer->getStatus() << "Done"<< std::endl;
+							}
+							else{
 								accel->setS2MMStatus(opendfx::status::Busy);
 								if (buffer->getInterRMEnabled()){
 									buffer->setStatus(opendfx::bufferStatus::BuffIsStream);
 								}else{
 									buffer->setStatus(opendfx::bufferStatus::BuffIsBusy);
 								}
-								std::cout << schedule->getDeleteFlag() << " " << index << " : " << accel->getCurrentIndex() << " [S2MM] ";
-								std::cout << accel->getMM2SCurrentIndex() << " MM2S : " << accel->getMM2SStatus() << " : ";
-								std::cout << accel->getS2MMCurrentIndex() << " S2MM : " << accel->getS2MMStatus() << " : ";
-								std::cout << "Buffer : " << buffer->getStatus() << "Transaction"<< std::endl;
-							}
-							else{
 							}
 						}
 					}
-					else if (accel->getS2MMStatus() == opendfx::status::Busy){
-						int ret = device->S2MMDone(deviceConfig);
-						if(ret > 0){
-							accel->setS2MMStatus(opendfx::status::Idle);
-							buffer->setStatus(opendfx::bufferStatus::BuffIsFull);
-							schedule->setDeleteFlag(true);
-							std::cout << schedule->getDeleteFlag() << " " << index << " : " << accel->getCurrentIndex() << " [S2MM] ";
-							std::cout << accel->getMM2SCurrentIndex() << " MM2S : " << accel->getMM2SStatus() << " : ";
-							std::cout << accel->getS2MMCurrentIndex() << " S2MM : " << accel->getS2MMStatus() << " : ";
-							std::cout << "Buffer : " << buffer->getStatus() << "Done"<< std::endl;
-						}
-						else{
-							accel->setS2MMStatus(opendfx::status::Busy);
-							if (buffer->getInterRMEnabled()){
-								buffer->setStatus(opendfx::bufferStatus::BuffIsStream);
-							}else{
-								buffer->setStatus(opendfx::bufferStatus::BuffIsBusy);
-							}
-						}
-					}
-				}
-			}
-		}
-		else{
-			//std::cout << "<<<" << index  << "B" << buffer->getStatus() << "A" << accel->getMM2SStatus() << std::endl;
-			//std::cout << buffConfig->interRMEnabled;
-			if (accel->getMM2SStatus() == opendfx::status::Idle){
-				if(buffer->getStatus() == opendfx::bufferStatus::BuffIsFull ||
-					buffer->getStatus() == opendfx::bufferStatus::BuffIsStream){
-					accel->setMM2SCurrentIndex(index);
-					accel->setCurrentIndex(link->getTransactionIndex());
-					accel->setMM2SStatus(opendfx::status::Ready);
 				}
 			}
 			else{
-				if (accel->getMM2SCurrentIndex() == index){
-					if (accel->getMM2SStatus() == opendfx::status::Ready){
-						if(buffer->getStatus() == opendfx::bufferStatus::BuffIsStream || 
-							buffer->getStatus() == opendfx::bufferStatus::BuffIsFull){
-							if(eDependency->isDependent()){
-								if (accel->getS2MMStatus() == opendfx::status::Busy){
-								std::cout << buffConfig->interRMEnabled;
+				std::cout << "<<<" << index  << "B" << buffer->getStatus() << "A" << accel->getMM2SStatus() << std::endl;
+				//std::cout << buffConfig->interRMEnabled;
+				if (accel->getMM2SStatus() == opendfx::status::Idle){
+					if(buffer->getStatus() == opendfx::bufferStatus::BuffIsFull ||
+							buffer->getStatus() == opendfx::bufferStatus::BuffIsStream){
+						accel->setMM2SCurrentIndex(index);
+						accel->setCurrentIndex(link->getTransactionIndex());
+						accel->setMM2SStatus(opendfx::status::Ready);
+					}
+				}
+				else{
+					if (accel->getMM2SCurrentIndex() == index){
+						if (accel->getMM2SStatus() == opendfx::status::Ready){
+							if(buffer->getStatus() == opendfx::bufferStatus::BuffIsStream || 
+									buffer->getStatus() == opendfx::bufferStatus::BuffIsFull){
+								if(eDependency->isDependent()){
+									if (accel->getS2MMStatus() == opendfx::status::Busy){
+										std::cout << buffConfig->interRMEnabled;
+										if (device->MM2SData(deviceConfig, buffConfig, offset, size, last, link->getChannel()) >= 0){
+											accel->setMM2SStatus(opendfx::status::Busy);
+											if (buffer->getInterRMEnabled()){
+												buffer->setStatus(opendfx::bufferStatus::BuffIsStream);
+											}else{
+												buffer->setStatus(opendfx::bufferStatus::BuffIsBusy);
+											}
+											std::cout << schedule->getDeleteFlag() << " " << index << " : " << accel->getCurrentIndex() << " [MM2S] ";
+											std::cout << accel->getMM2SCurrentIndex() << " MM2S : " << accel->getMM2SStatus() << " : ";
+											std::cout << accel->getS2MMCurrentIndex() << " S2MM : " << accel->getS2MMStatus() << " : ";
+											std::cout << "Buffer : " << buffer->getStatus() << "Transaction"<< std::endl;
+										}
+										else{
+											std::cout << "blocked" << std::endl;
+										}
+									}
+								}
+								else{
+									std::cout << buffConfig->interRMEnabled;
 									if (device->MM2SData(deviceConfig, buffConfig, offset, size, last, link->getChannel()) >= 0){
 										accel->setMM2SStatus(opendfx::status::Busy);
-										if (buffer->getInterRMEnabled()){
-											buffer->setStatus(opendfx::bufferStatus::BuffIsStream);
-										}else{
-											buffer->setStatus(opendfx::bufferStatus::BuffIsBusy);
-										}
 										std::cout << schedule->getDeleteFlag() << " " << index << " : " << accel->getCurrentIndex() << " [MM2S] ";
 										std::cout << accel->getMM2SCurrentIndex() << " MM2S : " << accel->getMM2SStatus() << " : ";
 										std::cout << accel->getS2MMCurrentIndex() << " S2MM : " << accel->getS2MMStatus() << " : ";
@@ -913,47 +1333,33 @@ int Graph::executeScheduler(){
 									}
 								}
 							}
+						}
+						else if (accel->getMM2SStatus() == opendfx::status::Busy){
+							int ret = device->MM2SDone(deviceConfig);
+							if(ret > 0){
+								accel->setMM2SStatus(opendfx::status::Idle);
+								buffer->setStatus(opendfx::bufferStatus::BuffIsEmpty);
+								schedule->setDeleteFlag(true);
+								std::cout << schedule->getDeleteFlag() << " " << index << " : " << accel->getCurrentIndex() << " [MM2S] ";
+								std::cout << accel->getMM2SCurrentIndex() << " MM2S : " << accel->getMM2SStatus() << " : ";
+								std::cout << accel->getS2MMCurrentIndex() << " S2MM : " << accel->getS2MMStatus() << " : ";
+								std::cout << "Buffer : " << buffer->getStatus() << "Done"<< std::endl;
+							}
 							else{
-								std::cout << buffConfig->interRMEnabled;
-								if (device->MM2SData(deviceConfig, buffConfig, offset, size, last, link->getChannel()) >= 0){
-									accel->setMM2SStatus(opendfx::status::Busy);
-									std::cout << schedule->getDeleteFlag() << " " << index << " : " << accel->getCurrentIndex() << " [MM2S] ";
-									std::cout << accel->getMM2SCurrentIndex() << " MM2S : " << accel->getMM2SStatus() << " : ";
-									std::cout << accel->getS2MMCurrentIndex() << " S2MM : " << accel->getS2MMStatus() << " : ";
-									std::cout << "Buffer : " << buffer->getStatus() << "Transaction"<< std::endl;
-								}
-								else{
-									std::cout << "blocked" << std::endl;
+								accel->setMM2SStatus(opendfx::status::Busy);
+								if (buffer->getInterRMEnabled()){
+									buffer->setStatus(opendfx::bufferStatus::BuffIsStream);
+								}else{
+									buffer->setStatus(opendfx::bufferStatus::BuffIsBusy);
 								}
 							}
 						}
-					}
-					else if (accel->getMM2SStatus() == opendfx::status::Busy){
-						int ret = device->MM2SDone(deviceConfig);
-						if(ret > 0){
-							accel->setMM2SStatus(opendfx::status::Idle);
-							buffer->setStatus(opendfx::bufferStatus::BuffIsEmpty);
-							schedule->setDeleteFlag(true);
-							std::cout << schedule->getDeleteFlag() << " " << index << " : " << accel->getCurrentIndex() << " [MM2S] ";
-							std::cout << accel->getMM2SCurrentIndex() << " MM2S : " << accel->getMM2SStatus() << " : ";
-							std::cout << accel->getS2MMCurrentIndex() << " S2MM : " << accel->getS2MMStatus() << " : ";
-							std::cout << "Buffer : " << buffer->getStatus() << "Done"<< std::endl;
-						}
-						else{
-							accel->setMM2SStatus(opendfx::status::Busy);
-							if (buffer->getInterRMEnabled()){
-								buffer->setStatus(opendfx::bufferStatus::BuffIsStream);
-							}else{
-								buffer->setStatus(opendfx::bufferStatus::BuffIsBusy);
-							}
-						}
-					}
 
+					}
 				}
 			}
 		}
+
+
+		return scheduleList.size();
 	}
-
-
-	return scheduleList.size();
-}

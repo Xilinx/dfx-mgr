@@ -110,6 +110,8 @@ namespace opendfx {
 			int execute();
 			int executeBypass();
 			int executeScheduler();
+			int executeScheduler1();
+			int processSchedule(opendfx::Schedule * schedule);
 			int getIODescriptors(int **fd, int **id, int *size);
 		private:
 			std::string m_name;
