@@ -30,6 +30,7 @@ namespace opendfx {
 			std::string getInfo() const;
 			Accel* addAccel(const std::string &name);
 			Accel* addAccel(Accel *accel);
+			Accel* addAccelWithFallback(const std::string &name);
 			Accel* addInputNode(const std::string &name, int bSize);
 			Accel* addOutputNode(const std::string &name, int bSize);
 			Buffer* addBuffer(const std::string &name, int bSize, int bType);

@@ -78,6 +78,11 @@ namespace opendfx {
 				this->S2MMCurrentIndex = S2MMCurrentIndex;
 				return 0;
 			};
+			inline int getFallback() const { return this->fallback; }
+			inline int setFallback(int fallback){
+				this->fallback = fallback;
+				return 0;
+			};
 			inline int getMM2SCurrentIndex() const { return this->MM2SCurrentIndex; }
 			inline int setMM2SCurrentIndex(int MM2SCurrentIndex){
 				this->MM2SCurrentIndex = MM2SCurrentIndex;
@@ -115,6 +120,7 @@ namespace opendfx {
 			bool deleteFlag;
 			int bSize;
 			std::string dmaLib;
+			int fallback;
 			std::string fallbackLib;
 			Device_t* device;
     		DeviceConfig_t *config;

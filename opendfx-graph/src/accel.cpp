@@ -92,6 +92,7 @@ std::string Accel::toJson(bool withDetail){
 	document["type"]    = type;
 	document["bSize"]    = bSize;
 	document["slot"]    = slot;
+	document["fallback"]    = fallback;
 	std::stringstream jsonStream;
 	jsonStream << document.dump(true);
 
@@ -129,7 +130,7 @@ int Accel::allocateBuffer(int xrt_fd){
 		if (semptr == ((void*) -1)){ 
 			std::cout << "sem_open" << std::endl;
 		}
-		dmaLib = "/media/test/dfx-mgr/build/opendfx-graph/drivers/softDma/src/libsoftDma_shared.so";	
+		dmaLib = "/lib/firmware/xilinx/firmware/libsoftDma_shared.so";	
         dmDriver = dlopen(dmaLib.c_str(), RTLD_NOW);
         registerDev = (REGISTER) dlsym(dmDriver, "registerDriver");
         unregisterDev = (UNREGISTER) dlsym(dmDriver, "unregisterDriver");
@@ -222,14 +223,14 @@ int Accel::allocateAccelResource(){
 			}
 		}
 		std::cout << metadata << std::endl;
-		std::cout << "#################################" << std::endl;
+		//std::cout << "#################################" << std::endl;
 
 		json document = json::parse(metadata);
 		json accelMetadataObj = document["accel_metadata"];
 		std::string dmaType;
 		accelMetadataObj.at("DMA_type").get_to(dmaType);
 		std::cout << "dmaType : " << dmaType << std::endl;
-		std::cout << "loading AIE accel" << std::endl;
+		//std::cout << "loading AIE accel" << std::endl;
 		accelMetadataObj.at("dma_driver_lib").get_to(dmaLib);
 		//
 		//}
@@ -238,11 +239,9 @@ int Accel::allocateAccelResource(){
 		//	}else if(dmaType == "SOFT_DMA"){
 		//		dmaLib = "/media/test/dfx-mgr/build/opendfx-graph/drivers/fallback/src/libfallback_shared.so";
 		//	}
-		json fallbackObj = accelMetadataObj["fallback"];
 		std::string behaviour;
 		std::string fallbackLib;
-		fallbackObj.at("Behaviour").get_to(behaviour);
-		fallbackObj.at("fallback_Lib").get_to(fallbackLib);
+		accelMetadataObj.at("fallback").get_to(fallbackLib);
 		json interrmObj = accelMetadataObj["Inter_RM"];
 		std::string compatible;
 		interrmObj.at("Compatible").get_to(compatible);
@@ -253,7 +252,12 @@ int Accel::allocateAccelResource(){
 			interRMCompatible = 0;
 		}
 		//std::cout << "load accelerator" << std::endl;
-		slot = load_accelerator(cname);
+		if (fallback || dmaType == "SOFT"){
+			slot = -1;
+		}
+		else{
+			slot = load_accelerator(cname);
+		}
 		//std::cout << "load accelerator" << std::endl;
 		if(slot >= 0){
 			std::cout << "loading driver from path : " << dmaLib << std::endl;
@@ -269,8 +273,9 @@ int Accel::allocateAccelResource(){
 			config->xrt_uid = &aie->xrt_uid;
 			device->open(config);
 		}
-		else if(fallbackLib != "None"){
-			std::cout << "loading soft accel" << std::endl;
+		else if(fallbackLib != ""){
+			interRMCompatible = 0;
+			std::cout << "loading soft accel" << fallbackLib << std::endl;
 			dmDriver = dlopen(fallbackLib.c_str(), RTLD_NOW);
 			registerDev = (REGISTER) dlsym(dmDriver, "registerDriver");
 			unregisterDev = (UNREGISTER) dlsym(dmDriver, "unregisterDriver");

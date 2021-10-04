@@ -83,9 +83,19 @@ std::string Graph::getInfo() const {
 	return stream.str();
 }
 
+opendfx::Accel* Graph::addAccelWithFallback(const std::string &name){
+	opendfx::Accel *accel = new opendfx::Accel(name, id);
+	accel->setBSize(0);
+	accel->setFallback(1);
+	accels.push_back(accel);
+	accelCount ++;
+	return accel;
+}
+
 opendfx::Accel* Graph::addAccel(const std::string &name){
 	opendfx::Accel *accel = new opendfx::Accel(name, id);
 	accel->setBSize(0);
+	accel->setFallback(0);
 	accels.push_back(accel);
 	accelCount ++;
 	return accel;
@@ -321,6 +331,7 @@ int Graph::fromJson(std::string jsonstr){
 			accelCount ++;
 		}
 		accel->setBSize(accelObj["bSize"].get<int>());
+		accel->setFallback(accelObj["fallback"].get<int>());
 		accels.push_back(accel);
 	}
 	json buffersObj = document["buffers"];
@@ -798,7 +809,8 @@ int Graph::processSchedule(opendfx::Schedule * schedule){
 	opendfx::Accel* accel = link->getAccel();
 	opendfx::Buffer* buffer = link->getBuffer();
 	Device_t* device = accel->getDevice();
-	DeviceConfig_t *deviceConfig = accel->getConfig();
+	DeviceConfig_t *deviceConfig = (DeviceConfig_t *)malloc(sizeof(DeviceConfig_t));
+	memcpy(deviceConfig, accel->getConfig(), sizeof(DeviceConfig_t));
 	BuffConfig_t *buffConfig = buffer->getConfig();
 	//std::cout << "interRMEn :" << buffConfig->interRMEnabled << std::endl;
 	//std::cout << "slot :" << deviceConfig->slot << std::endl;
