@@ -304,6 +304,8 @@ int load_accelerator(const char *accel_name)
 					base->slots[i] = slot;
 					platform.active_base->active += 1;
 					return i;
+				} else{
+					slot->is_aie = 0;
 				}
                 strcpy(pkg->name, accel_name);
                 pkg->path = path;
