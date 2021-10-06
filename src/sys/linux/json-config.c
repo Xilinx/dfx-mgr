@@ -360,7 +360,7 @@ int initBaseDesign(struct basePLDesign *base, const char *shell_path)
 		}
 	}
 	if (!strcmp(base->type,"XRT_FLAT") || !strcmp(base->type,"PL_FLAT"))
-		base->num_slots = 1;
+		base->num_pl_slots = 1;
 	return 0;
 }
 
