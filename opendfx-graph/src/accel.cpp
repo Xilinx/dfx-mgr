@@ -135,6 +135,7 @@ int Accel::allocateBuffer(int xrt_fd){
         registerDev = (REGISTER) dlsym(dmDriver, "registerDriver");
         unregisterDev = (UNREGISTER) dlsym(dmDriver, "unregisterDriver");
         registerDev(&device, &config);
+        config->slot  = -1;
         config->semptr  = semptr;
         config->ptr     = ptr;
         config->phyAddr = phyAddr;
@@ -222,7 +223,8 @@ int Accel::allocateAccelResource(){
 				break;
 			}
 		}
-		std::cout << metadata << std::endl;
+		slot = -1;
+		//std::cout << metadata << std::endl;
 		//std::cout << "#################################" << std::endl;
 
 		json document = json::parse(metadata);
@@ -274,6 +276,7 @@ int Accel::allocateAccelResource(){
 			device->open(config);
 		}
 		else if(fallbackLib != ""){
+			config->slot = -1;
 			interRMCompatible = 0;
 			std::cout << "loading soft accel" << fallbackLib << std::endl;
 			dmDriver = dlopen(fallbackLib.c_str(), RTLD_NOW);

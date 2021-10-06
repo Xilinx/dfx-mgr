@@ -52,6 +52,12 @@ ACCEL_HANDLE    Graph_addAccelByName    (GRAPH_HANDLE gHandle, const char* name)
 	return (ACCEL_HANDLE) accel;
 }
 
+ACCEL_HANDLE    Graph_addFallbackAccelByName    (GRAPH_HANDLE gHandle, const char* name){
+	opendfx::Graph *graph = (opendfx::Graph *) gHandle;
+	auto accel   = graph->addAccelWithFallback(name);
+	return (ACCEL_HANDLE) accel;
+}
+
 ACCEL_HANDLE    Graph_addInputNode      (GRAPH_HANDLE gHandle, const char* name, int bSize){
 	opendfx::Graph *graph = (opendfx::Graph *) gHandle;
 	auto accel   = graph->addInputNode(name, bSize);

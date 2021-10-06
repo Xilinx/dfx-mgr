@@ -63,12 +63,12 @@ class Buffer {
 		}
 		inline int getInterRMEnabled(){ return this->interRMEnabled;}
 		inline int setSinkSlot(int sinkSlot){ 
-			this->sinkSlot += sinkSlot; 
+			this->sinkSlot = sinkSlot; 
 			return 0;
 		}
 		inline int getSinkSlot(){ return this->sinkSlot;}
 		inline int setSourceSlot(int sourceSlot){ 
-			this->sourceSlot += sourceSlot; 
+			this->sourceSlot = sourceSlot; 
 			return 0;
 		}
 	private:

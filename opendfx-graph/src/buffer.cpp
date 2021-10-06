@@ -21,19 +21,31 @@ Buffer::Buffer(const std::string &name, int parentGraphId) : name(name), parentG
 	id = utils::genID();
 	linkRefCount = 0;
 	semaphore = id ^ parentGraphId; 
-	config = (BuffConfig_t*) malloc(sizeof(BuffConfig_t));
+	config = (BuffConfig_t*) calloc(1, sizeof(BuffConfig_t));
 	status = opendfx::bufferStatus::BuffIsEmpty;
 	interRMReqIn = 0;
 	interRMReqOut = 0;
+	config->interRMSinks[0] = 0x20180000000;
+	config->interRMSinks[1] = 0x201C0000000;
+	config->interRMSinks[2] = 0x20200000000;
+	config->sinkSlot = -1;
+	config->sourceSlot = -1;
+	config->interRMEnabled = -1;
 }
 
 Buffer::Buffer(const std::string &name, int parentGraphId, int id) : name(name), id(id), parentGraphId(parentGraphId) {
 	linkRefCount = 0;
 	semaphore = id ^ parentGraphId; 
-	config = (BuffConfig_t*) malloc(sizeof(BuffConfig_t));
+	config = (BuffConfig_t*) calloc(1, sizeof(BuffConfig_t));
 	status = opendfx::bufferStatus::BuffIsEmpty;
 	interRMReqIn = 0;
 	interRMReqOut = 0;
+	config->interRMSinks[0] = 0x20180000000;
+	config->interRMSinks[1] = 0x201C0000000;
+	config->interRMSinks[2] = 0x20200000000;
+	config->sinkSlot = -1;
+	config->sourceSlot = -1;
+	config->interRMEnabled = -1;
 }
 
 std::string Buffer::info() const {
@@ -86,16 +98,13 @@ bool Buffer::getDeleteFlag() const{
 
 int Buffer::allocateBuffer(int xrt_fd){
 	int status;
-	std::cout << bType << std::endl;
+	//std::cout << bType << std::endl;
 	if (interRMReqIn == 1 && interRMReqOut == 1 && bType == buffertype::STREAM_BASED){
 		interRMEnabled = 1;
-		config->interRMSinks[0] = 0x20180000000;
-		config->interRMSinks[1] = 0x201C0000000;
-		config->interRMSinks[2] = 0x20200000000;
 		config->sinkSlot = sinkSlot;
 		config->sourceSlot = sourceSlot;
 		config->interRMEnabled = 1;
-		std::cout << "$$$$$" << config->sinkSlot << "@" << config->sourceSlot << std::endl; 
+		//std::cout << "$$$$$" << config->sinkSlot << "@" << config->sourceSlot << std::endl; 
 	}
 	else{
 		interRMEnabled = 0;
@@ -105,7 +114,7 @@ int Buffer::allocateBuffer(int xrt_fd){
 		std::cout << "allocate : " << phyAddr << std::endl; 
 		std::cout << "allocateBuffer of size : " << bSize << std::endl;
 		if(status < 0){
-			printf( "error @ config allocation\n");
+			//printf( "error @ config allocation\n");
 			return status;
 		}
 		config->ptr = ptr;   // Buffer Ptr
