@@ -22,6 +22,7 @@ extern "C" {
 #define INFOP(...) \
     fprintf(stderr, __VA_ARGS__);
 
+#define DEBUG
 #ifndef DEBUG
 #define acapd_debug(...)
 #define acapd_praw(...)

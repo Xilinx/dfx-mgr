@@ -177,7 +177,7 @@ int sihahls_S2MMData(void* dmconfig_a, uint64_t data, uint64_t size){
 	return 0;
 }
 
-int sihahls_MM2SData_B(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t size, uint8_t firstLast, uint8_t tid){
+int sihahls_MM2SData_B(void* dmconfig_a, DFXBuffer_t* data, uint64_t offset, uint64_t size, uint8_t firstLast, uint8_t tid){
 	acapd_debug("MM2S %x\n", MM2S);
 	_unused(firstLast);
 	//INFO("%x %d\n", size, tid);
@@ -218,7 +218,7 @@ int sihahls_MM2SData_B(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64
 	return 0;
 }
 
-int sihahls_S2MMData_B(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64_t size, uint8_t firstLast){
+int sihahls_S2MMData_B(void* dmconfig_a, DFXBuffer_t* data, uint64_t offset, uint64_t size, uint8_t firstLast){
 	acapd_debug("S2MM %x\n", S2MM);
 	_unused(firstLast);
 	sihahls_DMConfig_t* dmconfig = (sihahls_DMConfig_t*)dmconfig_a;
@@ -252,7 +252,7 @@ int sihahls_S2MMData_B(void* dmconfig_a, Buffer_t* data, uint64_t offset, uint64
 	return 0;
 }
 
-int sihahls_S2MMDone(void* dmconfig_a, Buffer_t* data){
+int sihahls_S2MMDone(void* dmconfig_a, DFXBuffer_t* data){
 	sihahls_DMConfig_t* dmconfig = (sihahls_DMConfig_t*)dmconfig_a;
 	int status, res;
 	status = *(uint32_t*)(uint32_t*)(dmconfig->s2mm_APCR);
@@ -265,7 +265,7 @@ int sihahls_S2MMDone(void* dmconfig_a, Buffer_t* data){
 	return res;
 }
 
-int sihahls_MM2SDone(void* dmconfig_a, Buffer_t* data){
+int sihahls_MM2SDone(void* dmconfig_a, DFXBuffer_t* data){
 	sihahls_DMConfig_t* dmconfig = (sihahls_DMConfig_t*)dmconfig_a;
 	int status, res;
 	status = *(volatile uint32_t*)(uint32_t*)(dmconfig->mm2s_APCR);

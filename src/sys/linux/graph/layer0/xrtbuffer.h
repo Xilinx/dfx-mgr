@@ -3,7 +3,14 @@
  *
  * SPDX-License-Identifier: MIT
  */
+// xrtbuffer.h
 #ifndef XRTBUFFER_H
+#define XRTBUFFER_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 
 struct Buffers{
@@ -34,7 +41,7 @@ typedef struct Buffers Buffers_t;
 #define EMPTY 0
 #define INQUEUE 1
 #define FULL  2
-struct Buffer{
+struct DFXBuffer{
 	int index; // Serial No of Buffer
 	int type;  //
 	int fd;    // File descriptor from ACAPD
@@ -55,7 +62,7 @@ struct Buffer{
 	char name[1024]; // Buffer Name Identifier
 };
 
-typedef struct Buffer Buffer_t;
+typedef struct DFXBuffer DFXBuffer_t;
 
 extern int printBuffer(Buffers_t* buffers, int slot);
 extern int initXrtBuffer(int slot, Buffers_t* buffers);
@@ -65,7 +72,11 @@ extern int mapBuffer(int fd, int size, uint8_t** ptr);
 extern int unmapBuffer(int fd, int size, uint8_t** ptr);
 extern int xrt_allocateBuffer(int drm_fd, int size, int* handle, uint8_t** ptr, unsigned long* paddr, int* fd);
 extern int xrt_deallocateBuffer(int drm_fd, int size, int *handle, uint8_t** ptr, unsigned long* paddr);
+
+#ifdef __cplusplus
+}
 #endif
 
-#define XRTBUFFER_H
+#endif
+
 

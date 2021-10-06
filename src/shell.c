@@ -40,7 +40,6 @@ int acapd_shell_release_isolation(acapd_accel_t *accel)
 	acapd_debug("%s: %s.\n", __func__, dev->dev_name);
 	reg_va = dev->va;
 	if (reg_va == NULL) {
-		printf("%s Open shell device \n",__func__);
 		ret = acapd_device_open(dev);
 		if (ret < 0) {
 			acapd_perror("%s: failed to open shell dev %s.\n",

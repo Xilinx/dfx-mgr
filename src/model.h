@@ -16,18 +16,36 @@
 extern "C" {
 #endif
 
+#include <xrt.h>
+#include <xrt/xrt_bo.h>
+#include <xclbin.h>
+#include <xrt/xrt_device.h>
+
+typedef struct xrt_device_info {
+	char xclbin[100];
+	uint8_t xrt_device_id;
+	xclDeviceHandle device_hdl;
+	xuid_t xrt_uid;
+} xrt_device_info_t;
+
 typedef struct {
+	char name[64];
+	char path[512];
 	int uid;
 	int parent_uid;
-	acapd_accel_t *accel;
+	int is_aie;
+	acapd_accel_t *accel; // This tracks active PL dfx in this slot
+	xrt_device_info_t *aie; // This tracks active AIE dfx in this slot
 }slot_info_t;
 
 typedef struct {
 	int uid;
 	char name[64];
 	char path[512];
+	char parent_name[64];
 	char parent_path[512];
 	int wd;
+	char accel_type[32];
 }accel_info_t;
 
 struct basePLDesign {
@@ -37,7 +55,8 @@ struct basePLDesign {
 	char base_path[512];
 	char parent_path[512];
 	char type[128];
-	int num_slots;
+	uint8_t num_pl_slots;
+	uint8_t num_aie_slots;
 	int active;
 	int wd; //inotify watch desc
 	int load_base_design;

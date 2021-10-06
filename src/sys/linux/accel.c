@@ -24,7 +24,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include "accel.h"
-#include "zynq_ioctl.h"
+#include <zynq_ioctl.h>
 #include "generic-device.h"
 
 #define MAX_BUFFERS 40
@@ -135,6 +135,7 @@ int sys_accel_config(acapd_accel_t *accel)
 		}
 		strncpy(config_path, env_config_path, sizeof(config_path));
 	}
+	acapd_debug("%s: Json Path %s \n",__func__,config_path);
 	parseAccelJson(accel, config_path);
 	if (sys_needs_load_accel(accel) == 0) {
 		for (int i = 0; i < accel->num_ip_devs; i++) {
@@ -210,7 +211,7 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 		dfx_cfg_destroy(fpga_cfg_id);
 		return ACAPD_ACCEL_FAILURE;
 	}
-	if (accel->type == FLAT_SHELL) {
+	if ( !strcmp(accel->type,"XRT_FLAT") || !strcmp(accel->type, "PL_DFX")) {
 		acapd_print("Successfully loaded base design.\n");
 		return ACAPD_ACCEL_SUCCESS;
 	}
@@ -493,6 +494,7 @@ acapd_buffer_t * sys_alloc_buffer(uint64_t size)
 		goto err2;
 	}
 	buff->PA = boInfo.paddr;
+	buff->size = boInfo.size;
 	acapd_print("allocated BO size %lu paddr %lu\n",boInfo.size,buff->PA);
 
 	struct drm_prime_handle bo_h = {bo.handle, DRM_RDWR, -1};
@@ -527,6 +529,7 @@ int sys_free_buffer(uint64_t pa){
 	for (i = 0; i < MAX_BUFFERS; i++) {
 		if (buffer_list[i].PA == pa) {
 			acapd_print("Free buffer pa %lu \n",pa);
+			acapd_print("Free buffer size %d \n", buffer_list[i].size);
 			struct drm_gem_close closeInfo = {0, 0};
 			closeInfo.handle = buffer_list[i].handle;
 			ioctl(buffer_list[i].drm_fd, DRM_IOCTL_GEM_CLOSE, &closeInfo);
@@ -539,4 +542,12 @@ int sys_free_buffer(uint64_t pa){
 	}
 	acapd_perror("No buffer allocation found for pa %lu\n",pa);
 	return -1;
+}
+
+int sys_print_buffers(){
+	int i;
+	for (i = 0; i < MAX_BUFFERS; i++) {
+		acapd_print("buffer pa %lu \n", buffer_list[i].PA);
+	}
+	return 0;
 }

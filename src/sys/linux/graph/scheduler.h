@@ -13,8 +13,8 @@
 typedef struct ScQueueBuffer{
 	int type;
 	char filename[1024];
-	Buffer_t* buffer;
-	Buffer_t* dependentBuffer;
+	DFXBuffer_t* buffer;
+	DFXBuffer_t* dependentBuffer;
 	int busy;
 	double throughput;
 }ScQueueBuffer_t;

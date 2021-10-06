@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+ *
+ * SPDX-License-Identifier: MIT
+ */
 // link.cpp
 #include <iostream>
 #include <sstream>
@@ -5,22 +10,31 @@
 #include "accel.hpp"
 #include "buffer.hpp"
 #include "utils.hpp"
+#include "nlohmann/json.hpp"
 
+using json = nlohmann::json;
 using opendfx::Link;
 
-Link::Link(opendfx::Accel &accel, opendfx::Buffer &buffer, int dir) : accel(accel), buffer(buffer), dir(dir) {
+Link::Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir, int parentGraphId) : accel(accel), buffer(buffer), dir(dir), parentGraphId(parentGraphId) {
 	deleteFlag = false;
-	accel.addLinkRefCount();
-	buffer.addLinkRefCount();
-	//std::cout << accel.toJson(true); 
-	utils::setID(id, strid);
+	accel->addLinkRefCount();
+	buffer->addLinkRefCount();
+	id = utils::genID();
+	transactionSizeScheduled = 0;
 }
 
-opendfx::Accel Link::getAccel() const{
+Link::Link(opendfx::Accel *accel, opendfx::Buffer *buffer, int dir, int parentGraphId, int id) : accel(accel), buffer(buffer), dir(dir), id(id), parentGraphId(parentGraphId) {
+	deleteFlag = false;
+	accel->addLinkRefCount();
+	buffer->addLinkRefCount();
+	transactionSizeScheduled = 0;
+}
+
+opendfx::Accel* Link::getAccel() const{
 	return this->accel;
 }
 
-opendfx::Buffer Link::getBuffer() const{
+opendfx::Buffer* Link::getBuffer() const{
 	return this->buffer;
 }
 
@@ -36,24 +50,31 @@ bool Link::getDeleteFlag() const{
 int Link::info() {
 	std::string resp;
 	if(dir == opendfx::direction::toAccel){
-		std::cout << strid << "Link: buffer:" + buffer.getName() + " -> accel:" + accel.getName() << std::endl;
+		std::cout << utils::int2str(id) << "Link: buffer:" + buffer->getName() + " -> accel:" + accel->getName() << std::endl;
 	}
 	else{
-		std::cout << strid << "Link: accel:" + accel.getName() + " -> buffer:" + buffer.getName() << std::endl;
+		std::cout << utils::int2str(id) << "Link: accel:" + accel->getName() + " -> buffer:" + buffer->getName() << std::endl;
 	}
 
 	return 0;
 }
 
 std::string Link::toJson(bool withDetail){
-	std::stringstream jsonStream;
-	jsonStream << "{\n";
-	jsonStream << "\t\"id\"\t: "    << strid          << ",\n";
+	json document;
+	document["id"]      = utils::int2str(id);
 	if(withDetail){
-		jsonStream << "\t\"deleteFlag\"\t: "    << deleteFlag          << ",\n";
+		document["deleteFlag"] = deleteFlag;
+		document["parentGraphId"]    = parentGraphId;
 	}
-	jsonStream << "\t\"accel\"\t: " << accel.getId()  << ",\n";
-	jsonStream << "\t\"buffer\"\t: "<< buffer.getId(); 
-	jsonStream << "}";
+	document["accel"]    = utils::int2str(accel->getId());
+	document["buffer"]   = utils::int2str(buffer->getId());
+	document["dir"]      = dir;
+	document["offset"]   = offset;
+	document["transactionSize"]   = transactionSize;
+	document["transactionIndex"]   = transactionIndex;
+	document["channel"]   = channel;
+	std::stringstream jsonStream;
+	jsonStream << document.dump(true);
+
 	return jsonStream.str();
 }

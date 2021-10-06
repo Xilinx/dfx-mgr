@@ -45,11 +45,6 @@ extern "C" {
 
 #define FIRMWARE_PATH	"/lib/firmware/xilinx"
 
-typedef enum shell_type {
-	FLAT_SHELL = 1U,
-	SIHA_SHELL,
-} shell_type_t;
-
 /**
  * @brief accel package information structure
  */
@@ -67,6 +62,7 @@ typedef struct {
     int fd;
     uint32_t handle;
     uint64_t PA;
+    uint64_t size;
 } acapd_buffer_t;
 
 
@@ -76,7 +72,7 @@ typedef struct {
 typedef struct {
 	acapd_accel_pkg_hd_t *pkg; /**< pointer to the package */
 	acapd_accel_sys_t sys_info; /**< system specific accel information */
-	shell_type_t type; /**< type of the accelarator */
+	char type[32]; /**< type of the accelarator */
 	unsigned int status; /**< status of the accelarator */
 	unsigned int is_cached; /**< if the accelerator is cached */
 	int load_failure; /**< load failure */
@@ -115,7 +111,7 @@ void sendBuffer(uint64_t size, int socket);
 void freeBuffer(uint64_t pa);
 void get_shell_fd(int socket);
 void get_shell_clock_fd(int socket);
-char * getAccelMetadata(char *package_name);
+char * getAccelMetadata(char *package_name, int slot);
 #ifdef ACAPD_INTERNAL
 int sys_needs_load_accel(acapd_accel_t *accel);
 int sys_accel_config(acapd_accel_t *accel);
@@ -128,6 +124,7 @@ int sys_remove_base(int fpga_cfg_id);
 acapd_buffer_t *sys_alloc_buffer(uint64_t size);
 int sys_free_buffer(uint64_t pa);
 int sys_send_buff(uint64_t size, int socket);
+int sys_print_buffers();
 int sys_get_fds(acapd_accel_t *accel, int fd, int socket);
 void sys_get_fd(int fd, int socket);
 #endif /* ACAPD_INTERNAL */

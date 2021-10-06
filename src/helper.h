@@ -97,4 +97,8 @@ static inline acapd_list_t *acapd_list_first(acapd_list_t *list)
 #define acapd_align_up(size, align)			\
 	acapd_align_down((size) + (align) - 1, align)
 
+#ifdef __cplusplus
+}
+#endif
+
 #endif /*  _ACAPD_HELPER_H */
