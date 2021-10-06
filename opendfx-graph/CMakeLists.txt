@@ -32,7 +32,7 @@ file(GLOB SOURCES src/*.cpp)
 add_library(${LIB} SHARED ${SOURCES})
 
 #target_link_libraries(${LIB}_shared dl pthread)
-target_link_libraries(${LIB} dfx-mgr-shared dl pthread opencv_core opencv_highgui )
+target_link_libraries(${LIB} dfx-mgr-shared dl pthread opencv_core opencv_highgui opencv_videoio opencv_imgcodecs opencv_imgproc opencv_features2d opencv_flann opencv_video opencv_calib3d opencv_highgui xilinxopencl )
 #target_link_libraries(${LIB}_static dfx-mgr-static dl pthread)
 
 set_target_properties (${LIB} PROPERTIES
