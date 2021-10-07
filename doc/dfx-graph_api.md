@@ -247,3 +247,64 @@ This function returns Json string containing list of Links and their attributes.
 
 This function returns Json string containing list of accelerators, buffers and Links with their attributes.
 
+
+
+## Graph_fromJson
+
+**Arguments:**
+
+	* GRAPH_HANDLE: Parent graph handeler
+	* char *: Json String
+	
+**Returns:**: ID
+
+This function populate an empty graph with accelerators, buffers and links object from a Json string containing list of accelerators, buffers and Links with their attributes. It returns a new graph id og a graph object.
+
+
+## Graph_submit
+
+**Arguments:**
+
+	* GRAPH_HANDLE: Parent graph handeler
+	
+**Returns:**: ID
+
+This function submits a graph to the daemon. And in response gets bac the graph id for the graph instence. this id can be seen as a remote object handler.
+
+## Graph_isScheduled
+
+**Arguments:**
+
+	* GRAPH_HANDLE: Parent graph handeler
+	
+**Returns:**: status
+
+This function returns if graph have been scheduled or not at daemon.
+
+
+## Data2IO
+
+**Arguments:**
+
+	* ACCEL_HANDLE: IO node handle
+	* uint8_t *: Pointer to Data needs to be copied from
+	* int: Size of data
+	
+**Returns:**: 0 on success and -1 on error
+
+This function Used to pass data to IO node by the application.
+
+## IO2Data
+
+**Arguments:**
+
+	* ACCEL_HANDLE: IO node handle
+	* uint8_t *: Pointer to Data needs to be copied to
+	* int: Size of data
+	
+**Returns:**: 0 on success and -1 on error
+
+This function Used to copy data from IO node by the application. Its a blocking function and waits for the completion of computation in the daemon.
+
+
+
