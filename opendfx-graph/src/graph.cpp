@@ -802,6 +802,7 @@ int Graph::executeBypass(){
 }
 
 int Graph::processSchedule(opendfx::Schedule * schedule){
+	//std::cout << "## New scheduler #####################" << std::endl;
 	ExecutionDependency *eDependency = schedule->getEDependency();
 	int index = schedule->getIndex();
 	int size = schedule->getSize();
@@ -821,15 +822,15 @@ int Graph::processSchedule(opendfx::Schedule * schedule){
 
 	int printFlag = 0;
 	if (link->getDir() == opendfx::direction::fromAccel){
-		printFlag = 0;
+		//printFlag = 1;
 		if (accel->getS2MMStatus() == opendfx::status::Idle){
 			if (schedule->getDeleteFlag() != true){
 				if(buffer->getStatus() == opendfx::bufferStatus::BuffIsEmpty){
 					accel->setS2MMCurrentIndex(index);
         	    	accel->setCurrentIndex(link->getTransactionIndex());
 					accel->setS2MMStatus(opendfx::status::Staged);
-					//printFlag = 1;
-					//std::cout << "==== Staged ===="<< std::endl;
+					printFlag = 1;
+					std::cout << "==== Staged ===="<< std::endl;
 				}
 			}
 		}
@@ -840,18 +841,18 @@ int Graph::processSchedule(opendfx::Schedule * schedule){
 						if (buffer->getInterRMEnabled()){
 							if(	buffer->getStatus() == opendfx::bufferStatus::BuffIsStreamReady){
 								accel->setS2MMStatus(opendfx::status::Stream);
-								//printFlag = 1;
-								//std::cout << "==== Ready ===="<< std::endl;
+								printFlag = 1;
+								std::cout << "==== Ready ===="<< std::endl;
 							}
 						}else{
 							accel->setS2MMStatus(opendfx::status::Ready);
-							//printFlag = 1;
-							//std::cout << "==== Ready ===="<< std::endl;
+							printFlag = 1;
+							std::cout << "==== Ready ===="<< std::endl;
 						}
 						break; 
 					case opendfx::status::Stream:
 						if ((accel->getMM2SStatus() == opendfx::status::Ready || 
-							accel->getMM2SStatus() == opendfx::status::Busy)&& 
+							accel->getMM2SStatus() == opendfx::status::Busy) && accel->getCurrentIndex() == link->getTransactionIndex() && 
 							buffer->getStatus() == opendfx::bufferStatus::BuffIsStreamReady){
 							device->S2MMData(deviceConfig, buffConfig, offset, size, first);
                             accel->setS2MMStatus(opendfx::status::Busy);
@@ -862,8 +863,8 @@ int Graph::processSchedule(opendfx::Schedule * schedule){
 						break;
 					case opendfx::status::Ready:
 						if(eDependency->isDependent()){
-							if(accel->getMM2SStatus() == opendfx::status::Ready || 
-								accel->getMM2SStatus() == opendfx::status::Busy ){
+							if((accel->getMM2SStatus() == opendfx::status::Ready || 
+								accel->getMM2SStatus() == opendfx::status::Busy) && accel->getCurrentIndex() == link->getTransactionIndex() ){
 								if (device->S2MMData(deviceConfig, buffConfig, offset, size, first) >= 0){
 									printFlag = 1;
 									std::cout << "==== Transaction ===="<< std::endl;
@@ -917,17 +918,23 @@ int Graph::processSchedule(opendfx::Schedule * schedule){
 			}
 		}
 		if (printFlag){
-			std::cout << "[S2MM] Index: " << index << " : " << accel->getS2MMCurrentIndex();
-			std::cout << "(" << accel->getCurrentIndex() << " : " << link->getTransactionIndex() << ")" << std::endl;
+            std::cout << "[S2MM] Index: " << index << " : " << accel->getS2MMCurrentIndex();
+            std::cout << "(" << accel->getCurrentIndex() << " : " << link->getTransactionIndex() << ")";
+            std::cout << " BuffStatus: " << buffer->getStatus();
+            std::cout << " AccelStatus: " << accel->getS2MMStatus();
+            std::cout << " Dependent: " << accel->getMM2SStatus() << buffer->getInterRMEnabled() << std::endl;
+
+			//std::cout << "[S2MM] Index: " << index << " : " << accel->getS2MMCurrentIndex();
+			//std::cout << "(" << accel->getCurrentIndex() << " : " << link->getTransactionIndex() << ")" << std::endl;
 		}
 	}
 	else{
-		printFlag = 0;
+		//printFlag = 1;
 		if (accel->getMM2SStatus() == opendfx::status::Idle){
 			accel->setMM2SCurrentIndex(index);
             accel->setCurrentIndex(link->getTransactionIndex());
 			accel->setMM2SStatus(opendfx::status::Staged);
-		//	std::cout << "==== Staged ===="<< std::endl;
+			std::cout << "==== Staged ===="<< std::endl;
 		}
 		else {
 			if (accel->getMM2SCurrentIndex() == index){
@@ -935,16 +942,17 @@ int Graph::processSchedule(opendfx::Schedule * schedule){
 					case opendfx::status::Staged:
 						if (buffer->getInterRMEnabled()){
 							if(accel->getS2MMStatus() == opendfx::status::Ready ||
+								accel->getS2MMStatus() == opendfx::status::Busy ||
 								accel->getS2MMStatus() == opendfx::status::Stream ){
 								accel->setMM2SStatus(opendfx::status::Stream);
 								buffer->setStatus(opendfx::bufferStatus::BuffIsStreamReady);
-                                //printFlag = 1;
-								//std::cout << "==== Ready ===="<< std::endl;
+                                printFlag = 1;
+								std::cout << "==== Ready ===="<< std::endl;
 							}
 						}else { //if(buffer->getStatus() == opendfx::bufferStatus::BuffIsFull){
 								accel->setMM2SStatus(opendfx::status::Ready);
-                            	//printFlag = 1;
-								//std::cout << "==== Ready ===="<< std::endl;
+                            	printFlag = 1;
+								std::cout << "==== Ready ===="<< std::endl;
 						}
 						break; 
 					case opendfx::status::Stream:
@@ -1020,8 +1028,14 @@ int Graph::processSchedule(opendfx::Schedule * schedule){
 			_unused(deviceConfig);
 			_unused(buffConfig);
 			if (printFlag){
-				std::cout << "[MM2S] Index: " << index << " : " << accel->getMM2SCurrentIndex();
-				std::cout << "(" << accel->getCurrentIndex() << " : " << link->getTransactionIndex() << ")" << std::endl;
+                std::cout << "[MM2S] Index: " << index << " : " << accel->getMM2SCurrentIndex();
+                std::cout << "(" << accel->getCurrentIndex() << " : " << link->getTransactionIndex() << ")";
+                std::cout << " BuffStatus: " << buffer->getStatus();
+                std::cout << " AccelStatus: " << accel->getMM2SStatus();
+                std::cout << " Dependent: " << accel->getS2MMStatus() << buffer->getInterRMEnabled() << std::endl;
+
+				//std::cout << "[MM2S] Index: " << index << " : " << accel->getMM2SCurrentIndex();
+				//std::cout << "(" << accel->getCurrentIndex() << " : " << link->getTransactionIndex() << ")" << std::endl;
 			}
 		}
 		return 0;

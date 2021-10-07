@@ -98,13 +98,13 @@ bool Buffer::getDeleteFlag() const{
 
 int Buffer::allocateBuffer(int xrt_fd){
 	int status;
-	//std::cout << bType << std::endl;
+	std::cout << bType << std::endl;
 	if (interRMReqIn == 1 && interRMReqOut == 1 && bType == buffertype::STREAM_BASED){
 		interRMEnabled = 1;
 		config->sinkSlot = sinkSlot;
 		config->sourceSlot = sourceSlot;
 		config->interRMEnabled = 1;
-		//std::cout << "$$$$$" << config->sinkSlot << "@" << config->sourceSlot << std::endl; 
+		std::cout << "$$$$$" << config->sinkSlot << "@" << config->sourceSlot << std::endl; 
 	}
 	else{
 		interRMEnabled = 0;
