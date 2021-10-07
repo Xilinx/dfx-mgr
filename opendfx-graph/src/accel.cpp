@@ -244,6 +244,8 @@ int Accel::allocateAccelResource(){
 		std::string behaviour;
 		std::string fallbackLib;
 		accelMetadataObj.at("fallback").get_to(fallbackLib);
+		std::cout << "###################" << std::endl;
+		std::cout << fallbackLib << std::endl;
 		json interrmObj = accelMetadataObj["Inter_RM"];
 		std::string compatible;
 		interrmObj.at("Compatible").get_to(compatible);
@@ -276,7 +278,6 @@ int Accel::allocateAccelResource(){
 			device->open(config);
 		}
 		else if(fallbackLib != ""){
-			config->slot = -1;
 			interRMCompatible = 0;
 			std::cout << "loading soft accel" << fallbackLib << std::endl;
 			dmDriver = dlopen(fallbackLib.c_str(), RTLD_NOW);
@@ -285,6 +286,7 @@ int Accel::allocateAccelResource(){
 			registerDev(&device, &config);
 			device->open(config);
 			interRMCompatible = 0;
+			config->slot = -1;
 		}
 		else {
 			return -1;
