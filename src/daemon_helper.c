@@ -27,6 +27,13 @@
 #include <sys/un.h>
 #include <semaphore.h>
 
+struct daemon_config config;
+struct watch *active_watch = NULL;
+struct basePLDesign *base_designs = NULL;
+static int inotifyFd;
+platform_info_t platform;
+sem_t mutex;
+
 struct watch {
     int wd;
 	char name[64];
@@ -34,12 +41,6 @@ struct watch {
 	char parent_name[64];
     char parent_path[WATCH_PATH_LEN];
 };
-sem_t mutex;
-
-struct watch *active_watch = NULL;
-struct basePLDesign *base_designs = NULL;
-static int inotifyFd;
-platform_info_t platform;
 
 struct basePLDesign *findBaseDesign(const char *name){
     int i,j;
@@ -61,6 +62,7 @@ struct basePLDesign *findBaseDesign(const char *name){
     acapd_perror("No accel found for %s\n",name);
     return NULL;
 }
+
 struct basePLDesign *findBaseDesign_path(const char *path){
     int i,j;
 
@@ -187,9 +189,9 @@ int load_accelerator(const char *accel_name)
     int i, ret;
     char path[1024];
     char shell_path[600];
-    acapd_accel_t *pl_accel = (acapd_accel_t *)malloc( sizeof(acapd_accel_t));
-	xrt_device_info_t *aie_accel = (xrt_device_info_t *)malloc(sizeof(xrt_device_info_t));
-    acapd_accel_pkg_hd_t *pkg = (acapd_accel_pkg_hd_t *) malloc(sizeof(acapd_accel_pkg_hd_t));
+    acapd_accel_t *pl_accel = (acapd_accel_t *)calloc(sizeof(acapd_accel_t), 1);
+	xrt_device_info_t *aie_accel = (xrt_device_info_t *)calloc(sizeof(xrt_device_info_t),1);
+    acapd_accel_pkg_hd_t *pkg = (acapd_accel_pkg_hd_t *)calloc(sizeof(acapd_accel_pkg_hd_t),1);
     struct basePLDesign *base = findBaseDesign(accel_name);
     slot_info_t *slot = (slot_info_t *)malloc(sizeof(slot_info_t));
     accel_info_t *accel_info = NULL;
@@ -235,6 +237,7 @@ int load_accelerator(const char *accel_name)
         base->fpga_cfg_id = pl_accel->sys_info.fpga_cfg_id;
         base->active += 1;
 		slot->accel = pl_accel;
+		slot->is_aie = 0;
         base->slots[0] = slot;
         platform.active_base = base;
 
@@ -379,7 +382,7 @@ void allocBuffer(uint64_t size)
 }
 void freeBuff(uint64_t pa)
 {
-    printf("%s: free buffer PA %lu\n",__func__,pa);
+    acapd_debug("%s: free buffer PA %lu\n",__func__,pa);
     freeBuffer(pa);
 }
 
@@ -509,7 +512,6 @@ void add_to_watch(int wd, char *name, char *path, char *parent_name, char *paren
     int i;
     for (i = 0; i < MAX_WATCH; i++) {
         if (active_watch[i].wd == -1) {
-            //printf("adding watch to list %s\n",pathname);
             active_watch[i].wd = wd;
             strncpy(active_watch[i].name, name, 64 -1);
             strncpy(active_watch[i].path, path, WATCH_PATH_LEN -1);
@@ -537,16 +539,22 @@ char * wd_to_pathname(int wd){
     }
     return NULL;
 }
-
+struct watch* path_to_watch(char *path){
+	int i;
+	for(i=0; i < MAX_WATCH; i++){
+		if(!strcmp(path,active_watch[i].path))
+			return &active_watch[i];
+	}
+	return NULL;
+}
 void remove_watch(char *path)
 {
     int i;
     for (i = 0; i < MAX_WATCH; i++) {
         if (strcmp(active_watch[i].path, path) == 0){
-		//printf("removing watch %s\n",path);
-        inotify_rm_watch(inotifyFd, active_watch[i].wd);
-        active_watch[i].wd = -1;
-        active_watch[i].path[0] = '\0';
+			inotify_rm_watch(inotifyFd, active_watch[i].wd);
+			active_watch[i].wd = -1;
+			active_watch[i].path[0] = '\0';
         }
     }
 }
@@ -560,6 +568,7 @@ accel_info_t *add_accel_to_base(struct basePLDesign *base, char *name, char *pat
             break;
         }
         if (base->accel_list[j].path[0] == '\0') {
+			acapd_debug("adding %s to base %s\n",path,parent_path);
             strcpy(base->accel_list[j].name, name);
             base->accel_list[j].name[sizeof(base->accel_list[j].name) - 1] = '\0';
             strcpy(base->accel_list[j].path, path);
@@ -588,6 +597,7 @@ void parse_packages(struct basePLDesign *base,char *fname, char *path)
         strcpy(base->accel_list[0].name, base->name);
         strcpy(base->accel_list[0].path, base->base_path);
         strcpy(base->accel_list[0].parent_path, base->base_path);
+        strcpy(base->accel_list[0].accel_type, base->type);
 		return;
 	}
 
@@ -610,37 +620,37 @@ void parse_packages(struct basePLDesign *base,char *fname, char *path)
 				return;
 			}
             
-				add_to_watch(wd, d1->d_name, first_level, fname, path);
-				sprintf(filename,"%s/accel.json",first_level);
-				/* For pl slots we need to traverse next level to find accel.json*/
-				if (stat(filename,&stat_info)){
+			add_to_watch(wd, d1->d_name, first_level, fname, path);
+			sprintf(filename,"%s/accel.json",first_level);
+			/* For pl slots we need to traverse next level to find accel.json*/
+			if (stat(filename,&stat_info)){
 
-					dir2 = opendir(first_level);
-					while((d2 = readdir(dir2)) != NULL) {
+				dir2 = opendir(first_level);
+				while((d2 = readdir(dir2)) != NULL) {
 					if (d2->d_type == DT_DIR) {
 						if (strlen(d2->d_name) > 64 || strcmp(d2->d_name,".") == 0 ||
-                            strcmp(d2->d_name,"..") == 0) {
+							strcmp(d2->d_name,"..") == 0) {
 						continue;
 						}
 					}
 					sprintf(second_level,"%s/%s", first_level, d2->d_name);
 					wd = inotify_add_watch(inotifyFd, second_level, IN_ALL_EVENTS);
 					if (wd == -1){
-						acapd_perror("%s:inotify_add_watch failed on %s\n",__func__,second_level);
-						return;
+					acapd_perror("%s:inotify_add_watch failed on %s\n",__func__,second_level);
+					return;
 					}
 					add_to_watch(wd, d2->d_name, second_level, d1->d_name, first_level);
 					sprintf(filename,"%s/accel.json",second_level);
 					if (!stat(filename,&stat_info)){
-						accel = add_accel_to_base(base,d1->d_name, first_level, path);
-						initAccel(accel, second_level);
+					accel = add_accel_to_base(base,d1->d_name, first_level, path);
+					initAccel(accel, second_level);
 					}
 				}
-				}
+			}
 				/* Found accel.json so add it*/
-				else {
-					accel = add_accel_to_base(base,d1->d_name, first_level, path);
-					initAccel(accel, first_level);
+			else {
+				accel = add_accel_to_base(base,d1->d_name, first_level, path);
+				initAccel(accel, first_level);
             }
         }
     }
@@ -650,12 +660,6 @@ void add_base_design(char *name, char *path, char *parent, int wd)
 {
     int i;
 
-	/* Add accel to existing base design*/
-    if (strcmp(parent,FIRMWARE_PATH)) {
-        //acapd_debug("Add accel %s to base %s\n",name,parent);
-        //add_accel_to_base(name, path, parent);
-        return;
-    }
     for (i = 0; i < MAX_WATCH; i++) {
 		if (!strcmp(base_designs[i].base_path,path)){
 			acapd_debug("Base design %s already exists\n",path);
@@ -675,10 +679,10 @@ void add_base_design(char *name, char *path, char *parent, int wd)
         }
     }
 }
-void remove_base_design(char *path,char *parent){
+void remove_base_design(char *path,char *parent, int is_base){
     int i, j;
 
-    if (strcmp(parent,FIRMWARE_PATH)) {
+    if (!is_base) {
         acapd_debug("Removing accel %s from base %s\n",path,parent);
         for (i = 0; i < MAX_WATCH; i++) {
             if (!strcmp(base_designs[i].base_path,parent)) {
@@ -756,18 +760,18 @@ displayInotifyEvent(struct inotify_event *i)
 #define BUF_LEN (10 * (sizeof(struct inotify_event) + NAME_MAX + 1))
 void *threadFunc()
 {
-    int wd, i, j, ret;
+    int wd, i, j, k, ret;
     char buf[BUF_LEN] __attribute__ ((aligned(8)));
     ssize_t numRead;
-    char *p;// *parent = NULL;
+    char *p;
     char new_dir[512],fname[600];
     struct inotify_event *event;
     DIR *d;
     struct dirent *dir;
     struct basePLDesign *base;
 
-    active_watch = (struct watch *)malloc(MAX_WATCH * sizeof(struct watch));
-    base_designs = (struct basePLDesign *)malloc(MAX_WATCH * sizeof(struct basePLDesign));
+    active_watch = (struct watch *)calloc(sizeof(struct watch), MAX_WATCH);
+    base_designs = (struct basePLDesign *)calloc(sizeof(struct basePLDesign), MAX_WATCH);
 
     for(j = 0; j < MAX_WATCH; j++) {
         active_watch[j].wd = -1;
@@ -780,45 +784,46 @@ void *threadFunc()
             base_designs[i].accel_list[j].path[0] = '\0';
     }
     inotifyFd = inotify_init();                 /* Create inotify instance */
-    if (inotifyFd == -1)
+    if (inotifyFd == -1){
         acapd_perror("inotify_init failed\n");
+	}
 
     /* For each command-line argument, add a watch for all events */
-
-    wd = inotify_add_watch(inotifyFd, FIRMWARE_PATH, IN_ALL_EVENTS);
-    if (wd == -1) {
-        acapd_perror("%s:%s not found, can't add inotify watch\n",__func__,FIRMWARE_PATH);
-        exit(EXIT_SUCCESS);
-    }
-    add_to_watch(wd,"Xilinx",FIRMWARE_PATH,"","");
-    /* Add already existing packages to inotify */
-    d = opendir(FIRMWARE_PATH);
-    if (d == NULL) {
-        acapd_perror("Directory %s not found\n",FIRMWARE_PATH);
-    }
-    while((dir = readdir(d)) != NULL) {
+	for(k = 0; k < config.number_locations; k++){
+	    wd = inotify_add_watch(inotifyFd, config.firmware_locations[k], IN_ALL_EVENTS);
+		if (wd == -1) {
+			acapd_perror("%s:%s not found, can't add inotify watch\n",__func__,config.firmware_locations[k]);
+			exit(EXIT_SUCCESS);
+		}
+	    add_to_watch(wd,"",config.firmware_locations[k],"","");
+		/* Add already existing packages to inotify */
+		d = opendir(config.firmware_locations[k]);
+		if (d == NULL) {
+			acapd_perror("Directory %s not found\n",config.firmware_locations[k]);
+		}
+		while((dir = readdir(d)) != NULL) {
         if (dir->d_type == DT_DIR) {
             if (strlen(dir->d_name) > 64 || strcmp(dir->d_name,".") == 0 ||
                             strcmp(dir->d_name,"..") == 0) {
                 continue;
             }
-            sprintf(new_dir,"%s/%s", FIRMWARE_PATH, dir->d_name);
+            sprintf(new_dir,"%s/%s", config.firmware_locations[k], dir->d_name);
             acapd_debug("Found dir %s\n",new_dir);
             wd = inotify_add_watch(inotifyFd, new_dir, IN_ALL_EVENTS);
             if (wd == -1)
                 acapd_perror("%s:inotify_add_watch failed on %s\n",__func__,new_dir);
             else {
-                add_to_watch(wd, dir->d_name, new_dir,"Xilinx",FIRMWARE_PATH);
-                add_base_design(dir->d_name, new_dir, FIRMWARE_PATH, wd);
+                add_to_watch(wd, dir->d_name, new_dir,"",config.firmware_locations[k]);
+                add_base_design(dir->d_name, new_dir, config.firmware_locations[k], wd);
 				base = findBaseDesign(dir->d_name);
 				sprintf(fname,"%s/%s",base->base_path,"shell.json");
 				ret = initBaseDesign(base, fname);
 				if (ret >= 0)
-					parse_packages(base,"",base->base_path);
+					parse_packages(base,base->name,base->base_path);
             }
         }
     }
-
+	}
 	/* Done parsing on target accelerators, now load a default one if present in config file */
 	sem_post(&mutex);
 
@@ -839,13 +844,13 @@ void *threadFunc()
                     if (w == NULL)
                         break;
                     sprintf(new_dir,"%s/%s",w->path, event->name);
-                    acapd_debug("%s: add inotify watch on %s\n",__func__,new_dir);
+                    acapd_debug("%s: add inotify watch on %s w->name %s parent %s \n",__func__,new_dir,w->name,w->parent_path);
                     wd = inotify_add_watch(inotifyFd, new_dir, IN_ALL_EVENTS);
                     if (wd == -1)
-                        printf("inotify_add_watch failed on %s\n",new_dir);
-                    add_to_watch(wd, event->name, new_dir, w->name,w->path);
-                    add_base_design(event->name, new_dir, w->path, wd);
-
+                        acapd_print("inotify_add_watch failed on %s\n",new_dir);
+					add_to_watch(wd, event->name, new_dir, w->name,w->path);
+					if (!strcmp(w->parent_path,""))
+						add_base_design(event->name, new_dir, w->path, wd);
                 }
 				else if(!strcmp(event->name,"shell.json")) {
 					struct watch *w = get_watch(event->wd);
@@ -854,28 +859,38 @@ void *threadFunc()
 					initBaseDesign(base, fname);
 					parse_packages(base,w->name, w->path);
 				}
-				/*else if(!strcmp(event->name,"accel.json")) {
+				else if(!strcmp(event->name,"accel.json")) {
 					struct watch *w = get_watch(event->wd);
-					base = findBaseDesign_path(w->path);
+					struct watch *parent_watch = path_to_watch(w->parent_path);
+					accel_info_t *accel;
+
+					base = findBaseDesign_path(parent_watch->parent_path);
 					acapd_debug("Add accel %s to base %s\n",w->path, base->base_path);
-					add_accel_to_base(w->name, w->path, base->base_path);
-				}*/
+					accel = add_accel_to_base(base, w->parent_name, w->parent_path, base->base_path);
+					initAccel(accel, w->path);
+				}
             }
             else if((event->mask & IN_DELETE) && (event->mask & IN_ISDIR)) {
-                char * parent = wd_to_pathname(event->wd);
-                if (parent == NULL)
+				struct watch *w = get_watch(event->wd);
+                if (w == NULL)
                     break;
-                sprintf(new_dir,"%s/%s",parent, event->name);
-                acapd_debug("Removing watch on %s parent %s\n",event->name, parent);
+                sprintf(new_dir,"%s/%s",w->path, event->name);
+                acapd_debug("Removing watch on %s parent_path %s \n",new_dir,w->parent_path);
+				if (!strcmp(w->parent_path,""))
+					remove_base_design(new_dir, w->path, 1);
+				else
+					remove_base_design(new_dir, w->path, 0);
                 remove_watch(new_dir);
-                remove_base_design(new_dir, parent);
             }
             else if((event->mask & IN_MOVED_FROM) && (event->mask & IN_ISDIR)) {
-                char * parent = wd_to_pathname(event->wd);
-                if (parent == NULL)
+				struct watch *w = get_watch(event->wd);
+                if (w == NULL)
                     break;
-                sprintf(new_dir,"%s/%s",parent, event->name);
-                remove_base_design(new_dir, parent);
+                sprintf(new_dir,"%s/%s",w->path, event->name);
+				if (!strcmp(w->parent_name,""))
+					remove_base_design(new_dir, w->path, 1);
+				else
+					remove_base_design(new_dir, w->path, 0);
             }
             else if(event->mask & IN_MOVED_TO){
 				/*
@@ -887,9 +902,6 @@ void *threadFunc()
 					struct watch *w = get_watch(event->wd);
 					if (w == NULL)
 						break;
-					//char * parent = wd_to_pathname(event->wd);
-					//if (parent == NULL)
-					//	break;
 					if (event->mask & IN_ISDIR){
 						sprintf(new_dir,"%s/%s",w->path, event->name);
 						add_base_design(event->name, new_dir, w->path, event->wd);
@@ -912,18 +924,19 @@ int dfx_init()
 {
 	pthread_t t;
 	int ret;
-	struct daemon_config config;
 	//struct stat info;
+	strcpy(config.defaul_accel_name, "");
 
 	strcpy(platform.boardName,"Xilinx board");
 	sem_init(&mutex, 0, 0);
+
+	parse_config(CONFIG_PATH, &config);
 	pthread_create(&t, NULL,threadFunc, NULL);
 	sem_wait(&mutex);
 	//TODO Save active design on filesytem and on reboot read that
 	//if (stat("/configfs/device-tree/overlays",&info))
 	//	ret = system("rmdir /configfs/device-tree/overlays/*");
 	_unused(ret);
-	parse_config(CONFIG_PATH, &config);
 	if (config.defaul_accel_name != NULL && strcmp(config.defaul_accel_name, "") != 0)
 		load_accelerator(config.defaul_accel_name);
 	return 0;

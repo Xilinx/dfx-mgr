@@ -50,7 +50,7 @@ int parseAccelJson(acapd_accel_t *accel, char *filename)
 
 	fptr = fopen(filename, "r");
 	if (fptr == NULL){
-		acapd_perror("%s: Cannot open %s\n",__func__,filename);
+		acapd_print("%s: Cannot open %s\n",__func__,filename);
 		return -1;
 	}
 	
@@ -333,6 +333,8 @@ int initBaseDesign(struct basePLDesign *base, const char *shell_path)
 	}
 
 	base->load_base_design = 1;
+	base->num_pl_slots = 0;
+	base->num_aie_slots = 0;
 
 	for(i=1; i < ret; i++){
 		if (token[i].type == JSMN_OBJECT)
@@ -429,7 +431,6 @@ void parseAccelInput(xrt_device_info_t *aie, char *path)
 
 	acapd_assert(path != NULL);
 	sprintf(json_path,"%s/accel.json",path);
-	printf("json_path %s\n",json_path);
 	fptr = fopen(json_path, "r");
 	if (fptr == NULL){
 		acapd_perror("%s: Cannot open  %s\n",__func__,json_path);
@@ -441,7 +442,6 @@ void parseAccelInput(xrt_device_info_t *aie, char *path)
 		return;
 	}
     numBytes = s.st_size;
-	printf("filesize is %lu",numBytes);
 
     jsonData = (char *)calloc(numBytes, sizeof(char));
     if (jsonData == NULL){
@@ -482,10 +482,9 @@ void parse_config(char *config_path, struct daemon_config *config)
     char *jsonData;
 	struct stat s;
 	FILE *fptr;
-
 	fptr = fopen(config_path, "r");
 	if (fptr == NULL){
-		acapd_perror("%s: Cannot open %s\n",__func__,config_path);
+		acapd_perror("%s: Cannot open %s, it is required\n",__func__,config_path);
 		return;
 	}
 
@@ -505,7 +504,6 @@ void parse_config(char *config_path, struct daemon_config *config)
     if (ret < numBytes)
         acapd_perror("%s: Error reading %s\n",__func__,config_path);
     fclose(fptr);
-
     jsmn_init(&parser);
     ret = jsmn_parse(&parser, jsonData, numBytes, token, sizeof(token)/sizeof(token[0]));
     if (ret < 0){
@@ -517,10 +515,23 @@ void parse_config(char *config_path, struct daemon_config *config)
         if (jsoneq(jsonData, &token[i],"default_accel") == 0) {
 			char *filename = strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start);
 			if ((fptr = fopen(filename, "r")) == NULL)
-				return;
+				continue;
 			ret = fscanf(fptr,"%s",config->defaul_accel_name);
 			fclose(fptr);
         }
+		if (jsoneq(jsonData, &token[i],"firmware_location") == 0){
+			int k;
+			if(token[i+1].type != JSMN_ARRAY) {
+				acapd_perror("%s firmware_location expects array \n",config_path);
+				continue;
+			}
+			config->firmware_locations = (char **)calloc(token[i+1].size, MAX_PATH_SIZE*sizeof(char));
+			for (k = 0; k < token[i+1].size; k++){
+				config->firmware_locations[k] = strndup(jsonData+token[i+k+2].start, token[i+k+2].end - token[i+k+2].start);
+			}
+			config->number_locations=token[i+1].size;
+			i += token[i+1].size;//increment by number of elements in array
+		}
     }
 	return;
 }

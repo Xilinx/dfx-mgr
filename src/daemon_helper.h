@@ -16,7 +16,7 @@ extern "C" {
 
 #define CONFIG_PATH		"/etc/dfx-mgrd/daemon.conf"
 #define WATCH_PATH_LEN 256
-#define MAX_WATCH 50
+#define MAX_WATCH 500
 
 int load_accelerator(const char *accel_name);
 int remove_accelerator(int slot);

@@ -21,6 +21,8 @@ extern "C" {
 #include <xclbin.h>
 #include <xrt/xrt_device.h>
 
+#define MAX_PATH_SIZE 512
+
 typedef struct xrt_device_info {
 	char xclbin[100];
 	uint8_t xrt_device_id;
@@ -71,6 +73,8 @@ typedef struct {
 
 struct daemon_config {
 	char defaul_accel_name[64];
+	char **firmware_locations;
+	int number_locations;
 };
 
 #ifdef __cplusplus

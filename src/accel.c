@@ -32,10 +32,13 @@ int acapd_parse_config(acapd_accel_t *accel, const char *shell_config)
 {
 	int ret;
 
-	ret = sys_accel_config(accel);
-	if (ret < 0) {
-		acapd_perror("%s: failed to config accel.\n", __func__);
-		return ACAPD_ACCEL_FAILURE;
+	/* Flat design don't have accel.json so do not parse */
+	if(!strcmp(accel->type,"SIHA_PL_DFX") || !strcmp(accel->type,"XRT_AIE_DFX")){
+		ret = sys_accel_config(accel);
+		if (ret < 0) {
+			acapd_perror("%s: failed to config accel.\n", __func__);
+			return ACAPD_ACCEL_FAILURE;
+		}
 	}
 	ret = acapd_shell_config(shell_config);
 	if (ret < 0) {

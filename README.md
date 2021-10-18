@@ -39,11 +39,13 @@ below folder structure for more understanding and the details of json config
 files.
 
 The expected directory structure under `/lib/firmware/xilinx` which contains a
-3x1 PL shell design, AIE accel and a flat shell design. 3x1 shell has an
-accelerator called FFT which contains three different partial bitstreams for
-three slots of base shell. DFX-MGR expects '_slot#' as subfolders for each of
-the accelerators for DFX designs.  Place the bitstream corresponding to that
-slot in the respective subfolder.
+3x1 PL shell design, AIE accel and a flat shell design. 3x1 `base_design` shell
+has an accelerator called FFT which contains three different partial bitstreams
+for three slots of base shell.
+`base_design` needs to have base shell bitstream and shell.json.
+DFX-MGR expects '_slot#' as subfolders for each of the accelerators for DFX designs.
+Place the bitstream corresponding to that slot in the respective subfolder along
+with accel.json file.
 
 It is not mandatory to have all the partial bitstreams for each slot but DFX-MGR
 will fail to load an accelerator to the slot if no partial design is found.
@@ -84,7 +86,13 @@ to be named 3,4 and so on.
 ### daemon.conf
 
 DFX-MGR is started on linux bootup and reads the config file
-`/etc/dfx-mgrd/daemon.conf` from device.
+`/etc/dfx-mgrd/daemon.conf` from device for any config settings. Any change to
+daemon.conf will need a restart of the /usr/bin/dfx-mgrd on target.
+
+For eg. If you want to add another location for packages on the filesystem,
+append absolute path to the location in "firmware_location" and restart the
+daemon. The limitations around directory structure as explained above still
+apply as for "/lib/firmware/xilinx".
  
 ```
 $cat /etc/dfx-mgrd/daemon.conf
@@ -235,7 +243,7 @@ Accelerator    Accel_type          Base   Base_type  #slots(PL+AIE) Active_slot
 
   flat_shell	  PL_FLAT    flat_shell     PL_FLAT           (0+0)          -1
   AIE_accel   XRT_AIE_DFX   base_design      PL_DFX           (3+1)          3,
-		FFT   SIHA_PL_DFX   base_design      PL_DFX           (3+1)         0,1
+        FFT   SIHA_PL_DFX   base_design      PL_DFX           (3+1)         0,1
 ```
 In the above output, AIE_accel is currently programmed to AIE and hence the
 slot shows as 3. FFT is programmed to first two slots out of three slots of PL.

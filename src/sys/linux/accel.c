@@ -211,7 +211,7 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 		dfx_cfg_destroy(fpga_cfg_id);
 		return ACAPD_ACCEL_FAILURE;
 	}
-	if ( !strcmp(accel->type,"XRT_FLAT") || !strcmp(accel->type, "PL_DFX")) {
+	if ( !strcmp(accel->type,"XRT_FLAT") || !strcmp(accel->type, "PL_FLAT")) {
 		acapd_print("Successfully loaded base design.\n");
 		return ACAPD_ACCEL_SUCCESS;
 	}

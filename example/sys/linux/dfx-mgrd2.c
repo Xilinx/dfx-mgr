@@ -35,8 +35,6 @@
 #include "utils.h"
 #include "graph_api.h"
 #include <dfx-mgr/daemon_helper.h>
-#define WATCH_PATH_LEN 256
-#define MAX_WATCH 50
 #define MAX_CLIENTS 200
 
 static volatile int interrupted = 0;
