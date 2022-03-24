@@ -226,6 +226,8 @@ int load_accelerator(const char *accel_name)
         pkg->path = base->base_path;
         pkg->type = ACAPD_ACCEL_PKG_TYPE_NONE;
         init_accel(pl_accel, pkg);
+        strncpy(pl_accel->sys_info.tmp_dir, pkg->path,
+                sizeof(pl_accel->sys_info.tmp_dir) - 1);
         strcpy(pl_accel->type,"XRT_FLAT");
         ret = load_accel(pl_accel, shell_path, 0);
         if (ret < 0){
