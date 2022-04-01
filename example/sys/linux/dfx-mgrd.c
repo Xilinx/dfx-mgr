@@ -30,9 +30,6 @@
 #include <stdbool.h>
 #include <sys/select.h>
 #include <dfx-mgr/dfxmgr_client.h>
-#include <dfx-mgr/sys/linux/graph/jobScheduler.h>
-#include <dfx-mgr/sys/linux/graph/abstractGraph.h>
-#include "graph_api.h"
 
 #define MAX_CLIENTS 200
 
@@ -56,20 +53,14 @@ int main (int argc, char **argv)
 	struct message recv_message, send_message;
 	struct stat statbuf;
 	struct sockaddr_un socket_address;
-	int slot, ret, size, status;
+	int slot, ret;
 	char *msg;
-	int buff_fd[25];
-	int buff_fd_cnt = 0;
 
 	signal(SIGINT, intHandler);
 	_unused(argc);
 	_unused(argv);
 	// initialize the complaint queue
-	GRAPH_HANDLE gHandle;
 	dfx_init();
-	GRAPH_MANAGER_HANDLE gmHandle = GraphManager_Create(3);
-	GraphManager_startServices(gmHandle);
-	int id;
 
 	if (stat(SERVER_SOCKET, &statbuf) == 0) {
 		if (unlink(SERVER_SOCKET) == -1)
@@ -134,70 +125,6 @@ int main (int argc, char **argv)
 						// data from client
 						memset (&send_message, '\0', sizeof (struct message));
 						switch (recv_message.id) {
-
-							case GRAPH_INIT:
-								acapd_debug("daemon recieved GRAPH_INIT");
-								gHandle = Graph_CreateWithPriority("test", 2);
-								id = Graph_fromJson(gHandle, recv_message.data);
-								GraphManager_addGraph(gmHandle, gHandle);
-								//printf("%s\n", Graph_toJson(gHandle));
-								//buff_fd_cnt = abstractGraphServerConfig(scheduler, 
-								//	recv_message.data, recv_message.size, buff_fd);
-								//GRAPH_HANDLE gHandle; // = Graph_CreateWithPriority("test", 2);
-								//memcpy(buff_fd, "hello", sizeof("hello"));
-								buff_fd_cnt = 0;
-								memcpy(send_message.data, &id, sizeof(id));					
-								send_message.id = GRAPH_INIT_DONE;
-								send_message.fdcount = buff_fd_cnt;
-								send_message.size = sizeof(id);
-								sock_fd_write(fd, &send_message, 
-										HEADERSIZE + send_message.size,
-										buff_fd, buff_fd_cnt);
-								break;
-							case GRAPH_STAGED:
-								acapd_debug("Recieved graph scheduled packet");
-								int * idptr = (int *) recv_message.data;
-								id = *idptr;
-								int *io_fd, *io_ids, io_size = 0;
-								status = GraphManager_ifGraphStaged(gmHandle, id, &io_fd, &io_ids, &io_size);
-								if (status == true){
-									for(int i = 0 ; i < io_size; i++){
-										printf("### id = %x\n", io_ids[i]);
-										printf("### fd = %x\n", io_fd[i]);
-										buff_fd[i] = io_fd[i];
-									}
-									//acapd_debug("%d\n", status);
-									//acapd_debug("%d\n", io_size);
-									size = sizeof(int)* (io_size + 1);
-									memcpy((char*)send_message.data, &status, sizeof(int));					
-									memcpy((char*)send_message.data + sizeof(int), io_ids, sizeof(int) * io_size);					
-									send_message.id = GRAPH_STAGED;
-									send_message.fdcount = io_size;
-									send_message.size = size;
-								}
-								else{
-									acapd_debug("Not Staged !! %d\n", status);
-									size = sizeof(int);
-									memcpy(send_message.data, &status, sizeof(int));					
-									send_message.id = GRAPH_STAGED;
-									send_message.fdcount = 0;
-									send_message.size = size;
-								}
-								sock_fd_write(fd, &send_message, 
-										HEADERSIZE + send_message.size,
-										buff_fd, io_size);
-								break;
-							case GRAPH_FINALISE:
-								//acapd_debug("daemon recieved graph_finalise\n");
-								//abstractGraphServerFinalise(scheduler, recv_message.data);
-								memcpy(send_message.data, recv_message.data, 
-										recv_message.size);
-								send_message.size = recv_message.size;
-								//send_message.id = GRAPH_FINALISE_DONE;
-
-								if (write(fd, &send_message, HEADERSIZE +send_message.size) < 0)
-									acapd_perror("GRAPH_FINALISE write failed\n");
-								break;
 
 							case LOAD_ACCEL:
 								acapd_print("daemon loading accel %s \n",recv_message.data);

@@ -18,7 +18,6 @@ include (CheckIncludeFiles)
 include (CheckCSourceCompiles)
 include (collect)
 include (options)
-include_directories(opendfx-graph/include)
 include_directories(include)
 include_directories("${CMAKE_SYSROOT}/usr/include/xrt")
 
@@ -46,7 +45,6 @@ link_directories (${_list})
 
 add_subdirectory (src)
 add_subdirectory (example)
-add_subdirectory (opendfx-graph)
 
 #if (WITH_EXAMPLE)
 #endif (WITH_EXAMPLE)
