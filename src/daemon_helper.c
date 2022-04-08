@@ -140,64 +140,17 @@ void update_env(char *path)
     }
 }
 
-int load_aie(char *slot_path, xrt_device_info_t *aie){
-    int ret = -1, len;
-	char *xclbin_filepath = NULL;
-	struct dirent *dir;
-	DIR *fd;
-
-    fd = opendir(slot_path);
-    if (fd) {
-       while ((dir = readdir(fd)) != NULL) {
-           len = strlen(dir->d_name);
-           if (len > 6) {
-               if (!strcmp(dir->d_name + (len - 6), "xclbin") || !strcmp(dir->d_name + (len-6),"XCLBIN")) {
-					xclbin_filepath = (char *)calloc( len + strlen(slot_path)+1, sizeof(char));
-					sprintf(xclbin_filepath,"%s/%s",slot_path,dir->d_name);
-					acapd_debug("loading xclbin %s\n",xclbin_filepath);
-               }
-           }
-       }
-    }
-	if( !xclbin_filepath){
-		acapd_perror("No .xclbin found in %s\n", slot_path);
-		return ret;
-	}
-	parseAccelInput(aie, slot_path);
-	ret = xclProbe();
-
-	aie->device_hdl = xrtDeviceOpen(aie->xrt_device_id); 
-	strcpy(aie->xclbin, xclbin_filepath); 
-	xrtXclbinHandle xclbin_hdl = xrtXclbinAllocFilename(xclbin_filepath);
-    ret = xrtDeviceLoadXclbinHandle(aie->device_hdl, xclbin_hdl);
-    ret = xrtXclbinGetUUID(xclbin_hdl, aie->xrt_uid);
-
-	//if (!aie->input_size || !aie->output_size){
-	//	acapd_perror("No input/output buffer size provided in accel.json");
-	//	return -1;
-	//}
-	// Memory map BOs into user's address space (DDR Memory)
-	//aie->input_bo_hdl = xrtBOAlloc(aie->device_hdl, aie->input_size, 0, 0);
-    //aie->output_bo_hdl = xrtBOAlloc(aie->device_hdl, aie->output_size, 0, 0);
-	acapd_print("Loading xclbin successfull\n");
-	
-	return 0;
-}
-
 int load_accelerator(const char *accel_name)
 {
     int i, ret;
-    char path[1024];
     char shell_path[600];
     acapd_accel_t *pl_accel = (acapd_accel_t *)calloc(sizeof(acapd_accel_t), 1);
-	xrt_device_info_t *aie_accel = (xrt_device_info_t *)calloc(sizeof(xrt_device_info_t),1);
     acapd_accel_pkg_hd_t *pkg = (acapd_accel_pkg_hd_t *)calloc(sizeof(acapd_accel_pkg_hd_t),1);
     struct basePLDesign *base = findBaseDesign(accel_name);
     slot_info_t *slot = (slot_info_t *)malloc(sizeof(slot_info_t));
     accel_info_t *accel_info = NULL;
 
 	slot->accel = NULL;
-	slot->aie = NULL;
 
     if(base == NULL) {
         acapd_perror("No package found for %s\n",accel_name);
@@ -291,50 +244,6 @@ int load_accelerator(const char *accel_name)
                 base->slots[i] = NULL;
             platform.active_base = base;	
 		}
-        for (i = 0; i < (base->num_pl_slots + base->num_aie_slots); i++) {
-            acapd_debug("Finding empty slot for %s i %d \n",accel_name,i);
-            if (base->slots[i] == NULL){
-                sprintf(path,"%s/%s_slot%d", accel_info->path, accel_info->name,i);
-                if (access(path,F_OK) != 0){
-                    continue;
-                }
-				strcpy(slot->name, accel_name);
-				if (!strcmp(accel_info->accel_type,"XRT_AIE_DFX")) {
-					slot->is_aie = 1;
-					slot->aie = aie_accel;
-					ret = load_aie(path, aie_accel);
-					if (ret) {
-						acapd_perror("Error loading aie accelerator %s\n",accel_name);
-						return -1;
-					}
-					base->slots[i] = slot;
-					platform.active_base->active += 1;
-					return i;
-				} else{
-					slot->is_aie = 0;
-				}
-                strcpy(pkg->name, accel_name);
-                pkg->path = path;
-                pkg->type = ACAPD_ACCEL_PKG_TYPE_NONE;
-                init_accel(pl_accel, pkg);
-                /* Set rm_slot before load_accel() so isolation for appropriate slot can be applied*/
-                pl_accel->rm_slot = i;
-                strcpy(pl_accel->type,accel_info->accel_type);
-
-                ret = load_accel(pl_accel, shell_path, 0);
-                if (ret < 0){
-                    acapd_perror("%s: Failed to load accel %s\n",__func__,accel_name);
-					goto out;
-                }
-				platform.active_base->active += 1;
-				slot->accel = pl_accel;
-                base->slots[i] = slot;
-                acapd_print("Loaded %s successfully to slot %d\n",pkg->name,i);
-                return i;
-            }
-        }
-        if (i >= (base->num_pl_slots + base->num_aie_slots))
-            acapd_perror("Couldn't find empty slot for %s\n",accel_name);
     }
     else {
         acapd_perror("Check the supported type of base/accel\n");
@@ -942,14 +851,4 @@ int dfx_init()
 	if (config.defaul_accel_name != NULL && strcmp(config.defaul_accel_name, "") != 0)
 		load_accelerator(config.defaul_accel_name);
 	return 0;
-}
-
-void *getXRTinfo(int slot){
-    struct basePLDesign *base = platform.active_base;
-	xrt_device_info_t * aie = base->slots[slot]->aie;
-	
-	if( aie != NULL)
-		return (void *)aie;
-	else
-		return NULL;
 }

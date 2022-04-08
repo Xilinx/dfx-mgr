@@ -29,7 +29,6 @@ void getShellFD();
 void getClockFD();
 char *listAccelerators();
 void getRMInfo();
-void *getXRTinfo(int slot);
 int dfx_init();
 int dfx_getFDs(int slot, int *fd);
 #ifdef __cplusplus

@@ -418,61 +418,6 @@ int initAccel(accel_info_t *accel, const char *path)
 	return 0;
 }
 
-void parseAccelInput(xrt_device_info_t *aie, char *path)
-{
-    long numBytes;
-    jsmn_parser parser;
-    jsmntok_t token[128];
-    int ret,i;
-    char *jsonData;
-	char json_path[256];
-	struct stat s;
-	FILE *fptr;
-
-	acapd_assert(path != NULL);
-	sprintf(json_path,"%s/accel.json",path);
-	fptr = fopen(json_path, "r");
-	if (fptr == NULL){
-		acapd_perror("%s: Cannot open  %s\n",__func__,json_path);
-		return;
-	}
-
-	if (stat(json_path,&s) != 0 || !S_ISREG(s.st_mode)){
-		acapd_perror("could not open %s\n",json_path);
-		return;
-	}
-    numBytes = s.st_size;
-
-    jsonData = (char *)calloc(numBytes, sizeof(char));
-    if (jsonData == NULL){
-        acapd_perror("%s: calloc failed\n",__func__);
-        return;
-    }
-    ret = fread(jsonData, sizeof(char), numBytes, fptr);
-    if (ret < numBytes)
-        acapd_perror("%s: Error reading %s\n",__func__,json_path);
-    fclose(fptr);
-
-    jsmn_init(&parser);
-    ret = jsmn_parse(&parser, jsonData, numBytes, token, sizeof(token)/sizeof(token[0]));
-    if (ret < 0){
-        acapd_perror("Failed to parse %s: %d\n", json_path, ret);
-    }
-    for(i=1; i < ret; i++){
-        if (token[i].type == JSMN_OBJECT)
-            continue;
-        if (jsoneq(jsonData, &token[i],"xrt_device_id") == 0) {
-			aie->xrt_device_id = strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 10);
-        }
-        //if (jsoneq(jsonData, &token[i],"Input_Buffer_Size") == 0) {
-		//	aie->input_size = strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 10);
-        //}
-        //if (jsoneq(jsonData, &token[i],"Output_Buffer_Size") == 0) {
-		//	aie->output_size = strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 10);
-        //}
-    }
-	return;
-}
 void parse_config(char *config_path, struct daemon_config *config)
 {
     long numBytes;

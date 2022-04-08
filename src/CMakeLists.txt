@@ -46,7 +46,7 @@ include_directories (${_inc_dirs})
 add_definitions (-DACAPD_INTERNAL)
 
 get_property (_ec_flags GLOBAL PROPERTY "PROJECT_EC_FLAGS")
-set (_deps "dfx" "websockets" "xrt_core" "xrt_coreutil")
+set (_deps "dfx" "websockets")
 
 if (WITH_SHARED_LIB)
   set (_lib ${PROJECT_NAME}-shared)

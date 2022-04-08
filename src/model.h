@@ -16,19 +16,7 @@
 extern "C" {
 #endif
 
-#include <xrt.h>
-#include <xrt/xrt_bo.h>
-#include <xclbin.h>
-#include <xrt/xrt_device.h>
-
 #define MAX_PATH_SIZE 512
-
-typedef struct xrt_device_info {
-	char xclbin[100];
-	uint8_t xrt_device_id;
-	xclDeviceHandle device_hdl;
-	xuid_t xrt_uid;
-} xrt_device_info_t;
 
 typedef struct {
 	char name[64];
@@ -37,7 +25,6 @@ typedef struct {
 	int parent_uid;
 	int is_aie;
 	acapd_accel_t *accel; // This tracks active PL dfx in this slot
-	xrt_device_info_t *aie; // This tracks active AIE dfx in this slot
 }slot_info_t;
 
 typedef struct {
