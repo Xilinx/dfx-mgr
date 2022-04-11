@@ -143,6 +143,7 @@ void update_env(char *path)
 int load_accelerator(const char *accel_name)
 {
     int i, ret;
+    char path[1024];
     char shell_path[600];
     acapd_accel_t *pl_accel = (acapd_accel_t *)calloc(sizeof(acapd_accel_t), 1);
     acapd_accel_pkg_hd_t *pkg = (acapd_accel_pkg_hd_t *)calloc(sizeof(acapd_accel_pkg_hd_t),1);
@@ -244,6 +245,41 @@ int load_accelerator(const char *accel_name)
                 base->slots[i] = NULL;
             platform.active_base = base;	
 		}
+        for (i = 0; i < (base->num_pl_slots + base->num_aie_slots); i++) {
+            acapd_debug("Finding empty slot for %s i %d \n",accel_name,i);
+            if (base->slots[i] == NULL){
+                sprintf(path,"%s/%s_slot%d", accel_info->path, accel_info->name,i);
+                if (access(path,F_OK) != 0){
+                    continue;
+                }
+				strcpy(slot->name, accel_name);
+				if (!strcmp(accel_info->accel_type,"XRT_AIE_DFX")) {
+					acapd_perror("%s: XRT_AIE_DFX unsupported", accel_name);
+					return -1;
+				}
+				slot->is_aie = 0;
+                strcpy(pkg->name, accel_name);
+                pkg->path = path;
+                pkg->type = ACAPD_ACCEL_PKG_TYPE_NONE;
+                init_accel(pl_accel, pkg);
+                /* Set rm_slot before load_accel() so isolation for appropriate slot can be applied*/
+                pl_accel->rm_slot = i;
+                strcpy(pl_accel->type,accel_info->accel_type);
+
+                ret = load_accel(pl_accel, shell_path, 0);
+                if (ret < 0){
+                    acapd_perror("%s: Failed to load accel %s\n",__func__,accel_name);
+					goto out;
+                }
+				platform.active_base->active += 1;
+				slot->accel = pl_accel;
+                base->slots[i] = slot;
+                acapd_print("Loaded %s successfully to slot %d\n",pkg->name,i);
+                return i;
+            }
+        }
+        if (i >= (base->num_pl_slots + base->num_aie_slots))
+            acapd_perror("Couldn't find empty slot for %s\n",accel_name);
     }
     else {
         acapd_perror("Check the supported type of base/accel\n");
