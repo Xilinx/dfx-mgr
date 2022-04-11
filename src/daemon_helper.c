@@ -176,13 +176,13 @@ int load_accelerator(const char *accel_name)
             return -1;
         }
         sprintf(pkg->name,"%s",accel_name);
-        acapd_debug("%s:loading xrt flat shell design %s\n",__func__,pkg->name);
         pkg->path = base->base_path;
         pkg->type = ACAPD_ACCEL_PKG_TYPE_NONE;
         init_accel(pl_accel, pkg);
         strncpy(pl_accel->sys_info.tmp_dir, pkg->path,
                 sizeof(pl_accel->sys_info.tmp_dir) - 1);
         strcpy(pl_accel->type,"XRT_FLAT");
+        acapd_print("%s:load flat shell from %s", __func__, pkg->path);
         ret = load_accel(pl_accel, shell_path, 0);
         if (ret < 0){
             acapd_perror("%s: Failed to load accel %s\n",__func__,accel_name);
@@ -228,8 +228,10 @@ int load_accelerator(const char *accel_name)
             pkg->type = ACAPD_ACCEL_PKG_TYPE_NONE;
 			if (base->load_base_design) {
 				init_accel(pl_accel, pkg);
+				strncpy(pl_accel->sys_info.tmp_dir, pkg->path,
+						sizeof(pl_accel->sys_info.tmp_dir) - 1);
 				strcpy(pl_accel->type,"PL_DFX");
-				acapd_print("Loading base shell design %s\n",base->name);
+				acapd_print("%s:load from %s\n", __func__, pkg->path);
 				ret = load_accel(pl_accel, shell_path, 0);
 				if (ret < 0){
 					acapd_perror("%s: Failed to load accel %s\n",__func__,accel_name);
@@ -265,7 +267,9 @@ int load_accelerator(const char *accel_name)
                 /* Set rm_slot before load_accel() so isolation for appropriate slot can be applied*/
                 pl_accel->rm_slot = i;
                 strcpy(pl_accel->type,accel_info->accel_type);
-
+                strncpy(pl_accel->sys_info.tmp_dir, pkg->path,
+                        sizeof(pl_accel->sys_info.tmp_dir) - 1);
+                acapd_print("%s:load from %s\n", __func__, pkg->path);
                 ret = load_accel(pl_accel, shell_path, 0);
                 if (ret < 0){
                     acapd_perror("%s: Failed to load accel %s\n",__func__,accel_name);
