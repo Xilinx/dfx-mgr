@@ -36,16 +36,17 @@
 static volatile int interrupted = 0;
 static int socket_d;
 
-void intHandler(int dummy) {
+void intHandler(int dummy)
+{
 	_unused(dummy);
 	interrupted = 1;
-	exit(0);
+	exit(EXIT_SUCCESS);
 }
 
 void error (char *msg)
 {
-	perror (msg);
-	exit (1);
+	perror(msg);
+	exit(EXIT_FAILURE);
 }
 
 int main (int argc, char **argv)
@@ -66,11 +67,9 @@ int main (int argc, char **argv)
 		if (unlink(SERVER_SOCKET) == -1)
 			error ("unlink");
 	}
-    
 
 	if ((socket_d = socket (AF_UNIX, SOCK_SEQPACKET, 0)) == -1)
 		error ("socket");
-
 
 	memset (&socket_address, 0, sizeof (struct sockaddr_un));
 	socket_address.sun_family = AF_UNIX;
@@ -106,9 +105,8 @@ int main (int argc, char **argv)
 					FD_SET (fd_new, &fds); 
 					if (fd_new > fdmax) 
 						fdmax = fd_new;
-				}
-				else  // data from an existing connection, receive it
-				{
+				} else {
+					// data from an existing connection, receive it
 					memset (&recv_message, '\0', sizeof (struct message));
 					ssize_t numbytes = read (fd, &recv_message, sizeof (struct message));
 					if (numbytes == -1)
@@ -119,9 +117,7 @@ int main (int argc, char **argv)
 						if (close (fd) == -1)
 						error ("close");
 						FD_CLR (fd, &fds);
-					}
-			        else 
-                   	{
+					} else {
 						// data from client
 						memset (&send_message, '\0', sizeof (struct message));
 						switch (recv_message.id) {
@@ -129,27 +125,30 @@ int main (int argc, char **argv)
 							case LOAD_ACCEL:
 								acapd_print("daemon loading accel %s \n",recv_message.data);
 								slot = load_accelerator(recv_message.data);
-								sprintf(send_message.data, "%d", slot);
-								send_message.size = 2;
+								send_message.size = 1 +
+										sprintf(send_message.data, "%d", slot);
 								if (write(fd, &send_message, HEADERSIZE + send_message.size) < 0)
-									acapd_perror("LOAD_ACCEL write failed\n");
+									perror("LOAD_ACCEL write");
 								break;
 
 							case REMOVE_ACCEL:
-								acapd_print("daemon removing accel at slot %d\n",atoi(recv_message.data));
-								ret = remove_accelerator(atoi(recv_message.data));
-								sprintf(send_message.data, "%d", ret);
-								send_message.size = 2;
+								slot = atoi(recv_message.data);
+								acapd_print("daemon REMOVE_ACCEL in slot %d\n", slot);
+								ret = remove_accelerator(slot);
+								send_message.size = 1 +
+										sprintf(send_message.data, "%d", ret);
 								if (write(fd, &send_message, HEADERSIZE+ send_message.size) < 0)
-									acapd_perror("REMOVE_ACCEL write failed\n");
+									perror("REMOVE_ACCEL write");
 								break;
 
 							case LIST_PACKAGE:
 								msg = listAccelerators();
-								memcpy(send_message.data, msg, sizeof(send_message.data)); 
-								send_message.size = sizeof(send_message.data);
+								send_message.size = strnlen(msg,
+									sizeof(send_message.data));
+								memcpy(send_message.data, msg, send_message.size);
 								if (write(fd, &send_message, send_message.size) < 0)
-									acapd_perror("LIST_PACKAGE: write failed\n");
+									perror("LIST_PACKAGE write");
+								free(msg);
 								break;
 							case QUIT:
 								if (close (fd) == -1)
@@ -165,7 +164,7 @@ int main (int argc, char **argv)
 			} 
 		} 
 	} 
-    exit (EXIT_SUCCESS);
+	exit(EXIT_SUCCESS);
 }
 /*
 #define SERVER_PATH     "/tmp/dfx-mgrd_socket"
