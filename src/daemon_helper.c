@@ -84,6 +84,10 @@ struct basePLDesign *findBaseDesign_path(const char *path){
     return NULL;
 }
 
+/*
+ * sk_xxx: do we need getRMInfo()? Rewrite if yes.
+ * bug: fptr is NULL and goto out : SEGV
+ */
 void getRMInfo()
 {
     FILE *fptr;
@@ -131,12 +135,14 @@ void update_env(char *path)
                                                     sizeof(char));
                     sprintf(str, "%s/%s",path,dir->d_name);
                     sprintf(cmd,"echo \"firmware: %s\" > /etc/vart.conf",str);
+                    free(str);
                     ret = system(cmd);
                     if (ret)
-                        acapd_perror("Write to /etc/vart.conf failed\n");
+                        perror(cmd);
                 }
             }
         }
+        closedir(FD);
     }
 }
 
@@ -156,16 +162,11 @@ int load_accelerator(const char *accel_name)
     if(base == NULL) {
         acapd_perror("No package found for %s\n",accel_name);
         goto out;
-    } else
-        sprintf(shell_path,"%s/shell.json",base->base_path);
-
-    if(base == NULL) {
-        acapd_perror("No accel with name %s found\n",accel_name);
-		goto out;
     }
+    sprintf(shell_path,"%s/shell.json",base->base_path);
 
     /* Flat shell design are treated as with one slot */
-    else if(base != NULL && (!strcmp(base->type,"XRT_FLAT")|| !strcmp(base->type,"PL_FLAT"))) {
+    if (!strcmp(base->type,"XRT_FLAT") || !strcmp(base->type,"PL_FLAT")) {
         if (base->slots == NULL) {
             base->slots = (slot_info_t **)malloc(sizeof(slot_info_t *) * (base->num_pl_slots+base->num_aie_slots));
             base->slots[0] = NULL;
@@ -173,7 +174,7 @@ int load_accelerator(const char *accel_name)
 
 		if(platform.active_base != NULL && platform.active_base->active > 0) {
             acapd_perror("Remove previously loaded accelerator, no empty slot\n");
-            return -1;
+            goto out;
         }
         sprintf(pkg->name,"%s",accel_name);
         pkg->path = base->base_path;
@@ -209,7 +210,7 @@ int load_accelerator(const char *accel_name)
         }
     }
     /* For SIHA slotted architecture */
-    if(base != NULL && !strcmp(base->type,"PL_DFX")) {
+    if(!strcmp(base->type,"PL_DFX")) {
         if (platform.active_base != NULL && !platform.active_base->active && 
 				strcmp(platform.active_base->base_path, accel_info->parent_path)) {
 			acapd_print("All slots for base are empty, loading new base design\n");
@@ -257,7 +258,7 @@ int load_accelerator(const char *accel_name)
 				strcpy(slot->name, accel_name);
 				if (!strcmp(accel_info->accel_type,"XRT_AIE_DFX")) {
 					acapd_perror("%s: XRT_AIE_DFX unsupported", accel_name);
-					return -1;
+					goto out;
 				}
 				slot->is_aie = 0;
                 strcpy(pkg->name, accel_name);
@@ -298,16 +299,15 @@ int remove_accelerator(int slot)
 {
     struct basePLDesign *base = platform.active_base;
     acapd_accel_t *accel;
-	int ret;
-	if (slot < 0) {
-		acapd_perror("%s invalid slot %d\n",__func__, slot);
-		return 0;
+	int ret = base == NULL || slot < 0 || base->active < slot
+		|| base->slots[slot] == NULL;
+
+	if (ret){
+		acapd_perror("%s No Accel or invalid slot %d", __func__, slot);
+		return -1;
 	}
-    if (base == NULL || base->slots[slot] == NULL){
-        acapd_perror("%s No Accel in slot %d\n",__func__,slot);
-        return 0;
-    }
 	if (base->slots[slot]->is_aie){
+		free(base->slots[slot]);
 		base->slots[slot] = NULL;
 		platform.active_base->active -= 1;
 		return 0;
@@ -316,7 +316,9 @@ int remove_accelerator(int slot)
     acapd_print("Removing accel %s from slot %d\n",accel->pkg->name,slot);
 
     ret = remove_accel(accel, 0);
+	free(accel->pkg);
     free(accel);
+	free(base->slots[slot]);
     base->slots[slot] = NULL;
 	platform.active_base->active -= 1;
 	return ret;
@@ -401,7 +403,7 @@ char *listAccelerators()
 {
     int i,j;
 	uint8_t slot;
-    char msg[300];
+    char msg[330];	/* max 326 bytes */
 	char res[8*1024];
 
 	memset(res,0, sizeof(res));
@@ -535,7 +537,7 @@ accel_info_t *add_accel_to_base(struct basePLDesign *base, char *name, char *pat
 
 void parse_packages(struct basePLDesign *base,char *fname, char *path)
 {
-    DIR *dir1,*dir2;
+    DIR *dir1 = NULL ,*dir2 = NULL;
     struct dirent *d1,*d2;
     char first_level[512],second_level[800],filename[811];
 	struct stat stat_info;
@@ -568,7 +570,7 @@ void parse_packages(struct basePLDesign *base,char *fname, char *path)
             wd = inotify_add_watch(inotifyFd, first_level, IN_ALL_EVENTS);
             if (wd == -1){
                 acapd_perror("%s:inotify_add_watch failed on %s\n",__func__,first_level);
-				return;
+				goto close_dir;
 			}
             
 			add_to_watch(wd, d1->d_name, first_level, fname, path);
@@ -587,8 +589,8 @@ void parse_packages(struct basePLDesign *base,char *fname, char *path)
 					sprintf(second_level,"%s/%s", first_level, d2->d_name);
 					wd = inotify_add_watch(inotifyFd, second_level, IN_ALL_EVENTS);
 					if (wd == -1){
-					acapd_perror("%s:inotify_add_watch failed on %s\n",__func__,second_level);
-					return;
+						acapd_perror("%s:inotify_add_watch failed on %s\n",__func__,second_level);
+						goto close_dir;
 					}
 					add_to_watch(wd, d2->d_name, second_level, d1->d_name, first_level);
 					sprintf(filename,"%s/accel.json",second_level);
@@ -605,6 +607,11 @@ void parse_packages(struct basePLDesign *base,char *fname, char *path)
             }
         }
     }
+close_dir:
+    if (dir1)
+	    closedir(dir1);
+    if (dir2)
+	    closedir(dir2);
 }
 
 void add_base_design(char *name, char *path, char *parent, int wd)
@@ -774,6 +781,7 @@ void *threadFunc()
             }
         }
     }
+    closedir(d);
 	}
 	/* Done parsing on target accelerators, now load a default one if present in config file */
 	sem_post(&mutex);
