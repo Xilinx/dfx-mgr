@@ -22,7 +22,7 @@
 
 int main(int argc, char *argv[])
 {
-	socket_t *gs = (socket_t *) malloc(sizeof(socket_t));
+	socket_t gs;
 	struct message send_message, recv_message;
 	int ret;
 
@@ -30,55 +30,57 @@ int main(int argc, char *argv[])
 	memset (&recv_message, '\0', sizeof(struct message));
 	if (argc < 2) {
 		printf("Expects an argument. Use -h to see options\n");
-		return 0;
+		return -1;
 	}
-	initSocket(gs);
+	initSocket(&gs);
 
 	if (!strcmp(argv[1],"-load")) {
 		if (argc < 3) {
 			printf("-load expects a package name. Try again.\n");
-			return 0;
+			return -1;
 		}
 		memcpy(send_message.data, argv[2], strlen(argv[2]));
 		send_message.id = LOAD_ACCEL;
 		send_message.size = strlen(argv[2]);
-		if (write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size) < 0)
-			printf("error sending message from client\n");
-		ret = read(gs->sock_fd, &recv_message, sizeof (struct message));
-		if (ret <= 0)
-			printf("No message recieved\n");
-		printf("Accelerator loaded to slot %s\n",recv_message.data);
-	} else if(!strcmp(argv[1],"-remove")) {
-		if (argc < 3){
-			/* If no slot number provided default to 0*/
-			strcpy(send_message.data, "0");
-			send_message.size = 1;
-		} else {
-			memcpy(send_message.data, argv[2], strlen(argv[2]));
-			send_message.size = strlen(argv[2]);
-		}
-		send_message.id = REMOVE_ACCEL;
-		if (write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size) == -1){
-			acapd_perror("error sending message from client\n");
+		if (write(gs.sock_fd, &send_message, HEADERSIZE + send_message.size) < 0){
+			perror("write");
 			return -1;
 		}
-		ret = read(gs->sock_fd, &recv_message, sizeof (struct message));
-		if (ret <= 0)
-			printf("No message recieved\n");
-		if (atoi(recv_message.data) == 0)
-			printf("Accelerator successfully removed.\n");
-		else
-			printf("Error trying to remove accelerator.\n");
+		ret = read(gs.sock_fd, &recv_message, sizeof (struct message));
+		if (ret <= 0){
+			perror("No message or read error");
+			return -1;
+		}
+		printf("Loaded to slot %s\n", recv_message.data);
+	} else if(!strcmp(argv[1],"-remove")) {
+		/* If no slot number provided default to 0*/
+		char *slot = (argc < 3) ? "0" : argv[2];
+		send_message.size = 1 + sprintf(send_message.data, "%s", slot);
+		send_message.id = REMOVE_ACCEL;
+		if (write(gs.sock_fd, &send_message, HEADERSIZE + send_message.size) < 0){
+			perror("write");
+			return -1;
+		}
+		ret = read(gs.sock_fd, &recv_message, sizeof (struct message));
+		if (ret <= 0){
+			perror("No message or read error");
+			return -1;
+		}
+		printf("remove from slot %s returns: %s (%s)\n", slot,
+			recv_message.data,
+			recv_message.data[0] == '0' ? "Ok" : "Error");
 	} else if(!strcmp(argv[1],"-listPackage")) {
 		send_message.id = LIST_PACKAGE;
 		send_message.size = 0;
-		if (write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size) == -1){
-			acapd_perror("error sending message from client\n");
+		if (write(gs.sock_fd, &send_message, HEADERSIZE + send_message.size) == -1){
+			perror("write");
 			return -1;
 		}
-		ret = read(gs->sock_fd, &recv_message, sizeof (struct message));
-		if (ret <= 0)
-			printf("No message recieved\n");
+		ret = read(gs.sock_fd, &recv_message, sizeof (struct message));
+		if (ret <= 0){
+			perror("No message or read error");
+			return -1;
+		}
 		printf("%s",recv_message.data);
 	} else if(!strcmp(argv[1],"-allocBuffer")) {
 	} else if(!strcmp(argv[1],"-freeBuffer")) {
@@ -91,7 +93,7 @@ int main(int argc, char *argv[])
 		printf("Commmands\n");
 		printf("-listPackage\t\t List locally downloaded accelerator package\n");
 		printf("-load <accel_name>\t\t Load the provided accelerator packaged\n");
-		printf("-remove <accel_name>\t\t\t Unload package previously programmed\n");
+		printf("-remove <slot#>\t\t Unload package previously programmed\n");
 		printf("-allocBuffer <size> \t\t Allocate buffer of size and return its DMA fd and pa\n");
 		printf("-freeBuffer <pa> \t\t free buffer with physical address pa in decimal\n");
 		printf("-getFDs <slot#> \t\t Send ip device FD's over socket\n");
@@ -100,7 +102,6 @@ int main(int argc, char *argv[])
 		printf("-getClockFD \n");
 	} else {
 		printf("Option not recognized, Try again.\n");
-		return 0;
 	}	
 	return 0;
 }
