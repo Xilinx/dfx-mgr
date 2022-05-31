@@ -142,11 +142,12 @@ int main (int argc, char **argv)
 								break;
 
 							case LIST_PACKAGE:
+								// change to: listAccelerators(buf, size))
 								msg = listAccelerators();
 								send_message.size = strnlen(msg,
 									sizeof(send_message.data));
 								memcpy(send_message.data, msg, send_message.size);
-								if (write(fd, &send_message, send_message.size) < 0)
+								if (write(fd, &send_message, HEADERSIZE + send_message.size) < 0)
 									perror("LIST_PACKAGE write");
 								free(msg);
 								break;
