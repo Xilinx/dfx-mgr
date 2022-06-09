@@ -35,8 +35,8 @@ collector_list (_headers PROJECT_LIB_HEADERS)
 
 foreach (f ${_headers})
   configure_file (${f} include/${PROJECT_NAME}/${f} @ONLY)
-  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/include/${PROJECT_NAME}/${f}
-           DESTINATION include RENAME ${PROJECT_NAME}/${f})
+  # install (FILES ${CMAKE_CURRENT_BINARY_DIR}/include/${PROJECT_NAME}/${f}
+  #          DESTINATION include RENAME ${PROJECT_NAME}/${f})
   if (${f} MATCHES "^[^/]*\\.h")
     collect (PROJECT_HDR_TESTS "acapd/${f}")
   endif (${f} MATCHES "^[^/]*\\.h")
@@ -56,8 +56,8 @@ if (WITH_SHARED_LIB)
   target_compile_options (${_lib} PUBLIC ${_ec_flags})
   set_target_properties (${_lib} PROPERTIES
     OUTPUT_NAME       "${PROJECT_NAME}"
-    VERSION           "${PROJECT_VER}"
-    SOVERSION         "${PROJECT_VER_MAJOR}"
+    VERSION           "${PROJECT_VERSION}"
+    SOVERSION         "${PROJECT_VERSION_MAJOR}"
   )
 endif (WITH_SHARED_LIB)
 
