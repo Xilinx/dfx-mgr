@@ -85,34 +85,29 @@ struct basePLDesign *findBaseDesign_path(const char *path){
 }
 
 /*
- * sk_xxx: do we need getRMInfo()? Rewrite if yes.
- * bug: fptr is NULL and goto out : SEGV
+ * getRMInfo is a function intended to be able to read the presently
+ * loaded RMs. Rename to saveRMinfo()?
  */
 void getRMInfo()
 {
     FILE *fptr;
     int i;
-    char line[512];
     struct basePLDesign *base = platform.active_base;
 
-    fptr = fopen("/home/root/rm_info.txt","w");
-    if (fptr == NULL){
-        acapd_perror("Couldn't create /home/root/rm_info.txt");
-        goto out;
+    if(base == NULL || base->slots == NULL) {
+        acapd_perror("No design currently loaded");
+        return;
     }
 
-    if(base == NULL) {
-        acapd_perror("No design currently loaded");
-        return ;
+    fptr = fopen("/home/root/rm_info.txt","w");
+    if (fptr == NULL) {
+        acapd_perror("Couldn't create /home/root/rm_info.txt");
+        return;
     }
-    for (i = 0; i < base->num_pl_slots; i++){
-        if (base->slots[i] == NULL)
-            sprintf(line, "%d,%s",i,"GREY");
-        else
-            //sprintf(line,"%d,%s",i, base->slots[i]->accel->pkg->name);
-        fprintf(fptr,"\n%s",line);
-    }
-out:
+
+    for (i = 0; i < base->num_pl_slots; i++)
+        fprintf(fptr, "%d %s\n", i, base->slots[i] ? "used" : "GREY");
+
     fclose(fptr);
 }
 
@@ -167,12 +162,11 @@ int load_accelerator(const char *accel_name)
 
     /* Flat shell design are treated as with one slot */
     if (!strcmp(base->type,"XRT_FLAT") || !strcmp(base->type,"PL_FLAT")) {
-        if (base->slots == NULL) {
-            base->slots = (slot_info_t **)malloc(sizeof(slot_info_t *) * (base->num_pl_slots+base->num_aie_slots));
-            base->slots[0] = NULL;
-		}
+        if (base->slots == NULL)
+            base->slots = calloc(base->num_pl_slots + base->num_aie_slots,
+                                 sizeof(slot_info_t *));
 
-		if(platform.active_base != NULL && platform.active_base->active > 0) {
+        if(platform.active_base != NULL && platform.active_base->active > 0) {
             acapd_perror("Remove previously loaded accelerator, no empty slot\n");
             goto out;
         }
@@ -242,12 +236,11 @@ int load_accelerator(const char *accel_name)
 				acapd_print("Loaded %s successfully.\n",base->name);
 				base->fpga_cfg_id = pl_accel->sys_info.fpga_cfg_id;
 			}
-            base->slots = (slot_info_t **)malloc(sizeof(slot_info_t *) * (base->num_pl_slots +
-																		base->num_aie_slots));
-            for (i = 0; i < (base->num_pl_slots + base->num_aie_slots); i++)
-                base->slots[i] = NULL;
-            platform.active_base = base;	
-		}
+			if (base->slots == NULL)
+				base->slots = calloc(base->num_pl_slots + base->num_aie_slots,
+						sizeof(slot_info_t *));
+			platform.active_base = base;
+	}
         for (i = 0; i < (base->num_pl_slots + base->num_aie_slots); i++) {
             acapd_debug("Finding empty slot for %s i %d \n",accel_name,i);
             if (base->slots[i] == NULL){
@@ -403,7 +396,7 @@ char *listAccelerators()
 {
     int i,j;
 	uint8_t slot;
-    char msg[330];	/* max 326 bytes */
+    char msg[330];	/* compiler warning if 326 bytes or less */
 	char res[8*1024];
 
 	memset(res,0, sizeof(res));
@@ -535,9 +528,15 @@ accel_info_t *add_accel_to_base(struct basePLDesign *base, char *name, char *pat
 	return &base->accel_list[j];
 }
 
+
+/*
+ * The present limitation is only one level of hierarchy (dir1 and dir2).
+ * In future when we face hierarchical designs that may have RPs within
+ * RMs we will need this scalability.
+ */
 void parse_packages(struct basePLDesign *base,char *fname, char *path)
 {
-    DIR *dir1 = NULL ,*dir2 = NULL;
+    DIR *dir1 = NULL, *dir2 = NULL;
     struct dirent *d1,*d2;
     char first_level[512],second_level[800],filename[811];
 	struct stat stat_info;
