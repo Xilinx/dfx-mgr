@@ -51,7 +51,8 @@ int main(int argc, char *argv[])
 			perror("No message or read error");
 			return -1;
 		}
-		printf("Loaded to slot %s\n", recv_message.data);
+		printf("%s: %s %s\n", argv[2], recv_message.data[0] == '-' ?
+			"load Error:" : "loaded to slot", recv_message.data);
 	} else if(!strcmp(argv[1],"-remove")) {
 		/* If no slot number provided default to 0*/
 		char *slot = (argc < 3) ? "0" : argv[2];
