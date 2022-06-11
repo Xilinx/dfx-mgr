@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -209,7 +210,7 @@ int parseShellJson(acapd_shell_t *shell, const char *filename)
 		acapd_perror("could not open %s\n",filename);
 		return -1;
 	}
-    numBytes = s.st_size;
+	numBytes = s.st_size;
 
 	jsonData = (char *)calloc(numBytes, sizeof(char));
 	if (jsonData == NULL)
@@ -290,6 +291,7 @@ int parseShellJson(acapd_shell_t *shell, const char *filename)
 			shell->slot_regs = slot_regs;
 		}
 	}
+	free(jsonData);
 	return 0;
 }
 
@@ -314,7 +316,7 @@ int initBaseDesign(struct basePLDesign *base, const char *shell_path)
 		acapd_perror("could not open %s\n",shell_path);
 		return -1;
 	}
-    numBytes = s.st_size;
+	numBytes = s.st_size;
 
 	jsonData = (char *)calloc(numBytes, sizeof(char));
 	if (jsonData == NULL){
@@ -340,29 +342,34 @@ int initBaseDesign(struct basePLDesign *base, const char *shell_path)
 		if (token[i].type == JSMN_OBJECT)
 			continue;
 		if (jsoneq(jsonData, &token[i],"shell_type") == 0) {
-			strncpy(base->type,strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), sizeof(base->type)-1);
-			base->type[sizeof(base->type)-1] = '\0';
+			int sz = MIN(token[i+1].end - token[i+1].start,
+					sizeof(base->type)-1);
+			strncpy(base->type, jsonData + token[i+1].start, sz);
+			base->type[sz] = 0;
 			if(strcmp(base->type,"XRT_FLAT") && strcmp(base->type,"PL_FLAT") && strcmp(base->type,"PL_DFX"))
 				acapd_perror("shell_type valid types are XRT_FLAT/PL_FLAT/PL_DFX\n");
 		}
 		if (jsoneq(jsonData, &token[i],"num_pl_slots") == 0) {
-			base->num_pl_slots = strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 10);
+			base->num_pl_slots = strtol(jsonData+token[i+1].start,
+						NULL, 10);
 		}
 		if (jsoneq(jsonData, &token[i],"num_aie_slots") == 0) {
-			base->num_aie_slots = strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 10);
+			base->num_aie_slots = strtol(jsonData+token[i+1].start,
+						NULL, 10);
 		}
 		if (jsoneq(jsonData, &token[i],"uid") == 0) {
-			base->uid = strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 10);
+			base->uid = strtol(jsonData+token[i+1].start, NULL, 10);
 		}
 		if (jsoneq(jsonData, &token[i],"load_base_design") == 0) {
-			char value[8];
-			strncpy(value,strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), 7);
-			if (!strcmp(value,"no") || !strcmp(value, "No"))
+			char *p = jsonData + token[i+1].start;
+				// If "no" or "No"
+			if ((p[0] == 'n' || p[0] == 'N') && p[1] == 'o')
 				base->load_base_design = 0;
 		}
 	}
 	if (!strcmp(base->type,"XRT_FLAT") || !strcmp(base->type,"PL_FLAT"))
 		base->num_pl_slots = 1;
+	free(jsonData);
 	return 0;
 }
 
@@ -410,11 +417,16 @@ int initAccel(accel_info_t *accel, const char *path)
 		if (token[i].type == JSMN_OBJECT)
 			continue;
 		if (jsoneq(jsonData, &token[i],"accel_type") == 0) {
-			strncpy(accel->accel_type,strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), sizeof(accel->accel_type)-1);
+			int sz = MIN(token[i+1].end - token[i+1].start,
+				sizeof(accel->accel_type)-1);
+			strncpy(accel->accel_type,
+				jsonData + token[i+1].start, sz);
+			accel->accel_type[sz] = 0;
 			if(strcmp(accel->accel_type,"SIHA_PL_DFX") && strcmp(accel->accel_type, "XRT_AIE_DFX") && strcmp(accel->accel_type,"XRT_PL_DFX"))
 				acapd_perror("accel_type valid values are SIHA_PL_DFX/XRT_AIE_DFX/XRT_PL_DFX\n");
 		}
 	}
+	free(jsonData);
 	return 0;
 }
 
@@ -459,7 +471,9 @@ void parse_config(char *config_path, struct daemon_config *config)
             continue;
         if (jsoneq(jsonData, &token[i],"default_accel") == 0) {
 			char *filename = strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start);
-			if ((fptr = fopen(filename, "r")) == NULL)
+			fptr = fopen(filename, "r");
+			free(filename);
+			if (fptr == NULL)
 				continue;
 			ret = fscanf(fptr,"%s",config->defaul_accel_name);
 			fclose(fptr);
@@ -478,5 +492,6 @@ void parse_config(char *config_path, struct daemon_config *config)
 			i += token[i+1].size;//increment by number of elements in array
 		}
     }
+    free(jsonData);
 	return;
 }
