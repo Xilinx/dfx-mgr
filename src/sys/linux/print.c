@@ -5,8 +5,10 @@
  */
 
 #include <dfx-mgr/print.h>
+#include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 
 #ifdef DEBUG
 void acapd_debug(const char *format, ...)
@@ -32,10 +34,11 @@ void acapd_print(const char *format, ...)
 
 void acapd_perror(const char *format, ...)
 {
+	int errnum = errno;
 	va_list argptr;
 	va_start(argptr, format);
 	fprintf(stderr, "DFX-MGRD> ERROR: " );
 	vfprintf(stderr, format, argptr);
-	fprintf(stderr, "\n" );
+	fprintf(stderr, "%s\n", errnum ? strerror(errnum) : "");
 	va_end(argptr);
 }
