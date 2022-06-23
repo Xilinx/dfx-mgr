@@ -33,6 +33,7 @@ struct basePLDesign *base_designs = NULL;
 static int inotifyFd;
 platform_info_t platform;
 sem_t mutex;
+void firmware_dir_walk(void);
 
 struct watch {
     int wd;
@@ -400,6 +401,7 @@ char *listAccelerators()
 	char res[8*1024];
 
 	memset(res,0, sizeof(res));
+	firmware_dir_walk();
  
     sprintf(msg,"%32s%20s%32s%20s%20s%20s\n\n","Accelerator","Accel_type","Base","Base_type","#slots(PL+AIE)","Active_slot");
 	strcat(res,msg);
@@ -545,7 +547,7 @@ void parse_packages(struct basePLDesign *base,char *fname, char *path)
 
 	/* For flat shell design there is no subfolder so assign the base path as the accel path */
 	if (!strcmp(base->type,"XRT_FLAT") || !strcmp(base->type,"PL_FLAT")) {
-		acapd_debug("This is flat shell design\n");
+		acapd_debug("%s : %s", base->name, base->type);
         strcpy(base->accel_list[0].name, base->name);
         strcpy(base->accel_list[0].path, base->base_path);
         strcpy(base->accel_list[0].parent_path, base->base_path);
@@ -618,10 +620,14 @@ void add_base_design(char *name, char *path, char *parent, int wd)
     int i;
 
     for (i = 0; i < MAX_WATCH; i++) {
-		if (!strcmp(base_designs[i].base_path,path)){
-			acapd_debug("Base design %s already exists\n",path);
-			return;
-		}
+	if (!strcmp(base_designs[i].base_path, path)){
+		acapd_debug("Base design %s already exists", path);
+		return;
+	}
+    }
+
+	// Now find the fist unsued base_designs[] element
+    for (i = 0; i < MAX_WATCH; i++) {
         if (base_designs[i].base_path[0] == '\0') {
             acapd_debug("Adding base design %s\n",path);
             strncpy(base_designs[i].name, name, sizeof(base_designs[i].name)-1);
@@ -714,17 +720,89 @@ displayInotifyEvent(struct inotify_event *i)
 //        printf("        name = %s\n", i->name);
 }*/
 
-#define BUF_LEN (10 * (sizeof(struct inotify_event) + NAME_MAX + 1))
-void *threadFunc()
+/*
+ * Filter: path a is over 64 char, "." and ".."
+ */
+static int
+d_name_filter(char *a)
 {
-    int wd, i, j, k, ret;
+	return (strlen(a) > 64) ||
+		(a[0] == '.' && (a[1] == 0 || (a[1] == '.' && a[2] == 0)));
+}
+
+void
+acell_dir_add(char *cpath, struct dirent *dirent)
+{
+	char new_dir[512], fname[600];
+	char *d_name = dirent->d_name;
+	struct basePLDesign *base;
+	int wd;
+
+	if (dirent->d_type != DT_DIR || d_name_filter(d_name))
+		return;
+
+	sprintf(new_dir, "%s/%s", cpath, d_name);
+	acapd_debug("Found dir %s", new_dir);
+	wd = inotify_add_watch(inotifyFd, new_dir, IN_ALL_EVENTS);
+	if (wd == -1){
+		acapd_perror("%s:inotify_add_watch %s", __func__, new_dir);
+		return;
+	}
+	add_to_watch(wd, d_name, new_dir, "", cpath);
+	add_base_design(d_name, new_dir, cpath, wd);
+	base = findBaseDesign(d_name);
+	if (base == NULL)
+		return;
+
+	sprintf(fname, "%s/shell.json", base->base_path);
+	if (initBaseDesign(base, fname) == 0)
+		parse_packages(base, base->name, base->base_path);
+}
+
+/*
+ * firmware_dir_walk()
+ * For each config.firmware_locations, add a watch for all events
+ */
+void
+firmware_dir_walk(void)
+{
+	int k, wd;
+	struct dirent *dirent;
+
+	for(k = 0; k < config.number_locations; k++) {
+		char *fwdir = config.firmware_locations[k];
+		DIR *d = opendir(fwdir);
+
+		if (d == NULL) {
+			acapd_perror("opendir(%s)", fwdir);
+			continue;
+		}
+		if (!path_to_watch(fwdir)) {
+			wd = inotify_add_watch(inotifyFd, fwdir, IN_ALL_EVENTS);
+			if (wd == -1) {
+				acapd_perror("%s:inotify_add_watch(%s)",
+						__func__, fwdir);
+				closedir(d);
+				continue;
+			}
+			add_to_watch(wd, "", fwdir, "", "");
+		}
+		/* Add packages to inotify */
+		while ((dirent = readdir(d)) != NULL)
+			acell_dir_add(fwdir, dirent);
+		closedir(d);
+	}
+}
+
+#define BUF_LEN (10 * (sizeof(struct inotify_event) + NAME_MAX + 1))
+void *threadFunc(void *)
+{
+    int wd, j, ret;
     char buf[BUF_LEN] __attribute__ ((aligned(8)));
     ssize_t numRead;
     char *p;
     char new_dir[512],fname[600];
     struct inotify_event *event;
-    DIR *d;
-    struct dirent *dir;
     struct basePLDesign *base;
 
     active_watch = (struct watch *)calloc(sizeof(struct watch), MAX_WATCH);
@@ -732,56 +810,13 @@ void *threadFunc()
 
     for(j = 0; j < MAX_WATCH; j++) {
         active_watch[j].wd = -1;
-        active_watch[j].path[0] = '\0';
     }
 
-    for(i = 0; i < MAX_WATCH; i++) {
-        base_designs[i].base_path[0] = '\0';
-        for( j = 0; j < 10; j++)
-            base_designs[i].accel_list[j].path[0] = '\0';
-    }
     inotifyFd = inotify_init();                 /* Create inotify instance */
-    if (inotifyFd == -1){
-        acapd_perror("inotify_init failed\n");
-	}
+    if (inotifyFd == -1)
+        acapd_perror("inotify_init");
 
-    /* For each command-line argument, add a watch for all events */
-	for(k = 0; k < config.number_locations; k++){
-	    wd = inotify_add_watch(inotifyFd, config.firmware_locations[k], IN_ALL_EVENTS);
-		if (wd == -1) {
-			acapd_perror("%s:%s not found, can't add inotify watch\n",__func__,config.firmware_locations[k]);
-			exit(EXIT_SUCCESS);
-		}
-	    add_to_watch(wd,"",config.firmware_locations[k],"","");
-		/* Add already existing packages to inotify */
-		d = opendir(config.firmware_locations[k]);
-		if (d == NULL) {
-			acapd_perror("Directory %s not found\n",config.firmware_locations[k]);
-		}
-		while((dir = readdir(d)) != NULL) {
-        if (dir->d_type == DT_DIR) {
-            if (strlen(dir->d_name) > 64 || strcmp(dir->d_name,".") == 0 ||
-                            strcmp(dir->d_name,"..") == 0) {
-                continue;
-            }
-            sprintf(new_dir,"%s/%s", config.firmware_locations[k], dir->d_name);
-            acapd_debug("Found dir %s\n",new_dir);
-            wd = inotify_add_watch(inotifyFd, new_dir, IN_ALL_EVENTS);
-            if (wd == -1)
-                acapd_perror("%s:inotify_add_watch failed on %s\n",__func__,new_dir);
-            else {
-                add_to_watch(wd, dir->d_name, new_dir,"",config.firmware_locations[k]);
-                add_base_design(dir->d_name, new_dir, config.firmware_locations[k], wd);
-				base = findBaseDesign(dir->d_name);
-				sprintf(fname,"%s/%s",base->base_path,"shell.json");
-				ret = initBaseDesign(base, fname);
-				if (ret >= 0)
-					parse_packages(base,base->name,base->base_path);
-            }
-        }
-    }
-    closedir(d);
-	}
+    firmware_dir_walk();
 	/* Done parsing on target accelerators, now load a default one if present in config file */
 	sem_post(&mutex);
 
@@ -799,7 +834,7 @@ void *threadFunc()
             if(event->mask & IN_CREATE || event->mask & IN_CLOSE_WRITE){
                 if (event->mask & IN_ISDIR) {
                     struct watch *w = get_watch(event->wd);
-                    if (w == NULL)
+                    if (w == NULL || strstr(event->name, ".dpkg-new"))
                         break;
                     sprintf(new_dir,"%s/%s",w->path, event->name);
                     acapd_debug("%s: add inotify watch on %s w->name %s parent %s \n",__func__,new_dir,w->name,w->parent_path);
@@ -812,10 +847,15 @@ void *threadFunc()
                 }
 				else if(!strcmp(event->name,"shell.json")) {
 					struct watch *w = get_watch(event->wd);
+					if (w == NULL)
+						break;
 					base = findBaseDesign_path(w->path);
+					if (base == NULL)
+						break;
 					sprintf(fname,"%s/%s",w->path,"shell.json");
-					initBaseDesign(base, fname);
-					parse_packages(base,w->name, w->path);
+					ret = initBaseDesign(base, fname);
+					if (ret == 0)
+						parse_packages(base,w->name, w->path);
 				}
 				else if(!strcmp(event->name,"accel.json")) {
 					struct watch *w = get_watch(event->wd);
@@ -858,7 +898,7 @@ void *threadFunc()
 				 */
 				if(event->mask & IN_ISDIR || !strcmp(event->name,"shell.json")){
 					struct watch *w = get_watch(event->wd);
-					if (w == NULL)
+                    if (w == NULL || strstr(event->name, ".dpkg-new"))
 						break;
 					if (event->mask & IN_ISDIR){
 						sprintf(new_dir,"%s/%s",w->path, event->name);
@@ -867,9 +907,12 @@ void *threadFunc()
 						sprintf(new_dir,"%s",w->path);
 					}
 					base = findBaseDesign_path(new_dir);
+					if (base == NULL)
+						break;
 					sprintf(fname,"%s/%s",new_dir,"shell.json");
-					initBaseDesign(base, fname);
-					parse_packages(base,w->name, new_dir);
+					ret = initBaseDesign(base, fname);
+					if (ret == 0)
+						parse_packages(base,w->name, new_dir);
 				}
             }
             p += sizeof(struct inotify_event) + event->len;
