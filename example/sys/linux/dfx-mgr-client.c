@@ -83,6 +83,22 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 		printf("%s",recv_message.data);
+
+	} else if(!strcmp(argv[1],"-listUIO")) {
+		/* If no slot number provided default to 0*/
+		char *slot = (argc < 3) ? "0" : argv[2];
+		send_message.size = 1 + sprintf(send_message.data, "%s", slot);
+		send_message.id = LIST_ACCEL_UIO;
+		if (write(gs.sock_fd, &send_message, HEADERSIZE + send_message.size) == -1){
+			perror("write");
+			return -1;
+		}
+		ret = read(gs.sock_fd, &recv_message, sizeof (struct message));
+		if (ret <= 0){
+			perror("No message or read error");
+			return -1;
+		}
+		printf("%s", recv_message.data);
 	} else if(!strcmp(argv[1],"-allocBuffer")) {
 	} else if(!strcmp(argv[1],"-freeBuffer")) {
 	} else if(!strcmp(argv[1],"-getFDs")) {
@@ -95,6 +111,7 @@ int main(int argc, char *argv[])
 		printf("-listPackage\t\t List locally downloaded accelerator package\n");
 		printf("-load <accel_name>\t\t Load the provided accelerator packaged\n");
 		printf("-remove <slot#>\t\t Unload package previously programmed\n");
+		printf("-listUIO <slot#>\t\t list accelerator UIOs\n");
 		printf("-allocBuffer <size> \t\t Allocate buffer of size and return its DMA fd and pa\n");
 		printf("-freeBuffer <pa> \t\t free buffer with physical address pa in decimal\n");
 		printf("-getFDs <slot#> \t\t Send ip device FD's over socket\n");

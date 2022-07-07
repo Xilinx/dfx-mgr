@@ -43,19 +43,91 @@ void intHandler(int dummy)
 	exit(EXIT_SUCCESS);
 }
 
-void error (char *msg)
+void error(char *msg)
 {
 	perror(msg);
 	exit(EXIT_FAILURE);
 }
 
-int main (int argc, char **argv)
+static void
+process_dfx_req(int fd, fd_set *fdset)
 {
-	struct message recv_message, send_message;
+	struct message recv_msg, send_msg;
+	ssize_t numbytes;
+	int ret, slot;
+
+	numbytes = read(fd, &recv_msg, sizeof(struct message));
+	if (numbytes == -1)
+		error("read");
+	else if (numbytes == 0) {
+		// connection closed by client
+		DFX_DBG("Socket %d closed by client", fd);
+		if (close(fd) == -1)
+			error("close");
+		FD_CLR(fd, fdset);
+		return;
+	}
+
+	// data from client
+	memset(&send_msg, 0, sizeof(struct message));
+	switch (recv_msg.id) {
+	case LOAD_ACCEL:
+		DFX_PR("daemon loading accel %s", recv_msg.data);
+		slot = load_accelerator(recv_msg.data);
+		send_msg.size = 1 + sprintf(send_msg.data, "%d", slot);
+
+		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
+			DFX_ERR("LOAD_ACCEL write(%d)", fd);
+		break;
+
+	case REMOVE_ACCEL:
+		slot = atoi(recv_msg.data);
+		DFX_PR("daemon REMOVE_ACCEL in slot %d\n", slot);
+		ret = remove_accelerator(slot);
+		send_msg.size = 1 + sprintf(send_msg.data, "%d", ret);
+
+		if (write(fd, &send_msg, HEADERSIZE+ send_msg.size) < 0)
+			DFX_ERR("REMOVE_ACCEL write(%d)", fd);
+		break;
+
+	case LIST_PACKAGE:
+		// change to: listAccelerators(buf, size))
+		char *msg = listAccelerators();
+		send_msg.size = strnlen(msg, sizeof(send_msg.data));
+		memcpy(send_msg.data, msg, send_msg.size);
+		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
+			DFX_ERR("LIST_PACKAGE write(%d)", fd);
+		free(msg);
+		break;
+
+	case LIST_ACCEL_UIO:
+		slot = atoi(recv_msg.data);
+		list_accel_uio(slot, send_msg.data, sizeof(send_msg.data));
+		send_msg.size = strnlen(send_msg.data, sizeof(send_msg.data));
+		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
+			DFX_ERR("LIST_ACCEL_UIO write(%d)", fd);
+		break;
+
+	case QUIT:
+		if (close(fd) == -1)
+			error("close");
+		FD_CLR(fd, fdset);
+		break;
+
+	default:
+		DFX_PR("Unexpected message from client");
+	}
+}
+
+int main(int argc, char **argv)
+{
+	const struct sockaddr_un su = {
+		.sun_family = AF_UNIX,
+		.sun_path   = SERVER_SOCKET,
+	};
 	struct stat statbuf;
-	struct sockaddr_un socket_address;
-	int slot, ret;
-	char *msg;
+	fd_set fds, readfds;
+	int fd_new, fdmax;
 
 	signal(SIGINT, intHandler);
 	_unused(argc);
@@ -65,108 +137,53 @@ int main (int argc, char **argv)
 
 	if (stat(SERVER_SOCKET, &statbuf) == 0) {
 		if (unlink(SERVER_SOCKET) == -1)
-			error ("unlink");
+			error("unlink");
 	}
 
-	if ((socket_d = socket (AF_UNIX, SOCK_SEQPACKET, 0)) == -1)
-		error ("socket");
+	if ((socket_d = socket(AF_UNIX, SOCK_SEQPACKET, 0)) == -1)
+		error("socket");
 
-	memset (&socket_address, 0, sizeof (struct sockaddr_un));
-	socket_address.sun_family = AF_UNIX;
-	strncpy (socket_address.sun_path, SERVER_SOCKET, sizeof(socket_address.sun_path) - 1);
-
-	if (bind (socket_d, (const struct sockaddr *) &socket_address, sizeof (struct sockaddr_un)) == -1)
-		error ("bind");
+	if (bind(socket_d, (const struct sockaddr *)&su, sizeof(su)) == -1)
+		error("bind");
 
 	// Mark socket for accepting incoming connections using accept
-	if (listen (socket_d, BACKLOG) == -1)
-		error ("listen");
+	if (listen(socket_d, BACKLOG) == -1)
+		error("listen");
 
-	fd_set fds, readfds;
-	FD_ZERO (&fds);
-	FD_SET (socket_d, &fds);
-	int fdmax = socket_d;
+	FD_ZERO(&fds);
+	FD_SET(socket_d, &fds);
+	fdmax = socket_d;
 
-	acapd_print("dfx-mgr daemon started.\n");
+	DFX_PR("dfx-mgr daemon started");
 	while (1) {
 		readfds = fds;
 		// monitor readfds for readiness for reading
-		if (select (fdmax + 1, &readfds, NULL, NULL, NULL) == -1)
-			error ("select");
+		if (select(fdmax + 1, &readfds, NULL, NULL, NULL) == -1)
+			error("select");
         
 		// Some sockets are ready. Examine readfds
 		for (int fd = 0; fd < (fdmax + 1); fd++) {
-			if (FD_ISSET (fd, &readfds)) {  // fd is ready for reading 
-				if (fd == socket_d) {  // request for new connection
-					int fd_new;
-					if ((fd_new = accept (socket_d, NULL, NULL)) == -1)
-						error ("accept");
+			if (FD_ISSET(fd, &readfds)) {
+				// fd is ready for reading
+				if (fd == socket_d) {
+					// request for new connection
+					fd_new = accept(socket_d, NULL, NULL);
+					if (fd_new  == -1)
+						error("accept");
 
-					FD_SET (fd_new, &fds); 
+					FD_SET(fd_new, &fds);
 					if (fd_new > fdmax) 
 						fdmax = fd_new;
 				} else {
-					// data from an existing connection, receive it
-					memset (&recv_message, '\0', sizeof (struct message));
-					ssize_t numbytes = read (fd, &recv_message, sizeof (struct message));
-					if (numbytes == -1)
-						error ("read");
-					else if (numbytes == 0) {
-						// connection closed by client
-						fprintf (stderr, "Socket %d closed by client\n", fd);
-						if (close (fd) == -1)
-						error ("close");
-						FD_CLR (fd, &fds);
-					} else {
-						// data from client
-						memset (&send_message, '\0', sizeof (struct message));
-						switch (recv_message.id) {
-
-							case LOAD_ACCEL:
-								acapd_print("daemon loading accel %s \n",recv_message.data);
-								slot = load_accelerator(recv_message.data);
-								send_message.size = 1 +
-										sprintf(send_message.data, "%d", slot);
-								if (write(fd, &send_message, HEADERSIZE + send_message.size) < 0)
-									perror("LOAD_ACCEL write");
-								break;
-
-							case REMOVE_ACCEL:
-								slot = atoi(recv_message.data);
-								acapd_print("daemon REMOVE_ACCEL in slot %d\n", slot);
-								ret = remove_accelerator(slot);
-								send_message.size = 1 +
-										sprintf(send_message.data, "%d", ret);
-								if (write(fd, &send_message, HEADERSIZE+ send_message.size) < 0)
-									perror("REMOVE_ACCEL write");
-								break;
-
-							case LIST_PACKAGE:
-								// change to: listAccelerators(buf, size))
-								msg = listAccelerators();
-								send_message.size = strnlen(msg,
-									sizeof(send_message.data));
-								memcpy(send_message.data, msg, send_message.size);
-								if (write(fd, &send_message, HEADERSIZE + send_message.size) < 0)
-									perror("LIST_PACKAGE write");
-								free(msg);
-								break;
-							case QUIT:
-								if (close (fd) == -1)
-									error ("close");
-								FD_CLR (fd, &fds);
-								break;
-
-							default: 
-								acapd_print("Unexpected message from client\n"); 
-						}
-					}
+					// data from an existing connection
+					process_dfx_req(fd, &fds);
 				}
-			} 
-		} 
+			}
+		}
 	} 
 	exit(EXIT_SUCCESS);
 }
+
 /*
 #define SERVER_PATH     "/tmp/dfx-mgrd_socket"
 

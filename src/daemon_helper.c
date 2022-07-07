@@ -358,7 +358,9 @@ int getFD(int slot, char *name)
 	for (int i = 0; i < accel->num_ip_devs; i++)
 		if (strstr(accel->ip_dev[i].dev_name, name))
 			return accel->ip_dev[i].id;
-	return -1;
+
+	// Check if the name matches one of the shell devices
+	return dfx_shell_fd_by_name(name);
 }
 
 int dfx_getFDs(int slot, int *fd)
@@ -388,6 +390,64 @@ void getClockFD()
 {
     //get_shell_clock_fd(socket_d);
 }
+
+/*
+ * list_accel_uio  list uio device name and its path
+ *
+ * Note: dev_name + path < 80 char, see: acapd_device_t
+ * and device_name limits in json. Reduce buf sise by
+ * one line (80 char) to prevent buffer overrun.
+ */
+void
+list_accel_uio(int slot, char *buf, size_t sz)
+{
+	struct basePLDesign *base = platform.active_base;
+	acapd_accel_t *accel;
+	char *end = buf + sz - 80;
+	char *p = buf;
+	int i;
+
+	if(base == NULL || base->slots == NULL)
+		p += sprintf(p, "No active design\n");
+	else if ( slot >= base->num_pl_slots || !base->slots[slot])
+		p += sprintf(p, "slot %d is not used or invalid\n", slot);
+	else if ( (accel = base->slots[slot]->accel) == NULL)
+		p += sprintf(p, "No Accel in slot %d", slot);
+	if (p != buf)
+		return;
+
+	for (i = 0; i < accel->num_ip_devs && p < end; i++) {
+		char *dname = accel->ip_dev[i].dev_name;
+		if (dname)
+			p += sprintf(p, "%-30s %s\n", dname,
+					accel->ip_dev[i].path);
+	}
+	dfx_shell_uio_list(p, end - p);
+}
+
+char *
+get_accel_uio_by_name(int slot, const char *name)
+{
+	struct basePLDesign *base = platform.active_base;
+	acapd_accel_t *accel;
+
+	// NULL if no active design, slot is not used or invalid
+	if(!base || !base->slots || slot >= base->num_pl_slots ||
+	   !base->slots[slot])
+		return NULL;
+
+	accel = base->slots[slot]->accel;
+	if (!accel)
+		return NULL;
+
+	for (int i = 0; i < accel->num_ip_devs; i++)
+		if (strstr(accel->ip_dev[i].dev_name, name))
+			return accel->ip_dev[i].path;
+
+	// Check if the name matches one of the shell devices
+	return dfx_shell_uio_by_name(name);
+}
+
 char *listAccelerators()
 {
     int i,j;
@@ -447,12 +507,6 @@ char *listAccelerators()
             }
         }
     }
-	char *dnames[] = {"SIHA_Manager", "AccelConfig", "rm_comm_box"};
-	j =  sizeof(dnames)/ sizeof(dnames[0]);
-	for (i=0; i < j; i++){
-		char *s = dnames[i];
-		DFX_DBG("getFD(0, %s) = %d", s, getFD(0, s));
-	}
 	return strdup(res);
 }
 
