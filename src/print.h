@@ -15,6 +15,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 #define INFO(...) \
     fprintf(stderr, "Info: %s:\n%d:%s:\n ", __FILE__, __LINE__, __func__); \
     fprintf(stderr, __VA_ARGS__);
@@ -32,6 +33,29 @@ void acapd_debug(const char *format, ...);
 #endif /* DEBUG */
 void acapd_print(const char *format, ...);
 void acapd_perror(const char *format, ...);
+
+/**
+ * Convenience macros DFX_ERR, DFX_PR, DFX_DBG to add source
+ * function name and the line number before the message.
+ * Inspired by pr_err, etc. in the kernel's printk.h.
+ */
+#ifdef errno
+#define DFX_ERR(fmt, args ...) do { fprintf(stderr, \
+		"DFX-MGRD> ERROR:%s():%u " fmt ": %s\n", \
+		__func__, __LINE__, ##args, errno ? strerror(errno) : ""); \
+	} while (0)
+#else /* errno */
+#define DFX_ERR(fmt, args ...) fprintf(stderr, \
+		"DFX-MGRD> ERROR:%s():%u " fmt "\n", \
+		__func__, __LINE__, ##args)
+#endif /* errno */
+#define DFX_PR(fmt, args ...) printf("DFX-MGRD> %s():%u " fmt "\n", \
+		__func__, __LINE__, ##args)
+#ifdef DEBUG
+#define DFX_DBG DFX_PR
+#else
+#define DFX_DBG(fmt, args ...)
+#endif /* DEBUG */
 
 #ifdef __cplusplus
 }
