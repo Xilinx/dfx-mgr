@@ -27,7 +27,7 @@ extern "C" {
 #define LOAD_ACCEL              6
 #define REMOVE_ACCEL            7
 #define LIST_PACKAGE            8
-
+#define LIST_ACCEL_UIO          9
 
 #define GRAPH_INIT_DONE           11
 #define GRAPH_FINALISE_DONE       12

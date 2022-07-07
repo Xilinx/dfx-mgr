@@ -39,6 +39,9 @@ int acapd_shell_get();
 int acapd_shell_put();
 int acapd_shell_clock_fd();
 int acapd_shell_fd();
+int dfx_shell_fd_by_name(const char *);
+void dfx_shell_uio_list(char *, size_t);
+char *dfx_shell_uio_by_name(const char *);
 int acapd_shell_release_isolation(acapd_accel_t *accel);
 int acapd_shell_assert_isolation(acapd_accel_t *accel);
 
