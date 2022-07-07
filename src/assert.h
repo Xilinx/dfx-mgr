@@ -11,6 +11,7 @@
 
 #ifndef _ACAPD_ASSERT_H
 #define _ACAPD_ASSERT_H
+#include <assert.h>
 
 #define _unused(x) ((void)(x))
 
