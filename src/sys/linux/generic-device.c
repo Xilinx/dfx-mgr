@@ -27,27 +27,25 @@ int acapd_generic_device_bind(acapd_device_t *dev, const char *drv)
 
 	acapd_assert(dev != NULL);
 	acapd_assert(drv != NULL);
+	DFX_DBG("%s, %s", dev->dev_name, drv);
 	if (dev->bus_name == NULL) {
 		dev->bus_name = "platform";
 	}
 	sprintf(tmpstr, "/sys/bus/%s/drivers", dev->bus_name);
 	d = opendir(tmpstr);
 	if (d == NULL) {
-		acapd_perror("%s, failed to bind %s, no %s.\n",
-			     __func__, dev->dev_name, tmpstr);
-		return -EINVAL;
+		ret = -errno;
+		DFX_ERR("opendir(%s)", tmpstr);
+		return ret;
 	}
 	while((dir = readdir(d)) != NULL) {
-		if (dir->d_type == DT_DIR) {
-			if (strlen(dir->d_name) > 64) {
-				continue;
-			}
+		if (dir->d_type == DT_DIR && strlen(dir->d_name) <= 64) {
 			sprintf(tmpstr, "/sys/bus/%s/drivers/%s/%s",
 				dev->bus_name, dir->d_name, dev->dev_name);
 			if (access(tmpstr, F_OK) == 0) {
 				if (strcmp(dir->d_name, drv) == 0) {
-					acapd_debug("%s: dev %s already bound.\n",
-						    __func__, dev->dev_name);
+					DFX_DBG("dev %s already bound",
+						dev->dev_name);
 					ret = 0;
 					goto out;
 				}
@@ -56,15 +54,14 @@ int acapd_generic_device_bind(acapd_device_t *dev, const char *drv)
 					dev->bus_name, dir->d_name);
 				fd = open(tmpstr, O_WRONLY);
 				if (fd < 0) {
-					acapd_perror("%s: failed to open %s.\n",
-						     __func__, tmpstr);
-					ret = -EINVAL;
+					ret = -errno;
+					DFX_ERR("open(%s)", tmpstr);
 					goto out;
 				}
 				ret = write(fd, dev->dev_name, strlen(dev->dev_name) + 1);
 				if (ret < 0) {
-					acapd_perror("%s: failed to unbind %s from %s.\n",
-						     __func__, dev->dev_name, dir->d_name);
+					DFX_ERR("write %s to %s",
+						dev->dev_name, tmpstr);
 					close(fd);
 					goto out;
 				}
@@ -77,15 +74,13 @@ int acapd_generic_device_bind(acapd_device_t *dev, const char *drv)
 		dev->bus_name, dev->dev_name);
 	fd = open(tmpstr, O_WRONLY);
 	if (fd < 0) {
-		acapd_perror("%s: failed to open %s.\n",
-			     __func__, tmpstr);
-		ret = -EINVAL;
+		ret = -errno;
+		DFX_ERR("open(%s)", tmpstr);
 		goto out;
 	}
 	ret = write(fd, drv, strlen(drv) + 1);
 	if (ret < 0) {
-		acapd_perror("%s: failed to override %s to %s.\n",
-			     __func__,drv, dev->dev_name);
+		DFX_ERR("write %s to %s", drv, tmpstr);
 		close(fd);
 		goto out;
 	}
@@ -93,15 +88,13 @@ int acapd_generic_device_bind(acapd_device_t *dev, const char *drv)
 		dev->bus_name, drv);
 	fd = open(tmpstr, O_WRONLY);
 	if (fd < 0) {
-		acapd_perror("%s: failed to open %s.\n",
-			     __func__, tmpstr);
-		ret = -EINVAL;
+		ret = -errno;
+		DFX_ERR("open(%s)", tmpstr);
 		goto out;
 	}
 	ret = write(fd, dev->dev_name, strlen(dev->dev_name) + 1);
 	if (ret < 0) {
-		acapd_perror("%s: failed to bind %s to %s.\n",
-			     __func__, dev->dev_name, drv);
+		DFX_ERR("write %s to %s", dev->dev_name, tmpstr);
 		close(fd);
 		goto out;
 	}
@@ -124,20 +117,18 @@ static int acapd_generic_device_get_uio_path(acapd_device_t *dev)
 
 	sprintf(tmpstr, "/sys/bus/%s/devices/%s/uio",
 		dev->bus_name, dev->dev_name);
+	DFX_DBG("%s", tmpstr);
 	d = opendir(tmpstr);
 	if (d == NULL) {
-		acapd_perror("%s: cannot open %s.\n", __func__, tmpstr);
-		return -EINVAL;
+		ret = -errno;
+		DFX_ERR("opendir(%s)", tmpstr);
+		return ret;
 	}
 	ret = -EINVAL;
 	while ((dir = readdir(d)) != NULL) {
-		if (strlen(dir->d_name) > 8) {
-			continue;
-		};
-		if(dir-> d_type == DT_DIR && strstr(dir->d_name, "uio") != NULL) {
+		if(dir->d_type == DT_DIR && !strncmp(dir->d_name, "uio", 3)) {
 			int fd;
 			char size_str[32], tmpname[8];
-			size_t size;
 
 			memset(dev->path, 0, sizeof(dev->path));
 			memset(tmpname, 0, sizeof(tmpname));
@@ -149,23 +140,19 @@ static int acapd_generic_device_get_uio_path(acapd_device_t *dev)
 				dev->bus_name, dev->dev_name, dir->d_name);
 			fd = open(tmpstr, O_RDONLY);
 			if (fd < 0) {
-				acapd_perror("%s: failed to open %s.\n",
-					     __func__, tmpstr);
-				close(fd);
-				ret = -EINVAL;
+				ret = -errno;
+				DFX_ERR("open(%s)", tmpstr);
 				goto out;
 			}
 			memset(size_str, 0, sizeof(size_str));
-			ret = read(fd, size_str, (sizeof(size) << 1) + 3);
+			ret = read(fd, size_str, sizeof(size_str));
 			if (ret < 0) {
-				acapd_perror("%s: failed to read %s.\n",
-					     __func__, tmpstr);
+				DFX_ERR("read(%s)", tmpstr);
 				close(fd);
 				goto out;
 			}
-			acapd_debug("%s: size %s.\n", __func__, size_str);
-			size = (size_t)strtoll(size_str, NULL, 16);
-			dev->reg_size = size;
+			dev->reg_size = strtoull(size_str, NULL, 16);
+			DFX_DBG("%s = %#lx", tmpstr, dev->reg_size);
 
 			close(fd);
 			ret = 0;
@@ -182,6 +169,7 @@ static int acapd_generic_device_open(acapd_device_t *dev)
 	int ret;
 
 	acapd_assert(dev != NULL);
+	DFX_DBG("%p %s", dev, dev->dev_name);
 	if (dev->va != NULL && dev->priv != NULL) {
 		/* Device is already open */
 		return 0;
@@ -194,18 +182,16 @@ static int acapd_generic_device_open(acapd_device_t *dev)
 		if (dev->dev_name != NULL) {
 			ret = acapd_generic_device_bind(dev, "uio_pdrv_genirq");
 			if (ret < 0) {
-				acapd_perror("%s: failed to bind uio to %s.\n",
-					     __func__, dev->dev_name);
+				DFX_ERR("device_bind %s", dev->dev_name);
 				return -EINVAL;
 			}
 			ret = acapd_generic_device_get_uio_path(dev);
 			if (ret < 0) {
-				acapd_perror("%s: failed to get uio path for %s.\n",
-					     __func__, dev->dev_name);
+				DFX_ERR("get_uio_path %s", dev->dev_name);
 				return -EINVAL;
 			}
 		} else {
-			acapd_perror("%s: no dev name or path is specified.\n");
+			DFX_ERR("no dev name or path is specified");
 			return -EINVAL;
 		}
 	}
@@ -215,30 +201,27 @@ static int acapd_generic_device_open(acapd_device_t *dev)
 
 		fd = open(dev->path, O_RDWR);
 		if (fd < 0) {
-			acapd_perror("%s: failed to open %s:%s:%s.\n",
-				     __func__, dev->dev_name, dev->path,
-				     strerror(errno));
+			DFX_ERR("open(%s) for %s", dev->path, dev->dev_name);
 			return -EINVAL;
 		}
 		if (dev->reg_size == 0) {
-			acapd_perror("%s: failed to get %s,%s size, as reg_siz is 0.\n",
-				     __func__, dev->dev_name, dev->path);
+			DFX_ERR("failed to get %s,%s size; reg_siz is 0",
+				dev->dev_name, dev->path);
 			close(fd);
 			return -EINVAL;
 		}
 		dev->va = mmap(NULL, dev->reg_size, PROT_READ | PROT_WRITE,
 			       MAP_SHARED, fd, 0);
 		if (dev->va == MAP_FAILED) {
-			acapd_perror("%s: failed to mmap %s, 0x%lx.\n",
-				     __func__, dev->path, dev->reg_size);
+			DFX_ERR("mmap %s, 0x%lx", dev->path, dev->reg_size);
 			dev->va = NULL;
 			close(fd);
 			return -EINVAL;
 		}
 		dev->id = fd;
+		DFX_DBG("fd, mmap(%s) = %d, %p ", dev->dev_name, fd, dev->va);
 	} else {
-		acapd_perror("%s: failed to access path %s.\n",
-			     __func__, dev->path);
+		DFX_ERR("failed to access path %s", dev->path);
 		return -EINVAL;
 	}
 	return 0;
@@ -246,6 +229,8 @@ static int acapd_generic_device_open(acapd_device_t *dev)
 
 static int acapd_generic_device_close(acapd_device_t *dev)
 {
+	acapd_assert(dev != NULL);
+	DFX_DBG("%s", dev->dev_name);
 	if (dev->va == NULL) {
 		return 0;
 	}
@@ -254,7 +239,6 @@ static int acapd_generic_device_close(acapd_device_t *dev)
 	return 0;
 }
 
-
 acapd_device_ops_t acapd_linux_generic_dev_ops = {
 	.open = acapd_generic_device_open,
 	.close = acapd_generic_device_close,
@@ -262,4 +246,3 @@ acapd_device_ops_t acapd_linux_generic_dev_ops = {
 	.detach = NULL,
 	.va_to_da = NULL,
 };
-

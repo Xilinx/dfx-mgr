@@ -18,11 +18,12 @@ int acapd_shell_config(const char *config)
 {
 	return sys_shell_config(&shell, config);
 }
-int acapd_shell_fd(){
-	printf("%s enter fd %d\n",__func__,shell.dev.id);
+int acapd_shell_fd()
+{
 	return shell.dev.id;
 }
-int acapd_shell_clock_fd(){
+int acapd_shell_clock_fd()
+{
 	return shell.clock_dev.id;
 }
 
@@ -37,29 +38,27 @@ int acapd_shell_release_isolation(acapd_accel_t *accel)
 	(void)accel;
 	dev = &shell.dev;
 	regs = shell.slot_regs[accel->rm_slot];
-	acapd_debug("%s: %s.\n", __func__, dev->dev_name);
+	DFX_DBG("%s", dev->dev_name);
 	reg_va = dev->va;
 	if (reg_va == NULL) {
 		ret = acapd_device_open(dev);
 		if (ret < 0) {
-			acapd_perror("%s: failed to open shell dev %s.\n",
-				     __func__, dev->dev_name);
+			DFX_ERR("acapd_device_open %s", dev->dev_name);
 			return ACAPD_ACCEL_FAILURE;
 		}
 		reg_va = dev->va;
 		if (reg_va == NULL) {
-			acapd_perror("%s: shell dev %s va is NULL.\n",
-				     __func__, dev->dev_name);
+			DFX_ERR("shell dev %s va is NULL", dev->dev_name);
 			return ACAPD_ACCEL_FAILURE;
 		}
 		ret = acapd_device_open(&shell.clock_dev);
 		if (ret < 0) {
-			acapd_perror("%s: failed to open shell clock_dev %s.\n",
-				     __func__, shell.clock_dev.dev_name);
+			DFX_ERR("acapd_device_open clock_dev %s",
+				     shell.clock_dev.dev_name);
 			return ACAPD_ACCEL_FAILURE;
 		}
 	}
-	acapd_debug("%s(%p): release isolation\n", __func__, reg_va);
+	DFX_DBG("release isolation: (%p)", reg_va);
 	for (i=0; i<4; i++){
 		*((volatile uint32_t *)((char *)reg_va + regs.offset[i])) = regs.values[i];
 	}
@@ -77,7 +76,7 @@ int acapd_shell_release_isolation(acapd_accel_t *accel)
 	//		break;
 	//	}
 	//}
-	acapd_debug("%s(%p): release isolation done\n", __func__, reg_va);
+	DFX_DBG("release isolation done: (%p)", reg_va);
 	return 0;
 }
 
@@ -98,18 +97,18 @@ int acapd_shell_assert_isolation(acapd_accel_t *accel)
 
 		ret = acapd_device_open(dev);
 		if (ret < 0) {
-			acapd_perror("%s: failed to open shell dev %s.\n",
-				     __func__, dev->dev_name);
+			DFX_ERR("failed to open shell dev %s.\n",
+				     dev->dev_name);
 			return ACAPD_ACCEL_FAILURE;
 		}
 		reg_va = dev->va;
 		if (reg_va == NULL) {
-			acapd_perror("%s: shell dev %s va is NULL.\n",
-				     __func__, dev->dev_name);
+			DFX_ERR("shell dev %s va is NULL.\n",
+				     dev->dev_name);
 			return ACAPD_ACCEL_FAILURE;
 		}
 	}
-	acapd_debug("%s(%p): assert isolation\n", __func__, reg_va);
+	DFX_DBG("assert isolation: (%p)", reg_va);
 	for (i=0; i<4; i++){
 		*((volatile uint32_t *)((char *)reg_va + regs.offset[i])) = 0;
 	}
