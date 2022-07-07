@@ -43,45 +43,47 @@ struct watch {
     char parent_path[WATCH_PATH_LEN];
 };
 
-struct basePLDesign *findBaseDesign(const char *name){
+struct basePLDesign *findBaseDesign(const char *name)
+{
     int i,j;
 
     for (i = 0; i < MAX_WATCH; i++) {
         if (base_designs[i].base_path[0] != '\0') {
             if(!strcmp(base_designs[i].name, name)) {
-                    acapd_debug("%s: Found base design %s\n",__func__,base_designs[i].name);
+                    DFX_DBG("Found base design %s", base_designs[i].name);
                     return &base_designs[i];
 			}
             for (j=0;j <10; j++){
                 if(!strcmp(base_designs[i].accel_list[j].name, name)) {
-                    acapd_debug("%s: Found accel %s in base  %s\n",__func__,name,base_designs[i].name);
+                    DFX_DBG("accel %s in base %s", name, base_designs[i].name);
                     return &base_designs[i];
                 }
             }
         }
     }
-    acapd_perror("No accel found for %s\n",name);
+    DFX_ERR("No accel found for %s", name);
     return NULL;
 }
 
-struct basePLDesign *findBaseDesign_path(const char *path){
+struct basePLDesign *findBaseDesign_path(const char *path)
+{
     int i,j;
 
     for (i = 0; i < MAX_WATCH; i++) {
         if (base_designs[i].base_path[0] != '\0') {
             if(!strcmp(base_designs[i].base_path, path)) {
-                    acapd_debug("%s: Found base design %s\n",__func__,base_designs[i].base_path);
+                    DFX_DBG("Found base design %s", base_designs[i].base_path);
                     return &base_designs[i];
 			}
             for (j=0;j <10; j++){
                 if(!strcmp(base_designs[i].accel_list[j].path, path)) {
-                    acapd_debug("%s: Found accel %s in base  %s\n",__func__,path,base_designs[i].base_path);
+                    DFX_DBG("accel %s in base %s", path, base_designs[i].base_path);
                     return &base_designs[i];
                 }
             }
         }
     }
-    acapd_perror("No base design or accel found for %s\n",path);
+    DFX_ERR("No base design or accel found for %s", path);
     return NULL;
 }
 
@@ -96,13 +98,13 @@ void getRMInfo()
     struct basePLDesign *base = platform.active_base;
 
     if(base == NULL || base->slots == NULL) {
-        acapd_perror("No design currently loaded");
+        DFX_ERR("No design currently loaded");
         return;
     }
 
     fptr = fopen("/home/root/rm_info.txt","w");
     if (fptr == NULL) {
-        acapd_perror("Couldn't create /home/root/rm_info.txt");
+        DFX_ERR("Couldn't create /home/root/rm_info.txt");
         return;
     }
 
@@ -112,6 +114,9 @@ void getRMInfo()
     fclose(fptr);
 }
 
+/*
+ * Update Vitis AI Runtime (VART) env
+ */
 void update_env(char *path)
 {
     DIR *FD;
@@ -120,6 +125,7 @@ void update_env(char *path)
     char *str;
     char cmd[128];
 
+    DFX_DBG("%s", path);
     FD = opendir(path);
     if (FD) {
         while ((dir = readdir(FD)) != NULL) {
@@ -132,9 +138,10 @@ void update_env(char *path)
                     sprintf(str, "%s/%s",path,dir->d_name);
                     sprintf(cmd,"echo \"firmware: %s\" > /etc/vart.conf",str);
                     free(str);
+		    DFX_DBG("system %s", cmd);
                     ret = system(cmd);
                     if (ret)
-                        perror(cmd);
+			    DFX_ERR("%s", cmd);
                 }
             }
         }
@@ -156,7 +163,7 @@ int load_accelerator(const char *accel_name)
 	slot->accel = NULL;
 
     if(base == NULL) {
-        acapd_perror("No package found for %s\n",accel_name);
+        DFX_ERR("No package found for %s", accel_name);
         goto out;
     }
     sprintf(shell_path,"%s/shell.json",base->base_path);
@@ -168,7 +175,7 @@ int load_accelerator(const char *accel_name)
                                  sizeof(slot_info_t *));
 
         if(platform.active_base != NULL && platform.active_base->active > 0) {
-            acapd_perror("Remove previously loaded accelerator, no empty slot\n");
+            DFX_ERR("Remove previously loaded accelerator, no empty slot");
             goto out;
         }
         sprintf(pkg->name,"%s",accel_name);
@@ -178,10 +185,10 @@ int load_accelerator(const char *accel_name)
         strncpy(pl_accel->sys_info.tmp_dir, pkg->path,
                 sizeof(pl_accel->sys_info.tmp_dir) - 1);
         strcpy(pl_accel->type,"XRT_FLAT");
-        acapd_print("%s:load flat shell from %s", __func__, pkg->path);
+        DFX_PR("load flat shell from %s", pkg->path);
         ret = load_accel(pl_accel, shell_path, 0);
         if (ret < 0){
-            acapd_perror("%s: Failed to load accel %s\n",__func__,accel_name);
+            DFX_ERR("load_accel %s", accel_name);
             base->active = 0;
             goto out;
         }
@@ -201,21 +208,21 @@ int load_accelerator(const char *accel_name)
     for (i = 0; i < 10; i++){
         if(!strcmp(base->accel_list[i].name, accel_name)) {
             accel_info = &base->accel_list[i];
-            acapd_debug("Found accel %s base %s parent %s\n",accel_info->path,base->base_path,accel_info->parent_path);
+            DFX_DBG("Found accel %s base %s parent %s", accel_info->path, base->base_path, accel_info->parent_path);
         }
     }
     /* For SIHA slotted architecture */
     if(!strcmp(base->type,"PL_DFX")) {
         if (platform.active_base != NULL && !platform.active_base->active && 
 				strcmp(platform.active_base->base_path, accel_info->parent_path)) {
-			acapd_print("All slots for base are empty, loading new base design\n");
+			DFX_PR("All slots for base are empty, loading new base design");
 			remove_base(platform.active_base->fpga_cfg_id);
 			free(platform.active_base->slots);
 			platform.active_base = NULL;
 		}
 		else if(platform.active_base != NULL && platform.active_base->active > 0 && 
 				strcmp(platform.active_base->base_path, accel_info->parent_path)) {
-            acapd_perror("Active base design doesn't match this accel base\n");
+            DFX_ERR("Active base design doesn't match this accel base");
             goto out;
         }
         if (platform.active_base == NULL) {
@@ -227,14 +234,14 @@ int load_accelerator(const char *accel_name)
 				strncpy(pl_accel->sys_info.tmp_dir, pkg->path,
 						sizeof(pl_accel->sys_info.tmp_dir) - 1);
 				strcpy(pl_accel->type,"PL_DFX");
-				acapd_print("%s:load from %s\n", __func__, pkg->path);
+				DFX_PR("load from %s", pkg->path);
 				ret = load_accel(pl_accel, shell_path, 0);
 				if (ret < 0){
-					acapd_perror("%s: Failed to load accel %s\n",__func__,accel_name);
+					DFX_ERR("load_accel %s", accel_name);
 					base->active = 0;
 					goto out;
 				}
-				acapd_print("Loaded %s successfully.\n",base->name);
+				DFX_PR("Loaded %s successfully", base->name);
 				base->fpga_cfg_id = pl_accel->sys_info.fpga_cfg_id;
 			}
 			if (base->slots == NULL)
@@ -243,7 +250,7 @@ int load_accelerator(const char *accel_name)
 			platform.active_base = base;
 	}
         for (i = 0; i < (base->num_pl_slots + base->num_aie_slots); i++) {
-            acapd_debug("Finding empty slot for %s i %d \n",accel_name,i);
+            DFX_DBG("Finding empty slot for %s i %d", accel_name, i);
             if (base->slots[i] == NULL){
                 sprintf(path,"%s/%s_slot%d", accel_info->path, accel_info->name,i);
                 if (access(path,F_OK) != 0){
@@ -251,7 +258,7 @@ int load_accelerator(const char *accel_name)
                 }
 				strcpy(slot->name, accel_name);
 				if (!strcmp(accel_info->accel_type,"XRT_AIE_DFX")) {
-					acapd_perror("%s: XRT_AIE_DFX unsupported", accel_name);
+					DFX_ERR("%s: XRT_AIE_DFX unsupported", accel_name);
 					goto out;
 				}
 				slot->is_aie = 0;
@@ -264,24 +271,24 @@ int load_accelerator(const char *accel_name)
                 strcpy(pl_accel->type,accel_info->accel_type);
                 strncpy(pl_accel->sys_info.tmp_dir, pkg->path,
                         sizeof(pl_accel->sys_info.tmp_dir) - 1);
-                acapd_print("%s:load from %s\n", __func__, pkg->path);
+                DFX_PR("load from %s", pkg->path);
                 ret = load_accel(pl_accel, shell_path, 0);
                 if (ret < 0){
-                    acapd_perror("%s: Failed to load accel %s\n",__func__,accel_name);
+                    DFX_ERR("load_accel %s", accel_name);
 					goto out;
                 }
 				platform.active_base->active += 1;
 				slot->accel = pl_accel;
                 base->slots[i] = slot;
-                acapd_print("Loaded %s successfully to slot %d\n",pkg->name,i);
+                DFX_PR("Loaded %s successfully to slot %d", pkg->name, i);
                 return i;
             }
         }
         if (i >= (base->num_pl_slots + base->num_aie_slots))
-            acapd_perror("Couldn't find empty slot for %s\n",accel_name);
+            DFX_ERR("No empty slot for %s", accel_name);
     }
     else {
-        acapd_perror("Check the supported type of base/accel\n");
+        DFX_ERR("Check the supported type of base/accel");
     }
 out:
     free(slot);
@@ -297,7 +304,7 @@ int remove_accelerator(int slot)
 		|| base->slots[slot] == NULL;
 
 	if (ret){
-		acapd_perror("%s No Accel or invalid slot %d", __func__, slot);
+		DFX_ERR("No Accel or invalid slot %d", slot);
 		return -1;
 	}
 	if (base->slots[slot]->is_aie){
@@ -307,7 +314,7 @@ int remove_accelerator(int slot)
 		return 0;
 	}
     accel = base->slots[slot]->accel;
-    acapd_print("Removing accel %s from slot %d\n",accel->pkg->name,slot);
+    DFX_PR("Removing accel %s from slot %d", accel->pkg->name, slot);
 
     ret = remove_accel(accel, 0);
 	free(accel->pkg);
@@ -319,50 +326,38 @@ int remove_accelerator(int slot)
 }
 void sendBuff(uint64_t size)
 {
-    acapd_print("%s: allocating buffer of size %lu\n",__func__,size);
+    DFX_PR("buffer size %lu", size);
     //sendBuffer(size, socket_d);
 }
 void allocBuffer(uint64_t size)
 {
-    acapd_print("%s: allocating buffer of size %lu\n",__func__,size);
+    DFX_PR("buffer size %lu", size);
     allocateBuffer(size);
 }
 void freeBuff(uint64_t pa)
 {
-    acapd_debug("%s: free buffer PA %lu\n",__func__,pa);
+    DFX_DBG("free buffer PA %lu", pa);
     freeBuffer(pa);
 }
 
 int getFD(int slot, char *name)
 {
-    struct basePLDesign *base = platform.active_base;
-    if(base == NULL){
-        acapd_perror("No active design\n");
-        return -1;
-    }
-    acapd_accel_t *accel = base->slots[slot]->accel;
-    if (accel == NULL){
-        acapd_perror("%s No Accel in slot %d\n",__func__,slot);
-        return -1;
-    }
-	for (int i = 0; i < accel->num_ip_devs; i++) {
-		char *dev_name = accel->ip_dev[i].dev_name;
-		char substr[32];
-		int j = 0;
-		int n = strlen(dev_name);
-		while (j < n){
-			if (dev_name[j] == '.') {
-				strncpy(substr, (dev_name + j +1),(n - j));
-				break;
-			}
-			j += 1;
-		}
-		if(!strcmp(substr, name)){
-			acapd_debug("Found ip_dev for %s fd %d\n",name,accel->ip_dev[i].id);
-			return accel->ip_dev[i].id;
-		}
+	struct basePLDesign *base = platform.active_base;
+	if(base == NULL || base->slots == NULL){
+		DFX_ERR("No active design");
+		return -1;
 	}
-	acapd_perror("No ip_dev found for %s slot %d\n",name,slot);
+	if ( slot >= base->num_pl_slots || !base->slots[slot])
+		return -1;
+
+	acapd_accel_t *accel = base->slots[slot]->accel;
+	if (accel == NULL){
+		DFX_ERR("No Accel in slot %d", slot);
+		return -1;
+	}
+	for (int i = 0; i < accel->num_ip_devs; i++)
+		if (strstr(accel->ip_dev[i].dev_name, name))
+			return accel->ip_dev[i].id;
 	return -1;
 }
 
@@ -370,18 +365,18 @@ int dfx_getFDs(int slot, int *fd)
 {
     struct basePLDesign *base = platform.active_base;
     if(base == NULL){
-        acapd_perror("No active design\n");
+        DFX_ERR("No active design");
         return -1;
     }
     acapd_accel_t *accel = base->slots[slot]->accel;
     if (accel == NULL){
-        acapd_perror("%s No Accel in slot %d\n",__func__,slot);
+        DFX_ERR("No Accel in slot %d", slot);
         return -1;
     }
     fd[0] = accel->ip_dev[2*slot].id;
     fd[1] = accel->ip_dev[2*slot+1].id;
-    acapd_perror("%s Daemon slot %d accel_config %d d_hls %d\n",
-                    __func__,slot,fd[0],fd[1]);
+    DFX_PR("Daemon slot %d accel_config %d d_hls %d",
+                    slot, fd[0], fd[1]);
     return 0;
 }
 
@@ -452,6 +447,12 @@ char *listAccelerators()
             }
         }
     }
+	char *dnames[] = {"SIHA_Manager", "AccelConfig", "rm_comm_box"};
+	j =  sizeof(dnames)/ sizeof(dnames[0]);
+	for (i=0; i < j; i++){
+		char *s = dnames[i];
+		DFX_DBG("getFD(0, %s) = %d", s, getFD(0, s));
+	}
 	return strdup(res);
 }
 
@@ -468,10 +469,11 @@ void add_to_watch(int wd, char *name, char *path, char *parent_name, char *paren
             return;
         }
     }
-    acapd_perror("no room to add more watch");
+    DFX_ERR("no room to add more watch");
 }
 
-struct watch *get_watch(int wd){
+struct watch *get_watch(int wd)
+{
     int i;
     for (i = 0; i < MAX_WATCH; i++) {
         if (active_watch[i].wd == wd)
@@ -479,7 +481,8 @@ struct watch *get_watch(int wd){
     }
     return NULL;
 }
-char * wd_to_pathname(int wd){
+char * wd_to_pathname(int wd)
+{
     int i;
     for (i = 0; i < MAX_WATCH; i++) {
         if (active_watch[i].wd == wd)
@@ -487,7 +490,8 @@ char * wd_to_pathname(int wd){
     }
     return NULL;
 }
-struct watch* path_to_watch(char *path){
+struct watch* path_to_watch(char *path)
+{
 	int i;
 	for(i=0; i < MAX_WATCH; i++){
 		if(!strcmp(path,active_watch[i].path))
@@ -512,11 +516,11 @@ accel_info_t *add_accel_to_base(struct basePLDesign *base, char *name, char *pat
 
 	for (j = 0; j < 10; j++) {
         if (!strcmp(base->accel_list[j].path, path)) {
-			acapd_debug("%s already exists\n",path);
+			DFX_DBG("%s already exists", path);
             break;
         }
         if (base->accel_list[j].path[0] == '\0') {
-			acapd_debug("adding %s to base %s\n",path,parent_path);
+			DFX_DBG("adding %s to base %s", path, parent_path);
             strcpy(base->accel_list[j].name, name);
             base->accel_list[j].name[sizeof(base->accel_list[j].name) - 1] = '\0';
             strcpy(base->accel_list[j].path, path);
@@ -547,7 +551,7 @@ void parse_packages(struct basePLDesign *base,char *fname, char *path)
 
 	/* For flat shell design there is no subfolder so assign the base path as the accel path */
 	if (!strcmp(base->type,"XRT_FLAT") || !strcmp(base->type,"PL_FLAT")) {
-		acapd_debug("%s : %s", base->name, base->type);
+		DFX_DBG("%s : %s", base->name, base->type);
         strcpy(base->accel_list[0].name, base->name);
         strcpy(base->accel_list[0].path, base->base_path);
         strcpy(base->accel_list[0].parent_path, base->base_path);
@@ -557,7 +561,7 @@ void parse_packages(struct basePLDesign *base,char *fname, char *path)
 
     dir1 = opendir(path);
     if (dir1 == NULL) {
-        acapd_perror("Directory %s not found\n",path);
+        DFX_ERR("Directory %s not found", path);
 		return;
     }
     while((d1 = readdir(dir1)) != NULL) {
@@ -570,7 +574,7 @@ void parse_packages(struct basePLDesign *base,char *fname, char *path)
 			//add_accel_to_base(dir->d_name, new_dir, path);
             wd = inotify_add_watch(inotifyFd, first_level, IN_ALL_EVENTS);
             if (wd == -1){
-                acapd_perror("%s:inotify_add_watch failed on %s\n",__func__,first_level);
+                DFX_ERR("inotify_add_watch failed on %s", first_level);
 				goto close_dir;
 			}
             
@@ -590,7 +594,7 @@ void parse_packages(struct basePLDesign *base,char *fname, char *path)
 					sprintf(second_level,"%s/%s", first_level, d2->d_name);
 					wd = inotify_add_watch(inotifyFd, second_level, IN_ALL_EVENTS);
 					if (wd == -1){
-						acapd_perror("%s:inotify_add_watch failed on %s\n",__func__,second_level);
+						DFX_ERR("inotify_add_watch failed on %s", second_level);
 						goto close_dir;
 					}
 					add_to_watch(wd, d2->d_name, second_level, d1->d_name, first_level);
@@ -621,7 +625,7 @@ void add_base_design(char *name, char *path, char *parent, int wd)
 
     for (i = 0; i < MAX_WATCH; i++) {
 	if (!strcmp(base_designs[i].base_path, path)){
-		acapd_debug("Base design %s already exists", path);
+		DFX_DBG("Base design %s already exists", path);
 		return;
 	}
     }
@@ -629,7 +633,7 @@ void add_base_design(char *name, char *path, char *parent, int wd)
 	// Now find the fist unsued base_designs[] element
     for (i = 0; i < MAX_WATCH; i++) {
         if (base_designs[i].base_path[0] == '\0') {
-            acapd_debug("Adding base design %s\n",path);
+            DFX_DBG("Adding base design %s", path);
             strncpy(base_designs[i].name, name, sizeof(base_designs[i].name)-1);
             base_designs[i].name[sizeof(base_designs[i].name) - 1] = '\0';
             strncpy(base_designs[i].base_path, path, sizeof(base_designs[i].base_path)-1);
@@ -642,11 +646,12 @@ void add_base_design(char *name, char *path, char *parent, int wd)
         }
     }
 }
-void remove_base_design(char *path,char *parent, int is_base){
+void remove_base_design(char *path,char *parent, int is_base)
+{
     int i, j;
 
     if (!is_base) {
-        acapd_debug("Removing accel %s from base %s\n",path,parent);
+        DFX_DBG("Removing accel %s from base %s", path, parent);
         for (i = 0; i < MAX_WATCH; i++) {
             if (!strcmp(base_designs[i].base_path,parent)) {
                 for(j=0; j < 10; j++) {
@@ -665,7 +670,7 @@ void remove_base_design(char *path,char *parent, int is_base){
     }
     for (i = 0; i < MAX_WATCH; i++) {
         if (strcmp(base_designs[i].base_path, path) == 0) {
-            acapd_debug("Removing base design %s \n",path);
+            DFX_DBG("Removing base design %s", path);
             for (j=0; j < 10; j++) {
                 if (base_designs[i].accel_list[j].path[0] != '\0') {
                     remove_watch(path);
@@ -742,10 +747,10 @@ acell_dir_add(char *cpath, struct dirent *dirent)
 		return;
 
 	sprintf(new_dir, "%s/%s", cpath, d_name);
-	acapd_debug("Found dir %s", new_dir);
+	DFX_DBG("Found dir %s", new_dir);
 	wd = inotify_add_watch(inotifyFd, new_dir, IN_ALL_EVENTS);
 	if (wd == -1){
-		acapd_perror("%s:inotify_add_watch %s", __func__, new_dir);
+		DFX_ERR("inotify_add_watch %s", new_dir);
 		return;
 	}
 	add_to_watch(wd, d_name, new_dir, "", cpath);
@@ -774,14 +779,13 @@ firmware_dir_walk(void)
 		DIR *d = opendir(fwdir);
 
 		if (d == NULL) {
-			acapd_perror("opendir(%s)", fwdir);
+			DFX_ERR("opendir(%s)", fwdir);
 			continue;
 		}
 		if (!path_to_watch(fwdir)) {
 			wd = inotify_add_watch(inotifyFd, fwdir, IN_ALL_EVENTS);
 			if (wd == -1) {
-				acapd_perror("%s:inotify_add_watch(%s)",
-						__func__, fwdir);
+				DFX_ERR("inotify_add_watch(%s)", fwdir);
 				closedir(d);
 				continue;
 			}
@@ -814,7 +818,7 @@ void *threadFunc(void *)
 
     inotifyFd = inotify_init();                 /* Create inotify instance */
     if (inotifyFd == -1)
-        acapd_perror("inotify_init");
+        DFX_ERR("inotify_init");
 
     firmware_dir_walk();
 	/* Done parsing on target accelerators, now load a default one if present in config file */
@@ -824,7 +828,7 @@ void *threadFunc(void *)
     for (;;) {
         numRead = read(inotifyFd, buf, BUF_LEN);
         if (numRead <= 0 && errno != EAGAIN)
-            acapd_perror("read() from inotify failed\n");
+            DFX_ERR("read() from inotify failed");
 
         /* Process all of the events in buffer returned by read() */
 
@@ -837,10 +841,10 @@ void *threadFunc(void *)
                     if (w == NULL || strstr(event->name, ".dpkg-new"))
                         break;
                     sprintf(new_dir,"%s/%s",w->path, event->name);
-                    acapd_debug("%s: add inotify watch on %s w->name %s parent %s \n",__func__,new_dir,w->name,w->parent_path);
+                    DFX_DBG("add inotify watch on %s w->name %s parent %s", new_dir, w->name, w->parent_path);
                     wd = inotify_add_watch(inotifyFd, new_dir, IN_ALL_EVENTS);
                     if (wd == -1)
-                        acapd_print("inotify_add_watch failed on %s\n",new_dir);
+                        DFX_PR("inotify_add_watch failed on %s", new_dir);
 					add_to_watch(wd, event->name, new_dir, w->name,w->path);
 					if (!strcmp(w->parent_path,""))
 						add_base_design(event->name, new_dir, w->path, wd);
@@ -863,7 +867,7 @@ void *threadFunc(void *)
 					accel_info_t *accel;
 
 					base = findBaseDesign_path(parent_watch->parent_path);
-					acapd_debug("Add accel %s to base %s\n",w->path, base->base_path);
+					DFX_DBG("Add accel %s to base %s", w->path, base->base_path);
 					accel = add_accel_to_base(base, w->parent_name, w->parent_path, base->base_path);
 					initAccel(accel, w->path);
 				}
@@ -873,7 +877,7 @@ void *threadFunc(void *)
                 if (w == NULL)
                     break;
                 sprintf(new_dir,"%s/%s",w->path, event->name);
-                acapd_debug("Removing watch on %s parent_path %s \n",new_dir,w->parent_path);
+                DFX_DBG("Removing watch on %s parent_path %s", new_dir, w->parent_path);
 				if (!strcmp(w->parent_path,""))
 					remove_base_design(new_dir, w->path, 1);
 				else

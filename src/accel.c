@@ -36,13 +36,13 @@ int acapd_parse_config(acapd_accel_t *accel, const char *shell_config)
 	if(!strcmp(accel->type,"SIHA_PL_DFX") || !strcmp(accel->type,"XRT_AIE_DFX")){
 		ret = sys_accel_config(accel);
 		if (ret < 0) {
-			acapd_perror("%s: failed to config accel.\n", __func__);
+			DFX_ERR("failed to config accel");
 			return ACAPD_ACCEL_FAILURE;
 		}
 	}
 	ret = acapd_shell_config(shell_config);
 	if (ret < 0) {
-		acapd_perror("%s: failed to config shell.\n", __func__);
+		DFX_ERR("failed to config shell");
 		return ACAPD_ACCEL_FAILURE;
 	}
 	return ret;
@@ -51,23 +51,24 @@ int acapd_parse_config(acapd_accel_t *accel, const char *shell_config)
 int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int async)
 {
 	int ret;
+
 	acapd_assert(accel != NULL);
+	DFX_DBG("accel=%s shell_config=%s", accel->pkg->name, shell_config);
 	ret = acapd_parse_config(accel, shell_config);
 	if (ret < 0) {
-		acapd_perror("%s: failed to parse config files.\n", __func__);
+		DFX_ERR("failed to parse config files");
 		return ACAPD_ACCEL_FAILURE;
 	}
 	ret = sys_needs_load_accel(accel);
 	if (ret == 0) {
-		acapd_debug("%s: no need to load accel.\n", __func__);
+		DFX_DBG("no need to load accel");
 		return 0;
 	}
 	/* assert isolation before programming */
 	if (!strcmp(accel->type, "SIHA_PL_DFX")) {
 		ret = acapd_shell_assert_isolation(accel);
 		if (ret < 0) {
-			acapd_perror("%s, failed to assert isolaction.\n",
-										     __func__);
+			DFX_ERR("failed to assert isolaction");
 			return ret;
 		}
 	}
@@ -75,7 +76,7 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 	if (accel->is_cached == 0) {
 		ret = sys_fetch_accel(accel, DFX_NORMAL_EN);
 		if (ret != ACAPD_ACCEL_SUCCESS) {
-			acapd_perror("%s, failed to fetch partial bistream\n",__func__);
+			DFX_ERR("failed to fetch partial bistream");
 			return ret;
 		}
 		accel->is_cached = 1;
@@ -86,17 +87,17 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 	} else if (ret == ACAPD_ACCEL_INPROGRESS) {
 		accel->status = ACAPD_ACCEL_STATUS_LOADING;
 	} else {
-		acapd_perror("%s: Failed to load partial bitstream ret %d\n",__func__,ret);
+		DFX_ERR("Failed to load partial bitstream ret %d", ret);
 		accel->load_failure = ret;
 		return ret;
 	}
 	if (accel->status == ACAPD_ACCEL_STATUS_INUSE && !strcmp(accel->type,"SIHA_PL_DFX")) {
 		ret = acapd_shell_release_isolation(accel);
 		if (ret != 0) {
-			acapd_perror("%s: failed to release isolation.\n",__func__);
+			DFX_ERR("shell_release_isolation");
 			return ACAPD_ACCEL_FAILURE;
 		}
-		acapd_debug("%s: releasing isolation done.\n", __func__);
+		DFX_DBG("shell_release_isolation done");
 	}
 	//ret = sys_load_accel_post(accel);
 	return ret;
@@ -116,7 +117,7 @@ int accel_load_status(acapd_accel_t *accel)
 int remove_base(int fpga_cfg_id)
 {
 	if (fpga_cfg_id <= 0) {
-		acapd_perror("Invalid fpga cfg id: %d.\n", fpga_cfg_id);
+		DFX_ERR("Invalid fpga_cfg_id: %d", fpga_cfg_id);
 		return -1;
 	}
 	return sys_remove_base(fpga_cfg_id);
@@ -126,36 +127,35 @@ int remove_accel(acapd_accel_t *accel, unsigned int async)
 {
 	acapd_assert(accel != NULL);
 	if (accel->status == ACAPD_ACCEL_STATUS_UNLOADED) {
-		acapd_perror("%s: accel is not loaded.\n", __func__);
+		DFX_ERR("accel is not loaded");
 		return ACAPD_ACCEL_SUCCESS;
 	} else if (accel->status == ACAPD_ACCEL_STATUS_UNLOADING) {
-		acapd_perror("%s: accel is unloading .\n", __func__);
+		DFX_ERR("accel is unloading");
 		return ACAPD_ACCEL_INPROGRESS;
 	} else {
 		int ret;
 		ret = sys_close_accel(accel);
 		if (ret < 0) {
-			acapd_perror("%s: failed to close accel.\n", __func__);
+			DFX_ERR("failed to close accel");
 			return ACAPD_ACCEL_FAILURE;
 		}
 		ret = sys_needs_load_accel(accel);
 		if (ret == 0) {
-			acapd_debug("%s: no need to load accel.\n", __func__);
+			DFX_DBG("no need to load accel");
 			accel->status = ACAPD_ACCEL_STATUS_UNLOADED;
 			return ACAPD_ACCEL_SUCCESS;
 		} else {
 			if (!strcmp(accel->type,"SIHA_PL_DFX")) {
 				ret = acapd_shell_assert_isolation(accel);
 				if (ret < 0) {
-					acapd_perror("%s, failed to assert isolaction.\n",
-				             __func__);
+					DFX_ERR("failed to assert isolaction");
 					return ret;
 				}
 			}
 			ret = sys_remove_accel(accel, async);
 		}
 		if (ret == ACAPD_ACCEL_SUCCESS) {
-			acapd_debug("%s:Succesfully removed accel\n",__func__);
+			DFX_DBG("Succesfully removed accel");
 			accel->status = ACAPD_ACCEL_STATUS_UNLOADED;
 		} else if (ret == ACAPD_ACCEL_INPROGRESS) {
 			accel->status = ACAPD_ACCEL_STATUS_UNLOADING;
@@ -313,8 +313,9 @@ out:
 	return slot_path;
 }
 
-char * getAccelMetadata(char *package_name, int slot){
-	char *filename = malloc(sizeof(char)*1024);
+char * getAccelMetadata(char *package_name, int slot)
+{
+	char filename[1024];
 	char *path;
 	FILE *fptr;
     long numBytes;
