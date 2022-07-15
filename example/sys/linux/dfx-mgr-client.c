@@ -85,9 +85,16 @@ int main(int argc, char *argv[])
 		printf("%s",recv_message.data);
 
 	} else if(!strcmp(argv[1],"-listUIO")) {
-		/* If no slot number provided default to 0*/
-		char *slot = (argc < 3) ? "0" : argv[2];
-		send_message.size = 1 + sprintf(send_message.data, "%s", slot);
+		/*
+		 * Need to convert to getopt_long. If argc=2, use slot 0.
+		 * No UIO name means "list all", else get the first match
+		 */
+		char *uio = (argc < 4) ? "" : argv[3];
+
+		send_message._u.slot = (argc == 3 || argc == 4)
+			? 0xff & strtol(argv[2], NULL, 10)
+			: 0;
+		send_message.size = 1 + sprintf(send_message.data, "%s", uio);
 		send_message.id = LIST_ACCEL_UIO;
 		if (write(gs.sock_fd, &send_message, HEADERSIZE + send_message.size) == -1){
 			perror("write");
@@ -98,7 +105,7 @@ int main(int argc, char *argv[])
 			perror("No message or read error");
 			return -1;
 		}
-		printf("%s", recv_message.data);
+		printf("%s\n", recv_message.data);
 	} else if(!strcmp(argv[1],"-allocBuffer")) {
 	} else if(!strcmp(argv[1],"-freeBuffer")) {
 	} else if(!strcmp(argv[1],"-getFDs")) {

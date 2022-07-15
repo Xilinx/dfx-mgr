@@ -26,6 +26,7 @@ void freeBuff(uint64_t pa);
 int getFD(int slot, char *dev_name);
 int dfx_getFDs(int slot, int *fd);
 void list_accel_uio(int, char *, size_t);
+char *get_accel_uio_by_name(int, const char *);
 void getShellFD();
 void getClockFD();
 char *listAccelerators();

@@ -43,9 +43,9 @@ void intHandler(int dummy)
 	exit(EXIT_SUCCESS);
 }
 
-void error(char *msg)
+void dfx_exit(char *msg)
 {
-	perror(msg);
+	DFX_ERR("%s", msg);
 	exit(EXIT_FAILURE);
 }
 
@@ -57,13 +57,14 @@ process_dfx_req(int fd, fd_set *fdset)
 	int ret, slot;
 
 	numbytes = read(fd, &recv_msg, sizeof(struct message));
-	if (numbytes == -1)
-		error("read");
-	else if (numbytes == 0) {
-		// connection closed by client
-		DFX_DBG("Socket %d closed by client", fd);
+	if (numbytes <= 0) {
+		if (numbytes < 0)
+			DFX_ERR("read(%d)", fd);
+		else
+			DFX_DBG("Socket %d closed by client", fd);
+
 		if (close(fd) == -1)
-			error("close");
+			DFX_ERR("close(%d)", fd);
 		FD_CLR(fd, fdset);
 		return;
 	}
@@ -101,8 +102,16 @@ process_dfx_req(int fd, fd_set *fdset)
 		break;
 
 	case LIST_ACCEL_UIO:
-		slot = atoi(recv_msg.data);
-		list_accel_uio(slot, send_msg.data, sizeof(send_msg.data));
+		/* slot = atoi(recv_msg.data); */
+		slot = recv_msg._u.slot;
+		if (recv_msg.data[0] == 0)
+			list_accel_uio(slot, send_msg.data, sizeof(send_msg.data));
+		else {
+			char *p = get_accel_uio_by_name(slot, recv_msg.data);
+			DFX_DBG("%s", recv_msg.data);
+			if (p != NULL)
+				sprintf(send_msg.data, "%s", p);
+		}
 		send_msg.size = strnlen(send_msg.data, sizeof(send_msg.data));
 		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
 			DFX_ERR("LIST_ACCEL_UIO write(%d)", fd);
@@ -110,7 +119,7 @@ process_dfx_req(int fd, fd_set *fdset)
 
 	case QUIT:
 		if (close(fd) == -1)
-			error("close");
+			DFX_ERR("close(%d)", fd);
 		FD_CLR(fd, fdset);
 		break;
 
@@ -137,18 +146,18 @@ int main(int argc, char **argv)
 
 	if (stat(SERVER_SOCKET, &statbuf) == 0) {
 		if (unlink(SERVER_SOCKET) == -1)
-			error("unlink");
+			dfx_exit("unlink " SERVER_SOCKET);
 	}
 
 	if ((socket_d = socket(AF_UNIX, SOCK_SEQPACKET, 0)) == -1)
-		error("socket");
+		dfx_exit("socket");
 
 	if (bind(socket_d, (const struct sockaddr *)&su, sizeof(su)) == -1)
-		error("bind");
+		dfx_exit("bind");
 
 	// Mark socket for accepting incoming connections using accept
 	if (listen(socket_d, BACKLOG) == -1)
-		error("listen");
+		dfx_exit("listen");
 
 	FD_ZERO(&fds);
 	FD_SET(socket_d, &fds);
@@ -159,7 +168,7 @@ int main(int argc, char **argv)
 		readfds = fds;
 		// monitor readfds for readiness for reading
 		if (select(fdmax + 1, &readfds, NULL, NULL, NULL) == -1)
-			error("select");
+			dfx_exit("select");
         
 		// Some sockets are ready. Examine readfds
 		for (int fd = 0; fd < (fdmax + 1); fd++) {
@@ -169,10 +178,10 @@ int main(int argc, char **argv)
 					// request for new connection
 					fd_new = accept(socket_d, NULL, NULL);
 					if (fd_new  == -1)
-						error("accept");
+						dfx_exit("accept");
 
 					FD_SET(fd_new, &fds);
-					if (fd_new > fdmax) 
+					if (fd_new > fdmax)
 						fdmax = fd_new;
 				} else {
 					// data from an existing connection
