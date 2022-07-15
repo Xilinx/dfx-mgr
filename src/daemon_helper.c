@@ -412,7 +412,7 @@ list_accel_uio(int slot, char *buf, size_t sz)
 	else if ( slot >= base->num_pl_slots || !base->slots[slot])
 		p += sprintf(p, "slot %d is not used or invalid\n", slot);
 	else if ( (accel = base->slots[slot]->accel) == NULL)
-		p += sprintf(p, "No Accel in slot %d", slot);
+		p += sprintf(p, "No Accel in slot %d\n", slot);
 	if (p != buf)
 		return;
 

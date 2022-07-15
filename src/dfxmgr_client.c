@@ -174,69 +174,90 @@ int exchangeCommand(char* path, char* argvalue){
     return 0;
 }
 
-int dfxmgr_load(char* packageName)
+int dfxmgr_load(char* pkg_name)
 {
-	socket_t *gs;
-    struct message send_message, recv_message;
-    int ret;
+	struct message send_msg, recv_msg;
+	socket_t gs;
 
-	if (packageName == NULL || !strcmp(packageName,""))
-		acapd_perror("%s expects a package name\n",__func__);
-
-	gs = (socket_t *) malloc(sizeof(socket_t));
-    memset (&send_message, '\0', sizeof(struct message));
-    memset (&recv_message, '\0', sizeof(struct message));
-	initSocket(gs);
-
-    memcpy(send_message.data, packageName, strlen(packageName));
-    send_message.id = LOAD_ACCEL;
-    send_message.size = strlen(packageName);
-	ret = write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size);
-    if (ret < 0){
-        acapd_perror("%s:error sending message from client %d\n",__func__,ret);
-		return -1;
-	}
-    ret = read(gs->sock_fd, &recv_message, sizeof (struct message));
-    if (ret <= 0){
-        acapd_perror("%s:No message recieved %d\n",__func__, ret);
+	if (pkg_name == NULL || pkg_name[0] == 0) {
+		DFX_ERR("need package name");
 		return -1;
 	}
 
-    acapd_print("%s:Accelerator loaded to slot %s\n",__func__,recv_message.data);
-	return atoi(recv_message.data);
+	initSocket(&gs);
+	send_msg.id = LOAD_ACCEL;
+	send_msg.size = strlen(pkg_name);
+	strncpy(send_msg.data, pkg_name, sizeof(struct message));
+	if (write(gs.sock_fd, &send_msg, HEADERSIZE + send_msg.size) < 0) {
+		DFX_ERR("write(%d)", gs.sock_fd);
+		return -1;
+	}
+
+	if (read(gs.sock_fd, &recv_msg, sizeof(struct message)) < 0) {
+		DFX_ERR("No message or read(%d) error", gs.sock_fd);
+		return -1;
+	}
+
+	DFX_PR("Accelerator %s loaded to slot %s", pkg_name, recv_msg.data);
+	return atoi(recv_msg.data);
 }
 
 int dfxmgr_remove(int slot)
 {
-	socket_t *gs;
-    struct message send_message, recv_message;
-    int ret;
+	struct message send_msg, recv_msg;
+	socket_t gs;
 
 	if (slot < 0){
-		acapd_perror("invalid argument to dfxmgr_remove()\n");
+		DFX_ERR("invalid slot %d", slot);
 		return -1;
 	}
-	gs = (socket_t *) malloc(sizeof(socket_t));
-    memset (&send_message, '\0', sizeof(struct message));
-    memset (&recv_message, '\0', sizeof(struct message));
-	initSocket(gs);
 
-	sprintf(send_message.data, "%d", slot);
-    send_message.id = REMOVE_ACCEL;
-    send_message.size = 2;
-    if (write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size) < 0)
-        acapd_perror("%s:error sending message from client\n",__func__);
-    ret = read(gs->sock_fd, &recv_message, sizeof (struct message));
-    if (ret <= 0){
-		acapd_perror("%s:No message recieved\n",__func__);
-		return ret;
+	initSocket(&gs);
+	send_msg.id = REMOVE_ACCEL;
+	send_msg.size = 2;
+	sprintf(send_msg.data, "%d", slot);
+	if (write(gs.sock_fd, &send_msg, HEADERSIZE + send_msg.size) < 0) {
+		DFX_ERR("write(%d)", gs.sock_fd);
+		return -1;
 	}
-	ret = atoi(recv_message.data);
-	if (ret == 0)
-		acapd_print("%s:Accelerator succesfully removed.\n",__func__);
-	else
-		acapd_perror("%s:Error trying to remove accelerator.\n",__func__);
-	return ret;
+
+	if (read(gs.sock_fd, &recv_msg, sizeof (struct message)) < 0) {
+		DFX_ERR("No message or read(%d) error", gs.sock_fd);
+		return -1;
+	}
+
+	DFX_PR("remove from slot %d returns: %s (%s)", slot, recv_msg.data,
+		recv_msg.data[0] == '0' ? "Ok" : "Error");
+	return  recv_msg.data[0] == '0' ? 0 : -1;
+}
+
+char *
+dfxmgr_uio_by_name(char *obuf, int slot, const char *name)
+{
+	struct message send_msg, recv_msg;
+	socket_t gs;
+
+	if (slot < 0 || !name || name[0] == 0) {
+		DFX_ERR("invalid slot %d, or no name", slot);
+		return NULL;
+	}
+
+	initSocket(&gs);
+	send_msg.id = LIST_ACCEL_UIO;
+	send_msg._u.slot = slot;
+	send_msg.size = 1 + strlen(name);
+	strncpy(send_msg.data, name, send_msg.size);
+	if (write(gs.sock_fd, &send_msg, HEADERSIZE + send_msg.size) < 0) {
+		DFX_ERR("write(%d)", gs.sock_fd);
+		return NULL;
+	}
+
+	if (read(gs.sock_fd, &recv_msg, sizeof (struct message)) < 0) {
+		DFX_ERR("No message or read(%d) error", gs.sock_fd);
+		return NULL;
+	}
+	strncpy(obuf, recv_msg.data, 63);
+	return obuf;
 }
 
 ssize_t sock_fd_write(int sock, void *buf, ssize_t buflen, int *fd, int fdcount)
@@ -308,7 +329,7 @@ ssize_t sock_fd_read(int sock, struct message *buf, int *fd, int *fdcount)
         acapd_perror("%s:recvmsg() failed\n",__func__);
         exit(1);
     }
-	*fdcount = buf->fdcount;
+	*fdcount = buf->_u.fdcount;
     cmsg = CMSG_FIRSTHDR(&msg);
     if (cmsg && cmsg->cmsg_len == CMSG_LEN(sizeof(int))) {
         if (cmsg->cmsg_level != SOL_SOCKET) {
@@ -324,19 +345,21 @@ ssize_t sock_fd_read(int sock, struct message *buf, int *fd, int *fdcount)
     return size;
 }
 
-int initSocket(socket_t* gs){
-	int status;
-	
+int initSocket(socket_t* gs)
+{
+	const struct sockaddr_un su = {
+		.sun_family = AF_UNIX,
+		.sun_path   = SERVER_SOCKET,
+	};
+
 	if ((gs->sock_fd = socket(AF_UNIX, SOCK_SEQPACKET, 0)) == -1){
-		acapd_perror("%s:socket creation failed\n",__func__);
+		DFX_ERR("socket(AF_UNIX, SOCK_SEQPACKET, 0)");
 		return -1;
 	}
-	memset(&gs->socket_address, 0, sizeof(struct sockaddr_un));
-	gs->socket_address.sun_family = AF_UNIX;
-	strncpy(gs->socket_address.sun_path, SERVER_SOCKET, sizeof(gs->socket_address.sun_path) - 1);
-	status = connect(gs->sock_fd, (const struct sockaddr *) &gs->socket_address, sizeof(struct sockaddr_un));
-	if (status < 0){
-		acapd_perror("%s:connect failed\n",__func__);
+
+	gs->socket_address = su;
+	if (connect(gs->sock_fd, (const struct sockaddr *)&su, sizeof(su)) < 0){
+		DFX_ERR("connect(%s)", SERVER_SOCKET);
 		return -1;
 	}
 	return 0;
@@ -349,7 +372,7 @@ int graphClientSubmit(socket_t *gs, char* json, int size, int *fd, int *fdcount)
 	memset(&send_message, '\0', sizeof(struct message));
 	send_message.id = GRAPH_INIT;
 	send_message.size = size;
-	send_message.fdcount = 0;
+	send_message._u.fdcount = 0;
 	memcpy(send_message.data, json, size);
 	ret = write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size);
 	if (ret < 0){
@@ -370,7 +393,7 @@ int graphClientFinalise(socket_t *gs, char* json, int size){
 	memset(&send_message, '\0', sizeof(struct message));
 	send_message.id = GRAPH_FINALISE;
 	send_message.size = size;
-	send_message.fdcount = 0;
+	send_message._u.fdcount = 0;
 	memcpy(send_message.data, json, size);
 	ret = write(gs->sock_fd, &send_message, HEADERSIZE + send_message.size);
 	if (ret < 0){

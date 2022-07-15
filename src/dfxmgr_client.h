@@ -39,7 +39,10 @@ extern "C" {
 struct message {
     uint32_t id;
     uint32_t size;
-    uint32_t fdcount;
+    union {
+	    uint32_t fdcount;
+	    uint32_t slot;
+    } _u;
     char data [32*1024];
 };
 
@@ -73,6 +76,7 @@ typedef struct fds{
 
 extern int dfxmgr_load(char* packageName);
 extern int dfxmgr_remove(int slot);
+extern char *dfxmgr_uio_by_name(char *obuf, int slot, const char *name);
 //extern int getFD(char* argvalue);
 //extern int getPA(char* argvalue);
 //extern int getShellFD();
