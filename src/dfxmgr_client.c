@@ -187,7 +187,7 @@ int dfxmgr_load(char* pkg_name)
 	initSocket(&gs);
 	send_msg.id = LOAD_ACCEL;
 	send_msg.size = strlen(pkg_name);
-	strncpy(send_msg.data, pkg_name, sizeof(struct message));
+	strncpy(send_msg.data, pkg_name, sizeof(send_msg.data));
 	if (write(gs.sock_fd, &send_msg, HEADERSIZE + send_msg.size) < 0) {
 		DFX_ERR("write(%d)", gs.sock_fd);
 		return -1;
@@ -231,8 +231,16 @@ int dfxmgr_remove(int slot)
 	return  recv_msg.data[0] == '0' ? 0 : -1;
 }
 
+/*
+ * We expect a short path in the recv_msg.data, e.g.: /dev/uioN,
+ * and we will copy at most NAME_MAX characters via strncpy.
+ * However, the compiler flags -Wall -Werror -Wextra force
+ * "output may be truncated copying .." error for strncpy.
+ * Add __attribute__((nonstring)) to avoid the error message.
+ */
 char *
-dfxmgr_uio_by_name(char *obuf, int slot, const char *name)
+dfxmgr_uio_by_name(char *obuf __attribute__((nonstring)),
+		   int slot, const char *name)
 {
 	struct message send_msg, recv_msg;
 	socket_t gs;
@@ -246,17 +254,17 @@ dfxmgr_uio_by_name(char *obuf, int slot, const char *name)
 	send_msg.id = LIST_ACCEL_UIO;
 	send_msg._u.slot = slot;
 	send_msg.size = 1 + strlen(name);
-	strncpy(send_msg.data, name, send_msg.size);
+	strncpy(send_msg.data, name, sizeof(send_msg.data));
 	if (write(gs.sock_fd, &send_msg, HEADERSIZE + send_msg.size) < 0) {
 		DFX_ERR("write(%d)", gs.sock_fd);
 		return NULL;
 	}
 
-	if (read(gs.sock_fd, &recv_msg, sizeof (struct message)) < 0) {
+	if (read(gs.sock_fd, &recv_msg, sizeof(struct message)) < 0) {
 		DFX_ERR("No message or read(%d) error", gs.sock_fd);
 		return NULL;
 	}
-	strncpy(obuf, recv_msg.data, 63);
+	strncpy(obuf, recv_msg.data, NAME_MAX);
 	return obuf;
 }
 
