@@ -6,8 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <limits.h>
 
-static char uio_path[64];
+static char uio_path[NAME_MAX];
 
 int main(int argc, char *argv[])
 {
