@@ -218,6 +218,7 @@ int load_accelerator(const char *accel_name)
 			DFX_PR("All slots for base are empty, loading new base design");
 			remove_base(platform.active_base->fpga_cfg_id);
 			free(platform.active_base->slots);
+			platform.active_base->slots = NULL;
 			platform.active_base = NULL;
 		}
 		else if(platform.active_base != NULL && platform.active_base->active > 0 && 
@@ -296,14 +297,42 @@ out:
     free(pkg);
     return -1;
 }
+
+static int
+remove_accel_base(void)
+{
+	struct basePLDesign *base = platform.active_base;
+	int ret = -1;
+
+	if (!base)
+		DFX_PR("No base");
+	else if (strcmp(base->type, "PL_DFX"))
+		DFX_PR("Invalid base type: %s", base->type);
+	else if (base->active)
+		DFX_PR("Can't remove active base PL design: %s", base->name);
+	else {
+		DFX_PR("Unload base: %s", base->name);
+		ret = remove_base(base->fpga_cfg_id);
+		if (ret == 0) {
+			free(base->slots);
+			base->slots = NULL;
+			platform.active_base = NULL;
+		}
+	}
+	return ret;
+}
+
 int remove_accelerator(int slot)
 {
-    struct basePLDesign *base = platform.active_base;
-    acapd_accel_t *accel;
-	int ret = base == NULL || slot < 0 || base->active < slot
-		|| base->slots[slot] == NULL;
+	struct basePLDesign *base = platform.active_base;
+	acapd_accel_t *accel;
+	int ret;
 
-	if (ret){
+	/* slot -1 means remove base PL design */
+	if (slot == -1)
+		return remove_accel_base();
+
+	if (!base || slot < 0 || base->active < slot || !base->slots[slot]) {
 		DFX_ERR("No Accel or invalid slot %d", slot);
 		return -1;
 	}
@@ -313,17 +342,18 @@ int remove_accelerator(int slot)
 		platform.active_base->active -= 1;
 		return 0;
 	}
-    accel = base->slots[slot]->accel;
-    DFX_PR("Removing accel %s from slot %d", accel->pkg->name, slot);
+	accel = base->slots[slot]->accel;
+	DFX_PR("Removing accel %s from slot %d", accel->pkg->name, slot);
 
-    ret = remove_accel(accel, 0);
+	ret = remove_accel(accel, 0);
 	free(accel->pkg);
-    free(accel);
+	free(accel);
 	free(base->slots[slot]);
-    base->slots[slot] = NULL;
+	base->slots[slot] = NULL;
 	platform.active_base->active -= 1;
 	return ret;
 }
+
 void sendBuff(uint64_t size)
 {
     DFX_PR("buffer size %lu", size);

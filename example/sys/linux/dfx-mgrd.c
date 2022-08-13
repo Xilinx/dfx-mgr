@@ -82,8 +82,11 @@ process_dfx_req(int fd, fd_set *fdset)
 		break;
 
 	case REMOVE_ACCEL:
-		slot = atoi(recv_msg.data);
-		DFX_PR("daemon REMOVE_ACCEL in slot %d\n", slot);
+		slot = -1;	/* assume base */
+		if (strcasecmp(recv_msg.data, "base")) {
+			slot = atoi(recv_msg.data);
+			DFX_PR("daemon REMOVE_ACCEL in slot %d", slot);
+		}
 		ret = remove_accelerator(slot);
 		send_msg.size = 1 + sprintf(send_msg.data, "%d", ret);
 
