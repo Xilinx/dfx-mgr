@@ -12,7 +12,7 @@ link_directories (${_list})
 
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
 
-set (_deps "dfx" "websockets" "dl" "pthread")
+set (_deps "dfx" "dl" "pthread")
 
 foreach (_app load_accel accel-bzip2 accel-shm accel-aes accel-container dfx-mgr-client dfx-mgrd )
 #foreach (_app load_accel dfx-mgr-client dfx-mgrd dfx-mgrd2 graphTest6)

@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <libwebsockets.h>
 #include <string.h>
 #include <signal.h>
 #include <time.h>
@@ -26,8 +25,6 @@
 #include <sys/un.h>
 #include <sys/types.h>
 #include <errno.h>
-#include <unistd.h>
-#include <stdbool.h>
 #include <sys/select.h>
 #include <dfx-mgr/dfxmgr_client.h>
 

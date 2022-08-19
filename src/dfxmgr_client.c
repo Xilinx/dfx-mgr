@@ -4,12 +4,11 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <libwebsockets.h>
+#include <limits.h>
 #include <string.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include <sys/select.h>
 #include <sys/types.h>
@@ -27,6 +26,10 @@
 #define MAX_FD 25
 struct message message;
 int sock_fd;
+
+#if 0
+#include <libwebsockets.h>
+
 static int interrupted;
 static struct lws *web_socket;
 static const char *arg;
@@ -173,6 +176,7 @@ int exchangeCommand(char* path, char* argvalue){
 
     return 0;
 }
+#endif /*   0 */
 
 int dfxmgr_load(char* pkg_name)
 {

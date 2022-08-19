@@ -4,9 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include <libwebsockets.h>
-#include <string.h>
-#include <signal.h>
+#include <errno.h>
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
