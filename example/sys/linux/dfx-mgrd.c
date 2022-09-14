@@ -124,7 +124,11 @@ process_dfx_req(int fd, fd_set *fdset)
 		break;
 
 	default:
-		DFX_PR("Unexpected message from client");
+		send_msg.size = 1 + sprintf(send_msg.data,
+				"Unsupported message id %d", recv_msg.id);
+		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
+			DFX_ERR("default write(%d)", fd);
+		DFX_PR("%s", send_msg.data);
 	}
 }
 
@@ -169,7 +173,7 @@ int main(int argc, char **argv)
 		// monitor readfds for readiness for reading
 		if (select(fdmax + 1, &readfds, NULL, NULL, NULL) == -1)
 			dfx_exit("select");
-        
+
 		// Some sockets are ready. Examine readfds
 		for (int fd = 0; fd < (fdmax + 1); fd++) {
 			if (FD_ISSET(fd, &readfds)) {
@@ -189,7 +193,7 @@ int main(int argc, char **argv)
 				}
 			}
 		}
-	} 
+	}
 	exit(EXIT_SUCCESS);
 }
 
