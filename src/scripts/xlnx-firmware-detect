@@ -38,7 +38,7 @@ echo "Trying to detect default firmware based on EEPROM..."
 # check if board is a SOM product
 eeprom=$(ls /sys/bus/i2c/devices/*50/eeprom 2> /dev/null)
 if [ -n "${eeprom}" ]; then
-    boardid=$(fru-print -d ${eeprom} -f product | awk -F- '{ print tolower($2) }')
+    boardid=$(ipmi-fru --fru-file=${eeprom} --interpret-oem-data | awk -F"-" '/FRU Board Product/ { print tolower($2) }')
     validids="k26"
     valid=0
     for id in ${validids}; do
@@ -64,8 +64,8 @@ fi
 # check if board is a System Controller product
 eeprom=$(ls /sys/bus/i2c/devices/*54/eeprom 2> /dev/null)
 if [ -n "${eeprom}" ]; then
-    boardid=$(fru-print -d ${eeprom} -f product | tr '[:upper:]' '[:lower:]')
-    revision=$(fru-print -d ${eeprom} -f revision | tr '[:upper:]' '[:lower:]')
+    boardid=$(ipmi-fru --fru-file=${eeprom} --interpret-oem-data | awk -F": " '/FRU Board Product/ { print tolower ($2) }')
+    revision=$(ipmi-fru --fru-file=${eeprom} --interpret-oem-data | awk -F": " '/FRU Board Custom/ { print tolower ($2); exit }')
     validids="vpk120 vpk180 vhk158"
     valid=0
     for id in ${validids}; do
