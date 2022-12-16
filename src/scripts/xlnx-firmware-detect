@@ -39,26 +39,15 @@ echo "Trying to detect default firmware based on EEPROM..."
 eeprom=$(ls /sys/bus/i2c/devices/*50/eeprom 2> /dev/null)
 if [ -n "${eeprom}" ]; then
     boardid=$(ipmi-fru --fru-file=${eeprom} --interpret-oem-data | awk -F"-" '/FRU Board Product/ { print tolower($2) }')
-    validids="k26"
-    valid=0
-    for id in ${validids}; do
-        if [ "${id}" = "${boardid}" ]; then
-            echo "Known SOM Board ID found: ${boardid}"
-            valid=1
-            break
-        fi
-    done
-    if [ ${valid} -eq 1 ]; then
-        fwname="${boardid}-starter-kits"
-        fwdir="${fwbasedir}/${fwname}"
-        if [ ! -d "${fwdir}" ]; then
-            echo "No default firmware named ${fwname} found in ${fwbasedir}"
-            exit 1
-        fi
-        echo "Default firmware detected: ${fwname}"
-        echo "${fwname}" > "${fwfile}"
-        exit 0
+    fwname="${boardid}-starter-kits"
+    fwdir="${fwbasedir}/${fwname}"
+    if [ ! -d "${fwdir}" ]; then
+        echo "No default firmware named ${fwname} found in ${fwbasedir}"
+        exit 1
     fi
+    echo "Default firmware detected: ${fwname}"
+    echo "${fwname}" > "${fwfile}"
+    exit 0
 fi
 
 # check if board is a System Controller product
@@ -66,26 +55,15 @@ eeprom=$(ls /sys/bus/i2c/devices/*54/eeprom 2> /dev/null)
 if [ -n "${eeprom}" ]; then
     boardid=$(ipmi-fru --fru-file=${eeprom} --interpret-oem-data | awk -F": " '/FRU Board Product/ { print tolower ($2) }')
     revision=$(ipmi-fru --fru-file=${eeprom} --interpret-oem-data | awk -F": " '/FRU Board Custom/ { print tolower ($2); exit }')
-    validids="vpk120 vpk180 vhk158"
-    valid=0
-    for id in ${validids}; do
-        if [ "${id}" = "${boardid}" ]; then
-            echo "Known System Controller Board ID found: ${boardid} rev ${revision}"
-            valid=1
-            break
-        fi
-    done
-    if [ ${valid} -eq 1 ]; then
-        fwname="${boardid}-${revision}"
-        fwdir="${fwbasedir}/${fwname}"
-        if [ ! -d "${fwdir}" ]; then
-            echo "No default firmware named ${fwname} found in ${fwbasedir}"
-            exit 1
-        fi
-        echo "Default firmware detected: ${fwname}"
-        echo "${fwname}" > "${fwfile}"
-        exit 0
+    fwname="${boardid}-${revision}"
+    fwdir="${fwbasedir}/${fwname}"
+    if [ ! -d "${fwdir}" ]; then
+        echo "No default firmware named ${fwname} found in ${fwbasedir}"
+        exit 1
     fi
+    echo "Default firmware detected: ${fwname}"
+    echo "${fwname}" > "${fwfile}"
+    exit 0
 fi
 
 echo "No known Board ID found"
