@@ -147,23 +147,17 @@ int sys_accel_config(acapd_accel_t *accel)
 			dev = &(accel->ip_dev[i]);
 			sprintf(tmpstr, "ACCEL_IP%d_PATH", i);
 			tmppath = getenv(tmpstr);
-			if (tmppath != NULL) {
-				size_t len;
-				len = sizeof(dev->path) - 1;
-			    memset(dev->path, 0, len + 1);
-				if (len > strlen(tmppath)) {
-					len = strlen(tmppath);
-				}
-				strncpy(dev->path, tmppath, len);
-			}
-			if (tmppath == NULL) {
+			if (tmppath == NULL)
 				break;
+
+			if (strlen(tmppath) >= sizeof(dev->path)) {
+				DFX_ERR("%s is too long: %s", tmpstr, tmppath);
+				return ACAPD_ACCEL_FAILURE;
 			}
+			strncpy(dev->path, tmppath, sizeof(dev->path));
 		}
-		return ACAPD_ACCEL_SUCCESS;
-	} else {
-		return ACAPD_ACCEL_SUCCESS;
 	}
+	return ACAPD_ACCEL_SUCCESS;
 }
 
 int sys_needs_load_accel(acapd_accel_t *accel)
@@ -336,8 +330,7 @@ int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
 	(void)async;
 	fpga_cfg_id = accel->sys_info.fpga_cfg_id;
 	DFX_DBG("Removing accel %s", accel->sys_info.tmp_dir);
-	if (accel->sys_info.tmp_dir != NULL && accel->pkg->type ==
-					ACAPD_ACCEL_PKG_TYPE_TAR_GZ) {
+	if (accel->pkg->type == ACAPD_ACCEL_PKG_TYPE_TAR_GZ) {
 		DFX_DBG("Removing tmp dir for .tar.gz");
 		ret = remove_directory(accel->sys_info.tmp_dir);
 		if (ret != 0) {

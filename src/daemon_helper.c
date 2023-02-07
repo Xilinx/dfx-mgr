@@ -1010,10 +1010,8 @@ void *threadFunc(void *)
 int dfx_init()
 {
 	pthread_t t;
-	int ret;
-	//struct stat info;
-	strcpy(config.defaul_accel_name, "");
 
+	strcpy(config.defaul_accel_name, "");
 	strcpy(platform.boardName,"Xilinx board");
 	sem_init(&mutex, 0, 0);
 
@@ -1023,8 +1021,8 @@ int dfx_init()
 	//TODO Save active design on filesytem and on reboot read that
 	//if (stat("/configfs/device-tree/overlays",&info))
 	//	ret = system("rmdir /configfs/device-tree/overlays/*");
-	_unused(ret);
-	if (config.defaul_accel_name != NULL && strcmp(config.defaul_accel_name, "") != 0)
+
+	if (strcmp(config.defaul_accel_name, "") != 0)
 		load_accelerator(config.defaul_accel_name);
 	return 0;
 }
