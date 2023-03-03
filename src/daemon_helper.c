@@ -1544,46 +1544,6 @@ void *threadFunc(void *)
     //exit(EXIT_SUCCESS);
 }
 
-void load_snap_firmware_locations(struct daemon_config* config)
-{
-    config->firmware_locations[config->number_locations] = strdup(SNAP_FIRMWARES_DIRECTORY);
-    config->number_locations++;
-    // DIR *d = opendir(SNAP_FIRMWARES_DIRECTORY);
-    // _unused(config);
-    // if (d)
-    // {
-    //     struct dirent* dir;
-    //     while ( (dir = readdir(d)) != NULL)
-    //     {
-    //         if (dir->d_type == DT_REG)
-    //         {
-    //             char file_path[MAX_PATH_SIZE];
-    //             FILE* file;
-
-    //             strcpy(file_path, SNAP_FIRMWARES_DIRECTORY);
-    //             strcat(file_path, "/");
-    //             strcat(file_path, dir->d_name);
-    //             file = fopen(file_path, "r");
-    //             if (file)
-    //             {
-    //                 char firmware_dir[MAX_PATH_SIZE];
-    //                 // fgets(firmware_dir, MAX_PATH_SIZE, file);
-    //                 fscanf(file, "%s", firmware_dir);
-    //                 config->firmware_locations[config->number_locations] = strdup(firmware_dir);
-    //                 config->number_locations++;
-    //                 DFX_ERR("Num %d: %s", config->number_locations, firmware_dir);
-    //                 fclose(file);
-    //             }
-    //         }
-    //     }
-    //     closedir(d);
-    // }
-    // else
-    // {
-    //     DFX_ERR("Not able to load snap firmware locations, opendir(%s)", SNAP_FIRMWARES_DIRECTORY);
-    // }
-}
-
 int dfx_init(char* config_path)
 {
 	pthread_t t;
@@ -1593,7 +1553,6 @@ int dfx_init(char* config_path)
 	sem_init(&mutex, 0, 0);
 
 	parse_config(config_path, &config);
-    //load_snap_firmware_locations(&config);
 
 	pthread_create(&t, NULL,threadFunc, NULL);
 	sem_wait(&mutex);

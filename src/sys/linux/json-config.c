@@ -94,13 +94,13 @@ int parseAccelJson(acapd_accel_t *accel, char *filename)
 		acapd_print("%s: Cannot open %s\n",__func__,filename);
 		return -1;
 	}
-	
+
 	if (stat(filename,&s) != 0 || !S_ISREG(s.st_mode)){
 		acapd_perror("could not open %s\n",filename);
 		return -1;
 	}
     numBytes = s.st_size;
-	
+
 	dma_dev = (acapd_device_t *)calloc(1, sizeof(*dma_dev));
 	if (dma_dev == NULL) {
 		acapd_perror("%s: failed to alloc mem for dma dev.\n", __func__);
@@ -447,7 +447,7 @@ int initAccel(accel_info_t *accel, const char *path)
 		return -1;
 	}
     numBytes = s.st_size;
-	
+
 	jsonData = (char *)calloc(numBytes, sizeof(char));
 	if (jsonData == NULL){
 		acapd_perror("%s: calloc failed\n",__func__);
@@ -497,6 +497,7 @@ void parse_config(char *config_path, struct daemon_config *config)
     char *jsonData;
 	struct stat s;
 	FILE *fptr;
+	DFX_DBG("Config Path: %s\n", config_path);
 	fptr = fopen(config_path, "r");
 	if (fptr == NULL){
 		acapd_perror("%s: Cannot open %s, it is required\n",__func__,config_path);
@@ -536,19 +537,21 @@ void parse_config(char *config_path, struct daemon_config *config)
 			ret = fscanf(fptr,"%s",config->defaul_accel_name);
 			fclose(fptr);
         }
-		if (jsoneq(jsonData, &token[i],"firmware_location") == 0){
-			int k;
-			if(token[i+1].type != JSMN_ARRAY) {
-				acapd_perror("%s firmware_location expects array \n",config_path);
-				continue;
+			if (jsoneq(jsonData, &token[i],"firmware_location") == 0){
+				int k;
+				if(token[i+1].type != JSMN_ARRAY) {
+					acapd_perror("%s firmware_location expects array \n",config_path);
+					continue;
+				}
+				config->firmware_locations = (char **)calloc(token[i+1].size, MAX_PATH_SIZE*sizeof(char));
+				DFX_DBG("Looking for firmware locations\n");
+				for (k = 0; k < token[i+1].size; k++){
+					config->firmware_locations[k] = strndup(jsonData+token[i+k+2].start, token[i+k+2].end - token[i+k+2].start);
+					DFX_DBG("Firmware Location[%d]: %s\n", k, config->firmware_locations[k]);
+				}
+				config->number_locations=token[i+1].size;
+				i += token[i+1].size;//increment by number of elements in array
 			}
-			config->firmware_locations = (char **)calloc(token[i+1].size, MAX_PATH_SIZE*sizeof(char));
-			for (k = 0; k < token[i+1].size; k++){
-				config->firmware_locations[k] = strndup(jsonData+token[i+k+2].start, token[i+k+2].end - token[i+k+2].start);
-			}
-			config->number_locations=token[i+1].size;
-			i += token[i+1].size;//increment by number of elements in array
-		}
     }
     free(jsonData);
 	return;
