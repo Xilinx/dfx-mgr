@@ -1,0 +1,12 @@
+#!/bin/sh
+
+mkdir -p $SNAP_DATA/config
+
+touch $SNAP_DATA/config/default_firmware
+
+tee $SNAP_DATA/config/daemon.conf <<EOF
+{
+	"firmware_location": ["$SNAP_COMMON/firmware.d"],
+	"default_accel":"$SNAP_DATA/config/default_firmware"
+}
+EOF

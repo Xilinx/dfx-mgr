@@ -159,15 +159,27 @@ int main(int argc, char **argv)
 		.sun_family = AF_UNIX,
 		.sun_path   = SERVER_SOCKET,
 	};
+	char config_path[255];
 	struct stat statbuf;
 	fd_set fds, readfds;
 	int fd_new, fdmax;
 
 	signal(SIGINT, intHandler);
-	_unused(argc);
-	_unused(argv);
+	if (argc < 2)
+	{
+		strcpy(config_path, "/etc/dfx-mgrd/daemon.conf");
+	}
+	else if (argc == 3)
+	{
+		strcpy(config_path, argv[1]);
+		strcpy(SNAP_FIRMWARES_DIRECTORY, argv[2]);
+	}
+	else
+	{
+		dfx_exit("invalid arguments, usage: dfx-mgrd <daemon_conf_path> <snap_firmwares_path>");
+	}
 	// initialize the complaint queue
-	dfx_init();
+	dfx_init(config_path);
 
 	if (stat(SERVER_SOCKET, &statbuf) == 0) {
 		if (unlink(SERVER_SOCKET) == -1)
@@ -361,13 +373,13 @@ enum protocols
     PROTOCOL_COUNT
 };
 
-static const struct lws_protocols protocols[] = { 
+static const struct lws_protocols protocols[] = {
 	// first protocol must always be HTTP handler
   {
-    "http",			
-    lws_callback_http_dummy,	
-    0,				
-	0,				
+    "http",
+    lws_callback_http_dummy,
+    0,
+	0,
 	0, NULL, 0,
   },
   {
@@ -377,7 +389,7 @@ static const struct lws_protocols protocols[] = {
     EXAMPLE_RX_BUFFER_BYTES,
 	0, NULL, 0,
   },
-  { NULL, NULL, 0, 0, 0, NULL, 0 } 
+  { NULL, NULL, 0, 0, 0, NULL, 0 }
 };
 
 void sigint_handler(int sig)
@@ -390,7 +402,7 @@ void socket_fd_setup()
 {
 	struct sockaddr_un serveraddr;
 
-	if (access(SERVER_PATH, F_OK) == 0) 
+	if (access(SERVER_PATH, F_OK) == 0)
 		unlink(SERVER_PATH);
 
     socket_d = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -443,7 +455,7 @@ int main(int argc, const char **argv)
 	lws_set_log_level(logs, NULL);
 	lwsl_user("LWS minimal http server dynamic | visit http://localhost:7681\n");
 
-	memset(&info, 0, sizeof info); 
+	memset(&info, 0, sizeof info);
 	//info.options = LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT |
 	//	       LWS_SERVER_OPTION_EXPLICIT_VHOSTS |
 	//	LWS_SERVER_OPTION_HTTP_HEADERS_SECURITY_BEST_PRACTICES_ENFORCE;
