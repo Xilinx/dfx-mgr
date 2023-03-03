@@ -13,10 +13,10 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#define CONFIG_PATH		"/etc/dfx-mgrd/daemon.conf"
 #define WATCH_PATH_LEN 256
 #define MAX_WATCH 500
+
+extern char SNAP_FIRMWARES_DIRECTORY[255];
 
 int load_accelerator(const char *accel_name);
 int remove_accelerator(int slot);
@@ -33,7 +33,7 @@ void getShellFD();
 void getClockFD();
 char *listAccelerators();
 void getRMInfo();
-int dfx_init();
+int dfx_init(char* config_path);
 int dfx_getFDs(int slot, int *fd);
 #ifdef __cplusplus
 }
