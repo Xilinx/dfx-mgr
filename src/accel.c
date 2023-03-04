@@ -48,6 +48,15 @@ int acapd_parse_config(acapd_accel_t *accel, const char *shell_config)
 	return ret;
 }
 
+static int get_fpga_flags(acapd_accel_t *accel)
+{
+	char cmd[FILENAME_MAX];
+
+	snprintf(cmd, sizeof(cmd), "grep -sq external-fpga-config %s/*.dtbo",
+		 accel->sys_info.tmp_dir);
+	return (system(cmd) == 0) ? DFX_EXTERNAL_CONFIG_EN : DFX_NORMAL_EN;
+}
+
 int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int async)
 {
 	int ret;
@@ -74,7 +83,7 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 	}
 
 	if (accel->is_cached == 0) {
-		ret = sys_fetch_accel(accel, DFX_NORMAL_EN);
+		ret = sys_fetch_accel(accel, get_fpga_flags(accel));
 		if (ret != ACAPD_ACCEL_SUCCESS) {
 			DFX_ERR("failed to fetch partial bistream");
 			return ret;
