@@ -72,10 +72,14 @@ int acapd_shell_release_isolation(acapd_accel_t *accel)
 	//uint32_t v;
 	int i, ret;
 
-	(void)accel;
+	acapd_assert(accel != NULL);
 	dev = &shell.dev;
-	regs = shell.slot_regs[accel->rm_slot];
 	DFX_DBG("%s", dev->dev_name);
+	if (!shell.slot_regs){
+		DFX_ERR("%s no isolation_slots in shell.json?", dev->dev_name);
+		return 0; // or ACAPD_ACCEL_FAILURE;
+	}
+	regs = shell.slot_regs[accel->rm_slot];
 	reg_va = dev->va;
 	if (reg_va == NULL) {
 		ret = acapd_device_open(dev);
@@ -127,6 +131,11 @@ int acapd_shell_assert_isolation(acapd_accel_t *accel)
 
 	acapd_assert(accel != NULL);
 	dev = &(shell.dev);
+	DFX_DBG("%s", dev->dev_name);
+	if (!shell.slot_regs){
+		DFX_ERR("%s no isolation_slots in shell.json?", dev->dev_name);
+		return 0; // or ACAPD_ACCEL_FAILURE;
+	}
 	regs = shell.slot_regs[accel->rm_slot];
 	reg_va = dev->va;
 	if (reg_va == NULL) {
