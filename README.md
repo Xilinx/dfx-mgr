@@ -8,16 +8,16 @@ management for dynamic deployment of Xilinx based accelerator across different
 platforms.
 
 DFX-MGR is merged in Petalinux 2021.1 onwards and the recipe is called
-‘dfx-mgr’. The recipe is not enabled by default and user is expected to enable
+`dfx-mgr`. The recipe is not enabled by default and user is expected to enable
 it. As of today, DFX-MGR can be used for dynamic loading/unloading of
-accelerators to PL (Programmable Logic) or AI Engine. The functionality is
+accelerators to PL (Programmable Logic). The functionality is
 tested for loading/unloading of Flat shell (i.e. shell which does not have any
 reconfigurable partitions) and DFX shell (i.e. shell which contains static and
-dynamic region).  As you can see in the diagram below DFX-MGR can load a 3RP
+dynamic region). As you can see in the diagram below DFX-MGR can load a 3RP
 design and a 2RP design with the corresponding accelerators dynamically without
-having to reboot the board
+having to reboot the board.
 
-Once you compile petalinux by enabling the dfx-mgr recipe, you should have
+Once you compile Petalinux by enabling the dfx-mgr recipe, you should have
 dfx-mgrd and dfx-mgr-client in `/usr/bin` of rootfs and libdfx-mgr.so in
 `/usr/lib`. The config file `daemon.conf` can be found in `/etc/dfx-mgrd/`.
 Config file is mandatory, refer the files section for details of it. A default
@@ -39,7 +39,7 @@ below folder structure for more understanding and the details of json config
 files.
 
 The expected directory structure under `/lib/firmware/xilinx` which contains a
-3x1 PL shell design, AIE accel and a flat shell design. 3x1 `base_design` shell
+3x1 PL shell design, and a flat shell design. 3x1 `base_design` shell
 has an accelerator called FFT which contains three different partial bitstreams
 for three slots of base shell.
 `base_design` needs to have base shell bitstream and shell.json.
@@ -47,12 +47,13 @@ DFX-MGR expects '_slot#' as subfolders for each of the accelerators for DFX desi
 Place the bitstream corresponding to that slot in the respective subfolder along
 with accel.json file.
 
-It is not mandatory to have all the partial bitstreams for each slot but DFX-MGR
+It is not mandatory to have all the partial bitstreams for each slot,
+but DFX-MGR
 will fail to load an accelerator to the slot if no partial design is found.
 
 ```
 $ls /lib/firmware/xilinx/base_design
-base_Shell.pdi base.dtbo shell.json FFT AIE_Accel
+base_Shell.pdi base.dtbo shell.json FFT
 
 $ls /lib/firmware/xilinx/base_design/FFT/
 FFT_slot0 FFT_slot1 FFT_slot2
@@ -66,34 +67,27 @@ partial.pdi partial.dtbo accel.json
 $ls /lib/firmware/xilinx/base_design/FFT/FFT_slot2/
 partial_slot2.pdi partial.dtbo accel.json
 
-$ls /lib/firmware/xilinx/base_design/AIE_accel
-AIE_accel_slot3
-
-$ls /lib/firmware/xilinx/base_design/AIE_accel/AIE_accel_slot3
-aie.xclbin accel.json
-
 $ls /lib/firmware/xilinx/flat_shell/
 Flat_shell.bit.bin flat_shell.dtbo shell.json
-``` 
+```
 
 As shown above, base_design has first three slots (0,1,2)
-corresponding to PL slots from the FFT subfolders, and AIE_accel has slot3. When
+corresponding to PL slots from the FFT subfolders. When
 DFX-MGR successfully loads FFT accel to one of the slots, -listPackage output
-would show active slot as 0,1 or 2. When AIE_accel is programmed, it will show
-active slot as 3. If AIE were to have multiple slots, the subfolders would have
-to be named 3,4 and so on.
+would show active slot as 0,1 or 2.
+
 
 ### daemon.conf
 
-DFX-MGR is started on linux bootup and reads the config file
+DFX-MGR is started on Linux bootup and reads the config file
 `/etc/dfx-mgrd/daemon.conf` from device for any config settings. Any change to
 daemon.conf will need a restart of the /usr/bin/dfx-mgrd on target.
 
-For eg. If you want to add another location for packages on the filesystem,
+If you want to add another location for packages on the filesystem,
 append absolute path to the location in "firmware_location" and restart the
 daemon. The limitations around directory structure as explained above still
 apply as for "/lib/firmware/xilinx".
- 
+
 ```
 $cat /etc/dfx-mgrd/daemon.conf
 {
@@ -101,7 +95,8 @@ $cat /etc/dfx-mgrd/daemon.conf
                              //package-name to default_firmware for any
                              // accelerator to be loaded on start of daemon
  "firmware_location": ["/lib/firmware/xilinx"]  //Required:Package directories
-                        // monitored by DFX-MGR }
+                        // monitored by DFX-MGR
+}
 ```
 
 ### shell.json
@@ -110,14 +105,14 @@ shell.json describes the base shell configuration information. Optional fields
 can be skipped if not desired.
 
 One of the below type should be used for shell_type as per your design.
-XRT-FLAT: dfx-mgr will program the PL and update /etc/vart.conf on target with the
+* XRT-FLAT: dfx-mgr will program the PL and update /etc/vart.conf on target with the
 path to the active xclbin on success.
-PL_FLAT: dfx-mgr will program the PL bitstream and treat the design as static.
-PL_DFX: dfx-mgr will treat the design as DFX with number of slots as mentioned in
+* PL_FLAT: dfx-mgr will program the PL bitstream and treat the design as static.
+* PL_DFX: dfx-mgr will treat the design as DFX with number of slots as mentioned in
 json.
 ```
-$cat shell.json 
- { 
+$cat shell.json
+ {
   "shell_type" : "PL_DFX",// Required: valid values are XRT_FLAT/PL_FLAT/PL_DFX
   "num_pl_slots": 3, //Required: Number of pl slots in your base shell design
   "num_aie_slots":1, //Required: Number of aie slots in your base shell design
@@ -125,15 +120,15 @@ $cat shell.json
               //and you want to skip loading base shell when loading the
               // accelerators to the slot.
   "device_name" : "a0010000.SIHA_Manager", //optional: IP name
-  "reg_base" : "", //Optional: IP device base address 
-  "reg_size" : "", //Optional 
+  "reg_base" : "", //Optional: IP device base address
+  "reg_size" : "", //Optional
   "clock_device_name" : "a0000000.clk_wiz", //optional
   "clock_reg_base" : "",//optional
   "clock_reg_size" : "", //optional
   "isolation_slots": [
 	// optional, specify the register offsets and the corresponding values to be
 	// written for each slot to bring it out of isolation, expects the length
-    //of array equal to number of slots 
+    //of array equal to number of slots
 	{ "offset": ["0x4000","0x4004","0x4008","0x400c"],//Address offset for first slot
 	"values": ["0x01","0x01", "0x0b", "0x02"] }, //Value to be written to above regs
 	{ "offset": ["0x5000","0x5004","0x5008","0x500c"],
@@ -149,25 +144,22 @@ accel.json describes the accelerator configuration. Optional fields can be
 skipped if not desired. Flat shell designs are not required to have accel.json
 since they do not have reconfigurable partition.
 
-SIHA_PL_DFX: Use this option for PL accelerators build with siha hw manager,
+* SIHA_PL_DFX: Use this option for PL accelerators build with SIHA hw manager,
 this enables some extra steps required to bring the slots out of isolation in
 addition to programming the bitstream.
-XRT_AIE_DFX: Use this option for AIE accelerator which expects an xclbin to
-program the AIE.
-XRT_PL_DFX: Use this option for XRT based PL accelerator.
+* XRT_PL_DFX: Use this option for XRT based PL accelerator.
 ```
 $cat accel.json
-{ 
-  "accel_type": "",  //Required: supported types are SIHA_PL_DFX/XRT_AIE_DFX/XRT_PL_DFX
+{
+  "accel_type": "", // Required: supported types are SIHA_PL_DFX / XRT_PL_DFX
   "accel_devices":[ // Optional: list of IP devices corresponding to this slot design
   { "dev_name": "20100000000.accel",
-   "reg_base":"", 
+   "reg_base":"",
    "reg_size":"" }],
   "sharedMemoryConfig": {
    "sizeInKB": "",
    "sharedMemType" : ""},
-  "dataMoverConfig": { //Optional: skip
-this node if application handles its own dma
+  "dataMoverConfig": { // Optional: skip this if application handles its own dma
   "dma_dev_name":"a4000000.dma",
   "dma_driver":"vfio-platform",
   "dma_reg_base":"",
@@ -184,20 +176,19 @@ this node if application handles its own dma
   { "chnl_id": 0,
    "chnl_dir": "ACAPD_DMA_DEV_R" }]
   },
-  "AccelHandshakeType": "”,
-  "fallbackBehaviour": "software" //Optional: If hw accelerator fails to load,
+  "AccelHandshakeType": "",
+  "fallbackBehaviour": "software" // Optional: If hw accelerator fails to load,
                     //DFX-MGR will try software fallback
-} 
-
+}
 ```
 
 ## How to build
 
-DFX-MGR depends on external libraries/frameworks like libdfx, libwebsockets, XRT,
+DFX-MGR depends on external libraries/frameworks like libdfx, XRT,
 i-notify etc. The recommended way to compile this repo is using
 yocto where the required dependency are taken care of in the recipe.
 
-If not using yocto then dependent libaries will need to be provided to cmake
+If not using yocto then dependent libraries will need to be provided to cmake
 using appropriate -DCMAKE_LIBRARY_PATH.
 
 ### How to build using yocto
@@ -214,10 +205,10 @@ There is generic cmake toolchian file for generic Linux which is in
 
 Set the path where you have all the dependent libraries in build.sh.
 
-``` 
-$ cd dfx-mgr 
-$ mkdir build 
-$ cd build 
+```
+$ cd dfx-mgr
+$ mkdir build
+$ cd build
 $ ../build.sh
 ```
 
@@ -250,6 +241,104 @@ slot shows as 3. FFT is programmed to first two slots out of three slots of PL.
 flat_shell is not programmed and show -1. Flat shell design do not have a
 dynamic reconfigurable partition and hence #slots shows as 0.
 
+Here is an example of 2-partition designs from KR260 board with Ubuntu 22.04,
+and their dfx-mgrd representation:
+```
+$ tree /lib/firmware/xilinx
+/lib/firmware/xilinx
+/lib/firmware/xilinx
+|-- k26-starter-kits
+|   |-- k26_starter_kits.bit.bin
+|   |-- k26_starter_kits.dtbo
+|   `-- shell.json
+|-- k26_2rp_1409
+|   |-- AES128
+|   |   |-- AES128_slot0
+|   |   |   |-- accel.json
+|   |   |   |-- opendfx_shell_i_RP_0_AES128_inst_0_partial.bit.bin
+|   |   |   |-- opendfx_shell_i_RP_0_AES128_inst_0_partial.bit.bin_i.dtbo
+|   |   |   `-- opendfx_shell_i_RP_0_AES128_inst_0_partial.bit.bin_i.dtsi
+|   |   `-- AES128_slot1
+|   |       |-- accel.json
+|   |       |-- opendfx_shell_i_RP_1_AES128_inst_1_partial.bit.bin
+|   |       |-- opendfx_shell_i_RP_1_AES128_inst_1_partial.bit.bin_i.dtbo
+|   |       `-- opendfx_shell_i_RP_1_AES128_inst_1_partial.bit.bin_i.dtsi
+|   |-- AES192
+|   |   |-- AES192_slot0
+|   |   |   |-- accel.json
+|   |   |   |-- opendfx_shell_i_RP_0_AES192_inst_0_partial.bit.bin
+|   |   |   |-- opendfx_shell_i_RP_0_AES192_inst_0_partial.bit.bin_i.dtbo
+|   |   |   `-- opendfx_shell_i_RP_0_AES192_inst_0_partial.bit.bin_i.dtsi
+|   |   `-- AES192_slot1
+|   |       |-- accel.json
+|   |       |-- opendfx_shell_i_RP_1_AES192_inst_1_partial.bit.bin
+|   |       |-- opendfx_shell_i_RP_1_AES192_inst_1_partial.bit.bin_i.dtbo
+|   |       `-- opendfx_shell_i_RP_1_AES192_inst_1_partial.bit.bin_i.dtsi
+|   |-- DPU
+|   |   |-- DPU_slot0
+|   |   |   |-- accel.json
+|   |   |   |-- opendfx_shell_i_RP_0_DPU_512_inst_0_partial.bit.bin
+|   |   |   |-- opendfx_shell_i_RP_0_DPU_512_inst_0_partial.bit.bin_i.dtbo
+|   |   |   `-- opendfx_shell_i_RP_0_DPU_512_inst_0_partial.bit.bin_i.dtsi
+|   |   `-- DPU_slot1
+|   |       |-- accel.json
+|   |       |-- opendfx_shell_i_RP_1_DPU_512_inst_1_partial.bit.bin
+|   |       |-- opendfx_shell_i_RP_1_DPU_512_inst_1_partial.bit.bin_i.dtbo
+|   |       `-- opendfx_shell_i_RP_1_DPU_512_inst_1_partial.bit.bin_i.dtsi
+|   |-- FFT
+|   |   |-- FFT_slot0
+|   |   |   |-- accel.json
+|   |   |   |-- opendfx_shell_i_RP_0_FFT_4channel_inst_0_partial.bit.bin
+|   |   |   |-- opendfx_shell_i_RP_0_FFT_4channel_inst_0_partial.bit.bin_i.dtbo
+|   |   |   `-- opendfx_shell_i_RP_0_FFT_4channel_inst_0_partial.bit.bin_i.dtsi
+|   |   `-- FFT_slot1
+|   |       |-- accel.json
+|   |       |-- opendfx_shell_i_RP_1_FFT_4channel_inst_1_partial.bit.bin
+|   |       |-- opendfx_shell_i_RP_1_FFT_4channel_inst_1_partial.bit.bin_i.dtbo
+|   |       `-- opendfx_shell_i_RP_1_FFT_4channel_inst_1_partial.bit.bin_i.dtsi
+|   |-- FIR
+|   |   |-- FIR_slot0
+|   |   |   |-- accel.json
+|   |   |   |-- opendfx_shell_i_RP_0_FIR_compiler_inst_0_partial.bit.bin
+|   |   |   |-- opendfx_shell_i_RP_0_FIR_compiler_inst_0_partial.bit.bin_i.dtbo
+|   |   |   `-- opendfx_shell_i_RP_0_FIR_compiler_inst_0_partial.bit.bin_i.dtsi
+|   |   `-- FIR_slot1
+|   |       |-- accel.json
+|   |       |-- opendfx_shell_i_RP_1_FIR_compiler_inst_1_partial.bit.bin
+|   |       |-- opendfx_shell_i_RP_1_FIR_compiler_inst_1_partial.bit.bin_i.dtbo
+|   |       `-- opendfx_shell_i_RP_1_FIR_compiler_inst_1_partial.bit.bin_i.dtsi
+|   |-- PP_PIPELINE
+|   |   |-- PP_PIPELINE_slot0
+|   |   |   |-- accel.json
+|   |   |   |-- opendfx_shell_i_RP_0_pp_pipeline_inst_0_partial.bit.bin
+|   |   |   |-- opendfx_shell_i_RP_0_pp_pipeline_inst_0_partial.bit.bin_i.dtbo
+|   |   |   `-- opendfx_shell_i_RP_0_pp_pipeline_inst_0_partial.bit.bin_i.dtsi
+|   |   `-- PP_PIPELINE_slot1
+|   |       |-- accel.json
+|   |       |-- opendfx_shell_i_RP_1_pp_pipeline_inst_1_partial.bit.bin
+|   |       |-- opendfx_shell_i_RP_1_pp_pipeline_inst_1_partial.bit.bin_i.dtbo
+|   |       `-- opendfx_shell_i_RP_1_pp_pipeline_inst_1_partial.bit.bin_i.dtsi
+|   |-- opendfx_shell_wrapper.bit.bin
+|   |-- pl.dtbo
+|   |-- pl.dtsi
+|   `-- shell.json
+`-- kr260-tsn-rs485pmod
+    |-- kr260-tsn-rs485pmod.bin
+    |-- kr260-tsn-rs485pmod.dtbo
+    `-- shell.json
+
+$ sudo xmutil listapps
+     Accelerator     Accel_type        Base         Base_type #slots(PL+AIE) Active_slot
+   k26-starter-kits  XRT_FLAT      k26-starter-kits  XRT_FLAT       (0+0)    0,
+kr260-tsn-rs485pmod  XRT_FLAT    kr260-tsn-rs485pmod XRT_FLAT       (0+0)    -1
+                FFT  SIHA_PL_DFX     k26_2rp_1409    PL_DFX         (2+0)    -1
+        PP_PIPELINE  SIHA_PL_DFX     k26_2rp_1409    PL_DFX         (2+0)    -1
+                FIR  SIHA_PL_DFX     k26_2rp_1409    PL_DFX         (2+0)    -1
+                DPU  SIHA_PL_DFX     k26_2rp_1409    PL_DFX         (2+0)    -1
+             AES128  SIHA_PL_DFX     k26_2rp_1409    PL_DFX         (2+0)    -1
+             AES192  SIHA_PL_DFX     k26_2rp_1409    PL_DFX         (2+0)    -1
+```
+
 2. Command to load one of the above listed accelerator. For dfx designs, base
 shell would be loaded first if not already loaded and then accelerator will be
 loaded to one of the free slots. If the shell is already loaded then only the
@@ -275,18 +364,17 @@ an accelerator.
 
 For DFX designs we recommend using graph api's which provide good abstract
 way to create a visual model of the RP's and inter connections. Refer to some
-example code under `<repo>/example/sys/linux/graph`. 
+example code under `<repo>/example/sys/linux/graph`.
 
 ## Known limitations
 
 1. DFX-MGR uses i-notify for firmware file updates and i-notify doesn't work
 with network filesystem.  Hence it is recommended to NOT boot linux over NFS for
-correct functinality of DFX-MGR daemon.
+correct functionality of DFX-MGR daemon.
 
 2. DFX-MGR package names i.e. firmware folder names are limited to 64 character
 currently and absolute path lengths are limited to 512 char. Hence avoid
 creating long filenames. If absolutely required for longer names, file an issue
-in the repo and will be adderssed on priority. 
+in the repo and will be addressed on priority.
 
 3. I/O nodes doesn't support zero copy.
-
