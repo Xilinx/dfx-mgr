@@ -22,13 +22,14 @@ typedef struct {
 	char name[64];
 	char path[512];
 	int uid;
-	int parent_uid;
+	int parent_uid; /**< future: 2+ deep hierarchal reconfiguration */
 	int is_aie;
 	acapd_accel_t *accel; // This tracks active PL dfx in this slot
 }slot_info_t;
 
 typedef struct {
 	int uid;
+	int pid; /**< parent's UID should match shell's UID */
 	char name[64];
 	char path[512];
 	char parent_name[64];

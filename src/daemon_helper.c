@@ -248,6 +248,13 @@ int load_accelerator(const char *accel_name)
 						sizeof(slot_info_t *));
 			platform.active_base = base;
 	}
+	/*
+	 * Check if base UID matches the parent_uid in accel_info
+	 */
+	DFX_DBG("base(%s).uid = %d does %s match accel(%s).pid = %d",
+		base->name, base->uid,
+		base->uid == accel_info->pid ? "" : "NOT",
+		accel_info->name, accel_info->pid);
         for (i = 0; i < (base->num_pl_slots + base->num_aie_slots); i++) {
             DFX_DBG("Finding empty slot for %s i %d", accel_name, i);
             if (base->slots[i] == NULL){
@@ -476,66 +483,84 @@ get_accel_uio_by_name(int slot, const char *name)
 	return dfx_shell_uio_by_name(name);
 }
 
+/*
+ * pid_error - return 1 if PL_DFX IDs do not match, 0 otherwise
+ * @base: base to get its uid
+ * @accel_idx: index of the accel: its pid should match uid of the base
+ *
+ * Returns: 0 for *FLAT shells, or if id's are non-zero and match
+ */
+static int
+pid_error(struct basePLDesign *base, int accel_idx)
+{
+	int uid = base->uid;
+	int pid = base->accel_list[accel_idx].pid;
+
+	return (!strcmp(base->type, "XRT_FLAT") ||
+		!strcmp(base->type, "PL_FLAT") ||
+		(uid && pid && (uid == pid))) ? 0 : 1;
+}
+
 char *listAccelerators()
 {
     int i,j;
 	uint8_t slot;
     char msg[330];	/* compiler warning if 326 bytes or less */
 	char res[8*1024];
+    char show_slots[16];
+    const char format[] = "%30s%16s%30s%4s%16s%16s%16s\n";
 
 	memset(res,0, sizeof(res));
 	firmware_dir_walk();
  
-    sprintf(msg,"%32s%20s%32s%20s%20s%20s\n\n","Accelerator","Accel_type","Base","Base_type","#slots(PL+AIE)","Active_slot");
+    sprintf(msg, format, "Accelerator", "Accel_type", "Base", "Pid",
+	    "Base_type", "#slots(PL+AIE)", "Active_slot");
 	strcat(res,msg);
     for (i = 0; i < MAX_WATCH; i++) {
         if (base_designs[i].base_path[0] != '\0' && base_designs[i].num_pl_slots > 0) {
             for (j = 0; j < 10; j++) {
                 if (base_designs[i].accel_list[j].path[0] != '\0') {
-					char s[20];
+                    char active_slots[16] = "";
 
-					/* Internally flat shell is treated as one slot to make the code generic and save info of the active design */
-					if (!strcmp(base_designs[i].type,"XRT_FLAT") || !strcmp(base_designs[i].type,"PL_FLAT"))
-						sprintf(s,"(%d+%d)", 0, base_designs[i].num_aie_slots);
-					else
-						sprintf(s,"(%d+%d)", base_designs[i].num_pl_slots,base_designs[i].num_aie_slots);
-
+                    /*
+                     * Internally flat shell is treated as one slot to make
+                     * the code generic and save info of the active design
+                     */
+                    sprintf(show_slots, "(%d+%d)",
+                            !strcmp(base_designs[i].type, "XRT_FLAT") ||
+                            !strcmp(base_designs[i].type, "PL_FLAT")
+                            ? 0 : base_designs[i].num_pl_slots,
+                            base_designs[i].num_aie_slots);
                     if (base_designs[i].active) {
-                        char active_slots[20] = "";
                         char tmp[5];
                         for(slot = 0; slot < (base_designs[i].num_pl_slots +  base_designs[i].num_aie_slots); slot++) {
-							if (base_designs[i].slots[slot] != NULL && base_designs[i].slots[slot]->is_aie &&
-									!strcmp(base_designs[i].slots[slot]->name,base_designs[i].accel_list[j].name)){
+                           if (base_designs[i].slots[slot] != NULL && base_designs[i].slots[slot]->is_aie &&
+                               !strcmp(base_designs[i].slots[slot]->name, base_designs[i].accel_list[j].name)) {
                                     sprintf(tmp,"%d,",slot);
                                     strcat(active_slots,tmp);
-							}
+                            }
                             else if (base_designs[i].slots[slot] != NULL && !base_designs[i].slots[slot]->is_aie &&
-										!strcmp(base_designs[i].slots[slot]->accel->pkg->name,base_designs[i].accel_list[j].name)){
+                                     !strcmp(base_designs[i].slots[slot]->accel->pkg->name, base_designs[i].accel_list[j].name)) {
                                     sprintf(tmp,"%d,",slot);
                                     strcat(active_slots,tmp);
                             }
                         }
-                        if (strcmp(active_slots, ""))
-                            sprintf(msg,"%32s%20s%32s%20s%20s%20s\n",base_designs[i].accel_list[j].name,
-										base_designs[i].accel_list[j].accel_type, base_designs[i].name,
-										base_designs[i].type, s,active_slots);
-                        else
-                            sprintf(msg,"%32s%20s%32s%20s%20s%20d\n",base_designs[i].accel_list[j].name,
-										base_designs[i].accel_list[j].accel_type,base_designs[i].name,
-                                                    base_designs[i].type, s,-1);
-						strcat(res,msg);
                     }
-                    else {
-                        sprintf(msg,"%32s%20s%32s%20s%20s%20d\n",base_designs[i].accel_list[j].name,
-							base_designs[i].accel_list[j].accel_type,base_designs[i].name,
-																base_designs[i].type, s,-1);
-						strcat(res,msg);
-                    }
+                    sprintf(msg, format,
+                            base_designs[i].accel_list[j].name,
+                            base_designs[i].accel_list[j].accel_type,
+                            base_designs[i].name,
+			    pid_error(&base_designs[i], j) ? "err" : "ok",
+                            base_designs[i].type,
+                            show_slots,
+                            active_slots[0] ? active_slots : "-1");
+                    strcat(res, msg);
                 }
             }
         }
     }
-	return strdup(res);
+
+    return strdup(res);
 }
 
 void add_to_watch(int wd, char *name, char *path, char *parent_name, char *parent_path)

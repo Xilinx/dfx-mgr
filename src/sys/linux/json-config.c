@@ -358,7 +358,7 @@ int initBaseDesign(struct basePLDesign *base, const char *shell_path)
 						NULL, 10);
 		}
 		if (jsoneq(jsonData, &token[i],"uid") == 0) {
-			base->uid = strtol(jsonData+token[i+1].start, NULL, 10);
+			base->uid = strtol(jsonData+token[i+1].start, NULL, 16);
 		}
 		if (jsoneq(jsonData, &token[i],"load_base_design") == 0) {
 			char *p = jsonData + token[i+1].start;
@@ -425,6 +425,13 @@ int initAccel(accel_info_t *accel, const char *path)
 			if(strcmp(accel->accel_type,"SIHA_PL_DFX") && strcmp(accel->accel_type, "XRT_AIE_DFX") && strcmp(accel->accel_type,"XRT_PL_DFX"))
 				acapd_perror("accel_type valid values are SIHA_PL_DFX/XRT_AIE_DFX/XRT_PL_DFX\n");
 		}
+		/* unique_id, parent_unique_id : uid, pid in base 16 w/ "0x"
+		 * or "0X" prefix to match data format produced by Vivado.
+		 */
+		if (!jsoneq(jsonData, &token[i], "uid"))
+			accel->uid = strtol(jsonData+token[i+1].start, NULL, 16);
+		if (!jsoneq(jsonData, &token[i], "pid"))
+			accel->pid = strtol(jsonData+token[i+1].start, NULL, 16);
 	}
 	free(jsonData);
 	return 0;
