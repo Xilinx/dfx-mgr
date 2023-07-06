@@ -230,26 +230,27 @@ void *acapd_accel_get_reg_va(acapd_accel_t *accel, const char *name)
 
 	acapd_assert(accel != NULL);
 	if (name == NULL) {
-		acapd_perror("Enter a non-empty device name.\n");
+		DFX_ERR("empty device name");
 		return NULL;
-	} else {
-		for (int i = 0; i < accel->num_ip_devs; i++) {
-			if(!strcmp(accel->ip_dev[i].dev_name, name)){
-				dev = &accel->ip_dev[i];
-				break;
-			}
+	}
+	for (int i = 0; i < accel->num_ip_devs; i++) {
+		if (strstr(accel->ip_dev[i].dev_name, name)) {
+			dev = &accel->ip_dev[i];
+			break;
 		}
 	}
+
 	if (dev == NULL) {
-		acapd_perror("%s: failed to find %s device.\n", __func__, name);
+		DFX_ERR("failed to find device: %s", name);
 		return NULL;
 	}
+
+	DFX_DBG("%s: match %s", name, dev->dev_name);
 	if (dev->va == NULL) {
-		int ret;
-		ret = acapd_device_open(dev);
+		int ret = acapd_device_open(dev);
+
 		if (ret < 0) {
-			acapd_perror("%s: failed to open dev %s.\n",
-			     __func__, dev->dev_name);
+			DFX_ERR("failed to open dev %s", dev->dev_name);
 			return NULL;
 		}
 	}
