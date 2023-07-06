@@ -35,6 +35,44 @@ static int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
   }
   return -1;
 }
+/**
+ * rp_comms_inter - parse array of Inter-RP buffer addresses
+ * @base:	pointer to the base shell to set inter_rp_comm[]
+ * @jdatat:	pointer to the start of json data
+ * @token:	pointer to rp_comms_interconnect token
+ *
+ * Parsing array:
+ * "rp_comms_interconnect": [
+ *	"slot0" : "0x080000000.inter_rp_comm",
+ *	"slot1" : "0x280000000.inter_rp_comm"
+ * ]
+ */
+static void
+rp_comms_inter(struct basePLDesign *base, char *jdat, jsmntok_t *token)
+{
+	char slotX[] = "slotX";
+	uint64_t addr;
+	int i, j;
+
+	if (token[0].type != JSMN_ARRAY) {
+		DFX_ERR("rp_comms_interconnect needs array");
+		return;
+	}
+
+	/*
+	 * array of key-value pairs: "slotX" : "0x280000000.inter_rp_comm"
+	 *           token[i + 1] ----^^^^^     ^---- token[i + 2]
+	 *   strtoul() gets the addr and ignores ".inter_rp_comm"
+	 */
+	for (i = j = 0; j < token[0].size; j++, i+=2) {
+		slotX[4] = '0' + j;
+		if (!jsoneq(jdat, &token[i + 1], slotX)) {
+			addr = strtoul(jdat + token[i + 2].start, NULL, 16);
+			base->inter_rp_comm[j] = addr;
+			DFX_PR("%d.inter_rp_comm= %#lx", j, addr);
+		}
+	}
+}
 
 int parseAccelJson(acapd_accel_t *accel, char *filename)
 {
@@ -360,6 +398,9 @@ int initBaseDesign(struct basePLDesign *base, const char *shell_path)
 		if (jsoneq(jsonData, &token[i],"uid") == 0) {
 			base->uid = strtol(jsonData+token[i+1].start, NULL, 16);
 		}
+		if (!jsoneq(jsonData, &token[i], "rp_comms_interconnect"))
+			rp_comms_inter(base, jsonData, &token[i+1]);
+
 		if (jsoneq(jsonData, &token[i],"load_base_design") == 0) {
 			char *p = jsonData + token[i+1].start;
 				// If "no" or "No"

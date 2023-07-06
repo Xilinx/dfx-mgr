@@ -17,6 +17,8 @@ extern "C" {
 #endif
 
 #define MAX_PATH_SIZE 512
+#define RP_SLOTS_MAX 10
+#define ARRAY_SIZE(a) (sizeof(a)/sizeof((a)[0]))
 
 typedef struct {
 	char name[64];
@@ -51,7 +53,8 @@ struct basePLDesign {
 	int wd; //inotify watch desc
 	int load_base_design;
 	slot_info_t **slots;
-	accel_info_t accel_list[10];
+	uint64_t inter_rp_comm[RP_SLOTS_MAX]; /**< Inter-RP buffer addrs */
+	accel_info_t accel_list[RP_SLOTS_MAX];
 };
 
 typedef struct {
