@@ -106,6 +106,37 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 		printf("%s\n", recv_message.data);
+	} else if (!strcmp(argv[1], "-listIRbuf")) {
+		send_message.id = SIHA_IR_LIST;
+		send_message.size = 0;
+		if (write(gs.sock_fd, &send_message, HEADERSIZE + send_message.size) == -1) {
+			perror("write");
+			return -1;
+		}
+		ret = read(gs.sock_fd, &recv_message, sizeof(struct message));
+		if (ret <= 0) {
+			perror("No message or read error");
+			return -1;
+		}
+		printf("%s\n", recv_message.data);
+	} else if (!strcmp(argv[1], "-setIRbuf")) {
+		if (argc < 3) {
+			printf("-setIRbuf expects slot/accelerator list\n");
+			return -1;
+		}
+		send_message.id = SIHA_IR_SET;
+		send_message.size = strlen(argv[2]);
+		memcpy(send_message.data, argv[2], send_message.size);
+		if (write(gs.sock_fd, &send_message, HEADERSIZE + send_message.size) == -1) {
+			perror("write");
+			return -1;
+		}
+		ret = read(gs.sock_fd, &recv_message, sizeof(struct message));
+		if (ret <= 0) {
+			perror("No message or read error");
+			return -1;
+		}
+		printf("%s\n", recv_message.data);
 	} else if(!strcmp(argv[1],"-allocBuffer")) {
 	} else if(!strcmp(argv[1],"-freeBuffer")) {
 	} else if(!strcmp(argv[1],"-getFDs")) {
@@ -118,7 +149,9 @@ int main(int argc, char *argv[])
 		printf("-listPackage\t\t List locally downloaded accelerator package\n");
 		printf("-load <accel_name>\t\t Load the provided accelerator packaged\n");
 		printf("-remove <slot#>\t\t Unload package previously programmed\n");
-		printf("-listUIO <slot#>\t\t list accelerator UIOs\n");
+		printf("-listUIO [<slot#> [UIOname]]\t\t list accelerator UIOs\n");
+		printf("-listIRbuf [slot]\t\t list inter-RM buffer info\n");
+		printf("-setIRbuf a,b\t\t set RM stream from slot a to b\n");
 		printf("-allocBuffer <size> \t\t Allocate buffer of size and return its DMA fd and pa\n");
 		printf("-freeBuffer <pa> \t\t free buffer with physical address pa in decimal\n");
 		printf("-getFDs <slot#> \t\t Send ip device FD's over socket\n");

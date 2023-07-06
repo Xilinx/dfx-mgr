@@ -18,20 +18,25 @@ extern "C" {
 #define MAX_MESSAGE_SIZE          4*1024
 #define BACKLOG                   10
 
-#define QUIT                      0
-#define GRAPH_INIT                1
-#define GRAPH_FINALISE            2
-#define GRAPH_STAGED              3
-#define GRAPH_GET_IOBUFF          4
-#define GRAPH_SET_IOBUFF          5
-#define LOAD_ACCEL              6
-#define REMOVE_ACCEL            7
-#define LIST_PACKAGE            8
-#define LIST_ACCEL_UIO          9
-
-#define GRAPH_INIT_DONE           11
-#define GRAPH_FINALISE_DONE       12
-#define GRAPH_STAGED_DONE         13
+enum dfx_mgr_request {
+	DFX_MGR_REQ_FIRST,
+	QUIT	= DFX_MGR_REQ_FIRST,
+	GRAPH_INIT,
+	GRAPH_FINALISE,
+	GRAPH_STAGED,
+	GRAPH_GET_IOBUFF,
+	GRAPH_SET_IOBUFF,
+	LOAD_ACCEL,
+	REMOVE_ACCEL,
+	LIST_PACKAGE,
+	LIST_ACCEL_UIO,
+	DFX_MGR_REQ_10,		/* unused */
+	GRAPH_INIT_DONE,
+	GRAPH_FINALISE_DONE,
+	GRAPH_STAGED_DONE,
+	SIHA_IR_LIST,
+	SIHA_IR_SET,
+};
 
 #define MAX_CLIENTS 200
 
@@ -77,6 +82,7 @@ typedef struct fds{
 extern int dfxmgr_load(char* packageName);
 extern int dfxmgr_remove(int slot);
 extern char *dfxmgr_uio_by_name(char *obuf, int slot, const char *name);
+extern char *dfxmgr_siha_ir_list(uint32_t sz, char *obuf);
 //extern int getFD(char* argvalue);
 //extern int getPA(char* argvalue);
 //extern int getShellFD();

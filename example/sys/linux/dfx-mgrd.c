@@ -117,6 +117,26 @@ process_dfx_req(int fd, fd_set *fdset)
 			DFX_ERR("LIST_ACCEL_UIO write(%d)", fd);
 		break;
 
+	case SIHA_IR_LIST:
+		ret = siha_ir_buf_list(sizeof(send_msg.data), send_msg.data);
+		/*
+		 * The siha_ir_buf_list returns 0 on error or the size of
+		 * the buffer. The (ret < 0) check is to avoid a large
+		 * (e.g: 4GB = unsigned(-1)) write request.
+		 */
+		send_msg.size = ret < 0 ? 0 : ret;
+		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
+			DFX_ERR("SIHA_IR_LIST: write(%d)", fd);
+		break;
+
+	case SIHA_IR_SET:
+		ret = siha_ir_buf_set(recv_msg.data);
+		send_msg.size = 1 + sprintf(send_msg.data,
+				"SIHA_IR_SET: %d: %.18s", ret, recv_msg.data);
+		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
+			DFX_ERR("SIHA_IR_SET: write(%d)", fd);
+		break;
+
 	case QUIT:
 		if (close(fd) == -1)
 			DFX_ERR("close(%d)", fd);

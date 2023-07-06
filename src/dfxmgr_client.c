@@ -272,6 +272,63 @@ dfxmgr_uio_by_name(char *obuf __attribute__((nonstring)),
 	return obuf;
 }
 
+/**
+ * dfxmgr_siha_ir_buf_set - Set up Inter-RM buffers for I/O between slots
+ * @sz:		the number of elements in slot_seq array
+ * @slot_seq:	array of slot IDs to connect
+ *
+ * In 2RP design there are only two possible slot_seq:
+ * {0, 1} slot 0 writes to IR-buf 1; slot 1 reads from its IR-buf
+ * {1, 0} slot 1 writes to IR-buf 0; slot 0 reads from its IR-buf
+ * In 3RP design there are 12 sets, 6 w/ two slots and 6 w/ 3 slots.
+ * E.g.: {1, 2, 0}
+ *	 slot 1 writes to IR-buf 2,
+ *	 slot 2 reads from its IR-buf 2 and writes to IR-buf 0,
+ *	 slot 0 reads from its IR-buf 0
+ *
+ * Returns: 0 if connected successfully; non-0 otherwise
+ */
+#if 0
+int
+dfxmgr_siha_ir_buf_set(char *user_slot_seq)
+{
+}
+#endif
+
+/**
+ * dfxmgr_siha_ir_list - list DMs configuration, see siha_ir_buf_list
+ * @sz:  the size of the buf
+ * @buf: buffer to put the DMs configuration
+ *
+ * Returns: pointer to the buffer obuf
+ */
+char *
+dfxmgr_siha_ir_list(uint32_t sz, char *obuf)
+{
+	struct message send_msg, recv_msg;
+	socket_t gs;
+
+	if (!obuf) {
+		DFX_ERR("obuf is 0");
+		return NULL;
+	}
+
+	initSocket(&gs);
+	send_msg.id = SIHA_IR_LIST;
+	send_msg.size = 0;
+	if (write(gs.sock_fd, &send_msg, HEADERSIZE + send_msg.size) < 0) {
+		DFX_ERR("write(%d)", gs.sock_fd);
+		return NULL;
+	}
+
+	if (read(gs.sock_fd, &recv_msg, sizeof(struct message)) < 0) {
+		DFX_ERR("No message or read(%d) error", gs.sock_fd);
+		return NULL;
+	}
+	strncpy(obuf, recv_msg.data, sz);
+	return obuf;
+}
+
 ssize_t sock_fd_write(int sock, void *buf, ssize_t buflen, int *fd, int fdcount)
 {
     ssize_t size;
