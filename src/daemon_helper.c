@@ -50,8 +50,8 @@ struct basePLDesign *findBaseDesign(const char *name)
             if(!strcmp(base_designs[i].name, name)) {
                     DFX_DBG("Found base design %s", base_designs[i].name);
                     return &base_designs[i];
-			}
-            for (j=0;j <10; j++){
+	    }
+            for (j = 0; j < RP_SLOTS_MAX; j++) {
                 if(!strcmp(base_designs[i].accel_list[j].name, name)) {
                     DFX_DBG("accel %s in base %s", name, base_designs[i].name);
                     return &base_designs[i];
@@ -72,8 +72,8 @@ struct basePLDesign *findBaseDesign_path(const char *path)
             if(!strcmp(base_designs[i].base_path, path)) {
                     DFX_DBG("Found base design %s", base_designs[i].base_path);
                     return &base_designs[i];
-			}
-            for (j=0;j <10; j++){
+	    }
+            for (j = 0; j < RP_SLOTS_MAX; j++) {
                 if(!strcmp(base_designs[i].accel_list[j].path, path)) {
                     DFX_DBG("accel %s in base %s", path, base_designs[i].base_path);
                     return &base_designs[i];
@@ -133,7 +133,7 @@ void update_env(char *path)
                         !strcmp(dir->d_name + (len - 7), ".XCLBIN")) {
                     str = (char *) calloc((len + strlen(path) + 1),
                                                     sizeof(char));
-                    sprintf(str, "%s/%s",path,dir->d_name);
+		    sprintf(str, "%s/%s", path, dir->d_name);
                     sprintf(cmd,"echo \"firmware: %s\" > /etc/vart.conf",str);
                     free(str);
 		    DFX_DBG("system %s", cmd);
@@ -203,7 +203,7 @@ int load_accelerator(const char *accel_name)
 			update_env(pkg->path);
         return 0;
     }
-    for (i = 0; i < 10; i++){
+    for (i = 0; i < RP_SLOTS_MAX; i++){
         if(!strcmp(base->accel_list[i].name, accel_name)) {
             accel_info = &base->accel_list[i];
             DFX_DBG("Found accel %s base %s parent %s", accel_info->path, base->base_path, accel_info->parent_path);
@@ -484,6 +484,231 @@ get_accel_uio_by_name(int slot, const char *name)
 }
 
 /*
+ * the s2mm config offset is 0; mm2s - 0x10000
+ * TBD: find a sutable header file for DM_*_OFFT and data_mover_cfg
+ */
+#define DM_S2MM_OFFT 0
+#define DM_MM2S_OFFT 0x10000
+
+struct data_mover_cfg {
+	uint32_t dm_cr;      /**< 0: Control signals */
+	uint32_t dm_gier;    /**< 4: Global Interrupt Enable Reg */
+	uint32_t dm_iier;    /**< 8: IP Interrupt Enable Reg */
+	uint32_t dm_iisr;    /**< c: IP Interrupt Status Reg */
+	uint32_t dm_addr_lo; /**< 10: Data signal of mem_V[31:0] */
+	uint32_t dm_addr_hi; /**< 14: Data signal of mem_V[63:31] */
+	uint32_t dm_x18;     /**< 18: reserved */
+	uint32_t dm_size_lo; /**< 1c: Data signal of size_V[31:0] */
+	uint32_t dm_x20;     /**< 20: reserved */
+	uint32_t dm_tid;     /**< 24: Data signal of tid_V[7:0] */
+};
+
+static int
+dm_format(char *buf, struct data_mover_cfg *p_dm)
+{
+	struct basePLDesign *base = platform.active_base;
+	int max = ARRAY_SIZE(base->inter_rp_comm);
+	uint64_t addr = p_dm->dm_addr_hi;
+	int s, slot = '-';
+
+	addr = addr << 32 | p_dm->dm_addr_lo;
+	for (s = 0; s < max; s++)
+		if (base->inter_rp_comm[s] == addr) {
+			slot = s + '0';
+			break;
+		}
+
+	return sprintf(buf, ": cr=%#x gier,iier,iisr=%#x,%#x,%#x "
+		"addr[%c]=%#lx sz=%#x tid=%#x\n",
+		p_dm->dm_cr,
+		p_dm->dm_gier,
+		p_dm->dm_iier,
+		p_dm->dm_iisr,
+		slot, addr,	// p_dm->dm_addr_hi, p_dm->dm_addr_lo,
+		p_dm->dm_size_lo,
+		p_dm->dm_tid
+	);
+}
+
+/**
+ * siha_ir_buf_list - list DMs configuration
+ * @sz:  the size of the buf
+ * @buf: buffer to put the DMs configuration
+ *
+ * Returns: 0 on error or the size of the buffer to send to the client
+ */
+int
+siha_ir_buf_list(uint32_t sz, char *buf)
+{
+	struct basePLDesign *base = platform.active_base;
+	struct data_mover_cfg dm_cfg;
+	char *p = buf;
+	uint8_t slot;
+
+	if (sz > (1<<15) || !buf) {
+		/* the sz should be < struct_message.data[32*1024] */
+		DFX_ERR("sz,buf = %u,%p", sz, buf);
+		return 0;
+	}
+	if (!base || !base->slots || strcmp(base->type, "PL_DFX")) {
+		p += sprintf(p, "No base, slots, or not a PL_DFX base: %s",
+				base ? base->name : "no_base");
+		return (p > buf) ? p + 1 - buf : 0;
+	}
+	for (slot = 0;
+		slot < base->num_pl_slots
+		&& base->slots[slot]
+		&& base->slots[slot]->accel
+		&& (p < buf + sz);
+	     slot++) {
+		acapd_accel_t *accel = base->slots[slot]->accel;
+		void *reg = acapd_accel_get_reg_va(accel, "rm_comm_box");
+
+		p += sprintf(p, "DataMover[%hhu]: %p\n", slot, reg);
+		/* Let's read it all at once if non-zero */
+		if (reg) {
+			memcpy(&dm_cfg, reg + DM_MM2S_OFFT, sizeof(dm_cfg));
+			p += sprintf(p, " mm2s[%hhu]", slot);
+			p += dm_format(p, &dm_cfg);
+			memcpy(&dm_cfg, reg + DM_S2MM_OFFT, sizeof(dm_cfg));
+			p += sprintf(p, " s2mm[%hhu]", slot);
+			p += dm_format(p, &dm_cfg);
+		}
+	}
+	return (p > buf) ? p + 1 - buf : 0;
+}
+
+/**
+ * siha_ir_buf - src outputs to the slot dst IR-buffer
+ * @src: src slot writes  to dst IR-buffer
+ * @des: dst slot reads from dst IR-buffer
+ *
+ * Inter-RP buffer addrs are from shell.json. See rp_comms_interconnect
+ *
+ * Returns: 0 if connected successfully; non-0 otherwise
+ */
+static int
+siha_ir_buf(acapd_accel_t *src, acapd_accel_t *dst)
+{
+	void *src_dm = acapd_accel_get_reg_va(src, "rm_comm_box");
+	void *dst_dm = acapd_accel_get_reg_va(dst, "rm_comm_box");
+	struct basePLDesign *base = platform.active_base;
+	struct data_mover_cfg *p_src, *q_dst;
+	uint32_t ir_buf_lo, ir_buf_hi;
+	int dst_slot = dst->rm_slot;
+
+	if (dst_slot < 0 || dst_slot > base->num_pl_slots - 1) {
+		DFX_ERR("dst_slot=%d", dst_slot);
+		return -1;
+	}
+	if (src_dm || dst_dm) {
+		DFX_ERR("rm_comm_box src,dst = %p,%p", src_dm, dst_dm);
+		return -1;
+	}
+	ir_buf_lo = base->inter_rp_comm[dst_slot] & 0xFFFFFFFF;
+	ir_buf_hi = base->inter_rp_comm[dst_slot] >> 32;
+	DFX_DBG("src,dst=%u,%u addr=%p", src->rm_slot, dst_slot,
+		(void *)base->inter_rp_comm[dst_slot]);
+
+	/* set s2mm in src_dm to write to dst IR-buf */
+	/* set mm2s in dst_dm to read from its own IR-buf */
+	p_src = (struct data_mover_cfg *)(src_dm + DM_S2MM_OFFT);
+	q_dst = (struct data_mover_cfg *)(dst_dm + DM_MM2S_OFFT);
+
+	p_src->dm_addr_lo = q_dst->dm_addr_lo = ir_buf_lo;
+	p_src->dm_addr_hi = q_dst->dm_addr_hi = ir_buf_hi;
+
+	/*
+	 * The app should set the size and the ap_start bit:
+	 * p_src->dm_size_lo = q_dst->dm_size_lo = input_size;
+	 * q_dst->dm_cr = 1;
+	 * p_src->dm_cr = 1;
+	 */
+	return 0;
+}
+
+/**
+ * slot_seq_init copy only 0-9 into slot_seq (filter delimiters)
+ */
+#ifndef BIT
+#define BIT(N) (1U << (N))
+#endif
+static int
+slot_seq_init(char *slot_seq, char *buf)
+{
+	int num_pl_slots = platform.active_base->num_pl_slots;
+	uint32_t no_dup = 0;
+	int i, sz;
+
+	for (sz = i = 0; i < RP_SLOTS_MAX; i++) {
+		int c = buf[i] - '0';
+
+		if (c >= 0 && c <= num_pl_slots) {
+			if (no_dup & BIT(c)) {
+				DFX_ERR("repeated slot %d in %s", c, buf);
+				return -1;
+			}
+			no_dup |= BIT(c);
+			slot_seq[sz++] = c;
+		}
+	}
+	return sz;
+}
+
+/**
+ * siha_ir_buf_set - Set up Inter-RM buffers for I/O between slots
+ * @slot_seq:  user input array of slot IDs to connect
+ *
+ * Check if the slot_seq is valid, i.e.:
+ *  - 1 < sz < base->num_pl_slots
+ *  - it's a permutation w/o repetitions. Same as in nPk - "n permute k".
+ *  - the requested slots are loaded
+ *
+ * Returns: 0 if connected successfully; non-0 otherwise
+ */
+int
+siha_ir_buf_set(char *user_slot_seq)
+{
+	struct basePLDesign *base = platform.active_base;
+	// acapd_accel_t *accel_src, *accel_dst;
+	uint8_t slot0, slot;
+	char slot_seq[RP_SLOTS_MAX];
+	int i, sz;
+
+	// NULL if no active design, slot is not used or invalid
+	if (!base || !base->slots || strcmp(base->type, "PL_DFX")) {
+		DFX_ERR("No base, slots, or not a PL_DFX base: %s",
+			base ? base->name : "no_base");
+		return -1;
+	}
+
+	sz = slot_seq_init(slot_seq, user_slot_seq);
+	if (sz < 2 || sz > base->num_pl_slots) {
+		DFX_ERR("invalid sz: %d or sequence: %s", sz, user_slot_seq);
+		return -1;
+	}
+
+	for (slot0 = 0xff, slot = i = 0; i < sz; i++) {
+		slot = slot_seq[i];
+		DFX_DBG("s,d=%d,%d", (int)slot0, (int)slot);
+		if (slot > base->num_pl_slots || !base->slots[slot]) {
+			DFX_ERR("No accel in slot %u", slot);
+			return -1;
+		}
+		if (slot0 != 0xff && slot0 != slot) {
+			int rc = siha_ir_buf(base->slots[slot0]->accel,
+					     base->slots[slot]->accel);
+			if (!rc) {
+				DFX_ERR("slot: %u,%u", slot0, slot);
+				return -1;
+			}
+		}
+		slot0 = slot;
+	}
+	return 0;
+}
+
+/*
  * pid_error - return 1 if PL_DFX IDs do not match, 0 otherwise
  * @base: base to get its uid
  * @accel_idx: index of the accel: its pid should match uid of the base
@@ -518,7 +743,7 @@ char *listAccelerators()
 	strcat(res,msg);
     for (i = 0; i < MAX_WATCH; i++) {
         if (base_designs[i].base_path[0] != '\0' && base_designs[i].num_pl_slots > 0) {
-            for (j = 0; j < 10; j++) {
+            for (j = 0; j < RP_SLOTS_MAX; j++) {
                 if (base_designs[i].accel_list[j].path[0] != '\0') {
                     char active_slots[16] = "";
 
@@ -621,7 +846,7 @@ accel_info_t *add_accel_to_base(struct basePLDesign *base, char *name, char *pat
 {
     int j;
 
-	for (j = 0; j < 10; j++) {
+    for (j = 0; j < RP_SLOTS_MAX; j++) {
         if (!strcmp(base->accel_list[j].path, path)) {
 			DFX_DBG("%s already exists", path);
             break;
@@ -761,8 +986,8 @@ void remove_base_design(char *path,char *parent, int is_base)
         DFX_DBG("Removing accel %s from base %s", path, parent);
         for (i = 0; i < MAX_WATCH; i++) {
             if (!strcmp(base_designs[i].base_path,parent)) {
-                for(j=0; j < 10; j++) {
-					if (!strcmp(base_designs[i].accel_list[j].path,path)) {
+		for (j = 0; j < RP_SLOTS_MAX; j++) {
+		    if (!strcmp(base_designs[i].accel_list[j].path,path)) {
                         remove_watch(path);
                         base_designs[i].accel_list[j].name[0] = '\0';
                         base_designs[i].accel_list[j].path[0] = '\0';
@@ -778,7 +1003,7 @@ void remove_base_design(char *path,char *parent, int is_base)
     for (i = 0; i < MAX_WATCH; i++) {
         if (strcmp(base_designs[i].base_path, path) == 0) {
             DFX_DBG("Removing base design %s", path);
-            for (j=0; j < 10; j++) {
+	    for (j = 0; j < RP_SLOTS_MAX; j++) {
                 if (base_designs[i].accel_list[j].path[0] != '\0') {
                     remove_watch(path);
                     base_designs[i].accel_list[j].name[0] = '\0';

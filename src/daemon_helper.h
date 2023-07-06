@@ -27,6 +27,8 @@ int getFD(int slot, char *dev_name);
 int dfx_getFDs(int slot, int *fd);
 void list_accel_uio(int, char *, size_t);
 char *get_accel_uio_by_name(int, const char *);
+int siha_ir_buf_list(uint32_t sz, char *buf);
+int siha_ir_buf_set(char *user_slot_seq);
 void getShellFD();
 void getClockFD();
 char *listAccelerators();
