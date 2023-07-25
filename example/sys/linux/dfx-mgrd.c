@@ -132,7 +132,7 @@ process_dfx_req(int fd, fd_set *fdset)
 	case SIHA_IR_SET:
 		ret = siha_ir_buf_set(recv_msg.data);
 		send_msg.size = 1 + sprintf(send_msg.data,
-				"SIHA_IR_SET: %d: %.18s", ret, recv_msg.data);
+				"%d SIHA_IR_SET: %.18s", ret, recv_msg.data);
 		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
 			DFX_ERR("SIHA_IR_SET: write(%d)", fd);
 		break;

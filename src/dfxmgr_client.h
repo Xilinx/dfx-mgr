@@ -83,6 +83,7 @@ extern int dfxmgr_load(char* packageName);
 extern int dfxmgr_remove(int slot);
 extern char *dfxmgr_uio_by_name(char *obuf, int slot, const char *name);
 extern char *dfxmgr_siha_ir_list(uint32_t sz, char *obuf);
+extern int dfxmgr_siha_ir_buf_set(const char *user_slot_seq);
 //extern int getFD(char* argvalue);
 //extern int getPA(char* argvalue);
 //extern int getShellFD();

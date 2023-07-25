@@ -601,7 +601,7 @@ siha_ir_buf(acapd_accel_t *src, acapd_accel_t *dst)
 		DFX_ERR("dst_slot=%d", dst_slot);
 		return -1;
 	}
-	if (src_dm || dst_dm) {
+	if (!src_dm || !dst_dm) {
 		DFX_ERR("rm_comm_box src,dst = %p,%p", src_dm, dst_dm);
 		return -1;
 	}
@@ -698,7 +698,7 @@ siha_ir_buf_set(char *user_slot_seq)
 		if (slot0 != 0xff && slot0 != slot) {
 			int rc = siha_ir_buf(base->slots[slot0]->accel,
 					     base->slots[slot]->accel);
-			if (!rc) {
+			if (rc) {
 				DFX_ERR("slot: %u,%u", slot0, slot);
 				return -1;
 			}

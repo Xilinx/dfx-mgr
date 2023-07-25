@@ -288,12 +288,34 @@ dfxmgr_uio_by_name(char *obuf __attribute__((nonstring)),
  *
  * Returns: 0 if connected successfully; non-0 otherwise
  */
-#if 0
 int
-dfxmgr_siha_ir_buf_set(char *user_slot_seq)
+dfxmgr_siha_ir_buf_set(const char *user_slot_seq)
 {
+	struct message send_msg, recv_msg;
+	socket_t gs;
+
+	if (!user_slot_seq) {
+		DFX_ERR("user_slot_seq is 0");
+		return -1;
+	}
+
+	initSocket(&gs);
+	send_msg.id = SIHA_IR_SET;
+	send_msg.size = 1 + strlen(user_slot_seq);
+	strncpy(send_msg.data, user_slot_seq, sizeof(send_msg.data));
+	if (write(gs.sock_fd, &send_msg, HEADERSIZE + send_msg.size) < 0) {
+		DFX_ERR("write(%d)", gs.sock_fd);
+		return -1;
+	}
+
+	if (read(gs.sock_fd, &recv_msg, sizeof(struct message)) < 0) {
+		DFX_ERR("No message or read(%d) error", gs.sock_fd);
+		return -1;
+	}
+	DFX_PR("SIHA_IR_SET (%s) returns: %s", user_slot_seq,
+		recv_msg.data[0] == '0' ? "Ok" : "Error");
+	return  recv_msg.data[0] == '0' ? 0 : -1;
 }
-#endif
 
 /**
  * dfxmgr_siha_ir_list - list DMs configuration, see siha_ir_buf_list
