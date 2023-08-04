@@ -507,33 +507,31 @@ static int
 dm_format(char *buf, struct data_mover_cfg *p_dm)
 {
 	struct basePLDesign *base = platform.active_base;
-	int max = ARRAY_SIZE(base->inter_rp_comm);
 	uint64_t addr = p_dm->dm_addr_hi;
 	int s, slot = '-';
 
 	addr = addr << 32 | p_dm->dm_addr_lo;
-	for (s = 0; s < max; s++)
+	for (s = 0; s < base->num_pl_slots; s++)
 		if (base->inter_rp_comm[s] == addr) {
 			slot = s + '0';
 			break;
 		}
 
-	return sprintf(buf, ": cr=%#x gier,iier,iisr=%#x,%#x,%#x "
-		"addr[%c]=%#lx sz=%#x tid=%#x\n",
-		p_dm->dm_cr,
-		p_dm->dm_gier,
-		p_dm->dm_iier,
-		p_dm->dm_iisr,
-		slot, addr,	// p_dm->dm_addr_hi, p_dm->dm_addr_lo,
-		p_dm->dm_size_lo,
-		p_dm->dm_tid
-	);
+	return sprintf(buf, ": addr[%c]=%#12lx sz=%#8x\n",
+			slot, addr, p_dm->dm_size_lo);
 }
 
+#define DMCFG(p, f) (*(uint32_t *)((p) + offsetof(struct data_mover_cfg, f)))
 /**
  * siha_ir_buf_list - list DMs configuration
  * @sz:  the size of the buf
  * @buf: buffer to put the DMs configuration
+ *
+ * Some of the bits in data_mover_cfg are Clear-On-Read, e.g.:
+ *	dm_cr:1 (bit 1)
+ * Do not read all of the struct data_mover_cfg as in
+ *	memcpy(&dm_cfg, reg + DM_MM2S_OFFT, sizeof(dm_cfg));
+ * This causes user application to hang.
  *
  * Returns: 0 on error or the size of the buffer to send to the client
  */
@@ -555,6 +553,7 @@ siha_ir_buf_list(uint32_t sz, char *buf)
 				base ? base->name : "no_base");
 		return (p > buf) ? p + 1 - buf : 0;
 	}
+	memset(&dm_cfg, 0, sizeof(dm_cfg));
 	for (slot = 0;
 		slot < base->num_pl_slots
 		&& base->slots[slot]
@@ -565,12 +564,19 @@ siha_ir_buf_list(uint32_t sz, char *buf)
 		void *reg = acapd_accel_get_reg_va(accel, "rm_comm_box");
 
 		p += sprintf(p, "DataMover[%hhu]: %p\n", slot, reg);
-		/* Let's read it all at once if non-zero */
+		/* dm_cr:1 (bit 1) is Clear-on-Read: do not read it */
 		if (reg) {
-			memcpy(&dm_cfg, reg + DM_MM2S_OFFT, sizeof(dm_cfg));
+			uint64_t cr = (uint64_t)reg + DM_MM2S_OFFT;
+
+			dm_cfg.dm_addr_lo = DMCFG(cr, dm_addr_lo);
+			dm_cfg.dm_addr_hi = DMCFG(cr, dm_addr_hi);
+			dm_cfg.dm_size_lo = DMCFG(cr, dm_size_lo);
 			p += sprintf(p, " mm2s[%hhu]", slot);
 			p += dm_format(p, &dm_cfg);
-			memcpy(&dm_cfg, reg + DM_S2MM_OFFT, sizeof(dm_cfg));
+			cr = (uint64_t)reg + DM_S2MM_OFFT;
+			dm_cfg.dm_addr_lo = DMCFG(cr, dm_addr_lo);
+			dm_cfg.dm_addr_hi = DMCFG(cr, dm_addr_hi);
+			dm_cfg.dm_size_lo = DMCFG(cr, dm_size_lo);
 			p += sprintf(p, " s2mm[%hhu]", slot);
 			p += dm_format(p, &dm_cfg);
 		}
