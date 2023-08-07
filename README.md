@@ -144,7 +144,8 @@ accel.json describes the accelerator configuration. Optional fields can be
 skipped if not desired. Flat shell designs are not required to have accel.json
 since they do not have reconfigurable partition.
 
-* SIHA_PL_DFX: Use this option for PL accelerators build with SIHA hw manager,
+* SIHA_PL_DFX: Use this option for PL accelerators build with
+[SIHA manager](https://github.com/Xilinx/kria-dfx-hw/tree/xlnx_rel_v2022.1/k26/ip_repo/siha_manager),
 this enables some extra steps required to bring the slots out of isolation in
 addition to programming the bitstream.
 * XRT_PL_DFX: Use this option for XRT based PL accelerator.
@@ -184,8 +185,11 @@ $cat accel.json
 
 ## How to build
 
-DFX-MGR depends on external libraries/frameworks like libdfx, XRT,
-i-notify etc. The recommended way to compile this repo is using
+DFX-MGR depends on external libraries/frameworks such as
+[libdfx](https://github.com/Xilinx/libdfx),
+[XRT](https://github.com/Xilinx/XRT),
+[inotify](https://en.wikipedia.org/wiki/Inotify),
+etc. The recommended way to compile this repo is using
 yocto where the required dependency are taken care of in the recipe.
 
 If not using yocto then dependent libraries will need to be provided to cmake
@@ -241,7 +245,10 @@ slot shows as 3. FFT is programmed to first two slots out of three slots of PL.
 flat_shell is not programmed and show -1. Flat shell design do not have a
 dynamic reconfigurable partition and hence #slots shows as 0.
 
-Here is an example of 2-partition designs from KR260 board with Ubuntu 22.04,
+Here is an example of 2-partition designs (see:
+[kria-dfx-hw](https://github.com/Xilinx/kria-dfx-hw),
+[kria-apps-firmware](https://github.com/Xilinx/kria-apps-firmware))
+from KR260 board with Ubuntu 22.04,
 and their dfx-mgrd representation:
 ```
 $ tree /lib/firmware/xilinx
@@ -374,7 +381,6 @@ correct functionality of DFX-MGR daemon.
 
 2. DFX-MGR package names i.e. firmware folder names are limited to 64 character
 currently and absolute path lengths are limited to 512 char. Hence avoid
-creating long filenames. If absolutely required for longer names, file an issue
-in the repo and will be addressed on priority.
+creating long filenames.
 
 3. I/O nodes doesn't support zero copy.
