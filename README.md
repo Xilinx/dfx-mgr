@@ -52,22 +52,22 @@ but DFX-MGR
 will fail to load an accelerator to the slot if no partial design is found.
 
 ```
-$ls /lib/firmware/xilinx/base_design
+$ ls /lib/firmware/xilinx/base_design
 base_Shell.pdi base.dtbo shell.json FFT
 
-$ls /lib/firmware/xilinx/base_design/FFT/
+$ ls /lib/firmware/xilinx/base_design/FFT/
 FFT_slot0 FFT_slot1 FFT_slot2
 
-$ls /lib/firmware/xilinx/base_design/FFT/FFT_slot0/
+$ ls /lib/firmware/xilinx/base_design/FFT/FFT_slot0/
 partial.pdi partial.dtbo accel.json
 
-$ls /lib/firmware/xilinx/base_design/FFT/FFT_slot1/
+$ ls /lib/firmware/xilinx/base_design/FFT/FFT_slot1/
 partial.pdi partial.dtbo accel.json
 
-$ls /lib/firmware/xilinx/base_design/FFT/FFT_slot2/
+$ ls /lib/firmware/xilinx/base_design/FFT/FFT_slot2/
 partial_slot2.pdi partial.dtbo accel.json
 
-$ls /lib/firmware/xilinx/flat_shell/
+$ ls /lib/firmware/xilinx/flat_shell/
 Flat_shell.bit.bin flat_shell.dtbo shell.json
 ```
 
@@ -89,7 +89,7 @@ daemon. The limitations around directory structure as explained above still
 apply as for "/lib/firmware/xilinx".
 
 ```
-$cat /etc/dfx-mgrd/daemon.conf
+$ cat /etc/dfx-mgrd/daemon.conf
 {
   "default_accel":"/etc/dfx-mgrd/default_firmware", //Optional: echo the
                              //package-name to default_firmware for any
@@ -105,13 +105,13 @@ shell.json describes the base shell configuration information. Optional fields
 can be skipped if not desired.
 
 One of the below type should be used for shell_type as per your design.
-* XRT-FLAT: dfx-mgr will program the PL and update /etc/vart.conf on target with the
+* XRT_FLAT: dfx-mgr will program the PL and update /etc/vart.conf on target with the
 path to the active xclbin on success.
 * PL_FLAT: dfx-mgr will program the PL bitstream and treat the design as static.
 * PL_DFX: dfx-mgr will treat the design as DFX with number of slots as mentioned in
 json.
 ```
-$cat shell.json
+$ cat shell.json
  {
   "shell_type" : "PL_DFX",// Required: valid values are XRT_FLAT/PL_FLAT/PL_DFX
   "num_pl_slots": 3, //Required: Number of pl slots in your base shell design
@@ -138,6 +138,10 @@ $cat shell.json
 	 }
 ```
 
+> **Note:** The [AIE](https://www.xilinx.com/products/technology/ai-engine.html)
+> support in dfx-mgr is preliminary and for a future production enablement capability.
+> [KRIA](https://www.xilinx.com/products/som/kria.html) devices do not have AIE.
+
 ### accel.json
 
 accel.json describes the accelerator configuration. Optional fields can be
@@ -150,7 +154,7 @@ this enables some extra steps required to bring the slots out of isolation in
 addition to programming the bitstream.
 * XRT_PL_DFX: Use this option for XRT based PL accelerator.
 ```
-$cat accel.json
+$ cat accel.json
 {
   "accel_type": "", // Required: supported types are SIHA_PL_DFX / XRT_PL_DFX
   "accel_devices":[ // Optional: list of IP devices corresponding to this slot design
@@ -223,7 +227,7 @@ under `build/usr/local/lib` and binary under `build/usr/local/bin`.
 
 ### Using command line
 
-dfx-mgrd daemon should mostly be running on linux startup. Assuming it is
+The dfx-mgrd daemon should mostly be running on linux startup. Assuming it is
 running, you can use below commands from command line to load/unload
 accelerators.
 
@@ -233,7 +237,7 @@ accelerators.
 An alternative command line utility which some users might be familiar with can
 also be used `xmutil listapps`.
 ```
-$dfx-mgr-client -listPackage
+$ dfx-mgr-client -listPackage
 Accelerator    Accel_type          Base   Base_type  #slots(PL+AIE) Active_slot
 
   flat_shell	  PL_FLAT    flat_shell     PL_FLAT           (0+0)          -1
@@ -248,11 +252,11 @@ dynamic reconfigurable partition and hence #slots shows as 0.
 Here is an example of 2-partition designs (see:
 [kria-dfx-hw](https://github.com/Xilinx/kria-dfx-hw),
 [kria-apps-firmware](https://github.com/Xilinx/kria-apps-firmware))
-from KR260 board with Ubuntu 22.04,
-and their dfx-mgrd representation:
+from KR260 board with Ubuntu 22.04:
+<details>
+
 ```
 $ tree /lib/firmware/xilinx
-/lib/firmware/xilinx
 /lib/firmware/xilinx
 |-- k26-starter-kits
 |   |-- k26_starter_kits.bit.bin
@@ -333,7 +337,11 @@ $ tree /lib/firmware/xilinx
     |-- kr260-tsn-rs485pmod.bin
     |-- kr260-tsn-rs485pmod.dtbo
     `-- shell.json
+```
+</details>
+and their dfx-mgrd representation:
 
+```
 $ sudo xmutil listapps
      Accelerator     Accel_type        Base         Base_type #slots(PL+AIE) Active_slot
    k26-starter-kits  XRT_FLAT      k26-starter-kits  XRT_FLAT       (0+0)    0,
@@ -349,18 +357,21 @@ kr260-tsn-rs485pmod  XRT_FLAT    kr260-tsn-rs485pmod XRT_FLAT       (0+0)    -1
 2. Command to load one of the above listed accelerator. For dfx designs, base
 shell would be loaded first if not already loaded and then accelerator will be
 loaded to one of the free slots. If the shell is already loaded then only the
-accelerator will be loaded to one of free slots.
+accelerator will be loaded to one of free slots. If the device tree overlay
+(.dtbo) file contains **external-fpga-config** string the dfx-mgrd will use
+DFX_EXTERNAL_CONFIG_EN instead of the default DFX_NORMAL_EN flag when
+calling [libdfx](https://github.com/Xilinx/libdfx) fetch function.
 
 Equivalent xmutil command is `xmutil loadapp FFT`.
 ```
-$dfx-mgr-client -load FFT
+$ dfx-mgr-client -load FFT
 ```
 3. Command to remove accelerator from the slot. If there is not accel in the
 mentioned slot, this command will do nothing.
 
 Equivalent xmutil command is `xmutil unloadapp 1`.
 ```
-$dfx-mgr-client -remove 1
+$ dfx-mgr-client -remove 1
 ```
 
 ### Using library API
@@ -368,10 +379,6 @@ $dfx-mgr-client -remove 1
 Users can write application to interact with daemon. Refer to example source
 code in `repo/example/sys/linux/load_accel.c` for a simple example how to load
 an accelerator.
-
-For DFX designs we recommend using graph api's which provide good abstract
-way to create a visual model of the RP's and inter connections. Refer to some
-example code under `<repo>/example/sys/linux/graph`.
 
 ## Known limitations
 
@@ -383,4 +390,4 @@ correct functionality of DFX-MGR daemon.
 currently and absolute path lengths are limited to 512 char. Hence avoid
 creating long filenames.
 
-3. I/O nodes doesn't support zero copy.
+3. I/O nodes don't support zero copy.
