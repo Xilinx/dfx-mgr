@@ -1,8 +1,8 @@
 #!/bin/sh
 
-mkdir -p $SNAP_DATA/config
+. "$SNAP/scripts/dfx-mgr-management-script.sh"
 
-touch $SNAP_DATA/config/default_firmware
+mkdir -p $SNAP_DATA/config
 
 tee $SNAP_DATA/config/daemon.conf <<EOF
 {
@@ -10,3 +10,21 @@ tee $SNAP_DATA/config/daemon.conf <<EOF
 	"default_accel":"$SNAP_DATA/config/default_firmware"
 }
 EOF
+
+handle_default_firmware_config()
+{
+	default_fw="$(default_firmware)"
+	echo "Default fw we have from management"
+
+	if [ -z "$default_fw" ]; then
+		touch $SNAP_DATA/config/default_firmware
+	else
+		echo "$default_fw" > $SNAP_DATA/config/default_firmware
+	fi
+
+	set_default_firmware "$default_fw"
+
+}
+
+
+handle_default_firmware_config

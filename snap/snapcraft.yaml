@@ -10,6 +10,9 @@ description: |
 grade: devel # must be 'stable' to release into candidate/stable channels
 confinement: devmode # use 'strict' once you have the right plugs and slots
 
+architectures:
+  - arm64
+
 package-repositories:
   - type: apt
     suites: [jammy-limerick]
@@ -77,5 +80,7 @@ parts:
     plugin: dump
     organize:
       src/scripts/dfx-mgrd-snap-wrapper.sh: scripts/dfx-mgrd-snap-wrapper.sh
+      src/scripts/dfx-mgr-management-script.sh: scripts/dfx-mgr-management-script.sh
     stage:
       - scripts/dfx-mgrd-snap-wrapper.sh
+      - scripts/dfx-mgr-management-script.sh
