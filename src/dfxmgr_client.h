@@ -14,7 +14,7 @@ extern "C" {
 #include <stdint.h>
 #include <sys/types.h>
 
-#define SERVER_SOCKET       "/tmp/dfx-mgrd.socket"
+#define SERVER_SOCKET "/var/run/dfx-mgrd.socket"
 #define MAX_MESSAGE_SIZE          4*1024
 #define BACKLOG                   10
 
