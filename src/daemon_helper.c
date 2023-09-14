@@ -715,21 +715,31 @@ siha_ir_buf_set(char *user_slot_seq)
 }
 
 /*
- * pid_error - return 1 if PL_DFX IDs do not match, 0 otherwise
+ * pid_uid_check - compare PID with base UID
  * @base: base to get its uid
  * @accel_idx: index of the accel: its pid should match uid of the base
  *
- * Returns: 0 for *FLAT shells, or if id's are non-zero and match
+ * Returns:
+ *	"id_ok"  - when PID and UID are present and match, or *FLAT shells
+ *	"id_err" - when PID and UID are present, but do not match
+ *	"no_id"  - when either PID or UID are not present.
  */
-static int
-pid_error(struct basePLDesign *base, int accel_idx)
+static const char *
+pid_uid_check(struct basePLDesign *base, int accel_idx)
 {
-	int uid = base->uid;
+	int base_uid = base->uid;
 	int pid = base->accel_list[accel_idx].pid;
+	static const char p_noid[] =	"no_id";
+	static const char p_err[] =	"id_err";
+	static const char p_ok[] =	"id_ok";
+	const char *str = p_noid;
 
-	return (!strcmp(base->type, "XRT_FLAT") ||
-		!strcmp(base->type, "PL_FLAT") ||
-		(uid && pid && (uid == pid))) ? 0 : 1;
+	if (!strcmp(base->type, "XRT_FLAT") || !strcmp(base->type, "PL_FLAT"))
+		str = p_ok;
+	else if (base_uid && pid)
+		str = (base_uid == pid) ? p_ok : p_err;
+
+	return str;
 }
 
 char *listAccelerators()
@@ -739,7 +749,7 @@ char *listAccelerators()
     char msg[330];	/* compiler warning if 326 bytes or less */
 	char res[8*1024];
     char show_slots[16];
-    const char format[] = "%30s%16s%30s%4s%16s%16s%16s\n";
+    const char format[] = "%30s%12s%30s%7s%12s%16s%12s\n";
 
 	memset(res,0, sizeof(res));
 	firmware_dir_walk();
@@ -781,7 +791,7 @@ char *listAccelerators()
                             base_designs[i].accel_list[j].name,
                             base_designs[i].accel_list[j].accel_type,
                             base_designs[i].name,
-			    pid_error(&base_designs[i], j) ? "err" : "ok",
+                            pid_uid_check(&base_designs[i], j),
                             base_designs[i].type,
                             show_slots,
                             active_slots[0] ? active_slots : "-1");
