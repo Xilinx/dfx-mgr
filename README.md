@@ -238,16 +238,19 @@ An alternative command line utility which some users might be familiar with can
 also be used `xmutil listapps`.
 ```
 $ dfx-mgr-client -listPackage
-Accelerator    Accel_type          Base   Base_type  #slots(PL+AIE) Active_slot
-
-  flat_shell	  PL_FLAT    flat_shell     PL_FLAT           (0+0)          -1
-  AIE_accel   XRT_AIE_DFX   base_design      PL_DFX           (3+1)          3,
-        FFT   SIHA_PL_DFX   base_design      PL_DFX           (3+1)         0,1
+Accelerator    Accel_type          Base    Pid Base_type #slots(PL+AIE) Active_slot
+  flat_shell	  PL_FLAT    flat_shell  id_ok  PL_FLAT          (0+0)          -1
+  AIE_accel   XRT_AIE_DFX   base_design  no_id   PL_DFX          (3+1)          3,
+        FFT   SIHA_PL_DFX   base_design id_err   PL_DFX          (3+1)         0,1
 ```
 In the above output, AIE_accel is currently programmed to AIE and hence the
 slot shows as 3. FFT is programmed to first two slots out of three slots of PL.
 flat_shell is not programmed and show -1. Flat shell design do not have a
-dynamic reconfigurable partition and hence #slots shows as 0.
+dynamic reconfigurable partition and hence #slots shows as 0. Vivado's UID, PID
+information for tracking parent-to-child relationships is in the "Pid" column:
+* "id_ok"  When PID and the base UID are present and match as expected
+* "id_err" When PID and the base UID are present but do not match.
+* "no_id"  When either PID or UID are not present.
 
 Here is an example of 2-partition designs (see:
 [kria-dfx-hw](https://github.com/Xilinx/kria-dfx-hw),
@@ -343,15 +346,15 @@ and their dfx-mgrd representation:
 
 ```
 $ sudo xmutil listapps
-     Accelerator     Accel_type        Base         Base_type #slots(PL+AIE) Active_slot
-   k26-starter-kits  XRT_FLAT      k26-starter-kits  XRT_FLAT       (0+0)    0,
-kr260-tsn-rs485pmod  XRT_FLAT    kr260-tsn-rs485pmod XRT_FLAT       (0+0)    -1
-                FFT  SIHA_PL_DFX     k26_2rp_1409    PL_DFX         (2+0)    -1
-        PP_PIPELINE  SIHA_PL_DFX     k26_2rp_1409    PL_DFX         (2+0)    -1
-                FIR  SIHA_PL_DFX     k26_2rp_1409    PL_DFX         (2+0)    -1
-                DPU  SIHA_PL_DFX     k26_2rp_1409    PL_DFX         (2+0)    -1
-             AES128  SIHA_PL_DFX     k26_2rp_1409    PL_DFX         (2+0)    -1
-             AES192  SIHA_PL_DFX     k26_2rp_1409    PL_DFX         (2+0)    -1
+     Accelerator     Accel_type        Base            Pid Base_type #slots(PL+AIE) Active_slot
+   k26-starter-kits  XRT_FLAT      k26-starter-kits  id_ok  XRT_FLAT         (0+0)    0,
+kr260-tsn-rs485pmod  XRT_FLAT    kr260-tsn-rs485pmod id_ok  XRT_FLAT         (0+0)    -1
+                FFT  SIHA_PL_DFX     k26_2rp_1409    no_id    PL_DFX         (2+0)    -1
+        PP_PIPELINE  SIHA_PL_DFX     k26_2rp_1409    no_id    PL_DFX         (2+0)    -1
+                FIR  SIHA_PL_DFX     k26_2rp_1409    no_id    PL_DFX         (2+0)    -1
+                DPU  SIHA_PL_DFX     k26_2rp_1409    no_id    PL_DFX         (2+0)    -1
+             AES128  SIHA_PL_DFX     k26_2rp_1409    id_err   PL_DFX         (2+0)    -1
+             AES192  SIHA_PL_DFX     k26_2rp_1409    id_ok    PL_DFX         (2+0)    -1
 ```
 
 2. Command to load one of the above listed accelerator. For dfx designs, base
@@ -376,9 +379,11 @@ $ dfx-mgr-client -remove 1
 
 ### Using library API
 
-Users can write application to interact with daemon. Refer to example source
+Users can write applications to interact with daemon. Refer to example source
 code in `repo/example/sys/linux/load_accel.c` for a simple example how to load
-an accelerator.
+an accelerator. The applications, including dfx-mgr-client connect to the daemon
+via `/var/run/dfx-mgrd.socket` file. This allows a client running in a docker
+container to connect to the dfx_mgrd running outside the container.
 
 ## Known limitations
 
