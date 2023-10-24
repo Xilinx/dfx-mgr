@@ -154,12 +154,13 @@ int load_accelerator(const char *accel_name)
     char shell_path[600];
     acapd_accel_t *pl_accel = (acapd_accel_t *)calloc(sizeof(acapd_accel_t), 1);
     acapd_accel_pkg_hd_t *pkg = (acapd_accel_pkg_hd_t *)calloc(sizeof(acapd_accel_pkg_hd_t),1);
-    struct basePLDesign *base = findBaseDesign(accel_name);
+    struct basePLDesign *base;
     slot_info_t *slot = (slot_info_t *)malloc(sizeof(slot_info_t));
     accel_info_t *accel_info = NULL;
 
-	slot->accel = NULL;
-
+    slot->accel = NULL;
+    firmware_dir_walk();
+    base = findBaseDesign(accel_name);
     if(base == NULL) {
         DFX_ERR("No package found for %s", accel_name);
         goto out;
