@@ -509,7 +509,7 @@ dm_format(char *buf, struct data_mover_cfg *p_dm)
 {
 	struct basePLDesign *base = platform.active_base;
 	uint64_t addr = p_dm->dm_addr_hi;
-	int s, slot = '-';
+	int s, slot = '=';
 
 	addr = addr << 32 | p_dm->dm_addr_lo;
 	for (s = 0; s < base->num_pl_slots; s++)
@@ -518,8 +518,10 @@ dm_format(char *buf, struct data_mover_cfg *p_dm)
 			break;
 		}
 
-	return sprintf(buf, ": addr[%c]=%#12lx sz=%#8x\n",
-			slot, addr, p_dm->dm_size_lo);
+	return sprintf(buf, slot == '='
+		       ? "  memory_addr%c%#12lx sz=%#8x\n"
+		       : " DataMover[%c]=%#12lx sz=%#8x\n",
+		       slot, addr, p_dm->dm_size_lo);
 }
 
 #define DMCFG(p, f) (*(uint32_t *)((p) + offsetof(struct data_mover_cfg, f)))
@@ -572,30 +574,36 @@ siha_ir_buf_list(uint32_t sz, char *buf)
 			dm_cfg.dm_addr_lo = DMCFG(cr, dm_addr_lo);
 			dm_cfg.dm_addr_hi = DMCFG(cr, dm_addr_hi);
 			dm_cfg.dm_size_lo = DMCFG(cr, dm_size_lo);
-			p += sprintf(p, " mm2s[%hhu]", slot);
+			p += sprintf(p, " DataToAccel[%hhu]  ", slot);
 			p += dm_format(p, &dm_cfg);
 			cr = (uint64_t)reg + DM_S2MM_OFFT;
 			dm_cfg.dm_addr_lo = DMCFG(cr, dm_addr_lo);
 			dm_cfg.dm_addr_hi = DMCFG(cr, dm_addr_hi);
 			dm_cfg.dm_size_lo = DMCFG(cr, dm_size_lo);
-			p += sprintf(p, " s2mm[%hhu]", slot);
+			p += sprintf(p, " DataFromAccel[%hhu]", slot);
 			p += dm_format(p, &dm_cfg);
 		}
 	}
 	return (p > buf) ? p + 1 - buf : 0;
 }
 
+#ifndef BIT
+#define BIT(N) (1U << (N))
+#endif
+
 /**
  * siha_ir_buf - src outputs to the slot dst IR-buffer
  * @src: src slot writes  to dst IR-buffer
  * @des: dst slot reads from dst IR-buffer
+ * @clear: clear DM_MM2S_OFFT src if BIT(0) is set
+ * 	   clear DM_S2MM_OFFT dst if BIT(1) is set
  *
  * Inter-RP buffer addrs are from shell.json. See rp_comms_interconnect
  *
  * Returns: 0 if connected successfully; non-0 otherwise
  */
 static int
-siha_ir_buf(acapd_accel_t *src, acapd_accel_t *dst)
+siha_ir_buf(acapd_accel_t *src, acapd_accel_t *dst, uint8_t clear)
 {
 	void *src_dm = acapd_accel_get_reg_va(src, "rm_comm_box");
 	void *dst_dm = acapd_accel_get_reg_va(dst, "rm_comm_box");
@@ -625,6 +633,15 @@ siha_ir_buf(acapd_accel_t *src, acapd_accel_t *dst)
 	p_src->dm_addr_lo = q_dst->dm_addr_lo = ir_buf_lo;
 	p_src->dm_addr_hi = q_dst->dm_addr_hi = ir_buf_hi;
 
+	if (clear & BIT(0)) {
+		p_src = (struct data_mover_cfg *)(src_dm + DM_MM2S_OFFT);
+		p_src->dm_addr_lo = p_src->dm_addr_hi = 0;
+	}
+	if (clear & BIT(1)) {
+		q_dst = (struct data_mover_cfg *)(dst_dm + DM_S2MM_OFFT);
+		q_dst->dm_addr_lo = q_dst->dm_addr_hi = 0;
+	}
+
 	/*
 	 * The app should set the size and the ap_start bit:
 	 * p_src->dm_size_lo = q_dst->dm_size_lo = input_size;
@@ -637,9 +654,6 @@ siha_ir_buf(acapd_accel_t *src, acapd_accel_t *dst)
 /**
  * slot_seq_init copy only 0-9 into slot_seq (filter delimiters)
  */
-#ifndef BIT
-#define BIT(N) (1U << (N))
-#endif
 static int
 slot_seq_init(char *slot_seq, char *buf)
 {
@@ -670,6 +684,7 @@ slot_seq_init(char *slot_seq, char *buf)
  *  - 1 < sz < base->num_pl_slots
  *  - it's a permutation w/o repetitions. Same as in nPk - "n permute k".
  *  - the requested slots are loaded
+ *  - clear the first slot's DM_MM2S and the last slot's DM_S2MM
  *
  * Returns: 0 if connected successfully; non-0 otherwise
  */
@@ -678,7 +693,7 @@ siha_ir_buf_set(char *user_slot_seq)
 {
 	struct basePLDesign *base = platform.active_base;
 	// acapd_accel_t *accel_src, *accel_dst;
-	uint8_t slot0, slot;
+	uint8_t slot0, slot, clear = 1;
 	char slot_seq[RP_SLOTS_MAX];
 	int i, sz;
 
@@ -702,9 +717,14 @@ siha_ir_buf_set(char *user_slot_seq)
 			DFX_ERR("No accel in slot %u", slot);
 			return -1;
 		}
+		if (i == sz - 1)
+			clear |= BIT(1);
+
 		if (slot0 != 0xff && slot0 != slot) {
 			int rc = siha_ir_buf(base->slots[slot0]->accel,
-					     base->slots[slot]->accel);
+					     base->slots[slot]->accel,
+					     clear);
+			clear = 0;
 			if (rc) {
 				DFX_ERR("slot: %u,%u", slot0, slot);
 				return -1;
