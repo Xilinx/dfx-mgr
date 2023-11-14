@@ -31,7 +31,7 @@ struct basePLDesign *base_designs = NULL;
 static int inotifyFd;
 platform_info_t platform;
 sem_t mutex;
-void firmware_dir_walk(void);
+static void firmware_dir_walk(void);
 
 struct watch {
     int wd;
@@ -40,6 +40,23 @@ struct watch {
 	char parent_name[64];
     char parent_path[WATCH_PATH_LEN];
 };
+
+/*
+ * Filter: path a is over 64 char, "." and ".."
+ */
+static int
+d_name_filter(char *a)
+{
+	return (strlen(a) > 64) ||
+		(a[0] == '.' && (a[1] == 0 || (a[1] == '.' && a[2] == 0)));
+}
+
+static int
+not_dir(char *path)
+{
+	struct stat sb;
+	return stat(path, &sb) || !S_ISDIR(sb.st_mode);
+}
 
 struct basePLDesign *findBaseDesign(const char *name)
 {
@@ -934,12 +951,10 @@ void parse_packages(struct basePLDesign *base,char *fname, char *path)
 		return;
     }
     while((d1 = readdir(dir1)) != NULL) {
-        if (d1->d_type == DT_DIR) {
-            if (strlen(d1->d_name) > 64 || strcmp(d1->d_name,".") == 0 ||
-                            strcmp(d1->d_name,"..") == 0) {
-                continue;
-            }
-            sprintf(first_level,"%s/%s", path, d1->d_name);
+	    sprintf(first_level, "%s/%s", path, d1->d_name);
+	    if (d_name_filter(d1->d_name) || not_dir(first_level))
+		    continue;
+
 			//add_accel_to_base(dir->d_name, new_dir, path);
             wd = inotify_add_watch(inotifyFd, first_level, IN_ALL_EVENTS);
             if (wd == -1){
@@ -954,13 +969,10 @@ void parse_packages(struct basePLDesign *base,char *fname, char *path)
 
 				dir2 = opendir(first_level);
 				while((d2 = readdir(dir2)) != NULL) {
-					if (d2->d_type == DT_DIR) {
-						if (strlen(d2->d_name) > 64 || strcmp(d2->d_name,".") == 0 ||
-							strcmp(d2->d_name,"..") == 0) {
-						continue;
-						}
-					}
 					sprintf(second_level,"%s/%s", first_level, d2->d_name);
+					if (d_name_filter(d2->d_name) || not_dir(second_level))
+						continue;
+
 					wd = inotify_add_watch(inotifyFd, second_level, IN_ALL_EVENTS);
 					if (wd == -1){
 						DFX_ERR("inotify_add_watch failed on %s", second_level);
@@ -979,7 +991,6 @@ void parse_packages(struct basePLDesign *base,char *fname, char *path)
 				accel = add_accel_to_base(base,d1->d_name, first_level, path);
 				initAccel(accel, first_level);
             }
-        }
     }
 close_dir:
     if (dir1)
@@ -1094,28 +1105,22 @@ displayInotifyEvent(struct inotify_event *i)
 //        printf("        name = %s\n", i->name);
 }*/
 
-/*
- * Filter: path a is over 64 char, "." and ".."
- */
-static int
-d_name_filter(char *a)
-{
-	return (strlen(a) > 64) ||
-		(a[0] == '.' && (a[1] == 0 || (a[1] == '.' && a[2] == 0)));
-}
-
-void
+static void
 acell_dir_add(char *cpath, struct dirent *dirent)
 {
 	char new_dir[512], fname[600];
-	char *d_name = dirent->d_name;
 	struct basePLDesign *base;
+	char *d_name;
 	int wd;
 
-	if (dirent->d_type != DT_DIR || d_name_filter(d_name))
+	if (!cpath || !dirent || d_name_filter(dirent->d_name))
 		return;
 
+	d_name = dirent->d_name;
 	sprintf(new_dir, "%s/%s", cpath, d_name);
+	if (not_dir(new_dir))
+		return;
+
 	DFX_DBG("Found dir %s", new_dir);
 	wd = inotify_add_watch(inotifyFd, new_dir, IN_ALL_EVENTS);
 	if (wd == -1){
@@ -1137,7 +1142,7 @@ acell_dir_add(char *cpath, struct dirent *dirent)
  * firmware_dir_walk()
  * For each config.firmware_locations, add a watch for all events
  */
-void
+static void
 firmware_dir_walk(void)
 {
 	int k, wd;
