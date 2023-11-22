@@ -27,6 +27,7 @@
 #include <errno.h>
 #include <sys/select.h>
 #include <dfx-mgr/dfxmgr_client.h>
+#include <systemd/sd-daemon.h>
 
 #define MAX_CLIENTS 200
 
@@ -188,6 +189,9 @@ int main(int argc, char **argv)
 	fdmax = socket_d;
 
 	DFX_PR("dfx-mgr daemon started");
+	// Notify systemd service that we're ready
+	sd_notify(0, "READY=1\nSTATUS=dfx-mgr daemon started");
+
 	while (1) {
 		readfds = fds;
 		// monitor readfds for readiness for reading
