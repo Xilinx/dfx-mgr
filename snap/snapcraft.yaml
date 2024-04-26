@@ -63,6 +63,9 @@ parts:
     source: .
     plugin: cmake
     stage-packages:
+      - libsystemd0
+    build-packages:
+      - libsystemd-dev
       - libdfx-dev
       - libwebsockets-dev
       - libdrm-dev
