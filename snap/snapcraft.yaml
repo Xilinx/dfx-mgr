@@ -1,14 +1,14 @@
-name: dfx-mgr # you probably want to 'snapcraft register <name>'
-base: core22 # the base snap is the execution environment for this snap
-version: '2022.1+20220908+deb' # just for humans, typically '1.2+git' or '1.3.2'
-summary: Utility to configure Progammable Logic on Xilinx FPGAs # 79 char long summary
+name: dfx-mgr
+base: core22
+version: '2023.2+git20240426.903898e'
+summary: Utility to configure Progammable Logic on Xilinx FPGAs
 description: |
   Daemon and command-line tool
   DFX-MGR provides infrastructure to abstract configuration and hardware resource
   management for dynamic deployment of accelerator across different platforms.
 
-grade: devel # must be 'stable' to release into candidate/stable channels
-confinement: devmode # use 'strict' once you have the right plugs and slots
+grade: devel
+confinement: devmode
 
 architectures:
   - arm64
@@ -21,11 +21,6 @@ package-repositories:
     key-id: 236252602787D6BDC2336849F9FDA6BED73CDC22
   - type: apt
     ppa: tchavadar/junk
-
-build-packages:
-  - libdfx-dev
-  - libwebsockets-dev
-  - libdrm-dev
 
 slots:
   firmwares-dir:
@@ -64,6 +59,7 @@ parts:
     plugin: cmake
     stage-packages:
       - libsystemd0
+      - libdfx1.0
     build-packages:
       - libsystemd-dev
       - libdfx-dev
@@ -71,13 +67,13 @@ parts:
       - libdrm-dev
     cmake-parameters:
       - -DCMAKE_INSTALL_PREFIX=/usr
-      - -DWITH_STATIC_LIB=no
+      - -DWITH_STATIC_LIB=yes
       - -DCMAKE_TOOLCHAIN_FILE=cross-linux-gcc
       - -DCMAKE_INCLUDE_PATH="../include"
       - -DCMAKE_LIBRARY_PATH="../opendfx-graph/drivers/XF2DFilter/src/lib/sw/aarch64-linux"
     organize:
-      usr/bin/dfx-mgrd-share: bin/dfx-mgrd
-      usr/bin/dfx-mgr-client-share: bin/dfx-mgr-client
+      usr/bin/dfx-mgrd-static: bin/dfx-mgrd
+      usr/bin/dfx-mgr-client-static: bin/dfx-mgr-client
   configure:
     source: .
     plugin: dump
