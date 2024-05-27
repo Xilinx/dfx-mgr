@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+ * Copyright (C) 2022 - 2024 Advanced Micro Devices, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: MIT
  */
@@ -11,6 +12,7 @@
 #include <dfx-mgr/shell.h>
 #include <dfx-mgr/model.h>
 #include <dfx-mgr/json-config.h>
+#include <dfx-mgr/rpu.h>
 #include <errno.h>
 #include <dirent.h>
 #include <ftw.h>
@@ -342,6 +344,7 @@ int initBaseDesign(struct basePLDesign *base, const char *shell_path)
 	char *jsonData;
 	struct stat s;
 	FILE *fptr;
+	int num_of_rpu=0;
 
 	fptr = fopen(shell_path, "r");
 	if (fptr == NULL){
@@ -384,8 +387,9 @@ int initBaseDesign(struct basePLDesign *base, const char *shell_path)
 					sizeof(base->type)-1);
 			strncpy(base->type, jsonData + token[i+1].start, sz);
 			base->type[sz] = 0;
-			if(strcmp(base->type,"XRT_FLAT") && strcmp(base->type,"PL_FLAT") && strcmp(base->type,"PL_DFX"))
-				acapd_perror("shell_type valid types are XRT_FLAT/PL_FLAT/PL_DFX\n");
+			if(strcmp(base->type,"XRT_FLAT") && strcmp(base->type,"PL_FLAT") && strcmp(base->type,"PL_DFX")
+					&& strcmp(base->type,"RPU"))
+				acapd_perror("shell_type valid types are XRT_FLAT/PL_FLAT/PL_DFX/RPU\n");
 		}
 		if (jsoneq(jsonData, &token[i],"num_pl_slots") == 0) {
 			base->num_pl_slots = strtol(jsonData+token[i+1].start,
@@ -410,6 +414,12 @@ int initBaseDesign(struct basePLDesign *base, const char *shell_path)
 	}
 	if (!strcmp(base->type,"XRT_FLAT") || !strcmp(base->type,"PL_FLAT"))
 		base->num_pl_slots = 1;
+
+	if (!strcmp(base->type,"RPU")){
+		num_of_rpu = get_number_of_rpu();
+		base->num_pl_slots = num_of_rpu;
+	}
+
 	free(jsonData);
 	return 0;
 }

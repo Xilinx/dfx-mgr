@@ -17,6 +17,7 @@ collect (PROJECT_LIB_HEADERS model.h)
 collect (PROJECT_LIB_HEADERS json-config.h)
 collect (PROJECT_LIB_HEADERS daemon_helper.h)
 collect (PROJECT_LIB_HEADERS conio.h)
+collect (PROJECT_LIB_HEADERS rpu.h)
 
 collect (PROJECT_LIB_SOURCES accel.c)
 collect (PROJECT_LIB_SOURCES assert.c)
@@ -26,6 +27,7 @@ collect (PROJECT_LIB_SOURCES shell.c)
 collect (PROJECT_LIB_SOURCES shm.c)
 collect (PROJECT_LIB_SOURCES dfxmgr_client.c)
 collect (PROJECT_LIB_SOURCES daemon_helper.c)
+collect (PROJECT_LIB_SOURCES rpu.c)
 
 add_subdirectory (sys)
 

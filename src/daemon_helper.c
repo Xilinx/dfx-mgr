@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+ * Copyright (C) 2022 - 2024 Advanced Micro Devices, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: MIT
  */
@@ -17,6 +18,7 @@
 #include <dfx-mgr/model.h>
 #include <dfx-mgr/json-config.h>
 #include <dfx-mgr/daemon_helper.h>
+#include <dfx-mgr/rpu.h>
 #include <sys/stat.h>
 #include <sys/inotify.h>
 #include <fcntl.h>
@@ -914,7 +916,7 @@ accel_info_t *add_accel_to_base(struct basePLDesign *base, char *name, char *pat
             strcpy(base->accel_list[j].parent_path, parent_path);
             base->accel_list[j].parent_path[sizeof(base->accel_list[j].parent_path) - 1] = '\0';
             //base->accel_list[j].wd = wd;
-            break;
+	    break;
         }
     }
 	return &base->accel_list[j];
@@ -984,6 +986,17 @@ void parse_packages(struct basePLDesign *base,char *fname, char *path)
 					accel = add_accel_to_base(base,d1->d_name, first_level, path);
 					initAccel(accel, second_level);
 					}
+				}
+				/* accel.json file not there for RPU
+				 * Check if base-type is "RPU"
+				 */
+				if (!strcmp(base->type,"RPU")) {
+					accel = add_accel_to_base(base,d1->d_name, first_level, path);
+					/* accel_type is set inside initAccel in the case of PL
+					 * by reading the accel.json file, since for RPU we do not
+					 * have accel.json file, we set the accel_type to RPU here
+					 */
+					strcpy(accel->accel_type, base->type);
 				}
 			}
 				/* Found accel.json so add it*/
