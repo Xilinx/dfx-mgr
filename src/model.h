@@ -26,6 +26,7 @@ typedef struct {
 	int uid;
 	int parent_uid; /**< future: 2+ deep hierarchal reconfiguration */
 	int is_aie;
+	int is_rpu;
 	acapd_accel_t *accel; // This tracks active PL dfx in this slot
 }slot_info_t;
 
@@ -60,6 +61,7 @@ struct basePLDesign {
 typedef struct {
 	char boardName[128];
 	struct basePLDesign* active_base;
+	struct basePLDesign* active_rpu_base;
 }platform_info_t;
 
 struct daemon_config {

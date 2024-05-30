@@ -27,6 +27,21 @@ extern "C" {
  */
 int get_number_of_rpu(void);
 
+/**
+ * load_rpu() - load and start RPU firmware
+ * @*rpu_path - location of the firmware
+ * @rpu_slot - RPU number to load the firmware
+ *
+ * This function does the following
+ * 1 - Set the firmware location path
+ * 2 - Load the firmware
+ * 3 - start the firmware
+ *
+ * Return: slot_number on success
+ *         -1 on error
+ */
+int load_rpu( char *rpu_path, int rpu_slot);
+
 #ifdef __cplusplus
 }
 #endif

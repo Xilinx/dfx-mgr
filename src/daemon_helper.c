@@ -230,91 +230,156 @@ int load_accelerator(const char *accel_name)
         }
     }
     /* For SIHA slotted architecture */
-    if(!strcmp(base->type,"PL_DFX")) {
-        if (platform.active_base != NULL && !platform.active_base->active && 
-				strcmp(platform.active_base->base_path, accel_info->parent_path)) {
-			DFX_PR("All slots for base are empty, loading new base design");
-			remove_base(platform.active_base->fpga_cfg_id);
-			free(platform.active_base->slots);
-			platform.active_base->slots = NULL;
-			platform.active_base = NULL;
-		}
-		else if(platform.active_base != NULL && platform.active_base->active > 0 && 
-				strcmp(platform.active_base->base_path, accel_info->parent_path)) {
-            DFX_ERR("Active base design doesn't match this accel base");
-            goto out;
-        }
-        if (platform.active_base == NULL) {
-            sprintf(pkg->name,"%s",base->name);
-            pkg->path = base->base_path;
-            pkg->type = ACAPD_ACCEL_PKG_TYPE_NONE;
-			if (base->load_base_design) {
-				init_accel(pl_accel, pkg);
-				strncpy(pl_accel->sys_info.tmp_dir, pkg->path,
-						sizeof(pl_accel->sys_info.tmp_dir) - 1);
-				strcpy(pl_accel->type,"PL_DFX");
-				DFX_PR("load from %s", pkg->path);
-				ret = load_accel(pl_accel, shell_path, 0);
-				if (ret < 0){
-					DFX_ERR("load_accel %s", accel_name);
-					base->active = 0;
-					goto out;
-				}
-				DFX_PR("Loaded %s successfully", base->name);
-				base->fpga_cfg_id = pl_accel->sys_info.fpga_cfg_id;
-			}
-			if (base->slots == NULL)
-				base->slots = calloc(base->num_pl_slots + base->num_aie_slots,
-						sizeof(slot_info_t *));
-			platform.active_base = base;
-	}
-	/*
-	 * Check if base UID matches the parent_uid in accel_info
-	 */
-	DFX_DBG("base(%s).uid = %d does %s match accel(%s).pid = %d",
-		base->name, base->uid,
-		base->uid == accel_info->pid ? "" : "NOT",
-		accel_info->name, accel_info->pid);
-        for (i = 0; i < (base->num_pl_slots + base->num_aie_slots); i++) {
-            DFX_DBG("Finding empty slot for %s i %d", accel_name, i);
-            if (base->slots[i] == NULL){
-                sprintf(path,"%s/%s_slot%d", accel_info->path, accel_info->name,i);
-                if (access(path,F_OK) != 0){
-                    continue;
-                }
-				strcpy(slot->name, accel_name);
-				if (!strcmp(accel_info->accel_type,"XRT_AIE_DFX")) {
-					DFX_ERR("%s: XRT_AIE_DFX unsupported", accel_name);
-					goto out;
-				}
-				slot->is_aie = 0;
-                strcpy(pkg->name, accel_name);
-                pkg->path = path;
-                pkg->type = ACAPD_ACCEL_PKG_TYPE_NONE;
-                init_accel(pl_accel, pkg);
-                /* Set rm_slot before load_accel() so isolation for appropriate slot can be applied*/
-                pl_accel->rm_slot = i;
-                strcpy(pl_accel->type,accel_info->accel_type);
-                strncpy(pl_accel->sys_info.tmp_dir, pkg->path,
-                        sizeof(pl_accel->sys_info.tmp_dir) - 1);
-                DFX_PR("load from %s", pkg->path);
-                ret = load_accel(pl_accel, shell_path, 0);
-                if (ret < 0){
-                    DFX_ERR("load_accel %s", accel_name);
-					goto out;
-                }
-				platform.active_base->active += 1;
-				slot->accel = pl_accel;
-                base->slots[i] = slot;
-                DFX_PR("Loaded %s successfully to slot %d", pkg->name, i);
-                return i;
-            }
-        }
-        if (i >= (base->num_pl_slots + base->num_aie_slots))
-            DFX_ERR("No empty slot for %s", accel_name);
+    if(!strcmp(base->type,"PL_DFX") || !strcmp(base->type,"RPU")) {
+
+	    /* For base type PL_DFX active_base is used to store
+	     * the current active PL base, below are checks for
+	     * 1) Availability of slots
+	     * 2) If the PL being loaded is of the active base
+	     * 3) If base design needs to be loaded then its done
+	     */
+	    if(!strcmp(base->type,"PL_DFX")){
+		    if (platform.active_base != NULL && !platform.active_base->active &&
+				    strcmp(platform.active_base->base_path, accel_info->parent_path)) {
+			    DFX_PR("All slots for base are empty, loading new base design");
+			    remove_base(platform.active_base->fpga_cfg_id);
+			    free(platform.active_base->slots);
+			    platform.active_base->slots = NULL;
+			    platform.active_base = NULL;
+		    }
+		    else if(platform.active_base != NULL && platform.active_base->active > 0 &&
+				    strcmp(platform.active_base->base_path, accel_info->parent_path)) {
+			    DFX_ERR("Active base design doesn't match this accel base");
+			    goto out;
+		    }
+		    if (platform.active_base == NULL) {
+			    sprintf(pkg->name,"%s",base->name);
+			    pkg->path = base->base_path;
+			    pkg->type = ACAPD_ACCEL_PKG_TYPE_NONE;
+			    if (base->load_base_design) {
+				    init_accel(pl_accel, pkg);
+				    strncpy(pl_accel->sys_info.tmp_dir, pkg->path,
+						    sizeof(pl_accel->sys_info.tmp_dir) - 1);
+				    strcpy(pl_accel->type,"PL_DFX");
+				    DFX_PR("load from %s", pkg->path);
+				    ret = load_accel(pl_accel, shell_path, 0);
+				    if (ret < 0){
+					    DFX_ERR("load_accel %s", accel_name);
+					    base->active = 0;
+					    goto out;
+				    }
+				    DFX_PR("Loaded %s successfully", base->name);
+				    base->fpga_cfg_id = pl_accel->sys_info.fpga_cfg_id;
+			    }
+			    if (base->slots == NULL)
+				    base->slots = calloc(base->num_pl_slots + base->num_aie_slots,
+						    sizeof(slot_info_t *));
+			    platform.active_base = base;
+		    }
+	    }
+	    else if (!strcmp(base->type,"RPU")){
+
+		    /* For base type RPU active_rpu_base is used to store
+		     * the current active RPU base, below are checks for
+		     * 1) Availability of slots
+		     * 2) If the RPU being loaded is of the active RPU base
+		     * base design loading is not supported in RPU case
+		     */
+		    if (platform.active_rpu_base != NULL && !platform.active_rpu_base->active &&
+				    strcmp(platform.active_rpu_base->base_path, accel_info->parent_path)) {
+			    DFX_PR("All slots for rpu base are empty, loading new base design");
+			    remove_base(platform.active_rpu_base->fpga_cfg_id);
+			    free(platform.active_rpu_base->slots);
+			    platform.active_rpu_base->slots = NULL;
+			    platform.active_rpu_base = NULL;
+		    }
+		    else if(platform.active_rpu_base != NULL && platform.active_rpu_base->active > 0 &&
+				    strcmp(platform.active_rpu_base->base_path, accel_info->parent_path)) {
+			    DFX_ERR("Active base design doesn't match this accel base");
+			    goto out;
+		    }
+		    if (platform.active_rpu_base == NULL) {
+			    if (base->slots == NULL)
+				    base->slots = calloc(base->num_pl_slots + base->num_aie_slots,
+						    sizeof(slot_info_t *));
+			    platform.active_rpu_base = base;
+		    }
+	    }
+	    /*
+	     * Check if base UID matches the parent_uid in accel_info
+	     */
+	    DFX_DBG("base(%s).uid = %d does %s match accel(%s).pid = %d",
+			    base->name, base->uid,
+			    base->uid == accel_info->pid ? "" : "NOT",
+			    accel_info->name, accel_info->pid);
+	    for (i = 0; i < (base->num_pl_slots + base->num_aie_slots); i++) {
+		    DFX_DBG("Finding empty slot for %s i %d", accel_name, i);
+		    if (base->slots[i] == NULL){
+			    sprintf(path,"%s/%s_slot%d", accel_info->path, accel_info->name,i);
+			    if (access(path,F_OK) != 0){
+				    continue;
+			    }
+
+			    if (!strcmp(base->type,"RPU")) {
+
+				    /*
+				     * For basetype RPU
+				     * Call load_rpu with path of firmware and rpu number(slot number)
+				     * update slot with details
+				     * increment active_rpu_base
+				     */
+				    ret = load_rpu(path,i);
+				    if (ret < 0){
+					    DFX_ERR("load_rpu %s failed", accel_name);
+					    goto out;
+				    }
+				    strcpy(slot->name, accel_name);
+                                    slot->is_aie = 0;
+                                    slot->is_rpu = 1;
+                                    slot->accel = pl_accel;
+                                    base->slots[i] = slot;
+                                    platform.active_rpu_base->active += 1;
+                                    DFX_PR("Loaded %s successfully to slot %d", pkg->name, i);
+                                    return i;
+                            }
+			    else {
+				    /*
+				     * For basetype PL_DFX
+				     */
+				    strcpy(slot->name, accel_name);
+				    if (!strcmp(accel_info->accel_type,"XRT_AIE_DFX")) {
+					    DFX_ERR("%s: XRT_AIE_DFX unsupported", accel_name);
+					    goto out;
+				    }
+				    slot->is_aie = 0;
+				    strcpy(pkg->name, accel_name);
+				    pkg->path = path;
+				    pkg->type = ACAPD_ACCEL_PKG_TYPE_NONE;
+				    init_accel(pl_accel, pkg);
+				    /* Set rm_slot before load_accel() so isolation for appropriate slot can be applied*/
+				    pl_accel->rm_slot = i;
+				    strcpy(pl_accel->type,accel_info->accel_type);
+				    strncpy(pl_accel->sys_info.tmp_dir, pkg->path,
+						    sizeof(pl_accel->sys_info.tmp_dir) - 1);
+				    DFX_PR("load from %s", pkg->path);
+				    ret = load_accel(pl_accel, shell_path, 0);
+				    if (ret < 0){
+					    DFX_ERR("load_accel %s", accel_name);
+					    goto out;
+				    }
+				    platform.active_base->active += 1;
+				    slot->accel = pl_accel;
+				    base->slots[i] = slot;
+				    DFX_PR("Loaded %s successfully to slot %d", pkg->name, i);
+				    return i;
+			    }
+		    }
+	    }
+	    if (i >= (base->num_pl_slots + base->num_aie_slots))
+		    DFX_ERR("No empty slot for %s", accel_name);
     }
     else {
-        DFX_ERR("Check the supported type of base/accel");
+	    DFX_ERR("Check the supported type of base/accel");
     }
 out:
     free(slot);
@@ -815,13 +880,15 @@ char *listAccelerators()
                     if (base_designs[i].active) {
                         char tmp[5];
                         for(slot = 0; slot < (base_designs[i].num_pl_slots +  base_designs[i].num_aie_slots); slot++) {
-                           if (base_designs[i].slots[slot] != NULL && base_designs[i].slots[slot]->is_aie &&
-                               !strcmp(base_designs[i].slots[slot]->name, base_designs[i].accel_list[j].name)) {
+                           if (base_designs[i].slots[slot] != NULL &&
+					   (base_designs[i].slots[slot]->is_aie || base_designs[i].slots[slot]->is_rpu) &&
+					   !strcmp(base_designs[i].slots[slot]->name, base_designs[i].accel_list[j].name)) {
                                     sprintf(tmp,"%d,",slot);
                                     strcat(active_slots,tmp);
                             }
                             else if (base_designs[i].slots[slot] != NULL && !base_designs[i].slots[slot]->is_aie &&
-                                     !strcmp(base_designs[i].slots[slot]->accel->pkg->name, base_designs[i].accel_list[j].name)) {
+                                     !base_designs[i].slots[slot]->is_rpu &&
+				     !strcmp(base_designs[i].slots[slot]->accel->pkg->name, base_designs[i].accel_list[j].name)) {
                                     sprintf(tmp,"%d,",slot);
                                     strcat(active_slots,tmp);
                             }
