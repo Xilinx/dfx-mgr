@@ -1,6 +1,6 @@
 name: dfx-mgr
 base: core22
-version: '2023.2+git20240426.903898e'
+adopt-info: version
 summary: Utility to configure Progammable Logic on Xilinx FPGAs
 description: |
   Daemon and command-line tool
@@ -53,6 +53,13 @@ apps:
       - system-files
 
 parts:
+  version:
+    plugin: nil
+    source: .
+    override-pull: |
+      craftctl default
+      craftctl set version="$(cat $SNAPCRAFT_PROJECT_DIR/snap/local/VERSION)+git$(date +'%Y%m%d').$(git describe --always --exclude '*')"
+      craftctl set grade="devel"
   dfx-mgr:
     # See 'snapcraft plugins'
     source: .
