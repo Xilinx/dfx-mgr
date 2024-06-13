@@ -110,3 +110,30 @@ int load_rpu( char *rpu_path, int rpu_slot)
 		return -1;
 	}
 }
+
+
+/**
+ * remove_rpu() - remove/stop a loaded RPU firmware
+ * @rpu_num - remoteproc number
+ *
+ * This function takes remoteproc number as input and
+ * stops/removes the firmware running on it
+ *
+ * Return: 0 on success
+ * 	  -1 on error
+ */
+int remove_rpu(int rpu_num)
+{
+	char cmd[1024];
+	int ret;
+
+	DFX_DBG("Remove firmware from RPU number %d", rpu_num);
+
+	sprintf(cmd,"echo stop > /sys/class/remoteproc/remoteproc%d/state", rpu_num);
+	ret = system(cmd);
+	if(ret != 0 ){
+		printf("Command not successful %s\n",cmd);
+		return -1;
+	}
+	return 0;
+}

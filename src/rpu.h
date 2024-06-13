@@ -42,6 +42,17 @@ int get_number_of_rpu(void);
  */
 int load_rpu( char *rpu_path, int rpu_slot);
 
+/**
+ * remove_rpu() - remove/stop a loaded RPU firmware
+ * @rpu_num - remoteproc number
+ *
+ * This function takes remoteproc number as input and
+ * stops/removes the firmware running on it
+ *
+ * Return: 0 on success
+ *        -1 on error
+ */
+int remove_rpu(int slot);
 #ifdef __cplusplus
 }
 #endif

@@ -131,6 +131,56 @@ void getRMInfo()
     fclose(fptr);
 }
 
+/**
+ * find_slot_from_handle() - returns the slot number
+ * @*base - Pointer to a base design
+ * @slot_handle - slot handle number
+ *
+ * This function returns the slot number for the given
+ * slot handle of a base
+ *
+ * Return: slot number
+ *         -1 for slot not found
+ */
+int find_slot_from_handle(struct basePLDesign *base, int slot_handle)
+{
+	int slot = -1;
+	for(int i = 0; i < (base->num_pl_slots + base->num_aie_slots); i++){
+		if(base->slots[i]){
+			if(slot_handle == base->slots[i]->slot_handle){
+				slot = i;
+				break;
+			}
+		}
+	}
+	DFX_DBG("slot %d slot_handle %d",slot,slot_handle);
+	return slot;
+}
+
+
+/**
+ * get_free_slot_handle() - get free slot handle
+ *
+ * This function returns a free slot handle from
+ * available list
+ *
+ * Return: slot handle index on success
+ *        -1 if no slots available
+ */
+int get_free_slot_handle()
+{
+	int slot_handle = -1;
+	for (int index = 0; index < SLOT_HANDLE_MAX; index++){
+		if(platform.available_slot_handle[index] == 0){
+			platform.available_slot_handle[index] = 1;
+			slot_handle = index;
+			break;
+		}
+	}
+	return slot_handle;
+}
+
+
 /*
  * Update Vitis AI Runtime (VART) env
  */
@@ -217,6 +267,13 @@ int load_accelerator(const char *accel_name)
 		slot->is_aie = 0;
         base->slots[0] = slot;
         platform.active_base = base;
+
+	/*
+	 * For PL_FLAT only single slot is available
+	 * assign free slot_handle to slot 0
+	 */
+	base->slots[0]->slot_handle = get_free_slot_handle();
+	DFX_PR("Loaded %s successfully to slot 0 with slot_handle %d", accel_name,base->slots[0]->slot_handle);
 
         /* VART libary for SOM desings needs .xclbin path to be written to a file*/
 		if(!strcmp(base->type,"XRT_FLAT"))
@@ -337,10 +394,15 @@ int load_accelerator(const char *accel_name)
                                     slot->is_aie = 0;
                                     slot->is_rpu = 1;
                                     slot->accel = pl_accel;
-                                    base->slots[i] = slot;
-                                    platform.active_rpu_base->active += 1;
-                                    DFX_PR("Loaded %s successfully to slot %d", pkg->name, i);
-                                    return i;
+				    base->slots[i] = slot;
+				    platform.active_rpu_base->active += 1;
+
+				    /* For RPU assign a free slot_handle to slot */
+				    base->slots[i]->slot_handle = get_free_slot_handle();
+				    DFX_PR("Loaded %s successfully to slot %d with slot_handle %d", accel_name, i,slot->slot_handle);
+                                    /* return slot_handle instead of slot number */
+				    return slot->slot_handle;
+
                             }
 			    else {
 				    /*
@@ -370,8 +432,12 @@ int load_accelerator(const char *accel_name)
 				    platform.active_base->active += 1;
 				    slot->accel = pl_accel;
 				    base->slots[i] = slot;
-				    DFX_PR("Loaded %s successfully to slot %d", pkg->name, i);
-				    return i;
+
+				    /* For PL_DFX assign a free slot_handle to slot */
+				    base->slots[i]->slot_handle = get_free_slot_handle();
+				    DFX_PR("Loaded %s successfully to slot %d with slot_handle %d", pkg->name, i,slot->slot_handle);
+                                    /* return slot_handle instead of slot number */
+				    return slot->slot_handle;
 			    }
 		    }
 	    }
@@ -412,35 +478,80 @@ remove_accel_base(void)
 	return ret;
 }
 
-int remove_accelerator(int slot)
+
+/**
+ * remove_accelerator() - remove accel or rpu from give slot handle
+ * @slot_handle - slot handle number
+ *
+ * This function removes an accel/rpu firmware from provided slot_handle
+ * the slot_handle is mapped to slots for each accel/rpu
+ *
+ * Return:  0 on success
+ *         -1 on failure
+ */
+int remove_accelerator(int slot_handle)
 {
 	struct basePLDesign *base = platform.active_base;
+        struct basePLDesign *rpu_base = platform.active_rpu_base; /* get active rpu base */
 	acapd_accel_t *accel;
-	int ret;
+	int ret = -1;
+	int slot = -1;
 
 	/* slot -1 means remove base PL design */
-	if (slot == -1)
+	if (slot_handle == -1)
 		return remove_accel_base();
 
-	if (!base || slot < 0 || base->active < slot || !base->slots[slot]) {
-		DFX_ERR("No Accel or invalid slot %d", slot);
+	/* check if base for pl or rpu is active */
+	if ((!base && !rpu_base) || slot_handle < 0 ) {
+		DFX_ERR("No Accel or invalid slot %d", slot_handle);
 		return -1;
 	}
-	if (base->slots[slot]->is_aie){
-		free(base->slots[slot]);
-		base->slots[slot] = NULL;
-		platform.active_base->active -= 1;
-		return 0;
-	}
-	accel = base->slots[slot]->accel;
-	DFX_PR("Removing accel %s from slot %d", accel->pkg->name, slot);
 
-	ret = remove_accel(accel, 0);
-	free(accel->pkg);
-	free(accel);
-	free(base->slots[slot]);
-	base->slots[slot] = NULL;
-	platform.active_base->active -= 1;
+	/*
+	 * if rpu base is active and slot_handle is found in active rpu base
+	 * then remove the rpu firmware by getting the slot number mapped to
+	 * slot_handle
+	 */
+	if(rpu_base){
+		slot = find_slot_from_handle(rpu_base, slot_handle);
+		if (slot != -1){
+			DFX_DBG("Removing rpu %s from slot %d slot_handle %d", rpu_base->slots[slot]->name, slot,rpu_base->slots[slot]->slot_handle);
+			ret = remove_rpu(slot);
+			platform.available_slot_handle[slot_handle] = 0;
+			free(rpu_base->slots[slot]);
+			rpu_base->slots[slot] = NULL;
+			platform.active_rpu_base->active -= 1;
+			return ret;
+
+		}
+	}
+
+	/*
+	 * if pl base is active and slot_handle is found in active pl base
+	 * then remove_accel by getting the slot number mapped to slot_handle
+	 */
+	if (base) {
+                slot = find_slot_from_handle(base, slot_handle);
+                if (slot != -1){
+                        if (base->slots[slot]->is_aie){
+                                free(base->slots[slot]);
+                                base->slots[slot] = NULL;
+                                platform.active_base->active -= 1;
+                                return 0;
+                        }
+                        accel = base->slots[slot]->accel;
+                        DFX_PR("Removing accel %s from slot %d", accel->pkg->name, slot);
+
+                        ret = remove_accel(accel, 0);
+                        platform.available_slot_handle[slot_handle] = 0;
+                        free(accel->pkg);
+                        free(accel);
+                        free(base->slots[slot]);
+                        base->slots[slot] = NULL;
+                        platform.active_base->active -= 1;
+                }
+        }
+
 	return ret;
 }
 
@@ -460,13 +571,23 @@ void freeBuff(uint64_t pa)
     freeBuffer(pa);
 }
 
-int getFD(int slot, char *name)
+int getFD(int slot_handle, char *name)
 {
 	struct basePLDesign *base = platform.active_base;
+	int slot = -1;
+
 	if(base == NULL || base->slots == NULL){
 		DFX_ERR("No active design");
 		return -1;
 	}
+
+	/* get the slot mapped to the slot_handle */
+	slot = find_slot_from_handle(base, slot_handle);
+	if (slot == -1){
+		DFX_ERR("slot not found");
+		return -1;
+	}
+
 	if ( slot >= base->num_pl_slots || !base->slots[slot])
 		return -1;
 
@@ -519,13 +640,24 @@ void getClockFD()
  * one line (80 char) to prevent buffer overrun.
  */
 void
-list_accel_uio(int slot, char *buf, size_t sz)
+list_accel_uio(int slot_handle, char *buf, size_t sz)
 {
 	struct basePLDesign *base = platform.active_base;
 	acapd_accel_t *accel;
 	char *end = buf + sz - 80;
 	char *p = buf;
 	int i;
+        int slot = -1;
+
+	/* if base is active get the slot from slot handle */
+        if(base)
+        {
+                slot = find_slot_from_handle(base, slot_handle);
+                if (slot == -1){
+                        DFX_ERR("slot not found");
+                        return;
+                }
+        }
 
 	if(base == NULL || base->slots == NULL)
 		p += sprintf(p, "No active design\n");
@@ -546,10 +678,20 @@ list_accel_uio(int slot, char *buf, size_t sz)
 }
 
 char *
-get_accel_uio_by_name(int slot, const char *name)
+get_accel_uio_by_name(int slot_handle, const char *name)
 {
 	struct basePLDesign *base = platform.active_base;
 	acapd_accel_t *accel;
+	int slot = -1;
+
+        if(base)
+        {
+                slot = find_slot_from_handle(base, slot_handle);
+                if (slot == -1){
+                        DFX_ERR("slot not found");
+                        return NULL;
+                }
+        }
 
 	// NULL if no active design, slot is not used or invalid
 	if(!base || !base->slots || slot >= base->num_pl_slots ||
@@ -742,8 +884,10 @@ static int
 slot_seq_init(char *slot_seq, char *buf)
 {
 	int num_pl_slots = platform.active_base->num_pl_slots;
+	struct basePLDesign *base = platform.active_base;
 	uint32_t no_dup = 0;
 	int i, sz;
+	int slot=-1;
 
 	for (sz = i = 0; i < RP_SLOTS_MAX; i++) {
 		int c = buf[i] - '0';
@@ -754,7 +898,10 @@ slot_seq_init(char *slot_seq, char *buf)
 				return -1;
 			}
 			no_dup |= BIT(c);
-			slot_seq[sz++] = c;
+
+			/* get the slot number from slot handle */
+			slot = find_slot_from_handle(base, c);
+			slot_seq[sz++] = slot;
 		}
 	}
 	return sz;
@@ -854,13 +1001,13 @@ char *listAccelerators()
     char msg[330];	/* compiler warning if 326 bytes or less */
 	char res[8*1024];
     char show_slots[16];
-    const char format[] = "%30s%12s%30s%7s%12s%16s%12s\n";
+    const char format[] = "%30s%12s%30s%7s%12s%16s%16s\n";
 
 	memset(res,0, sizeof(res));
 	firmware_dir_walk();
  
     sprintf(msg, format, "Accelerator", "Accel_type", "Base", "Pid",
-	    "Base_type", "#slots(PL+AIE)", "Active_slot");
+	    "Base_type", "#slots(PL+AIE)", "slot->handle");
 	strcat(res,msg);
     for (i = 0; i < MAX_WATCH; i++) {
         if (base_designs[i].base_path[0] != '\0' && base_designs[i].num_pl_slots > 0) {
@@ -878,18 +1025,18 @@ char *listAccelerators()
                             ? 0 : base_designs[i].num_pl_slots,
                             base_designs[i].num_aie_slots);
                     if (base_designs[i].active) {
-                        char tmp[5];
+                        char tmp[10];
                         for(slot = 0; slot < (base_designs[i].num_pl_slots +  base_designs[i].num_aie_slots); slot++) {
                            if (base_designs[i].slots[slot] != NULL &&
 					   (base_designs[i].slots[slot]->is_aie || base_designs[i].slots[slot]->is_rpu) &&
 					   !strcmp(base_designs[i].slots[slot]->name, base_designs[i].accel_list[j].name)) {
-                                    sprintf(tmp,"%d,",slot);
+				    sprintf(tmp,"%d->%d,",slot, base_designs[i].slots[slot]->slot_handle);
                                     strcat(active_slots,tmp);
                             }
                             else if (base_designs[i].slots[slot] != NULL && !base_designs[i].slots[slot]->is_aie &&
                                      !base_designs[i].slots[slot]->is_rpu &&
 				     !strcmp(base_designs[i].slots[slot]->accel->pkg->name, base_designs[i].accel_list[j].name)) {
-                                    sprintf(tmp,"%d,",slot);
+				    sprintf(tmp,"%d->%d,",slot, base_designs[i].slots[slot]->slot_handle);
                                     strcat(active_slots,tmp);
                             }
                         }
