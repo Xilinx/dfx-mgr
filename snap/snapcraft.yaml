@@ -33,7 +33,7 @@ slots:
 plugs:
   system-files:
     write:
-      - /sys/kernel/config
+      - /sys/kernel/config/device-tree
 
 apps:
   dfx-mgr:
