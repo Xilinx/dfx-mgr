@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+ * Copyright (C) 2022 - 2024 Advanced Micro Devices, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: MIT
  */
@@ -52,7 +53,7 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 		printf("%s: %s %s\n", argv[2], recv_message.data[0] == '-' ?
-			"load Error:" : "loaded to slot", recv_message.data);
+			"load Error:" : "loaded with slot_handle", recv_message.data);
 	} else if(!strcmp(argv[1],"-remove")) {
 		/* If no slot number provided default to 0*/
 		char *slot = (argc < 3) ? "0" : argv[2];

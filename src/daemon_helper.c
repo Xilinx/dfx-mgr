@@ -1001,13 +1001,13 @@ char *listAccelerators()
     char msg[330];	/* compiler warning if 326 bytes or less */
 	char res[8*1024];
     char show_slots[16];
-    const char format[] = "%30s%12s%30s%7s%12s%16s%16s\n";
+    const char format[] = "%30s%12s%24s%7s%12s%20s%16s\n";
 
 	memset(res,0, sizeof(res));
 	firmware_dir_walk();
  
     sprintf(msg, format, "Accelerator", "Accel_type", "Base", "Pid",
-	    "Base_type", "#slots(PL+AIE)", "slot->handle");
+	    "Base_type", "#slots(RPU+PL+AIE)", "slot->handle");
 	strcat(res,msg);
     for (i = 0; i < MAX_WATCH; i++) {
         if (base_designs[i].base_path[0] != '\0' && base_designs[i].num_pl_slots > 0) {
@@ -1015,15 +1015,25 @@ char *listAccelerators()
                 if (base_designs[i].accel_list[j].path[0] != '\0') {
                     char active_slots[16] = "";
 
-                    /*
-                     * Internally flat shell is treated as one slot to make
-                     * the code generic and save info of the active design
-                     */
-                    sprintf(show_slots, "(%d+%d)",
-                            !strcmp(base_designs[i].type, "XRT_FLAT") ||
-                            !strcmp(base_designs[i].type, "PL_FLAT")
-                            ? 0 : base_designs[i].num_pl_slots,
-                            base_designs[i].num_aie_slots);
+		    /*
+		     * For RPU num_pl_slots is used for RPU slot number
+		     * For PL  num_pl_slots is used for PL slot number
+		     */
+		    if (!strcmp(base_designs[i].type, "RPU") ){
+			    sprintf(show_slots, "(%d+0+0)",
+					    base_designs[i].num_pl_slots);
+                    }else {
+			    /*
+			     * Internally flat shell is treated as one slot to make
+			     * the code generic and save info of the active design
+			     */
+			    sprintf(show_slots, "(0+%d+%d)",
+					    !strcmp(base_designs[i].type, "XRT_FLAT") ||
+					    !strcmp(base_designs[i].type, "PL_FLAT")
+					    ? 0 : base_designs[i].num_pl_slots,
+					    base_designs[i].num_aie_slots);
+		    }
+
                     if (base_designs[i].active) {
                         char tmp[10];
                         for(slot = 0; slot < (base_designs[i].num_pl_slots +  base_designs[i].num_aie_slots); slot++) {
