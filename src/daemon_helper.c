@@ -189,8 +189,7 @@ void update_env(char *path)
     DIR *FD;
     struct dirent *dir;
     int len, ret;
-    char *str;
-    char cmd[128];
+    char cmd[512];
 
     DFX_DBG("%s", path);
     FD = opendir(path);
@@ -200,11 +199,7 @@ void update_env(char *path)
             if (len > 7) {
                 if (!strcmp(dir->d_name + (len - 7), ".xclbin") ||
                         !strcmp(dir->d_name + (len - 7), ".XCLBIN")) {
-                    str = (char *) calloc((len + strlen(path) + 1),
-                                                    sizeof(char));
-		    sprintf(str, "%s/%s", path, dir->d_name);
-                    sprintf(cmd,"echo \"firmware: %s\" > /etc/vart.conf",str);
-                    free(str);
+		    snprintf(cmd,sizeof(cmd),"echo \"firmware: %s/%s\" > /etc/vart.conf",path,dir->d_name);
 		    DFX_DBG("system %s", cmd);
                     ret = system(cmd);
                     if (ret)
