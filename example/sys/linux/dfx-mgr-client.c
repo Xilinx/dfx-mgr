@@ -52,8 +52,13 @@ int main(int argc, char *argv[])
 			perror("No message or read error");
 			return -1;
 		}
-		printf("%s: %s %s\n", argv[2], recv_message.data[0] == '-' ?
-			"load Error:" : "loaded with slot_handle", recv_message.data);
+		if (recv_message.data[0] == '-'){
+			printf("%s: Load Error: %s\n", argv[2], recv_message.data);
+			return -1;
+		} else {
+			printf("%s: Loaded with slot_handle %s\n", argv[2], recv_message.data);
+		}
+
 	} else if(!strcmp(argv[1],"-remove")) {
 		/* If no slot number provided default to 0*/
 		char *slot = (argc < 3) ? "0" : argv[2];
@@ -68,9 +73,15 @@ int main(int argc, char *argv[])
 			perror("No message or read error");
 			return -1;
 		}
-		printf("remove from slot %s returns: %s (%s)\n", slot,
-			recv_message.data,
-			recv_message.data[0] == '0' ? "Ok" : "Error");
+		if (recv_message.data[0] == '0'){
+			printf("remove from slot %s returns: %s (Ok)\n", slot,
+					recv_message.data);
+		} else {
+			printf("remove from slot %s returns: %s (Error)\n", slot,
+					recv_message.data);
+			return -1;
+		}
+
 	} else if(!strcmp(argv[1],"-listPackage")) {
 		send_message.id = LIST_PACKAGE;
 		send_message.size = 0;
