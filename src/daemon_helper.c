@@ -27,6 +27,7 @@
 #include <sys/un.h>
 #include <semaphore.h>
 
+char FIRMWARES_DIRECTORY[255] = {0};
 struct daemon_config config;
 struct watch *active_watch = NULL;
 struct basePLDesign *base_designs = NULL;
@@ -221,8 +222,25 @@ int load_accelerator(const char *accel_name)
     struct basePLDesign *base;
     slot_info_t *slot = (slot_info_t *)malloc(sizeof(slot_info_t));
     accel_info_t *accel_info = NULL;
+    char command[1024];
 
     slot->accel = NULL;
+
+    if (strcmp(FIRMWARES_DIRECTORY, "") != 0)
+    {
+        sprintf(command, "echo -n \"%s/%s\" > /sys/module/firmware_class/parameters/path",
+                FIRMWARES_DIRECTORY, accel_name);
+        ret = system(command);
+        if (ret)
+        {
+            DFX_ERR("Not able to change firmware load path to '%s/%s'", FIRMWARES_DIRECTORY, accel_name);
+        }
+        else
+        {
+            DFX_DBG("A custom firmware path (%s/%s) is set in /sys/module/firmware_class/parameters/path",
+                FIRMWARES_DIRECTORY, accel_name);
+        }
+    }
     firmware_dir_walk();
     base = findBaseDesign(accel_name);
     if(base == NULL) {
@@ -1000,7 +1018,7 @@ char *listAccelerators()
 
 	memset(res,0, sizeof(res));
 	firmware_dir_walk();
- 
+
     sprintf(msg, format, "Accelerator", "Accel_type", "Base", "Pid",
 	    "Base_type", "#slots(RPU+PL+AIE)", "slot->handle");
 	strcat(res,msg);
@@ -1182,7 +1200,7 @@ void parse_packages(struct basePLDesign *base,char *fname, char *path)
                 DFX_ERR("inotify_add_watch failed on %s", first_level);
 				goto close_dir;
 			}
-            
+
 			add_to_watch(wd, d1->d_name, first_level, fname, path);
 			sprintf(filename,"%s/accel.json",first_level);
 			/* For pl slots we need to traverse next level to find accel.json*/
@@ -1531,7 +1549,7 @@ void *threadFunc(void *)
     //exit(EXIT_SUCCESS);
 }
 
-int dfx_init()
+int dfx_init(char* config_path)
 {
 	pthread_t t;
 
@@ -1539,7 +1557,8 @@ int dfx_init()
 	strcpy(platform.boardName,"Xilinx board");
 	sem_init(&mutex, 0, 0);
 
-	parse_config(CONFIG_PATH, &config);
+	parse_config(config_path, &config);
+
 	pthread_create(&t, NULL,threadFunc, NULL);
 	sem_wait(&mutex);
 	//TODO Save active design on filesytem and on reboot read that

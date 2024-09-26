@@ -37,8 +37,8 @@ collector_list (_headers PROJECT_LIB_HEADERS)
 
 foreach (f ${_headers})
   configure_file (${f} include/${PROJECT_NAME}/${f} @ONLY)
-  # install (FILES ${CMAKE_CURRENT_BINARY_DIR}/include/${PROJECT_NAME}/${f}
-  #          DESTINATION include RENAME ${PROJECT_NAME}/${f})
+  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/include/${PROJECT_NAME}/${f}
+           DESTINATION include RENAME ${PROJECT_NAME}/${f})
   if (${f} MATCHES "^[^/]*\\.h")
     collect (PROJECT_HDR_TESTS "acapd/${f}")
   endif (${f} MATCHES "^[^/]*\\.h")
