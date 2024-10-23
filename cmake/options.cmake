@@ -4,7 +4,7 @@
 #########################################################################
 
 #PROJECT_VERSION should match with yocto recipe version for SOVERSION
-set (PROJECT_VERSION_MAJOR 1)
+set (PROJECT_VERSION_MAJOR 2)
 set (PROJECT_VERSION_MINOR 0)
 set (PROJECT_VERSION ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR})
 message (STATUS "dfx-mgr version: ${PROJECT_VERSION} (${CMAKE_SOURCE_DIR})")
