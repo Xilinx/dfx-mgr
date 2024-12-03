@@ -1,0 +1,19 @@
+# Copyright (C) 2022 - 2024 Advanced Micro Devices, Inc. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+#
+# DFX manager default firmware load service
+# There are 2 mechanisms to determine default
+# 1. EEPROM - firmware based on EEPROM board id
+# 2. user override - set in /etc/dfx-mgrd/default_firmware
+
+[Unit]
+Description=dfx-mgrd Default Firmware Load Service
+Documentation=https://github.com/Xilinx/dfx-mgr
+After=dfx-mgr.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/xlnx-firmware-load
+
+[Install]
+WantedBy=multi-user.target
