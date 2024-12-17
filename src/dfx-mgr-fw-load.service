@@ -12,7 +12,7 @@ Documentation=https://github.com/Xilinx/dfx-mgr
 After=dfx-mgr.service
 
 [Service]
-Type=simple
+Type=oneshot
 ExecStart=/usr/bin/xlnx-firmware-load
 
 [Install]
