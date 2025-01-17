@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
- * Copyright (C) 2022 - 2024 Advanced Micro Devices, Inc. All Rights Reserved.
+ * Copyright (C) 2022 - 2025 Advanced Micro Devices, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: MIT
  */
@@ -17,10 +17,21 @@
 extern "C" {
 #endif
 
+#include <limits.h>
+
 #define MAX_PATH_SIZE 512
 #define RP_SLOTS_MAX 10
 #define SLOT_HANDLE_MAX 30 /* MAX number of slot handles */
 #define ARRAY_SIZE(a) (sizeof(a)/sizeof((a)[0]))
+
+
+typedef struct {
+	/*virtio number of rpmsg created by firmware*/
+        unsigned int virtio_num;
+	/*to store rpmsg_ctrl_dev name*/
+	char rpmsg_ctrl_dev_name[NAME_MAX];
+}rpu_info_t;
+
 
 typedef struct {
 	char name[64];
@@ -51,6 +62,7 @@ typedef struct {
 	 */
 	int slot_handle;
 	acapd_accel_t *accel; // This tracks active PL dfx in this slot
+	rpu_info_t rpu; //This stores the rpu specific info in this slot
 }slot_info_t;
 
 typedef struct {
@@ -109,6 +121,7 @@ struct daemon_config {
 	char defaul_accel_name[64];
 	char **firmware_locations;
 	int number_locations;
+	unsigned int rpu_fw_uptime_msec; /* store rpu_fw_uptime_msec from config file */
 };
 
 #ifdef __cplusplus

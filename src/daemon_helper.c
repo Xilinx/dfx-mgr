@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
- * Copyright (C) 2022 - 2024 Advanced Micro Devices, Inc. All Rights Reserved.
+ * Copyright (C) 2022 - 2025 Advanced Micro Devices, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: MIT
  */
@@ -221,6 +221,7 @@ int load_accelerator(const char *accel_name)
     struct basePLDesign *base;
     slot_info_t *slot = (slot_info_t *)malloc(sizeof(slot_info_t));
     accel_info_t *accel_info = NULL;
+    char *rpmsg_ctrl_dev_name = NULL;
 
     slot->accel = NULL;
     firmware_dir_walk();
@@ -385,9 +386,45 @@ int load_accelerator(const char *accel_name)
 					    DFX_ERR("load_rpu %s failed", accel_name);
 					    goto out;
 				    }
+
 				    strcpy(slot->name, accel_name);
                                     slot->is_aie = 0;
-                                    slot->is_rpu = 1;
+				    slot->is_rpu = 1;
+
+				    /*
+				     * wait for firmware to be up
+				     * rpu firware uptime is set in
+				     * json file : /etc/dfx-mgr/daemon.conf
+				     * property  : rpu_fw_uptime_msec
+				     * */
+				    DFX_DBG("RPU firmware uptime %d msec\n",config.rpu_fw_uptime_msec);
+				    usleep(config.rpu_fw_uptime_msec * 1000);
+
+				    /* Get new rpmsg ctrl device created by firmware */
+				    rpmsg_ctrl_dev_name = get_new_rpmsg_ctrl_dev(base);
+
+				    /* check if new ctrl dev is found
+				     * Assumption is that ctrl dev will be created
+				     * during load, dev can be dynamic.
+				     * if found then record the virtio number
+				     * if not found then 2 of the following are the cases
+				     * 1- no dev is created by firmware
+				     *    Here we just proceed, nothing to address
+				     * 2- Firmware is taking time to create the channel
+				     *    Increase rpu_fw_uptime_msec from config file
+				     * */
+				    if (rpmsg_ctrl_dev_name != NULL) {
+					    /* Store rpmsg control dev in slot */
+					    memcpy(slot->rpu.rpmsg_ctrl_dev_name,rpmsg_ctrl_dev_name,strlen(rpmsg_ctrl_dev_name));
+					    slot->rpu.rpmsg_ctrl_dev_name[strlen(rpmsg_ctrl_dev_name)] ='\0';
+
+					    /* Get and store virtio number in slot */
+					    slot->rpu.virtio_num = get_virtio_number(rpmsg_ctrl_dev_name);
+					    DFX_PR("rpmsg_ctrl_dev %s virtio %d", slot->rpu.rpmsg_ctrl_dev_name ,slot->rpu.virtio_num);
+				    } else {
+					    DFX_PR("No rpmsg control device found after rpu fw load");
+				    }
+
                                     slot->accel = pl_accel;
 				    base->slots[i] = slot;
 				    platform.active_rpu_base->active += 1;

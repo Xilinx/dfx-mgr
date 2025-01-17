@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
- * Copyright (C) 2022 - 2024 Advanced Micro Devices, Inc. All Rights Reserved.
+ * Copyright (C) 2022 - 2025 Advanced Micro Devices, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: MIT
  */
@@ -549,6 +549,10 @@ void parse_config(char *config_path, struct daemon_config *config)
 			config->number_locations=token[i+1].size;
 			i += token[i+1].size;//increment by number of elements in array
 		}
+		/* read rpu_fw_uptime_msec from daemon.conf and store in config */
+		if (jsoneq(jsonData, &token[i],"rpu_fw_uptime_msec") == 0) {
+                        config->rpu_fw_uptime_msec = strtof(jsonData+token[i+1].start, NULL);
+                }
     }
     free(jsonData);
 	return;

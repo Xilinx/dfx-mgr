@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 - 2024 Advanced Micro Devices, Inc. All Rights Reserved.
+ * Copyright (C) 2022 - 2025 Advanced Micro Devices, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: MIT
  */
@@ -53,6 +53,34 @@ int load_rpu( char *rpu_path, int rpu_slot);
  *        -1 on error
  */
 int remove_rpu(int slot);
+
+/**
+ * get_new_rpmsg_ctrl_dev() - return new rpmsg control dev found
+ * @struct basePLDesign *base - PL base design
+ *
+ * This function checks if new rpmsg control dev is created by
+ * RPU firmware and return the same, it does this by parsing through
+ * /sys/device/rpmsg/devices directory takes each entries and comparing
+ * with the previously stored data in base design structure
+ *
+ * Return: rpmsg_ctrl_dev_name on success
+ *         NULL on failure
+ *
+ */
+char* get_new_rpmsg_ctrl_dev(struct basePLDesign *base);
+
+/**
+ * get_virtio_number() - return virtio number
+ * @rpmsg_dev_name - rpmsg device or control name
+ *
+ * This function taken input rpmsg dev or control name
+ * and returns the virtio number
+ *
+ * Return: virtio number on success
+ *         0 if not found
+ */
+int get_virtio_number(char* rpmsg_dev_name);
+
 #ifdef __cplusplus
 }
 #endif

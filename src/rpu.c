@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 - 2024 Advanced Micro Devices, Inc. All Rights Reserved.
+ * Copyright (C) 2022 - 2025 Advanced Micro Devices, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: MIT
  */
@@ -9,7 +9,14 @@
 #include <string.h>
 #include <dirent.h>
 #include <unistd.h>
+#include <errno.h>
+#include <ctype.h>
 #include <dfx-mgr/print.h>
+#include <dfx-mgr/accel.h>
+#include <dfx-mgr/assert.h>
+#include <dfx-mgr/shell.h>
+#include <dfx-mgr/model.h>
+
 
 
 /**
@@ -136,4 +143,96 @@ int remove_rpu(int rpu_num)
 		return -1;
 	}
 	return 0;
+}
+
+/**
+ * get_virtio_number() - return virtio number
+ * @rpmsg_dev_name - rpmsg device or control name
+ *
+ * This function taken input rpmsg dev or control name
+ * and returns the virtio number
+ *
+ * Return: virtio number on success
+ *         0 if not found
+ */
+
+int get_virtio_number(char* rpmsg_dev_name)
+{
+	char *rpmsg_dev = strdup(rpmsg_dev_name); /* copy of dev name */
+	char *virtio_str;
+	int virtio_num = 0;
+
+	virtio_str = strtok(rpmsg_dev,".");
+	if (virtio_str != NULL) {
+		while (*virtio_str) {
+			if (isdigit(*virtio_str)) {
+				/* get the virtio number */
+				virtio_num = strtol(virtio_str, &virtio_str, 10);
+			} else {
+				/* Otherwise, move on to the next character */
+				virtio_str++;
+			}
+		}
+	}
+	free(rpmsg_dev);
+	return virtio_num;
+}
+
+/**
+ * get_new_rpmsg_ctrl_dev() - return new rpmsg control dev found
+ * @struct basePLDesign *base - PL base design
+ *
+ * This function checks if new rpmsg control dev is created by
+ * RPU firmware and return the same, it does this by parsing through
+ * /sys/device/rpmsg/devices directory takes each entries and comparing
+ * with the previously stored data in base design structure
+ *
+ * Return: rpmsg_ctrl_dev_name on success
+ * 	   NULL on failure
+ *
+ */
+char* get_new_rpmsg_ctrl_dev(struct basePLDesign *base)
+{
+	char dpath[] = "/sys/bus/rpmsg/devices";
+	DIR *dir = opendir(dpath);
+	int rpmsg_ctrl_found = 0;
+	struct dirent *ent;
+
+	if (!dir) {
+		fprintf(stderr, "opendir %s, %s\n", dpath, strerror(errno));
+		return NULL;
+	}
+	while ((ent = readdir(dir)) != NULL) {
+		if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, "..") || strstr(ent->d_name, "rpmsg_ns"))
+			continue;    /* skip self and parent */
+
+		/* Find rpmsg ctrl dev file created */
+		if (strstr(ent->d_name, "rpmsg_ctrl")) {
+			/* Check if ctrl is already recorded */
+			for(int i = 0; i < (base->num_pl_slots + base->num_aie_slots); i++) {
+				/* Check if slot exists */
+				if (base->slots[i]) {
+					/* Compare with existing records */
+					if (!strncmp(base->slots[i]->rpu.rpmsg_ctrl_dev_name,ent->d_name,strlen(ent->d_name))) {
+						DFX_DBG("rpmsg ctrl dev already recorded\n");
+						rpmsg_ctrl_found = 1;
+						break;
+					}
+				}
+			}
+			/* Entry already recorded */
+			if (rpmsg_ctrl_found == 1) {
+				rpmsg_ctrl_found = 0;
+				continue;
+			}
+
+			closedir(dir);
+			/* Return new ctrl dev found */
+			return ent->d_name;
+		}
+	}
+
+	closedir(dir);
+	/* Return NULL if no new ctrl dev is found */
+	return NULL;
 }

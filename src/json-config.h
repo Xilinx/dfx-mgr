@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+ * Copyright (C) 2022 - 2025 Advanced Micro Devices, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: MIT
  */
@@ -23,4 +24,5 @@ int parseShellJson(acapd_shell_t *shell, const char *filename);
 int initBaseDesign(struct basePLDesign *base, const char *shell_path);
 void parse_config(char *config_path, struct daemon_config *config);
 int initAccel(accel_info_t *accel, const char *path);
+
 #endif /* _ACAPD_LINUX_JSON_CONFIG_H */
