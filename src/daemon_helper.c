@@ -425,6 +425,9 @@ int load_accelerator(const char *accel_name)
 					    DFX_PR("No rpmsg control device found after rpu fw load");
 				    }
 
+				    /* Initialize rpmsg dev list */
+				    acapd_list_init(&slot->rpu.rpmsg_dev_list);
+
                                     slot->accel = pl_accel;
 				    base->slots[i] = slot;
 				    platform.active_rpu_base->active += 1;
@@ -550,6 +553,8 @@ int remove_accelerator(int slot_handle)
 			DFX_DBG("Removing rpu %s from slot %d slot_handle %d", rpu_base->slots[slot]->name, slot,rpu_base->slots[slot]->slot_handle);
 			ret = remove_rpu(slot);
 			platform.available_slot_handle[slot_handle] = 0;
+			/* delete rpmsg_dev_list from slot */
+			delete_rpmsg_dev_list(&rpu_base->slots[slot]->rpu.rpmsg_dev_list);
 			free(rpu_base->slots[slot]);
 			rpu_base->slots[slot] = NULL;
 			platform.active_rpu_base->active -= 1;
@@ -675,21 +680,64 @@ void
 list_accel_uio(int slot_handle, char *buf, size_t sz)
 {
 	struct basePLDesign *base = platform.active_base;
+	struct basePLDesign *rpu_base = platform.active_rpu_base; /* get active rpu base */
 	acapd_accel_t *accel;
 	char *end = buf + sz - 80;
 	char *p = buf;
 	int i;
         int slot = -1;
+	char *rpmsg_ctrl_dev;
+        int virtio_num;
+	acapd_list_t *rpmsg_dev_list;
+	acapd_list_t *rpmsg_dev_node;
+
+	/*Check if rpu is active in slot_handle*/
+	if(rpu_base)
+	{
+		slot = find_slot_from_handle(rpu_base, slot_handle);
+		if (slot != -1){
+			/* get virtio number of slot */
+			virtio_num = rpu_base->slots[slot]->rpu.virtio_num;
+
+			/* get rpmgs ctrl device name */
+			rpmsg_ctrl_dev = rpu_base->slots[slot]->rpu.rpmsg_ctrl_dev_name;
+
+			/* get stored list */
+			rpmsg_dev_list = &rpu_base->slots[slot]->rpu.rpmsg_dev_list;
+
+			/* update rpmsg_dev_list
+			 * This function updates rpmsg_dev_list by parsing through /sys/bus/rpmsg/devices
+			 * directory and does the following:
+			 * 1) remove deleted rpmsg dev from list
+			 * 2) create new rpmsg_dev_t for new dev found
+			 *    a) setups up rpmsg end point dev for new rpmsg virtio dev and ctrl
+			 *    b) setup rpmsg_channel name
+			 * 3) add new entry to rpmsg dev list
+			 */
+			update_rpmsg_dev_list(rpmsg_dev_list, rpmsg_ctrl_dev, virtio_num);
+
+			/* traverse through list and return channel name and dev name*/
+			acapd_list_for_each(rpmsg_dev_list, rpmsg_dev_node) {
+				rpmsg_dev_t *rpmsg_dev;
+
+				rpmsg_dev = (rpmsg_dev_t *)acapd_container_of(rpmsg_dev_node, rpmsg_dev_t,
+						rpmsg_node);
+				p += sprintf(p, "%-30s %-30s\n", rpmsg_dev->rpmsg_channel_name, rpmsg_dev->ept_rpmsg_dev_name);
+			}
+
+			return;
+		}
+	}
 
 	/* if base is active get the slot from slot handle */
-        if(base)
-        {
-                slot = find_slot_from_handle(base, slot_handle);
-                if (slot == -1){
-                        DFX_ERR("slot not found");
-                        return;
-                }
-        }
+	if(base)
+	{
+		slot = find_slot_from_handle(base, slot_handle);
+		if (slot == -1){
+			DFX_ERR("slot not found");
+			return;
+		}
+	}
 
 	if(base == NULL || base->slots == NULL)
 		p += sprintf(p, "No active design\n");
@@ -713,8 +761,58 @@ char *
 get_accel_uio_by_name(int slot_handle, const char *name)
 {
 	struct basePLDesign *base = platform.active_base;
+	struct basePLDesign *rpu_base = platform.active_rpu_base; /* get active rpu base */
 	acapd_accel_t *accel;
 	int slot = -1;
+	char *ept_dev = NULL;
+	acapd_list_t *rpmsg_dev_list;
+	acapd_list_t *rpmsg_dev_node;
+	char *rpmsg_ctrl_dev;
+	int virtio_num;
+
+	if(rpu_base)
+	{
+
+		slot = find_slot_from_handle(rpu_base, slot_handle);
+		if(slot != -1){
+			/* get virtio number of slot */
+			virtio_num = rpu_base->slots[slot]->rpu.virtio_num;
+
+			/* get rpmgs ctrl device name */
+			rpmsg_ctrl_dev = rpu_base->slots[slot]->rpu.rpmsg_ctrl_dev_name;
+
+			/* get stored list */
+			rpmsg_dev_list = &rpu_base->slots[slot]->rpu.rpmsg_dev_list;
+
+			/* update rpmsg_dev_list
+			 * This function updates rpmsg_dev_list by parsing through /sys/bus/rpmsg/devices
+			 * directory and does the following:
+			 * 1) remove deleted rpmsg dev from list
+			 * 2) create new rpmsg_dev_t for new dev found
+			 *    a) setups up rpmsg end point dev for new rpmsg virtio dev and ctrl
+			 *    b) setup rpmsg_channel name
+			 * 3) add new entry to rpmsg dev list
+			 */
+			update_rpmsg_dev_list(rpmsg_dev_list, rpmsg_ctrl_dev, virtio_num);
+
+			/* traverse throught the list */
+			acapd_list_for_each(rpmsg_dev_list, rpmsg_dev_node) {
+				rpmsg_dev_t *rpmsg_dev;
+				rpmsg_dev = (rpmsg_dev_t *)acapd_container_of(rpmsg_dev_node, rpmsg_dev_t,
+						rpmsg_node);
+
+				/* get end point dev for given rpmsg channel name */
+				if((strlen(name) == strlen(rpmsg_dev->rpmsg_channel_name)) &&
+						!strncmp(name, rpmsg_dev->rpmsg_channel_name, strlen(name))){
+					ept_dev = rpmsg_dev->ept_rpmsg_dev_name;
+					break;
+				}
+			}
+
+			/* return endpoint dev name */
+			return ept_dev;
+		}
+	}
 
         if(base)
         {

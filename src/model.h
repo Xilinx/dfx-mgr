@@ -18,18 +18,36 @@ extern "C" {
 #endif
 
 #include <limits.h>
+#include <stdbool.h>
+#include <dfx-mgr/helper.h>
 
 #define MAX_PATH_SIZE 512
 #define RP_SLOTS_MAX 10
 #define SLOT_HANDLE_MAX 30 /* MAX number of slot handles */
 #define ARRAY_SIZE(a) (sizeof(a)/sizeof((a)[0]))
 
+#define EPT_DEV_LEN     32
+#define EPT_NAME_LEN    32
+
+typedef struct rpmsg_dev{
+        /* name used to query - rpmsg-openamp-demo-channel.-1.1024 */
+        char rpmsg_channel_name[NAME_MAX];
+        /* Store ept dev name (/dev/rpmsg0) */
+        char ept_rpmsg_dev_name[EPT_DEV_LEN];
+        /* set to 1 if active */
+        bool active;
+        /* rpmsg_dev_t node list */
+	acapd_list_t rpmsg_node;
+}rpmsg_dev_t;
+
 
 typedef struct {
-	/*virtio number of rpmsg created by firmware*/
+	/* virtio number of rpmsg created by firmware */
         unsigned int virtio_num;
-	/*to store rpmsg_ctrl_dev name*/
+	/* to store rpmsg_ctrl_dev name */
 	char rpmsg_ctrl_dev_name[NAME_MAX];
+	/* rpmsg dev list for referencing to rpmsg_dev_t */
+	acapd_list_t rpmsg_dev_list;
 }rpu_info_t;
 
 

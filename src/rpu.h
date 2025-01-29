@@ -81,8 +81,37 @@ char* get_new_rpmsg_ctrl_dev(struct basePLDesign *base);
  */
 int get_virtio_number(char* rpmsg_dev_name);
 
+/**
+ * update_rpmsg_dev_list() - updates rpmsg device list and setup
+ * end point
+ * @acapd_list_t *rpmsg_dev_list -- pointer to rpmsg_dev_list
+ * @rpmsg_ctrl_dev -- rpmsg control dev
+ * @virtio_num -- virtio number
+ *
+ * This function updates rpmsg_dev_list by parsing through /sys/bus/rpmsg/devices
+ * directory and does the following:
+ * 1) remove deleted rpmsg dev from list
+ * 2) setups up rpmsg end point dev for new rpmsg virtio dev and ctrl
+ * 3) add new entry to rpmsg dev list
+ *
+ * Return:  void
+ *
+ */
+void update_rpmsg_dev_list(acapd_list_t *rpmsg_dev_list, char* rpmsg_ctrl_dev, int virtio_num);
+
+/**
+ * delete_rpmsg_dev_list - delete complete rpmsg_dev_list
+ * @acapd_list_t *rpmsg_dev_list -- pointer to rpmsg_dev_list
+ *
+ * This function delete complete list
+ * Called when RPU is removed
+ *
+ */
+void delete_rpmsg_dev_list(acapd_list_t *rpmsg_dev_list);
+
+
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* _ACAPD_ACCEL_H */
+#endif /* _ACAPD_RPU_H */

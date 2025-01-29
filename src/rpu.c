@@ -16,7 +16,7 @@
 #include <dfx-mgr/assert.h>
 #include <dfx-mgr/shell.h>
 #include <dfx-mgr/model.h>
-
+#include <dfx-mgr/rpu_helper.h>
 
 
 /**
@@ -235,4 +235,113 @@ char* get_new_rpmsg_ctrl_dev(struct basePLDesign *base)
 	closedir(dir);
 	/* Return NULL if no new ctrl dev is found */
 	return NULL;
+}
+
+/**
+ * delete_rpmsg_dev_list - delete completed rpmsg_dev_list
+ * @acapd_list_t *rpmsg_dev_list -- pointer to rpmsg_dev_list
+ *
+ * This function delete complete list
+ * Called when RPU is removed
+ *
+ */
+void delete_rpmsg_dev_list(acapd_list_t *rpmsg_dev_list)
+{
+
+	if (rpmsg_dev_list == NULL) {
+		DFX_DBG("List is empty\n");
+		return;
+	}
+
+	acapd_list_t *rpmsg_dev_node;
+
+	/* traverse through the list */
+	acapd_list_for_each(rpmsg_dev_list, rpmsg_dev_node) {
+		rpmsg_dev_t *rpmsg_dev;
+
+		rpmsg_dev = (rpmsg_dev_t *)acapd_container_of(rpmsg_dev_node, rpmsg_dev_t,
+				rpmsg_node);
+		/* delete node */
+		acapd_list_del(&rpmsg_dev->rpmsg_node);
+		free(rpmsg_dev);
+	}
+}
+
+/**
+ * update_rpmsg_dev_list() - updates rpmsg device list and setup
+ * end point
+ * @acapd_list_t *rpmsg_dev_list -- pointer to rpmsg_dev_list
+ * @rpmsg_ctrl_dev -- rpmsg control dev
+ * @virtio_num -- virtio number
+ *
+ * This function updates rpmsg_dev_list by parsing through /sys/bus/rpmsg/devices
+ * directory and does the following:
+ * 1) remove deleted rpmsg dev from list
+ * 2) create new rpmsg_dev_t for new dev found
+ *    a) setups up rpmsg end point dev for new rpmsg virtio dev and ctrl
+ *    b) setup rpmsg_channel name
+ * 3) add new entry to rpmsg dev list
+ *
+ * Return:  void
+ *
+ */
+void update_rpmsg_dev_list(acapd_list_t *rpmsg_dev_list, char* rpmsg_ctrl_dev, int virtio_num)
+{
+	char dpath[] = "/sys/bus/rpmsg/devices";
+	DIR *dir = opendir(dpath);
+	struct dirent *ent;
+	int rpmsg_dev_found = 0;
+	int v_num;
+	rpmsg_dev_t *rpmsg_dev;
+
+	if (!dir) {
+		DFX_DBG("opendir %s, %s\n", dpath, strerror(errno));
+		return;
+	}
+
+	/*
+	 * reset active flag for all in list
+	 * this is needed as endpoints can be created and deleted at runtime
+	 * - active flag will be set if dev is found
+	 * - any device without active flag set will be deleted
+	 * */
+	reset_active(rpmsg_dev_list);
+
+	while ((ent = readdir(dir)) != NULL) {
+		if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, "..") || strstr(ent->d_name, "rpmsg_ns")
+				|| strstr(ent->d_name, "rpmsg_ctrl"))
+			continue;    /* skip self, parent and ctrl dev */
+
+		/* check if virtio num matches */
+		v_num = get_virtio_number(ent->d_name);
+		if (v_num != virtio_num)
+			continue;
+
+		/* check if dev already recorded and set active flag*/
+		rpmsg_dev_found = check_rpmsg_dev_active(rpmsg_dev_list, ent->d_name, virtio_num);
+
+		/* if device is recorded go to next file */
+		if (rpmsg_dev_found == 1) {
+			rpmsg_dev_found = 0;
+			continue;
+		}
+
+		/* new virtio rpmsg dev found */
+
+		/*
+		 * create new rpmsg dev
+		 *  - setup endpoint dev and rpmsg channel name
+		 * */
+		rpmsg_dev = create_rpmsg_dev(ent->d_name, rpmsg_ctrl_dev);
+
+		/* new rpmsg device node created, insert to end of list */
+		if ( rpmsg_dev != NULL)
+			acapd_list_add_tail(rpmsg_dev_list, &rpmsg_dev->rpmsg_node);
+
+	}
+
+	/* delete all inactive node by checking active flag */
+	delete_inactive_rpmsgdev(rpmsg_dev_list);
+
+	return;
 }
