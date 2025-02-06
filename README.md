@@ -7,22 +7,22 @@ DFX-MGR provides infrastructure to abstract configuration and hardware resource
 management for dynamic deployment of Xilinx based accelerator across different
 platforms.
 
-DFX-MGR is merged in Petalinux 2021.1 onwards and the recipe is called
-`dfx-mgr`. The recipe is not enabled by default and user is expected to enable
-it. As of today, DFX-MGR can be used for dynamic loading/unloading of
-accelerators to PL (Programmable Logic). The functionality is
-tested for loading/unloading of Flat shell (i.e. shell which does not have any
-reconfigurable partitions) and DFX shell (i.e. shell which contains static and
-dynamic region). As you can see in the diagram below DFX-MGR can load a 3RP
+DFX-MGR is merged in Yocto Project meta-xilinx layer 2021.1 onwards and the
+recipe is called `dfx-mgr`. The recipe is not enabled by default and user
+is expected to enable it. As of today, DFX-MGR can be used for dynamic
+loading/unloading of accelerators to PL (Programmable Logic). The functionality
+is tested for loading/unloading of Flat shell (i.e. shell which does not have
+any reconfigurable partitions) and DFX shell (i.e. shell which contains static
+and dynamic region). As you can see in the diagram below DFX-MGR can load a 3RP
 design and a 2RP design with the corresponding accelerators dynamically without
 having to reboot the board.
 
-Once you compile Petalinux by enabling the dfx-mgr recipe, you should have
-dfx-mgrd and dfx-mgr-client in `/usr/bin` of rootfs and libdfx-mgr.so in
-`/usr/lib`. The config file `daemon.conf` can be found in `/etc/dfx-mgrd/`.
-Config file is mandatory, refer the files section for details of it. A default
-daemon.conf will be copied by the recipe and the user is expected to update as
-required.
+Once you compile Yocto Project meta-xilinx layer by enabling the dfx-mgr
+recipe, you should have dfx-mgrd and dfx-mgr-client in `/usr/bin` of rootfs
+and libdfx-mgr.so in `/usr/lib`. The config file `daemon.conf` can be found
+in `/etc/dfx-mgrd/`. Config file is mandatory, refer the files section for
+details of it. A default daemon.conf will be copied by the recipe and the
+user is expected to update as required.
 
 ![Screenshot](https://media.gitenterprise.xilinx.com/user/978/files/c2254180-9d53-11eb-9371-ad2d44922a8b)
 
