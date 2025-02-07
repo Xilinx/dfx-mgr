@@ -11,8 +11,9 @@ if [ ! -f "${conffile}" ]; then
         exit 1
 fi
 
-fwbasedir=$(grep "firmware_location" ${conffile} | sed 's/.*:.*\[\"\(.*\)\"\],\?/\1/')
-if [ -z "${fwbasedir}" ]; then
+# Extract firmware base directories
+fwbasedirs=$(grep "firmware_location" ${conffile} | sed 's/.*:.*\[\"\(.*\)\"\],\?/\1/; s/[",]/ /g')
+if [ -z "${fwbasedirs}" ]; then
         echo "Property 'firmware_location' not found in ${conffile}"
         exit 1
 fi
@@ -26,20 +27,24 @@ fi
 # check if default firmware is already set and present
 if [ -f "${fwfile}" ]; then
     fwname=$(cat ${fwfile})
-    if [ -d "${fwbasedir}" ]; then
-      # Search for default firmware within 2 levels of subdirectory
-      # flat design firmware will be at 1st level dir
-      # PL design firmware will be at 2nd level dir
-      if find "${fwbasedir}" -maxdepth 2 -type d -name "${fwname}" | grep -q .; then
-          echo "User defined default firmware detected: ${fwname}"
-	  #load firmware using client command
-          dfx-mgr-client -load "${fwname}"
-          exit 0
-      else
-          echo "User defined default firmware not detected: ${fwname}"
-	  exit 1
-      fi
-    fi
+
+    # Iterate through each firmware base directories
+    for fwbasedir in ${fwbasedirs}; do
+        if [ -d "${fwbasedir}" ]; then
+            # Search for default firmware within 2 levels of subdirectory
+            # flat design firmware will be at 1st level dir
+            # PL design firmware will be at 2nd level dir
+            if find "${fwbasedir}" -maxdepth 2 -type d -name "${fwname}" | grep -q .; then
+                echo "User defined default firmware detected: ${fwname}"
+                #load firmware using client command
+                dfx-mgr-client -load "${fwname}"
+                exit 0
+            fi
+        fi
+    done
+
+    echo "No default firmware named ${fwname} found in any of the fw base directories: ${fwbasedirs}"
+    exit 1
 fi
 
 # search for firmware based on EEPROM board id
@@ -51,15 +56,20 @@ if [ -n "${eeprom}" ]; then
     boardid=$(ipmi-fru --fru-file=${eeprom} --interpret-oem-data | awk -F": " '/FRU Board Product/ { print tolower ($2) }')
     revision=$(ipmi-fru --fru-file=${eeprom} --interpret-oem-data | awk -F": " '/FRU Board Custom/ { print tolower ($2); exit }')
     fwname="${boardid}-${revision}"
-    fwdir="${fwbasedir}/${fwname}"
-    if [ ! -d "${fwdir}" ]; then
-        echo "No default firmware named ${fwname} found in ${fwbasedir}"
-        exit 1
-    fi
-    echo "Default firmware detected: ${fwname}"
-    #load firmware using client command
-    dfx-mgr-client -load "${fwname}"
-    exit 0
+
+    # Iterate through each firmware base directories
+    for fwbasedir in ${fwbasedirs}; do
+        fwdir="${fwbasedir}/${fwname}"
+        if [ -d "${fwdir}" ]; then
+            echo "Default firmware detected: ${fwname}"
+            #load firmware using client command
+            dfx-mgr-client -load "${fwname}"
+            exit 0
+        fi
+    done
+
+    echo "No default firmware named ${fwname} found in any of the fw base directories: ${fwbasedirs}"
+    exit 1
 fi
 
 # check if board is a SOM product
@@ -67,15 +77,20 @@ eeprom=$(ls /sys/bus/i2c/devices/*50/eeprom 2> /dev/null)
 if [ -n "${eeprom}" ]; then
     boardid=$(ipmi-fru --fru-file=${eeprom} --interpret-oem-data | awk -F"-" '/FRU Board Product/ { print tolower($2) }')
     fwname="${boardid}-starter-kits"
-    fwdir="${fwbasedir}/${fwname}"
-    if [ ! -d "${fwdir}" ]; then
-        echo "No default firmware named ${fwname} found in ${fwbasedir}"
-        exit 1
-    fi
-    echo "Default firmware detected: ${fwname}"
-    #load firmware using client command
-    dfx-mgr-client -load "${fwname}"
-    exit 0
+
+    # Iterate through each firmware base directories
+    for fwbasedir in ${fwbasedirs}; do
+        fwdir="${fwbasedir}/${fwname}"
+        if [ -d "${fwdir}" ]; then
+            echo "Default firmware detected: ${fwname}"
+            #load firmware using client command
+            dfx-mgr-client -load "${fwname}"
+            exit 0
+        fi
+    done
+
+    echo "No default firmware named ${fwname} found in any of the fw base directories: ${fwbasedirs}"
+    exit 1
 fi
 
 # check if board is a System Controller product
@@ -84,15 +99,20 @@ if [ -n "${eeprom}" ]; then
     boardid=$(ipmi-fru --fru-file=${eeprom} --interpret-oem-data | awk -F": " '/FRU Board Product/ { print tolower ($2) }')
     revision=$(ipmi-fru --fru-file=${eeprom} --interpret-oem-data | awk -F": " '/FRU Board Custom/ { print tolower ($2); exit }')
     fwname="${boardid}-${revision}"
-    fwdir="${fwbasedir}/${fwname}"
-    if [ ! -d "${fwdir}" ]; then
-        echo "No default firmware named ${fwname} found in ${fwbasedir}"
-        exit 1
-    fi
-    echo "Default firmware detected: ${fwname}"
-    #load firmware using client command
-    dfx-mgr-client -load "${fwname}"
-    exit 0
+
+    # Iterate through each firmware base directories
+    for fwbasedir in ${fwbasedirs}; do
+        fwdir="${fwbasedir}/${fwname}"
+        if [ -d "${fwdir}" ]; then
+            echo "Default firmware detected: ${fwname}"
+            #load firmware using client command
+            dfx-mgr-client -load "${fwname}"
+            exit 0
+        fi
+    done
+
+    echo "No default firmware named ${fwname} found in any of the fw base directories: ${fwbasedirs}"
+    exit 1
 fi
 
 echo "No known Board ID found"
