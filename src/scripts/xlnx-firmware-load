@@ -55,7 +55,7 @@ eeprom=$(ls /sys/bus/i2c/devices/*/eeprom_cc*/nvmem 2> /dev/null)
 if [ -n "${eeprom}" ]; then
     boardid=$(ipmi-fru --fru-file=${eeprom} --interpret-oem-data | awk -F": " '/FRU Board Product/ { print tolower ($2) }')
 
-    if [ -z "${boardid}"]; then
+    if [ -z "${boardid}" ]; then
         echo "No Board-ID read"
         exit 0
     fi
@@ -83,7 +83,7 @@ eeprom=$(ls /sys/bus/i2c/devices/*50/eeprom 2> /dev/null)
 if [ -n "${eeprom}" ]; then
     boardid=$(ipmi-fru --fru-file=${eeprom} --interpret-oem-data | awk -F"-" '/FRU Board Product/ { print tolower($2) }')
 
-    if [ -z "${boardid}"]; then
+    if [ -z "${boardid}" ]; then
         echo "No Board-ID read"
         exit 0
     fi
@@ -110,7 +110,7 @@ eeprom=$(ls /sys/bus/i2c/devices/*54/eeprom 2> /dev/null)
 if [ -n "${eeprom}" ]; then
     boardid=$(ipmi-fru --fru-file=${eeprom} --interpret-oem-data | awk -F": " '/FRU Board Product/ { print tolower ($2) }')
 
-    if [ -z "${boardid}"]; then
+    if [ -z "${boardid}" ]; then
         echo "No Board-ID read"
         exit 0
     fi
