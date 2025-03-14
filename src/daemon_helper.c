@@ -214,6 +214,7 @@ void update_env(char *path)
 int load_accelerator(const char *accel_name)
 {
     int i, ret;
+    int rv = -DFX_MGR_LOAD_ERROR;
     char path[1024];
     char shell_path[600];
     acapd_accel_t *pl_accel = (acapd_accel_t *)calloc(sizeof(acapd_accel_t), 1);
@@ -228,6 +229,7 @@ int load_accelerator(const char *accel_name)
     base = findBaseDesign(accel_name);
     if(base == NULL) {
         DFX_ERR("No package found for %s", accel_name);
+        rv = -DFX_MGR_NO_PACKAGE_FOUND_ERROR;
         goto out;
     }
     sprintf(shell_path,"%s/shell.json",base->base_path);
@@ -240,6 +242,7 @@ int load_accelerator(const char *accel_name)
 
         if(platform.active_base != NULL && platform.active_base->active > 0) {
             DFX_ERR("Remove previously loaded accelerator, no empty slot");
+            rv = -DFX_MGR_NO_EMPTY_SLOT_ERROR;
             goto out;
         }
         sprintf(pkg->name,"%s",accel_name);
@@ -476,8 +479,10 @@ int load_accelerator(const char *accel_name)
 			    }
 		    }
 	    }
-	    if (i >= (base->num_pl_slots + base->num_aie_slots))
+	    if (i >= (base->num_pl_slots + base->num_aie_slots)) {
 		    DFX_ERR("No empty slot for %s", accel_name);
+		    rv = -DFX_MGR_NO_EMPTY_SLOT_ERROR;
+	    }
     }
     else {
 	    DFX_ERR("Check the supported type of base/accel");
@@ -486,7 +491,7 @@ out:
     free(slot);
     free(pl_accel);
     free(pkg);
-    return -1;
+    return rv;
 }
 
 static int

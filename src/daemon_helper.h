@@ -18,6 +18,11 @@ extern "C" {
 #define WATCH_PATH_LEN 256
 #define MAX_WATCH 500
 
+/* Error codes */
+#define DFX_MGR_LOAD_ERROR			(1U)
+#define DFX_MGR_NO_PACKAGE_FOUND_ERROR		(2U)
+#define DFX_MGR_NO_EMPTY_SLOT_ERROR		(3U)
+
 int load_accelerator(const char *accel_name);
 int remove_accelerator(int slot);
 void allocBuffer(uint64_t size);
