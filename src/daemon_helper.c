@@ -217,8 +217,8 @@ int load_accelerator(const char *accel_name)
     int rv = -DFX_MGR_LOAD_ERROR;
     char path[1024];
     char shell_path[600];
-    acapd_accel_t *pl_accel = (acapd_accel_t *)calloc(sizeof(acapd_accel_t), 1);
-    acapd_accel_pkg_hd_t *pkg = (acapd_accel_pkg_hd_t *)calloc(sizeof(acapd_accel_pkg_hd_t),1);
+    acapd_accel_t *pl_accel = (acapd_accel_t *)calloc(1, sizeof(acapd_accel_t));
+    acapd_accel_pkg_hd_t *pkg = (acapd_accel_pkg_hd_t *)calloc(1, sizeof(acapd_accel_pkg_hd_t));
     struct basePLDesign *base;
     slot_info_t *slot = (slot_info_t *)malloc(sizeof(slot_info_t));
     accel_info_t *accel_info = NULL;
@@ -1555,8 +1555,8 @@ void *threadFunc(void *)
     struct inotify_event *event;
     struct basePLDesign *base;
 
-    active_watch = (struct watch *)calloc(sizeof(struct watch), MAX_WATCH);
-    base_designs = (struct basePLDesign *)calloc(sizeof(struct basePLDesign), MAX_WATCH);
+    active_watch = (struct watch *)calloc(MAX_WATCH, sizeof(struct watch));
+    base_designs = (struct basePLDesign *)calloc(MAX_WATCH, sizeof(struct basePLDesign));
 
     for(j = 0; j < MAX_WATCH; j++) {
         active_watch[j].wd = -1;
