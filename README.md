@@ -17,6 +17,11 @@ and dynamic region). As you can see in the diagram below DFX-MGR can load a 3RP
 design and a 2RP design with the corresponding accelerators dynamically without
 having to reboot the board.
 
+DFX-MGR now support lightweight use cases. User can load PL bitstream alone or
+along with device tree overlay from any path. User can provide the absolute
+path of bitstream and overlay file as command line options.
+See Usage guidelines for more details.
+
 Once you compile Yocto Project meta-xilinx layer by enabling the dfx-mgr
 recipe, you should have dfx-mgrd and dfx-mgr-client in `/usr/bin` of rootfs
 and libdfx-mgr.so in `/usr/lib`. The config file `daemon.conf` can be found
@@ -375,6 +380,46 @@ mentioned slot, this command will do nothing.
 Equivalent xmutil command is `xmutil unloadapp 1`.
 ```
 $ dfx-mgr-client -remove 1
+```
+
+### Lightweight use cases
+
+1. Command to load PL bitstream alone from any path.
+```
+ dfx-mgr-client -b <bitstream> -f <type>
+
+ where <bitstream> is the absolute path for PL bitstream file
+
+       <type> is the bitstream type. Acceptable values : Full | Partial
+```
+
+2. Command to load PL bitstream along with device tree overlay.
+```
+ dfx-mgr-client -b <bitstream> -f <type> -o <dtbo> -n <region>
+
+ where <bitstream> is the absolute path for PL bitstream file
+
+       <type> is the bitstream type. Acceptable values : Full | Partial
+
+       <dtbo> is the absolute path for device tree overlay file
+
+       <region> is the Full or Partial reconfiguration region of FPGA
+```
+
+
+3. Command for unloading device tree overlay alone.
+```
+ dfx-mgr-client -R -n <region>
+
+ where <region> is the device tree overlay region to be removed
+```
+
+
+4. Command for unloading bitstream.
+```
+ dfx-mgr-client -remove <handle>
+
+ where <handle> is the unique id retuned while loading the bitstream
 ```
 
 ### Using library API

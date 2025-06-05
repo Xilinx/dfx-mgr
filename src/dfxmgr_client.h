@@ -36,6 +36,8 @@ enum dfx_mgr_request {
 	GRAPH_STAGED_DONE,
 	SIHA_IR_LIST,
 	SIHA_IR_SET,
+	USER_LOAD,
+	USER_UNLOAD,
 };
 
 #define MAX_CLIENTS 200
@@ -44,6 +46,7 @@ enum dfx_mgr_request {
 struct message {
     uint32_t id;
     uint32_t size;
+    uint32_t user_load_flag;
     union {
 	    uint32_t fdcount;
 	    uint32_t slot;

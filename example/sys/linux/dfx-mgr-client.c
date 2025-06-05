@@ -25,7 +25,10 @@ int main(int argc, char *argv[])
 {
 	socket_t gs;
 	struct message send_message, recv_message;
-	int ret;
+	int ret, opt;
+	int user_load_flag = 0;
+	int user_unload_flag = 0;
+	char *binfile = NULL, *overlay = NULL, *region = NULL;
 
 	memset (&send_message, '\0', sizeof(struct message));
 	memset (&recv_message, '\0', sizeof(struct message));
@@ -178,8 +181,114 @@ int main(int argc, char *argv[])
 		printf("-getRMInfo \n");
 		printf("-getShellFD \n");
 		printf("-getClockFD \n");
+		printf("\nUsage for lightweight usecase\n");
+		printf("-b <bitstream> -f <type>\t Load the bitstream alone\n");
+		printf("-b <bitstream> -f <type> -o <dtbo> -n <region>\t Load the bitstream with dtbo\n");
+		printf("-R -n <region>\t\t Remove overlay from livetree\n");
+		printf("-remove <slot#>\t\t Unload previously loaded bitstream\n");
+		printf("Options:\n\t -b <bitstream>\t Absolute path of bitstream file\n");
+		printf("\t -o <dtbo>\t Absolute path of device tree overlay file\n");
+		printf("\t -f <type>\t Bitstream type: <Full | Partial>\n");
+		printf("\t -n <region>\t Full or Partial reconfiguration region of FPGA in device tree\n");
+		printf("\t -R\t\t Remove overlay from live tree without unloading bitstream\n");
 	} else {
-		printf("Option not recognized, Try again.\n");
+		int unknown_arg = 1;
+		while ((opt = getopt(argc, argv, "b:o:f:n:R?:")) != -1) {
+			unknown_arg = 0;
+			switch (opt) {
+				case 'b':
+					binfile = optarg;
+					break;
+				case 'o':
+					overlay = optarg;
+					break;
+				case 'f':
+					if (!strcmp(optarg, "Partial")) {
+						user_load_flag |= (1 << 0);
+					} else if (strcmp(optarg, "Full")) {
+						printf("Unknown value for -f: expect 'Full' or 'Partial'\n");
+						return -1;
+					}
+					break;
+				case 'n':
+					region = optarg;
+					break;
+				case 'R':
+					user_unload_flag = 1;
+					break;
+				default:
+					unknown_arg = 1;
+					break;
+			}
+		}
+
+		if (unknown_arg) {
+			printf("Option not recognized, Try again.\n");
+			return -1;
+		}
+
+		if (user_unload_flag) {
+			if ((binfile != NULL) || (overlay != NULL)) {
+				printf("Wrong usage: Cannot load and unload together\n");
+				return -1;
+			}
+
+			send_message.id = USER_UNLOAD;
+			sprintf(send_message.data, "%s", (region == NULL) ? "full" : region);
+			send_message.size = strlen(send_message.data);
+
+			if (write(gs.sock_fd, &send_message, HEADERSIZE + send_message.size) < 0){
+				perror("write");
+				return -1;
+			}
+			ret = read(gs.sock_fd, &recv_message, sizeof (struct message));
+			if (ret <= 0){
+				perror("No message or read error");
+				return -1;
+			}
+			if (recv_message.data[0] == '0'){
+				printf("Removed device tree overlay: %s\n", send_message.data);
+			} else {
+				printf("Failed to remove overlay: %s\n", send_message.data);
+				return -1;
+			}
+
+		} else {
+			if (binfile == NULL) {
+				printf ("Not provided the bitstream path\n");
+				return -1;
+			}
+
+			send_message.id = USER_LOAD;
+			sprintf(send_message.data, "%s", binfile);
+
+			if (overlay != NULL) {
+				if (((user_load_flag >> 0) & 1) && (region == NULL)) {
+					printf ("FPGA region for partial loading has not provided\n");
+					return -1;
+				}
+				user_load_flag |= (1 << 1);
+				sprintf(send_message.data, "%s : %s : %s", binfile, overlay, (region == NULL) ? "full" : region);
+			}
+			send_message.user_load_flag = user_load_flag;
+			send_message.size = strlen(send_message.data);
+
+			if (write(gs.sock_fd, &send_message, HEADERSIZE + send_message.size) < 0){
+				perror("write");
+				return -1;
+			}
+			ret = read(gs.sock_fd, &recv_message, sizeof (struct message));
+			if (ret <= 0){
+				perror("No message or read error");
+				return -1;
+			}
+			if (recv_message.data[0] == '-'){
+				printf("Load Error: %s: ", recv_message.data);
+				return -1;
+			} else {
+				printf("Loaded with slot_handle %s\n", recv_message.data);
+			}
+		}
 	}	
 	return 0;
 }

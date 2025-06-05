@@ -573,6 +573,10 @@ int remove_accelerator(int slot_handle)
 	 * then remove_accel by getting the slot number mapped to slot_handle
 	 */
 	if (base) {
+		/* Call user_unload() if the design is user managed one */
+		if (base->is_user_load)
+			return user_unload(slot_handle);
+
                 slot = find_slot_from_handle(base, slot_handle);
                 if (slot != -1){
                         if (base->slots[slot]->is_aie){
@@ -1136,12 +1140,12 @@ char *listAccelerators()
     char msg[330];	/* compiler warning if 326 bytes or less */
 	char res[8*1024];
     char show_slots[16];
-    const char format[] = "%30s%12s%24s%7s%12s%20s%16s\n";
+    const char format[] = "%20s%12s%15s%17s%15s%6s%10s%19s%13s\n";
 
 	memset(res,0, sizeof(res));
 	firmware_dir_walk();
  
-    sprintf(msg, format, "Accelerator", "Accel_type", "Base", "Pid",
+    sprintf(msg, format, "Accelerator", "Accel_type", "user_load_type", "user_load_region", "Base", "Pid",
 	    "Base_type", "#slots(RPU+PL+AIE)", "slot->handle");
 	strcat(res,msg);
     for (i = 0; i < MAX_WATCH; i++) {
@@ -1189,6 +1193,7 @@ char *listAccelerators()
                     sprintf(msg, format,
                             base_designs[i].accel_list[j].name,
                             base_designs[i].accel_list[j].accel_type,
+			    "-", "-",
                             base_designs[i].name,
                             pid_uid_check(&base_designs[i], j),
                             base_designs[i].type,
@@ -1197,6 +1202,21 @@ char *listAccelerators()
                     strcat(res, msg);
                 }
             }
+        }
+        if (base_designs[i].is_user_load) {
+            char tmp[1024];
+
+            sprintf(tmp, "%s->%d",
+                base_designs[i].user_load_type ? base_designs[i].user_load_region : "0",
+                base_designs[i].user_load_handle);
+
+            sprintf(msg, format,
+                base_designs[i].name, "-",
+                base_designs[i].user_load_type ? "Partial" : "Full",
+                base_designs[i].user_load_region,
+                "-", "-", "-", "-",
+                tmp);
+            strcat(res, msg);
         }
     }
 
@@ -1544,6 +1564,429 @@ firmware_dir_walk(void)
 	}
 }
 
+/**
+ * fpga_state() - check the current state of the FPGA.
+ *
+ * This static function checks the operational state of the FPGA by reading
+ * the state from the sysfs interface.
+ *
+ * Return: 0 if the FPGA is in a valid state,
+ *        -1 on error or if the state is not valid.
+ */
+static int fpga_state(void)
+{
+	FILE *fptr;
+	char buf[10];
+	char *state_operating = "operating";
+	char *state_unknown = "unknown";
+
+	if (system("cat /sys/class/fpga_manager/fpga0/state >> state.txt")) {
+		DFX_ERR("Failed system() API");
+		return -1;
+	}
+	fptr = fopen("state.txt", "r");
+	if (fptr) {
+		if (fgets(buf, 10, fptr) == NULL) {
+			DFX_ERR("Failed to read fpga state");
+			buf[0] = 0;
+		}
+		fclose(fptr);
+		if (system("rm state.txt")) {
+			DFX_ERR("Failed system() API");
+		}
+		if ((strncmp(buf, state_operating, 9) == 0) || (strncmp(buf, state_unknown, 7) == 0))
+			return 0;
+		else
+			return -1;
+	}
+
+	return -1;
+}
+
+/**
+ * user_load_sysfs() - load FPGA firmware via sysfs.
+ * @bin: name of the bitstream file to load.
+ *
+ * This static function loads the FPGA by writing the provided bitstream
+ * file name to the sysfs interface at /sys/class/fpga_manager/fpga0/firmware.
+ * It then checks the FPGA state to ensure it is in a valid state after loading.
+ *
+ * Return: 0 on success,
+ *        -1 on failure.
+ */
+static int user_load_sysfs(char *bin)
+{
+	char command[2048];
+
+	snprintf(command, sizeof(command), "echo %s > /sys/class/fpga_manager/fpga0/firmware", bin);
+	if (system(command)) {
+		DFX_ERR("Failed system() API");
+		return -1;
+	}
+
+	return (fpga_state() == 0) ? 0 : -1;
+}
+
+/**
+ * user_load_overlay() - Load device tree overlay using configfs interface.
+ *
+ * @ov:    Name of the device tree overlay file to load.
+ * @region: Name of the region where the overlay should be loaded.
+ *
+ * This function handles the process of loading device tree overlays to the
+ * specified region using the configfs interface.
+ *
+ * Return: 0 on success,
+ *        -1 on failure.
+ */
+static int user_load_overlay(char *ov, char *region)
+{
+	char command[2048], ov_dir[512], buf[512];
+	struct stat sb;
+	FILE *fptr;
+
+	snprintf(ov_dir, sizeof(ov_dir), "/configfs/device-tree/overlays/%s", region);
+	if (((stat(ov_dir, &sb) == 0) && S_ISDIR(sb.st_mode))) {
+		DFX_ERR("Overlay already exists in the live tree");
+		return -1;
+	}
+
+	snprintf(command, sizeof(command), "mkdir %s", ov_dir);
+	if (system(command)) {
+		DFX_ERR("Failed system() API");
+		return -1;
+	}
+
+	snprintf(command, sizeof(command), "echo -n %s > %s/path", ov, ov_dir);
+	if (system(command)) {
+		DFX_ERR("Failed system() API");
+	}
+
+	snprintf(command, sizeof(command), "cat %s/path >> state.txt", ov_dir);
+	if (system(command)) {
+		DFX_ERR("Failed system() API");
+	}
+
+	fptr = fopen("state.txt", "r");
+	if (fptr) {
+		if (fgets(buf, strlen(ov) + 1, fptr) == NULL) {
+			DFX_ERR("Failed to read overlay path");
+			buf[0] = 0;
+		}
+		fclose(fptr);
+		if (system("rm state.txt")) {
+			DFX_ERR("Failed system() API");
+		}
+
+		if (!strcmp(buf, ov)) {
+			DFX_PR("Applied overlay");
+		} else {
+			DFX_ERR("Failed to apply Overlay");
+			return -1;
+		}
+	} else {
+		DFX_ERR("Failed to check overlay state");
+		return -1;
+	}
+
+	if (fpga_state()) {
+		DFX_ERR("Failed to load bitstream. Removing overlay applied");
+		snprintf(command, sizeof(command), "rmdir %s", ov_dir);
+		if (system(command)) {
+			DFX_ERR("Failed system() API");
+		}
+
+		return -1;
+	}
+
+	return 0;
+}
+
+/**
+ * user_load() - load pl bitstream with optional device tree overlay.
+ *
+ * @flag:     Integer flag to control loading behavior.
+ *                 - Bit 0: 0 = full bitstream, 1 = partial bitstream.
+ *                 - Bit 1: 1 = load bitstream along with device tree overlay,
+ *                          0 = load bitstream alone via sysfs interface.
+ * @binfile:  Path to the bitstream file to be loaded.
+ * @overlay:  Path to the device tree overlay file (if applicable).
+ * @region:   Target region for the overlay (if applicable).
+ *
+ * This function handles the loading of a pl bitstream to the FPGA.
+ * It uses the sysfs interface for loading bitstream alone, and the configfs interface
+ * for loading bitstream with a device tree overlay.
+ * It also add the loaded design to the base_designs array for tracking.
+ * It also handles cleanup of temporary files and error conditions.
+ *
+ * This function is used by the daemon to load user-managed designs while it process
+ * the request for USER_LOAD from client application.
+ *
+ * Return: An integer unique handle id on success,
+ *        -1 on failure or if constraints are violated.
+ */
+int user_load(int flag, char *binfile, char *overlay, char *region)
+{
+	char command[2048];
+	char *bin = NULL, *ov = NULL, *tmp, *token;
+	int rv = -1;
+
+	if (platform.active_base != NULL) {
+		if (platform.active_base->is_user_load) {
+			if (!(flag & 1)) {
+				DFX_ERR("Remove previously loaded full bitstream, no empty slot.");
+				goto ret;
+			} else if (platform.active_base->active >= MAX_WATCH) {
+				DFX_ERR("Remove previously loaded partial bitstream, no empty slot.");
+				goto ret;
+			}
+		}
+
+		if (!strcmp(platform.active_base->type, "XRT_FLAT") || !strcmp(platform.active_base->type, "PL_FLAT")) {
+			DFX_ERR("Remove previously loaded FLAT design, no empty slot.");
+			goto ret;
+		}
+
+		if (!strcmp(platform.active_base->type, "PL_DFX")) {
+			if (platform.active_base->active > 0) {
+				DFX_ERR("Remove previously loaded DFX designs, no empty slot.");
+				goto ret;
+			} else {
+				/* Remove existing DFX base design before loading new user managed design */
+				remove_base(platform.active_base->fpga_cfg_id);
+				free(platform.active_base->slots);
+				platform.active_base->slots = NULL;
+				platform.active_base = NULL;
+			}
+		}
+	}
+
+	if ((platform.active_base == NULL) && (flag & 1)) {
+		DFX_ERR("Load Full bitstream before loading bitstream to any partial reconfiguration region.");
+		goto ret;
+	}
+
+	if (binfile == NULL) {
+		DFX_ERR("Provide path for bitstream");
+		goto ret;
+	}
+
+	tmp = strdup(binfile);
+	while((token = strsep(&tmp, "/"))) {
+		bin = token;
+	}
+
+	snprintf(command, sizeof(command), "cp %s /lib/firmware", binfile);
+	if (system(command)) {
+		DFX_ERR("Failed system() API");
+	}
+
+	snprintf(command, sizeof(command), "echo %x > /sys/class/fpga_manager/fpga0/flags", flag & 1);
+	if (system(command)) {
+		DFX_ERR("Failed system() API");
+	}
+
+	if ((flag >> 1) & 1) {
+		if (region == NULL) {
+			DFX_ERR("Provide overlay region name");
+			goto ret;
+		}
+
+		if (overlay == NULL) {
+			DFX_ERR("Error: Provide path for device tree overlay file\n");
+			goto ret;
+		}
+
+		tmp = strdup(overlay);
+		while((token = strsep(&tmp, "/"))) {
+			ov = token;
+		}
+
+		snprintf(command, sizeof(command), "cp %s /lib/firmware", overlay);
+		if (system(command)) {
+			DFX_ERR("Failed system() API");
+		}
+
+		rv = user_load_overlay(ov, region);
+	} else {
+		rv = user_load_sysfs(bin);
+	}
+
+	if (!rv) {
+		int i;
+
+		/* get the free space in array to add new entry */
+		for (i = 0; (i < MAX_WATCH) && (base_designs[i].base_path[0] != '\0'); i++);
+
+		if (i == MAX_WATCH) {
+			DFX_ERR("Unable to add new design, MAX limit (%d) reached.", MAX_WATCH);
+			user_unload_overlay(region);
+			rv = -1;
+		} else {
+			DFX_DBG("Adding user managed design %s", bin);
+			strncpy(base_designs[i].name, bin, sizeof(base_designs[i].name) - 1);
+			base_designs[i].name[sizeof(base_designs[i].name) - 1] = '\0';
+			strncpy(base_designs[i].base_path, "User", sizeof(base_designs[i].base_path) - 1);
+			base_designs[i].base_path[sizeof(base_designs[i].base_path) - 1] = '\0';
+			base_designs[i].active = 0;
+			base_designs[i].is_user_load = 1;
+			base_designs[i].user_load_type = flag & 1;
+			rv = base_designs[i].user_load_handle = get_free_slot_handle();
+			strncpy(base_designs[i].user_load_region, region ? region : "", sizeof(base_designs[i].user_load_region) - 1);
+			base_designs[i].user_load_region[sizeof(base_designs[i].user_load_region) - 1] = '\0';
+
+			if (base_designs[i].user_load_type && platform.active_base)
+				platform.active_base->active += 1;
+			else
+				platform.active_base = &base_designs[i];
+		}
+	}
+
+ret:
+	if (bin != NULL) {
+		snprintf(command, sizeof(command), "rm /lib/firmware/%s", bin);
+		if (system(command)) {
+			DFX_ERR("Failed system() API");
+		}
+	}
+
+	if (ov != NULL) {
+		snprintf(command, sizeof(command), "rm /lib/firmware/%s", ov);
+		if (system(command)) {
+			DFX_ERR("Failed system() API");
+		}
+	}
+
+	return rv;
+}
+
+/**
+ * user_unload_overlay() - unload the device tree overlay associated with the specified region.
+ *
+ * @region: Name of the overlay region to unload.
+ *
+ * This function removes the specified overlay from the configfs interface.
+ * It also cleans up the corresponding entry in the base_designs array.
+ *
+ * This function is used by the daemon to unload device tree overlays for user-managed designs.
+ *
+ * Return: 0 on success,
+ *        -1 on failure or if the overlay does not exist.
+ */
+int user_unload_overlay(char *region)
+{
+	char command[2048], ov_dir[512];
+	struct stat sb;
+	int i;
+
+	if (region == NULL) {
+		DFX_ERR("Provide overlay region");
+		return -1;
+	}
+
+	snprintf(ov_dir, sizeof(ov_dir), "/configfs/device-tree/overlays/%s", region);
+	if (((stat(ov_dir, &sb) == 0) && S_ISDIR(sb.st_mode))) {
+		snprintf(command, sizeof(command), "rmdir %s", ov_dir);
+		if (system(command)) {
+			DFX_ERR("Failed system() API");
+		}
+
+		for (i = 0; (i < MAX_WATCH) && strncmp(base_designs[i].user_load_region, region, strlen(region) + 1); i++);
+		if (i == MAX_WATCH) {
+			DFX_ERR("No entry found for user_load_region: %s.", region);
+		} else {
+			base_designs[i].user_load_region[0] = '\0';
+		}
+
+		return 0;
+	} else {
+		DFX_ERR("Overlay doesn't exist.");
+		return -1;
+	}
+}
+
+/**
+ * user_unload() - unload the user managed design associated with the specified handle.
+ *
+ * @handle: An integer handle that uniquely identifies the user managed design to be unloaded.
+ *
+ * This function removes the user managed design from the base_designs array and
+ * unloads the associated device tree overlay if it exists.
+ * It also decrements the active count of the base design if it is a partial load.
+ *
+ * This function is used by the daemon to unload user-managed designs when requested by the
+ * client application.
+ *
+ * Return: 0 on success,
+ *        -1 on failure or if the handle does not correspond to any loaded design.
+ */
+int user_unload(int handle)
+{
+	int i;
+
+	for (i = 0; i < MAX_WATCH; i++) {
+		if (base_designs[i].is_user_load && base_designs[i].user_load_handle == handle)
+			break;
+	}
+	if (i == MAX_WATCH) {
+		DFX_ERR("No entry found for handle: %d", handle);
+		return -1;
+	}
+
+	if (!base_designs[i].user_load_type && (platform.active_base->active > 0)) {
+		DFX_ERR("Remove all partial bitstreams before removing full bitstream.");
+		return -1;
+	}
+
+	if (base_designs[i].user_load_region[0])
+		user_unload_overlay(base_designs[i].user_load_region);
+
+	if (base_designs[i].user_load_type && platform.active_base)
+		platform.active_base->active -= 1;
+	else
+		platform.active_base = NULL;
+
+	base_designs[i].name[0] = '\0';
+	base_designs[i].base_path[0] = '\0';
+	base_designs[i].is_user_load = 0;
+	base_designs[i].user_load_handle = -1;
+	platform.available_slot_handle[handle] = 0;
+
+	return 0;
+}
+
+/**
+ * init_user_load() - initializes the environment for user managed design.
+ *
+ * This static function sets up the necessary directories and mounts
+ * the configfs interface for managing user load operations.
+ */
+static void init_user_load(void)
+{
+    DIR *FD;
+    FD = opendir("/lib/firmware");
+
+    if (FD) {
+	    closedir(FD);
+    } else {
+	    if (system("mkdir -p /lib/firmware")) {
+		    DFX_ERR("Failed system() API");
+	    }
+    }
+
+    FD = opendir("/configfs/device-tree/overlays/");
+    if (FD)
+	    closedir(FD);
+    else {
+	    if (system("mkdir -p /configfs")) {
+		    DFX_ERR("Failed system() API");
+	    }
+	    if (system("mount -t configfs configfs /configfs")) {
+		    DFX_ERR("Failed system() API");
+	    }
+    }
+}
+
 #define BUF_LEN (10 * (sizeof(struct inotify_event) + NAME_MAX + 1))
 void *threadFunc(void *)
 {
@@ -1569,6 +2012,8 @@ void *threadFunc(void *)
     firmware_dir_walk();
 	/* Done parsing on target accelerators, now load a default one if present in config file */
 	sem_post(&mutex);
+
+    init_user_load();
 
     /* Listen for new updates in firmware path*/
     for (;;) {

@@ -53,6 +53,7 @@ process_dfx_req(int fd, fd_set *fdset)
 	struct message recv_msg, send_msg;
 	ssize_t numbytes;
 	int ret, slot;
+	char *binfile = NULL, *overlay = NULL, *region = NULL, *tmp;
 
 	numbytes = read(fd, &recv_msg, sizeof(struct message));
 	if (numbytes <= 0) {
@@ -142,6 +143,26 @@ process_dfx_req(int fd, fd_set *fdset)
 		if (close(fd) == -1)
 			DFX_ERR("close(%d)", fd);
 		FD_CLR(fd, fdset);
+		break;
+
+	case USER_LOAD:
+		tmp = strdup(recv_msg.data);
+		binfile = strtok(tmp, " : ");
+		overlay = strtok(NULL, " : ");
+		region = strtok(NULL, " : ");
+
+		slot = user_load(recv_msg.user_load_flag, binfile, overlay, region);
+		send_msg.size = 1 + sprintf(send_msg.data, "%d", slot);
+		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
+			DFX_ERR("USER_LOAD write(%d)", fd);
+
+		break;
+
+	case USER_UNLOAD:
+		ret = user_unload_overlay(recv_msg.data);
+		send_msg.size = 1 + sprintf(send_msg.data, "%d", ret);
+		if (write(fd, &send_msg, HEADERSIZE+ send_msg.size) < 0)
+			DFX_ERR("USER_UNLOAD write(%d)", fd);
 		break;
 
 	default:

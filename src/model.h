@@ -109,6 +109,12 @@ struct basePLDesign {
 	slot_info_t **slots;
 	uint64_t inter_rp_comm[RP_SLOTS_MAX]; /**< Inter-RP buffer addrs */
 	accel_info_t accel_list[RP_SLOTS_MAX];
+
+	/* Added for User Managed Design*/
+	int is_user_load;            /* 1 if user managed design, 0 otherwise */
+	int user_load_type;          /* 0 for full, 1 for partial bitstream load */
+	int user_load_handle;        /* slot handle for user managed design */
+	char user_load_region[128];  /* full or partial reconfiguration region of FPGA in device tree */
 };
 
 typedef struct {
