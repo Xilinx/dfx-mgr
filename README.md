@@ -441,3 +441,6 @@ currently and absolute path lengths are limited to 512 char. Hence avoid
 creating long filenames.
 
 3. I/O nodes don't support zero copy.
+
+4. DFX-MGR is currently limited to supporting Zynq UltraScale+MPSoC and Versal platforms.
+It does not supprt Zynq-7000 platform.
