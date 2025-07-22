@@ -36,9 +36,10 @@ user is expected to update as required.
 DFX-MGR recognizes the designs under `/lib/firmware/xilinx` on device
 filesystem, location can be updated in `daemon.conf`. Designs could be
 downloaded using dnf or any other package manager or manually copied to the
-previously mentioned location. Each folder under `/lib/firmware/xilinx` will be
-treated as a base shell design wherein the folder is expected to have a
-shell.json file. Base design folder can then have sub-folder for each of the
+previously mentioned location. Each sub-folder upto 5 hierarchical level
+under `/lib/firmware/xilinx` will be treated as a base shell design if it
+contain a shell.json file, or the sub-folder name is `rpu` or `RPU`.
+Base design folder can then have sub-folder for each of the
 accelerators. Each accelerator is expected to have a accel.json. Have a look at
 below folder structure for more understanding and the details of json config
 files.

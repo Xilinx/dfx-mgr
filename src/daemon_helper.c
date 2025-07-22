@@ -1336,14 +1336,15 @@ void parse_packages(struct basePLDesign *base,char *fname, char *path)
 	    if (d_name_filter(d1->d_name) || not_dir(first_level))
 		    continue;
 
-			//add_accel_to_base(dir->d_name, new_dir, path);
-            wd = inotify_add_watch(inotifyFd, first_level, IN_ALL_EVENTS);
-            if (wd == -1){
-                DFX_ERR("inotify_add_watch failed on %s", first_level);
+		if (path_to_watch(first_level) == NULL) {
+			wd = inotify_add_watch(inotifyFd, first_level, IN_ALL_EVENTS);
+			if (wd == -1){
+				DFX_ERR("inotify_add_watch failed on %s", first_level);
 				goto close_dir;
 			}
-            
 			add_to_watch(wd, d1->d_name, first_level, fname, path);
+		}
+
 			sprintf(filename,"%s/accel.json",first_level);
 			/* For pl slots we need to traverse next level to find accel.json*/
 			if (stat(filename,&stat_info)){
@@ -1354,12 +1355,15 @@ void parse_packages(struct basePLDesign *base,char *fname, char *path)
 					if (d_name_filter(d2->d_name) || not_dir(second_level))
 						continue;
 
-					wd = inotify_add_watch(inotifyFd, second_level, IN_ALL_EVENTS);
-					if (wd == -1){
-						DFX_ERR("inotify_add_watch failed on %s", second_level);
-						goto close_dir;
+					if (path_to_watch(second_level) == NULL) {
+						wd = inotify_add_watch(inotifyFd, second_level, IN_ALL_EVENTS);
+						if (wd == -1){
+							DFX_ERR("inotify_add_watch failed on %s", second_level);
+							goto close_dir;
+						}
+						add_to_watch(wd, d2->d_name, second_level, d1->d_name, first_level);
 					}
-					add_to_watch(wd, d2->d_name, second_level, d1->d_name, first_level);
+
 					sprintf(filename,"%s/accel.json",second_level);
 					if (!stat(filename,&stat_info)){
 					accel = add_accel_to_base(base,d1->d_name, first_level, path);
@@ -1450,7 +1454,6 @@ void remove_base_design(char *path,char *parent, int is_base)
                     base_designs[i].accel_list[j].path[0] = '\0';
                     base_designs[i].accel_list[j].parent_path[0] = '\0';
                     base_designs[i].accel_list[j].wd = -1;
-                    break;
                 }
             }
             base_designs[i].name[0] = '\0';
@@ -1497,13 +1500,26 @@ displayInotifyEvent(struct inotify_event *i)
 //        printf("        name = %s\n", i->name);
 }*/
 
+#define MAX_RECURSION_DEPTH 5
+/*
+ * accel_dir_add() - set up inotify watches for a directory, and check for base designs
+ *
+ * @cpath: The path for parent directory.
+ * @dirent: Pointer to a struct dirent representing the directory entry to add.
+ * @recursion_depth: The current recursion depth, used to prevent excessive recursion.
+ *
+ * This function is called recursively to handle subdirectories.
+ * It checks if the directory is already being watched, adds a watch if not,
+ * and initializes base designs if applicable.
+ */
 static void
-acell_dir_add(char *cpath, struct dirent *dirent)
+accel_dir_add(char *cpath, struct dirent *dirent, int recursion_depth)
 {
 	char new_dir[512], fname[600];
 	struct basePLDesign *base;
 	char *d_name;
 	int wd;
+	struct watch *watch = NULL;
 
 	if (!cpath || !dirent || d_name_filter(dirent->d_name))
 		return;
@@ -1513,21 +1529,61 @@ acell_dir_add(char *cpath, struct dirent *dirent)
 	if (not_dir(new_dir))
 		return;
 
-	DFX_DBG("Found dir %s", new_dir);
-	wd = inotify_add_watch(inotifyFd, new_dir, IN_ALL_EVENTS);
-	if (wd == -1){
-		DFX_ERR("inotify_add_watch %s", new_dir);
+	if (recursion_depth > MAX_RECURSION_DEPTH) {
+		DFX_PR("Max recursion depth reached for %s. Not processing files any deeper.", new_dir);
 		return;
 	}
-	add_to_watch(wd, d_name, new_dir, "", cpath);
-	add_base_design(d_name, new_dir, cpath, wd);
-	base = findBaseDesign(d_name);
-	if (base == NULL)
-		return;
 
-	sprintf(fname, "%s/shell.json", base->base_path);
-	if (initBaseDesign(base, fname) == 0)
-		parse_packages(base, base->name, base->base_path);
+	DFX_DBG("Found dir %s", new_dir);
+
+	watch = path_to_watch(new_dir);
+
+	if (watch) {
+		wd = watch->wd;
+		if (strcmp(watch->parent_name, "")) {
+			/* Update parent_name as empty string for base and parent directories */
+			strcpy(watch->parent_name, "");
+		}
+	} else {
+		wd = inotify_add_watch(inotifyFd, new_dir, IN_ALL_EVENTS);
+		if (wd == -1){
+			DFX_ERR("inotify_add_watch %s", new_dir);
+			return;
+		}
+		add_to_watch(wd, d_name, new_dir, "", cpath);
+	}
+
+	/* add base design if shell.json exists or if the directory name is RPU or rpu */
+	sprintf(fname, "%s/shell.json", new_dir);
+	if (access(fname, F_OK) == 0 ||
+			!strcmp(d_name, "RPU") || !strcmp(d_name, "rpu")) {
+		/* add the base design */
+		add_base_design(d_name, new_dir, cpath, wd);
+
+		/* initialize the base design */
+		base = findBaseDesign_path(new_dir);
+		if (base) {
+			if (initBaseDesign(base, fname) == 0) {
+				parse_packages(base, base->name, base->base_path);
+			} else {
+				DFX_ERR("Failed to init base design %s", d_name);
+			}
+		} else {
+			DFX_ERR("Base design %s not found", d_name);
+		}
+	} else {
+		/* check for subdirectories recursively */
+		DIR *d = opendir(new_dir);
+
+		if (d != NULL) {
+			struct dirent *subdir;
+
+			while ((subdir = readdir(d)) != NULL) {
+				accel_dir_add(new_dir, subdir, recursion_depth + 1);
+			}
+			closedir(d);
+		}
+	}
 }
 
 /*
@@ -1559,7 +1615,7 @@ firmware_dir_walk(void)
 		}
 		/* Add packages to inotify */
 		while ((dirent = readdir(d)) != NULL)
-			acell_dir_add(fwdir, dirent);
+			accel_dir_add(fwdir, dirent, 1);
 		closedir(d);
 	}
 }
@@ -2032,13 +2088,15 @@ void *threadFunc(void *)
                     if (w == NULL || strstr(event->name, ".dpkg-new"))
                         break;
                     sprintf(new_dir,"%s/%s",w->path, event->name);
+                    if (path_to_watch(new_dir) != NULL) {
+                        break;
+                    }
                     DFX_DBG("add inotify watch on %s w->name %s parent %s", new_dir, w->name, w->parent_path);
                     wd = inotify_add_watch(inotifyFd, new_dir, IN_ALL_EVENTS);
                     if (wd == -1)
                         DFX_PR("inotify_add_watch failed on %s", new_dir);
 					add_to_watch(wd, event->name, new_dir, w->name,w->path);
-					if (!strcmp(w->parent_path,""))
-						add_base_design(event->name, new_dir, w->path, wd);
+					/* new addition of base design will be managed by firmware_dir_walk() */
                 }
 				else if(!strcmp(event->name,"shell.json")) {
 					struct watch *w = get_watch(event->wd);
@@ -2053,11 +2111,24 @@ void *threadFunc(void *)
 						parse_packages(base,w->name, w->path);
 				}
 				else if(!strcmp(event->name,"accel.json")) {
-					struct watch *w = get_watch(event->wd);
-					struct watch *parent_watch = path_to_watch(w->parent_path);
+					struct watch *w, *parent_watch;
 					accel_info_t *accel;
 
+					w = get_watch(event->wd);
+					if (w == NULL) {
+						break;
+					}
+
+					parent_watch = path_to_watch(w->parent_path);
+					if (parent_watch == NULL) {
+						break;
+					}
+
 					base = findBaseDesign_path(parent_watch->parent_path);
+					if (base == NULL) {
+						break;
+					}
+
 					DFX_DBG("Add accel %s to base %s", w->path, base->base_path);
 					accel = add_accel_to_base(base, w->parent_name, w->parent_path, base->base_path);
 					initAccel(accel, w->path);
@@ -2069,7 +2140,7 @@ void *threadFunc(void *)
                     break;
                 sprintf(new_dir,"%s/%s",w->path, event->name);
                 DFX_DBG("Removing watch on %s parent_path %s", new_dir, w->parent_path);
-				if (!strcmp(w->parent_path,""))
+				if (!strcmp(w->parent_name,""))
 					remove_base_design(new_dir, w->path, 1);
 				else
 					remove_base_design(new_dir, w->path, 0);
@@ -2084,6 +2155,7 @@ void *threadFunc(void *)
 					remove_base_design(new_dir, w->path, 1);
 				else
 					remove_base_design(new_dir, w->path, 0);
+				remove_watch(new_dir);
             }
             else if(event->mask & IN_MOVED_TO){
 				/*
@@ -2097,7 +2169,7 @@ void *threadFunc(void *)
 						break;
 					if (event->mask & IN_ISDIR){
 						sprintf(new_dir,"%s/%s",w->path, event->name);
-						add_base_design(event->name, new_dir, w->path, event->wd);
+						/* new addition of base design will be managed by firmware_dir_walk() */
 					} else {
 						sprintf(new_dir,"%s",w->path);
 					}
