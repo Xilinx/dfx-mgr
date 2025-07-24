@@ -57,7 +57,8 @@ int main(int argc, char *argv[])
 		}
 		if (recv_message.data[0] == '-'){
 			printf("Load Error: %s: ", recv_message.data);
-			switch (strtol(&recv_message.data[1], NULL, 10)) {
+			ret = strtol(&recv_message.data[1], NULL, 10);
+			switch (ret) {
 				case 2: printf("No package found for %s\n", argv[2]);
 					break;
 				case 3: printf("No empty slot for %s\n", argv[2]);
@@ -65,7 +66,8 @@ int main(int argc, char *argv[])
 				default: printf("Unable to load %s\n", argv[2]);
 					break;
 			}
-			return -1;
+			/* return error code when load error happened */
+			return -ret;
 		} else {
 			printf("%s: Loaded with slot_handle %s\n", argv[2], recv_message.data);
 		}
