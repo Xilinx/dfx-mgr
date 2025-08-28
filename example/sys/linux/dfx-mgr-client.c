@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
 		printf("-b <bitstream> -f <type>\t Load the bitstream alone\n");
 		printf("-b <bitstream> -f <type> -o <dtbo> -n <region>\t Load the bitstream with dtbo\n");
 		printf("-R -n <region>\t\t Remove overlay from livetree\n");
-		printf("-remove <slot#>\t\t Unload previously loaded bitstream\n");
+		printf("-remove <slot#>\t\t Unload bitstream and remove associated overlay\n");
 		printf("Options:\n\t -b <bitstream>\t Absolute path of bitstream file\n");
 		printf("\t -o <dtbo>\t Absolute path of device tree overlay file\n");
 		printf("\t -f <type>\t Bitstream type: <Full | Partial>\n");
