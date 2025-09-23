@@ -595,6 +595,11 @@ int remove_accelerator(int slot_handle)
                         free(base->slots[slot]);
                         base->slots[slot] = NULL;
                         platform.active_base->active -= 1;
+                        if (!strcmp(platform.active_base->type, "XRT_FLAT") ||
+                            !strcmp(platform.active_base->type, "PL_FLAT")) {
+                            DFX_PR("Clearing platform active base for flat designs.");
+                            platform.active_base = NULL;
+                        }
                 }
         }
 
