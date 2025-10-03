@@ -404,7 +404,7 @@ $ dfx-mgr-client -remove 1
 
        <dtbo> is the absolute path for device tree overlay file
 
-       <region> is the Full or Partial reconfiguration region of FPGA
+       <region> is the Full or Partial reconfiguration region of FPGA (max 8 characters)
 ```
 
 

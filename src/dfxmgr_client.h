@@ -18,6 +18,8 @@ extern "C" {
 #define MAX_MESSAGE_SIZE          4*1024
 #define BACKLOG                   10
 
+#define MAX_REGION_NAME_LEN  8
+
 enum dfx_mgr_request {
 	DFX_MGR_REQ_FIRST,
 	QUIT	= DFX_MGR_REQ_FIRST,

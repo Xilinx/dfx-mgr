@@ -23,6 +23,10 @@ extern "C" {
 #define DFX_MGR_NO_PACKAGE_FOUND_ERROR		(2U)
 #define DFX_MGR_NO_EMPTY_SLOT_ERROR		(3U)
 
+#define TRUNCATED_BASE_NAME_LEN     8
+#define MAX_BASE_NAME_DISPLAY_LEN   (TRUNCATED_BASE_NAME_LEN + 3)  // Truncated base len  + 3 dots
+#define TRUNCATED_BASE_BUFFER_SIZE  (MAX_BASE_NAME_DISPLAY_LEN + 1)  // Display length + null terminator
+
 int load_accelerator(const char *accel_name);
 int remove_accelerator(int slot);
 void allocBuffer(uint64_t size);

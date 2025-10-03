@@ -191,7 +191,7 @@ int main(int argc, char *argv[])
 		printf("Options:\n\t -b <bitstream>\t Absolute path of bitstream file\n");
 		printf("\t -o <dtbo>\t Absolute path of device tree overlay file\n");
 		printf("\t -f <type>\t Bitstream type: <Full | Partial>\n");
-		printf("\t -n <region>\t Full or Partial reconfiguration region of FPGA in device tree\n");
+		printf("\t -n <region>\t Full or Partial reconfiguration region of FPGA in device tree (max 8 chars)\n");
 		printf("\t -R\t\t Remove overlay from live tree without unloading bitstream\n");
 	} else {
 		int unknown_arg = 1;
@@ -213,6 +213,11 @@ int main(int argc, char *argv[])
 					}
 					break;
 				case 'n':
+					if (strlen(optarg) > MAX_REGION_NAME_LEN) {
+						printf("Error: Region name must be %d characters or less (provided: %s, length: %d)\n",
+							MAX_REGION_NAME_LEN, optarg, (int)strlen(optarg));
+						return -1;
+					}
 					region = optarg;
 					break;
 				case 'R':

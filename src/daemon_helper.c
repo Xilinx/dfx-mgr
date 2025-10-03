@@ -1145,13 +1145,20 @@ char *listAccelerators()
     char msg[330];	/* compiler warning if 326 bytes or less */
 	char res[8*1024];
     char show_slots[16];
-    const char format[] = "%20s%12s%15s%17s%15s%6s%10s%19s%13s\n";
+	int entry_count = 1;
+	char truncated_base[TRUNCATED_BASE_BUFFER_SIZE];
+	const char header_format[] = "%-3s%-12s%-15s%-17s%-12s%-6s%-10s%-19s%-13s%s\n";
+	const char entry_format[] = "%2d %-12s%-15s%-17s%-12s%-6s%-10s%-19s%-13s%s\n";
 
 	memset(res,0, sizeof(res));
 	firmware_dir_walk();
  
-    sprintf(msg, format, "Accelerator", "Accel_type", "user_load_type", "user_load_region", "Base", "Pid",
-	    "Base_type", "#slots(RPU+PL+AIE)", "slot->handle");
+	sprintf(msg, header_format, "#", "Accel_type", "user_load_type", "user_load_region", "Base", "Pid",
+		"Base_type", "#slots(RPU+PL+AIE)", "slot->handle", "Accelerator");
+	strcat(res,msg);
+	// TODO: This hardcoded separator lines "----" should be updated in future improvements
+	sprintf(msg, header_format, "--", "-----------", "--------------", "----------------", "-----------",
+		"-----", "---------", "------------------", "------------", "---------");
 	strcat(res,msg);
     for (i = 0; i < MAX_WATCH; i++) {
         if (base_designs[i].base_path[0] != '\0' && base_designs[i].num_pl_slots > 0) {
@@ -1195,15 +1202,22 @@ char *listAccelerators()
                             }
                         }
                     }
-                    sprintf(msg, format,
-                            base_designs[i].accel_list[j].name,
+                    if (strlen(base_designs[i].name) > MAX_BASE_NAME_DISPLAY_LEN) {
+			snprintf(truncated_base, sizeof(truncated_base),
+				"%.*s...", TRUNCATED_BASE_NAME_LEN, base_designs[i].name);
+			} else {
+				strncpy(truncated_base, base_designs[i].name, sizeof(truncated_base) - 1);
+			}
+			sprintf(msg, entry_format,
+                            entry_count++ ,
                             base_designs[i].accel_list[j].accel_type,
 			    "-", "-",
-                            base_designs[i].name,
+                            truncated_base,
                             pid_uid_check(&base_designs[i], j),
                             base_designs[i].type,
                             show_slots,
-                            active_slots[0] ? active_slots : "-1");
+                            active_slots[0] ? active_slots : "-1",
+                            base_designs[i].accel_list[j].name);
                     strcat(res, msg);
                 }
             }
@@ -1215,12 +1229,14 @@ char *listAccelerators()
                 base_designs[i].user_load_type ? base_designs[i].user_load_region : "0",
                 base_designs[i].user_load_handle);
 
-            sprintf(msg, format,
-                base_designs[i].name, "-",
+            sprintf(msg, entry_format,
+                entry_count++,
+                "-",
                 base_designs[i].user_load_type ? "Partial" : "Full",
                 base_designs[i].user_load_region,
                 "-", "-", "-", "-",
-                tmp);
+                tmp,
+                base_designs[i].name);
             strcat(res, msg);
         }
     }
