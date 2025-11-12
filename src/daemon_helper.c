@@ -1152,7 +1152,7 @@ char *listAccelerators()
 
 	memset(res,0, sizeof(res));
 	firmware_dir_walk();
- 
+
 	sprintf(msg, header_format, "#", "Accel_type", "user_load_type", "user_load_region", "Base", "Pid",
 		"Base_type", "#slots(RPU+PL+AIE)", "slot->handle", "Accelerator");
 	strcat(res,msg);
@@ -1722,7 +1722,7 @@ static int user_load_overlay(char *ov, char *region)
 	struct stat sb;
 	FILE *fptr;
 
-	snprintf(ov_dir, sizeof(ov_dir), "/configfs/device-tree/overlays/%s", region);
+	snprintf(ov_dir, sizeof(ov_dir), "/sys/kernel/config/device-tree/overlays/%s", region);
 	if (((stat(ov_dir, &sb) == 0) && S_ISDIR(sb.st_mode))) {
 		DFX_ERR("Overlay already exists in the live tree");
 		return -1;
@@ -1961,7 +1961,7 @@ int user_unload_overlay(char *region)
 		return -1;
 	}
 
-	snprintf(ov_dir, sizeof(ov_dir), "/configfs/device-tree/overlays/%s", region);
+	snprintf(ov_dir, sizeof(ov_dir), "/sys/kernel/config/device-tree/overlays/%s", region);
 	if (((stat(ov_dir, &sb) == 0) && S_ISDIR(sb.st_mode))) {
 		snprintf(command, sizeof(command), "rmdir %s", ov_dir);
 		if (system(command)) {
@@ -2051,16 +2051,13 @@ static void init_user_load(void)
 	    }
     }
 
-    FD = opendir("/configfs/device-tree/overlays/");
+    FD = opendir("/sys/kernel/config/device-tree/overlays/");
     if (FD)
 	    closedir(FD);
     else {
-	    if (system("mkdir -p /configfs")) {
-		    DFX_ERR("Failed system() API");
-	    }
-	    if (system("mount -t configfs configfs /configfs")) {
-		    DFX_ERR("Failed system() API");
-	    }
+    	DFX_ERR("/sys/kernel/config/device-tree/overlays/ not present on the system. "
+	     "Is configfs enabled in kernel config?");
+
     }
 }
 
