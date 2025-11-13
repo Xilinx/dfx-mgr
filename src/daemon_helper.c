@@ -12,6 +12,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <unistd.h>
+#include <libgen.h>
 #include <dfx-mgr/accel.h>
 #include <dfx-mgr/assert.h>
 #include <dfx-mgr/shell.h>
@@ -26,6 +27,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <semaphore.h>
+#include <libdfx.h>
 
 struct daemon_config config;
 struct watch *active_watch = NULL;
@@ -1694,7 +1696,6 @@ static int fpga_state(void)
 static int user_load_sysfs(char *bin)
 {
 	char command[2048];
-
 	snprintf(command, sizeof(command), "echo %s > /sys/class/fpga_manager/fpga0/firmware", bin);
 	if (system(command)) {
 		DFX_ERR("Failed system() API");
@@ -1853,11 +1854,6 @@ int user_load(int flag, char *binfile, char *overlay, char *region)
 		bin = token;
 	}
 
-	snprintf(command, sizeof(command), "cp %s /lib/firmware", binfile);
-	if (system(command)) {
-		DFX_ERR("Failed system() API");
-	}
-
 	snprintf(command, sizeof(command), "echo %x > /sys/class/fpga_manager/fpga0/flags", flag & 1);
 	if (system(command)) {
 		DFX_ERR("Failed system() API");
@@ -1878,62 +1874,46 @@ int user_load(int flag, char *binfile, char *overlay, char *region)
 		while((token = strsep(&tmp, "/"))) {
 			ov = token;
 		}
-
-		snprintf(command, sizeof(command), "cp %s /lib/firmware", overlay);
-		if (system(command)) {
-			DFX_ERR("Failed system() API");
-		}
-
+	    dfx_set_firmware_lookup_path(overlay);
 		rv = user_load_overlay(ov, region);
 	} else {
+	    dfx_set_firmware_lookup_path(binfile);
 		rv = user_load_sysfs(bin);
 	}
 
 	if (!rv) {
-		int i;
+	    int i;
 
-		/* get the free space in array to add new entry */
-		for (i = 0; (i < MAX_WATCH) && (base_designs[i].base_path[0] != '\0'); i++);
+	    /* get the free space in array to add new entry */
+	    for (i = 0; (i < MAX_WATCH) && (base_designs[i].base_path[0] != '\0'); i++);
 
-		if (i == MAX_WATCH) {
-			DFX_ERR("Unable to add new design, MAX limit (%d) reached.", MAX_WATCH);
-			user_unload_overlay(region);
-			rv = -1;
-		} else {
-			DFX_DBG("Adding user managed design %s", bin);
-			strncpy(base_designs[i].name, bin, sizeof(base_designs[i].name) - 1);
-			base_designs[i].name[sizeof(base_designs[i].name) - 1] = '\0';
-			strncpy(base_designs[i].base_path, "User", sizeof(base_designs[i].base_path) - 1);
-			base_designs[i].base_path[sizeof(base_designs[i].base_path) - 1] = '\0';
-			base_designs[i].active = 0;
-			base_designs[i].is_user_load = 1;
-			base_designs[i].user_load_type = flag & 1;
-			rv = base_designs[i].user_load_handle = get_free_slot_handle();
-			strncpy(base_designs[i].user_load_region, region ? region : "", sizeof(base_designs[i].user_load_region) - 1);
-			base_designs[i].user_load_region[sizeof(base_designs[i].user_load_region) - 1] = '\0';
+	    if (i == MAX_WATCH) {
+	        DFX_ERR("Unable to add new design, MAX limit (%d) reached.", MAX_WATCH);
+	        user_unload_overlay(region);
+	        rv = -1;
+	    } else {
+	        DFX_DBG("Adding user managed design %s", bin);
+	        strncpy(base_designs[i].name, bin, sizeof(base_designs[i].name) - 1);
+	        base_designs[i].name[sizeof(base_designs[i].name) - 1] = '\0';
+	        strncpy(base_designs[i].base_path, "User", sizeof(base_designs[i].base_path) - 1);
+	        base_designs[i].base_path[sizeof(base_designs[i].base_path) - 1] = '\0';
+	        base_designs[i].active = 0;
+	        base_designs[i].is_user_load = 1;
+	        base_designs[i].user_load_type = flag & 1;
+	        rv = base_designs[i].user_load_handle = get_free_slot_handle();
+	        strncpy(base_designs[i].user_load_region, region ? region : "", sizeof(base_designs[i].user_load_region) - 1);
+	        base_designs[i].user_load_region[sizeof(base_designs[i].user_load_region) - 1] = '\0';
 
-			if (base_designs[i].user_load_type && platform.active_base)
-				platform.active_base->active += 1;
-			else
-				platform.active_base = &base_designs[i];
-		}
+	        if (base_designs[i].user_load_type && platform.active_base)
+	            platform.active_base->active += 1;
+	        else
+	            platform.active_base = &base_designs[i];
+	    }
 	}
+
 
 ret:
-	if (bin != NULL) {
-		snprintf(command, sizeof(command), "rm /lib/firmware/%s", bin);
-		if (system(command)) {
-			DFX_ERR("Failed system() API");
-		}
-	}
-
-	if (ov != NULL) {
-		snprintf(command, sizeof(command), "rm /lib/firmware/%s", ov);
-		if (system(command)) {
-			DFX_ERR("Failed system() API");
-		}
-	}
-
+    dfx_set_firmware_lookup_path("");
 	return rv;
 }
 
@@ -2041,15 +2021,6 @@ int user_unload(int handle)
 static void init_user_load(void)
 {
     DIR *FD;
-    FD = opendir("/lib/firmware");
-
-    if (FD) {
-	    closedir(FD);
-    } else {
-	    if (system("mkdir -p /lib/firmware")) {
-		    DFX_ERR("Failed system() API");
-	    }
-    }
 
     FD = opendir("/sys/kernel/config/device-tree/overlays/");
     if (FD)
