@@ -1,10 +1,10 @@
-#### Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+#### Copyright (c) 2025, Xilinx Inc. and Contributors. All rights reserved.
 #### SPDX-License-Identifier: MIT
 
 ## Overview
 
 DFX-MGR provides infrastructure to abstract configuration and hardware resource
-management for dynamic deployment of Xilinx based accelerator across different
+management for dynamic deployment of Xilinx based accelerators across different
 platforms.
 
 DFX-MGR is merged in Yocto Project meta-xilinx layer 2021.1 onwards and the
@@ -27,7 +27,7 @@ recipe, you should have dfx-mgrd and dfx-mgr-client in `/usr/bin` of rootfs
 and libdfx-mgr.so in `/usr/lib`. The config file `daemon.conf` can be found
 in `/etc/dfx-mgrd/`. Config file is mandatory, refer the files section for
 details of it. A default daemon.conf will be copied by the recipe and the
-user is expected to update as required.
+users are expected to update as required.
 
 ![Screenshot](https://media.gitenterprise.xilinx.com/user/978/files/c2254180-9d53-11eb-9371-ad2d44922a8b)
 
@@ -36,19 +36,19 @@ user is expected to update as required.
 DFX-MGR recognizes the designs under `/lib/firmware/xilinx` on device
 filesystem, location can be updated in `daemon.conf`. Designs could be
 downloaded using dnf or any other package manager or manually copied to the
-previously mentioned location. Each sub-folder upto 5 hierarchical level
-under `/lib/firmware/xilinx` will be treated as a base shell design if it
+previously mentioned location. Each sub-folder upto 5 hierarchical levels
+under `/lib/firmware/xilinx` will be treated as a base/static shell design if it
 contain a shell.json file, or the sub-folder name is `rpu` or `RPU`.
-Base design folder can then have sub-folder for each of the
+base/static design folder can then have sub-folder for each of the
 accelerators. Each accelerator is expected to have a accel.json. Have a look at
 below folder structure for more understanding and the details of json config
 files.
 
 The expected directory structure under `/lib/firmware/xilinx` which contains a
-3x1 PL shell design, and a flat shell design. 3x1 `base_design` shell
-has an accelerator called FFT which contains three different partial bitstreams
-for three slots of base shell.
-`base_design` needs to have base shell bitstream and shell.json.
+2x1 PL shell design, and a flat shell design. 2x1 `base_design` shell
+has an accelerator which contains two different partial bitstreams
+for two slots of base/static shell.
+`base_design` needs to have base/static shell bitstream and shell.json.
 DFX-MGR expects '_slot#' as subfolders for each of the accelerators for DFX designs.
 Place the bitstream corresponding to that slot in the respective subfolder along
 with accel.json file.
@@ -57,30 +57,46 @@ It is not mandatory to have all the partial bitstreams for each slot,
 but DFX-MGR
 will fail to load an accelerator to the slot if no partial design is found.
 
+### Directory Structure
+#### DFX, Seg+DFX Designs
 ```
-$ ls /lib/firmware/xilinx/base_design
-base_Shell.pdi base.dtbo shell.json FFT
-
-$ ls /lib/firmware/xilinx/base_design/FFT/
-FFT_slot0 FFT_slot1 FFT_slot2
-
-$ ls /lib/firmware/xilinx/base_design/FFT/FFT_slot0/
-partial.pdi partial.dtbo accel.json
-
-$ ls /lib/firmware/xilinx/base_design/FFT/FFT_slot1/
-partial.pdi partial.dtbo accel.json
-
-$ ls /lib/firmware/xilinx/base_design/FFT/FFT_slot2/
-partial_slot2.pdi partial.dtbo accel.json
-
-$ ls /lib/firmware/xilinx/flat_shell/
-Flat_shell.bit.bin flat_shell.dtbo shell.json
+/lib/firmware/xilinx/
+└── <base-design-name>
+    ├── shell.json                          # Base/Static design configuration
+    ├── <base-design>.pdi/.bit.bin          # Static base bitstream
+    ├── <base-design>.dtbo                  # Base device tree overlay
+    └── <accelerator-name>/
+        ├── <accelerator>_slot0/
+        │   ├── accel.json                  # Accelerator configuration
+        │   ├── <partial>.pdi/.bit.bin      # Partial bitstream for slot 0
+        │   └── <partial>.dtbo              # Device tree overlay for slot 0
+        └── <accelerator>_slot1/
+            ├── accel.json
+            ├── <partial>.pdi/.bit.bin      # Partial bitstream for slot 1
+            └── <partial>.dtbo
+```
+#### Flat Designs
+```
+/lib/firmware/xilinx/
+└── <flat_shell>/                        # Flat design structure
+    ├── <flat_shell>.pdi                 # Flat bitstream
+    ├── <flat_shell>.dtbo                # Flat device tree overlay
+    └── shell.json                       # Flat design configuration
+```
+#### RPU Designs
+```
+/lib/firmware/xilinx/
+└──rpu/                                  # RPU directory structure (case-insensitive)
+  └── <rpu-application-name>/
+      └── <rpu-application>_slot0/
+          └── <firmware>.elf             # RPU firmware file
 ```
 
-As shown above, base_design has first three slots (0,1,2)
-corresponding to PL slots from the FFT subfolders. When
-DFX-MGR successfully loads FFT accel to one of the slots, -listPackage output
-would show active slot as 0,1 or 2.
+**Key Requirements:**
+- Base/static design directory must contain `shell.json`
+- Accelerator subdirectories must follow `<name>_slot<N>` naming convention
+- Each slot directory must contain `accel.json` for proper recognition
+- Supports up to 5 hierarchical directory levels under `/lib/firmware/xilinx`
 
 
 ### daemon.conf
@@ -107,7 +123,7 @@ $ cat /etc/dfx-mgrd/daemon.conf
 
 ### shell.json
 
-shell.json describes the base shell configuration information. Optional fields
+shell.json describes the base/static shell configuration information. Optional fields
 can be skipped if not desired.
 
 One of the below type should be used for shell_type as per your design.
@@ -116,15 +132,16 @@ path to the active xclbin on success.
 * PL_FLAT: dfx-mgr will program the PL bitstream and treat the design as static.
 * PL_DFX: dfx-mgr will treat the design as DFX with number of slots as mentioned in
 json.
-```
+* RPU: dfx-mgr will treat this design as RPU firmware.
+
+#### KRIA Designs.
+```json
 $ cat shell.json
  {
   "shell_type" : "PL_DFX",// Required: valid values are XRT_FLAT/PL_FLAT/PL_DFX
   "num_pl_slots": 3, //Required: Number of pl slots in your base shell design
   "num_aie_slots":1, //Required: Number of aie slots in your base shell design
-  "load_base_design": "no" //Optional : If the shell was loaded during boot
-              //and you want to skip loading base shell when loading the
-              // accelerators to the slot.
+  "load_base_design": "no" //Optional : Default is "yes". Set to "no" to skip loading base design
   "device_name" : "a0010000.SIHA_Manager", //optional: IP name
   "reg_base" : "", //Optional: IP device base address
   "reg_size" : "", //Optional
@@ -148,6 +165,15 @@ $ cat shell.json
 > support in dfx-mgr is preliminary and for a future production enablement capability.
 > [KRIA](https://www.xilinx.com/products/som/kria.html) devices do not have AIE.
 
+#### FLAT, DFX, Segmented and Segmented+DFX Designs.
+```json
+{
+  "shell_type": "PL_DFX", //"Supported types are XRT_FLAT/PL_FLAT/PL_DFX"
+  "num_pl_slots": 2, // Required for PL_DFX: Number of pl slots in your static shell design
+  "num_aie_slots":1, //Optional: Default is 0, Set Number of aie slots in your base shell design if present
+  "load_base_design": "no" //Optional : Default is "yes". Set to "no" to skip loading base design
+}
+```
 ### accel.json
 
 accel.json describes the accelerator configuration. Optional fields can be
@@ -159,7 +185,9 @@ since they do not have reconfigurable partition.
 this enables some extra steps required to bring the slots out of isolation in
 addition to programming the bitstream.
 * XRT_PL_DFX: Use this option for XRT based PL accelerator.
-```
+
+#### KRIA Designs.
+```json
 $ cat accel.json
 {
   "accel_type": "", // Required: supported types are SIHA_PL_DFX / XRT_PL_DFX
@@ -192,7 +220,13 @@ $ cat accel.json
                     //DFX-MGR will try software fallback
 }
 ```
-
+#### DFX, Segmented and Segmented+DFX Designs
+```json
+{
+  "accel_type": "SIHA_PL_DFX" // Required: supported types are
+                      // SIHA_PL_DFX/XRT_AIE_DFX/XRT_PL_DFX
+}
+```
 ## How to build
 
 DFX-MGR depends on external libraries/frameworks such as
@@ -237,23 +271,26 @@ The dfx-mgrd daemon should mostly be running on linux startup. Assuming it is
 running, you can use below commands from command line to load/unload
 accelerators.
 
-1. Command to list the packages present on target filesystem under
-`/lib/firmware/xilinx`.
+### Command to list the packages
+This command will list all packages present on target filesystem under /lib/firmware/xilinx.
 
-An alternative command line utility which some users might be familiar with can
-also be used `xmutil listapps`.
 ```
 $ dfx-mgr-client -listPackage
-Accelerator    Accel_type          Base    Pid Base_type #slots(PL+AIE) Active_slot
-  flat_shell	  PL_FLAT    flat_shell  id_ok  PL_FLAT          (0+0)          -1
-  AIE_accel   XRT_AIE_DFX   base_design  no_id   PL_DFX          (3+1)          3,
-        FFT   SIHA_PL_DFX   base_design id_err   PL_DFX          (3+1)         0,1
+#  Accel_type  user_load_type user_load_region Base        Pid   Base_type #slots(RPU+PL+AIE) slot->handle Accelerator
+-- ----------- -------------- ---------------- ----------- ----- --------- ------------------ ------------ ---------
+ 1 RPU         -              -                rpu         no_id RPU       (2+0+0)            -1           vek280-r5-0-matrix-multiply
+ 2 XRT_FLAT    -              -                vek280-p... id_ok XRT_FLAT  (0+0+0)            -1           vek280-pl-bram-gpio-fw
+ 3 XRT_FLAT    -              -                vek280-p... id_ok XRT_FLAT  (0+0+0)            -1           vek280-pl-bram-uart-gpio-fw
+ 4 SIHA_PL_DFX -              -                static      no_id PL_DFX    (0+2+0)            -1           rp1rm0
+ 5 SIHA_PL_DFX -              -                static      no_id PL_DFX    (0+2+0)            -1           rp0rm0
 ```
-In the above output, AIE_accel is currently programmed to AIE and hence the
-slot shows as 3. FFT is programmed to first two slots out of three slots of PL.
-flat_shell is not programmed and show -1. Flat shell design do not have a
-dynamic reconfigurable partition and hence #slots shows as 0. Vivado's UID, PID
-information for tracking parent-to-child relationships is in the "Pid" column:
+In the above output, XRT_FLAT designs show flat shell designs that do not have dynamic reconfigurable
+partitions and hence #slots shows as (0+0+0). SIHA_PL_DFX designs show DFX-based
+accelerators with reconfigurable partitions - in this case showing (0+2+0) indicating
+0 RPU slots, 2 PL slots, and 0 AIE slots. The slot->handle column shows -1 when no
+accelerator is currently loaded to any slot.RPU entries show RPU firmware applications.
+
+UID, PID information for tracking parent-to-child relationships is in the "Pid" column:
 * "id_ok"  When PID and the base UID are present and match as expected
 * "id_err" When PID and the base UID are present but do not match.
 * "no_id"  When either PID or UID are not present.
@@ -348,42 +385,26 @@ $ tree /lib/firmware/xilinx
     `-- shell.json
 ```
 </details>
-and their dfx-mgrd representation:
 
-```
-$ sudo xmutil listapps
-     Accelerator     Accel_type        Base            Pid Base_type #slots(PL+AIE) Active_slot
-   k26-starter-kits  XRT_FLAT      k26-starter-kits  id_ok  XRT_FLAT         (0+0)    0,
-kr260-tsn-rs485pmod  XRT_FLAT    kr260-tsn-rs485pmod id_ok  XRT_FLAT         (0+0)    -1
-                FFT  SIHA_PL_DFX     k26_2rp_1409    no_id    PL_DFX         (2+0)    -1
-        PP_PIPELINE  SIHA_PL_DFX     k26_2rp_1409    no_id    PL_DFX         (2+0)    -1
-                FIR  SIHA_PL_DFX     k26_2rp_1409    no_id    PL_DFX         (2+0)    -1
-                DPU  SIHA_PL_DFX     k26_2rp_1409    no_id    PL_DFX         (2+0)    -1
-             AES128  SIHA_PL_DFX     k26_2rp_1409    id_err   PL_DFX         (2+0)    -1
-             AES192  SIHA_PL_DFX     k26_2rp_1409    id_ok    PL_DFX         (2+0)    -1
-```
-
-2. Command to load one of the above listed accelerator. For dfx designs, base
-shell would be loaded first if not already loaded and then accelerator will be
-loaded to one of the free slots. If the shell is already loaded then only the
-accelerator will be loaded to one of free slots. If the device tree overlay
-(.dtbo) file contains **external-fpga-config** string the dfx-mgrd will use
-DFX_EXTERNAL_CONFIG_EN instead of the default DFX_NORMAL_EN flag when
+### Command to load accelerator.
+For DFX designs, the base/static shell will be loaded automatically if not already loaded when loading an accelerator. The accelerator will then be loaded to one of the free slots.
+If the device tree overlay (.dtbo) file contains **external-fpga-config** string the
+dfx-mgrd will use DFX_EXTERNAL_CONFIG_EN instead of the default DFX_NORMAL_EN flag when
 calling [libdfx](https://github.com/Xilinx/libdfx) fetch function.
 
-Equivalent xmutil command is `xmutil loadapp FFT`.
 ```
-$ dfx-mgr-client -load FFT
+$ dfx-mgr-client -load rp1rm0
 ```
-3. Command to remove accelerator from the slot. If there is not accel in the
-mentioned slot, this command will do nothing.
+When DFX-MGR successfully loads rp1rm0 accel to one of the slots, -listPackage output-would show active slot as 0.
 
-Equivalent xmutil command is `xmutil unloadapp 1`.
+### Command to remove accelerator from the slot.
+If there is no accel in the mentioned slot, this command will do nothing.
+
 ```
-$ dfx-mgr-client -remove 1
+$ dfx-mgr-client -remove 0
 ```
 
-### Lightweight use cases
+## Lightweight use cases
 
 1. Command to load PL bitstream alone from any path.
 ```
@@ -443,5 +464,5 @@ creating long filenames.
 
 3. I/O nodes don't support zero copy.
 
-4. DFX-MGR is currently limited to supporting Zynq UltraScale+MPSoC and Versal platforms.
-It does not supprt Zynq-7000 platform.
+4. DFX-MGR is currently limited to supporting Zynq UltraScale+MPSoC and Versal and Versal Gen2 platforms.
+It does not support Zynq-7000 platform.
