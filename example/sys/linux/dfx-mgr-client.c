@@ -290,7 +290,7 @@ int main(int argc, char *argv[])
 				return -1;
 			}
 			if (recv_message.data[0] == '-'){
-				printf("Load Error: %s: ", recv_message.data);
+				printf("Load Error: %s\n", recv_message.data);
 				return -1;
 			} else {
 				printf("Loaded with slot_handle %s\n", recv_message.data);
