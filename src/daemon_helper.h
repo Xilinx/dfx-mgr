@@ -44,9 +44,9 @@ char *listAccelerators();
 void getRMInfo();
 int dfx_init();
 int dfx_getFDs(int slot, int *fd);
-int user_load(int flag, char *binfile, char *overlay, char *region);
-int user_unload_overlay(char *region);
-int user_unload(int handle);
+int user_load(int flag, const char *binfile, const char *overlay, const char *region);
+int user_unload_overlay(const char *region);
+int user_unload(const int handle);
 
 #ifdef __cplusplus
 }
