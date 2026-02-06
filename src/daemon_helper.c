@@ -29,6 +29,10 @@
 #include <semaphore.h>
 #include <libdfx.h>
 
+#ifndef DTBO_ROOT_DIR
+#define DTBO_ROOT_DIR "/sys/kernel/config/device-tree/overlays"
+#endif
+
 struct daemon_config config;
 struct watch *active_watch = NULL;
 struct basePLDesign *base_designs = NULL;
@@ -1654,33 +1658,84 @@ firmware_dir_walk(void)
  */
 static int fpga_state(void)
 {
-	FILE *fptr;
-	char buf[10];
-	char *state_operating = "operating";
-	char *state_unknown = "unknown";
+    const char *state_operating = "operating";
+    const char *state_unknown = "unknown";
+    char read_buf[128];
 
-	if (system("cat /sys/class/fpga_manager/fpga0/state >> state.txt")) {
-		DFX_ERR("Failed system() API");
-		return -1;
-	}
-	fptr = fopen("state.txt", "r");
-	if (fptr) {
-		if (fgets(buf, 10, fptr) == NULL) {
-			DFX_ERR("Failed to read fpga state");
-			buf[0] = 0;
-		}
-		fclose(fptr);
-		if (system("rm state.txt")) {
-			DFX_ERR("Failed system() API");
-		}
-		if ((strncmp(buf, state_operating, 9) == 0) || (strncmp(buf, state_unknown, 7) == 0))
-			return 0;
-		else
-			return -1;
-	}
+    if (dfx_get_fpga_state(read_buf, sizeof(read_buf)) < 0) {
+        DFX_ERR("Failed to determine the fpga state -"
+        " could not read state file");
+        return -1;
+    }
 
-	return -1;
+    DFX_DBG("FPGA state read as: `%s`", read_buf);
+
+    if (strcmp(read_buf, state_operating) == 0 ||
+        strcmp(read_buf, state_unknown) == 0) {
+        return 0;
+        }
+
+    DFX_ERR("FPGA is in a bad state. State: `%s`", read_buf);
+    return -1;
 }
+
+/**
+ * check_overlay_was_applied(...) - check that an overlay was applied
+ *
+ *
+ * @overlay_dir:      Path to the overlay directory in configfs.
+ * @requested_path:   The overlay path to write to the `path` attribute.
+ *
+ * This function checks that an overlay was properly applied by reading
+ * the overlay status and the overlay path by checking files in the configfs.
+ * It checks that "applied" is in the overlay's `status` attribute
+ * and that the `path` attribute contains the requested_path, i.e. the overlay
+ * file which was requested
+ *
+ * Return: 0 if the overlay status "applied" and path matches requested_path,
+ *        -1 on error or if either assertion is false
+ */
+static int check_overlay_was_applied(const char *overlay_dir, const char *requested_path)
+{
+    char read_buf[128];
+    const char *state_applied = "applied";
+
+
+    /* Check overlay path */
+    if (dfx_get_overlay_path(overlay_dir, read_buf, sizeof(read_buf)) < 0) {
+        DFX_ERR("Failed to check the overlay was applied -"
+                " could not read path file");
+        return -1;
+    }
+
+    DFX_DBG("Overlay path read as: `%s`", read_buf);
+
+    if (strcmp(read_buf, requested_path) != 0) {
+        DFX_ERR("Overlay path does not match written path:\n"
+                "\tRequested: `%s`\n"
+                "\tCurrent:   `%s`",
+                requested_path, read_buf);
+        return -1;
+    }
+
+    /* Check overlay status */
+    if (dfx_get_overlay_status(overlay_dir, read_buf, sizeof(read_buf)) < 0) {
+        DFX_ERR("Failed to check the overlay was applied -"
+                " could not read status file");
+        return -1;
+    }
+
+    DFX_DBG("Overlay status read as: `%s`", read_buf);
+
+    if (strcmp(read_buf, state_applied) != 0) {
+        DFX_ERR("Overlay status is `%s`, expected `%s`",
+                read_buf, state_applied);
+        return -1;
+    }
+
+    return 0;
+}
+
 
 /**
  * user_load_sysfs() - load FPGA firmware via sysfs.
@@ -1695,14 +1750,33 @@ static int fpga_state(void)
  */
 static int user_load_sysfs(char *bin)
 {
-	char command[2048];
-	snprintf(command, sizeof(command), "echo %s > /sys/class/fpga_manager/fpga0/firmware", bin);
-	if (system(command)) {
-		DFX_ERR("Failed system() API");
+	if (dfx_set_fpga_firmware(bin)) {
+		DFX_ERR("Failed to load firmware - failed to request bitstream load");
 		return -1;
 	}
+	if (fpga_state()) {
+		DFX_ERR("Failed to load firmware - write succeeded, but fpga reports"
+				" bad state (or state could not be determined)");
+		return -1;
+	}
+	return 0;
+}
 
-	return (fpga_state() == 0) ? 0 : -1;
+/**
+ * remove_overlay_dir() - remove device tree overlay from configfs interface.
+ *
+ * @dir: the overlay directory to be removed
+ *
+ * This function attempts to remove the directory provided, with additional logging.
+ *
+ */
+static void remove_overlay_dir(const char *dir)
+{
+	if (rmdir(dir) != 0) {
+		DFX_ERR("Failed to remove directory `%s`", dir);
+	} else {
+		DFX_DBG("Directory `%s` removed", dir);
+	}
 }
 
 /**
@@ -1717,63 +1791,38 @@ static int user_load_sysfs(char *bin)
  * Return: 0 on success,
  *        -1 on failure.
  */
-static int user_load_overlay(char *ov, char *region)
-{
-	char command[2048], ov_dir[512], buf[512];
+static int user_load_overlay(char *ov, char *region) {
+	char ov_dir[512];
+	char* overlays_root_path = DTBO_ROOT_DIR;
 	struct stat sb;
-	FILE *fptr;
 
-	snprintf(ov_dir, sizeof(ov_dir), "/sys/kernel/config/device-tree/overlays/%s", region);
+	snprintf(ov_dir, sizeof(ov_dir), "%s/%s", overlays_root_path, region);
 	if (((stat(ov_dir, &sb) == 0) && S_ISDIR(sb.st_mode))) {
 		DFX_ERR("Overlay already exists in the live tree");
 		return -1;
 	}
 
-	snprintf(command, sizeof(command), "mkdir %s", ov_dir);
-	if (system(command)) {
-		DFX_ERR("Failed system() API");
+	// here, mode (0755) is ignored by the kernel so can be anything.
+	if (mkdir(ov_dir, 0755)) {
+		DFX_ERR("Failed to create overlay dir");
 		return -1;
 	}
 
-	snprintf(command, sizeof(command), "echo -n %s > %s/path", ov, ov_dir);
-	if (system(command)) {
-		DFX_ERR("Failed system() API");
+	if (dfx_set_overlay_path(ov_dir, ov)) {
+		DFX_ERR("Failed to set overlay's source path");
+		remove_overlay_dir(ov_dir);
+		return -1;
 	}
 
-	snprintf(command, sizeof(command), "cat %s/path >> state.txt", ov_dir);
-	if (system(command)) {
-		DFX_ERR("Failed system() API");
-	}
-
-	fptr = fopen("state.txt", "r");
-	if (fptr) {
-		if (fgets(buf, strlen(ov) + 1, fptr) == NULL) {
-			DFX_ERR("Failed to read overlay path");
-			buf[0] = 0;
-		}
-		fclose(fptr);
-		if (system("rm state.txt")) {
-			DFX_ERR("Failed system() API");
-		}
-
-		if (!strcmp(buf, ov)) {
-			DFX_PR("Applied overlay");
-		} else {
-			DFX_ERR("Failed to apply Overlay");
-			return -1;
-		}
-	} else {
-		DFX_ERR("Failed to check overlay state");
+	if (check_overlay_was_applied(ov_dir, ov)) {
+		DFX_ERR("Overlay failed to apply - state or path was wrong");
+		remove_overlay_dir(ov_dir);
 		return -1;
 	}
 
 	if (fpga_state()) {
-		DFX_ERR("Failed to load bitstream. Removing overlay applied");
-		snprintf(command, sizeof(command), "rmdir %s", ov_dir);
-		if (system(command)) {
-			DFX_ERR("Failed system() API");
-		}
-
+		DFX_ERR("Bitstream loading failed during overlay application");
+		remove_overlay_dir(ov_dir);
 		return -1;
 	}
 
@@ -1803,9 +1852,8 @@ static int user_load_overlay(char *ov, char *region)
  * Return: An integer unique handle id on success,
  *        -1 on failure or if constraints are violated.
  */
-int user_load(int flag, char *binfile, char *overlay, char *region)
+int user_load(const int flag, char *binfile, char *overlay, char *region)
 {
-	char command[2048];
 	char *bin = NULL, *ov = NULL, *tmp, *token;
 	int rv = -1;
 
@@ -1854,11 +1902,12 @@ int user_load(int flag, char *binfile, char *overlay, char *region)
 		bin = token;
 	}
 
-	snprintf(command, sizeof(command), "echo %x > /sys/class/fpga_manager/fpga0/flags", flag & 1);
-	if (system(command)) {
-		DFX_ERR("Failed system() API");
+	// ignore bits >= 1, only care about partial or full.
+	if (dfx_set_fpga_flags(flag & 1)) {
+		DFX_ERR("Failed to set flags");
 	}
 
+	// Check between bitstream load via overlay, or direct.
 	if ((flag >> 1) & 1) {
 		if (region == NULL) {
 			DFX_ERR("Provide overlay region name");
@@ -1874,46 +1923,46 @@ int user_load(int flag, char *binfile, char *overlay, char *region)
 		while((token = strsep(&tmp, "/"))) {
 			ov = token;
 		}
-	    dfx_set_firmware_lookup_path(overlay);
+		dfx_set_firmware_search_path(overlay);
 		rv = user_load_overlay(ov, region);
 	} else {
-	    dfx_set_firmware_lookup_path(binfile);
+		dfx_set_firmware_search_path(binfile);
 		rv = user_load_sysfs(bin);
 	}
 
 	if (!rv) {
-	    int i;
+		int i;
 
-	    /* get the free space in array to add new entry */
-	    for (i = 0; (i < MAX_WATCH) && (base_designs[i].base_path[0] != '\0'); i++);
+		/* get the free space in array to add new entry */
+		for (i = 0; (i < MAX_WATCH) && (base_designs[i].base_path[0] != '\0'); i++);
 
-	    if (i == MAX_WATCH) {
-	        DFX_ERR("Unable to add new design, MAX limit (%d) reached.", MAX_WATCH);
-	        user_unload_overlay(region);
-	        rv = -1;
-	    } else {
-	        DFX_DBG("Adding user managed design %s", bin);
-	        strncpy(base_designs[i].name, bin, sizeof(base_designs[i].name) - 1);
-	        base_designs[i].name[sizeof(base_designs[i].name) - 1] = '\0';
-	        strncpy(base_designs[i].base_path, "User", sizeof(base_designs[i].base_path) - 1);
-	        base_designs[i].base_path[sizeof(base_designs[i].base_path) - 1] = '\0';
-	        base_designs[i].active = 0;
-	        base_designs[i].is_user_load = 1;
-	        base_designs[i].user_load_type = flag & 1;
-	        rv = base_designs[i].user_load_handle = get_free_slot_handle();
-	        strncpy(base_designs[i].user_load_region, region ? region : "", sizeof(base_designs[i].user_load_region) - 1);
-	        base_designs[i].user_load_region[sizeof(base_designs[i].user_load_region) - 1] = '\0';
+		if (i == MAX_WATCH) {
+			DFX_ERR("Unable to add new design, MAX limit (%d) reached.", MAX_WATCH);
+			user_unload_overlay(region);
+			rv = -1;
+		} else {
+			DFX_DBG("Adding user managed design %s", bin);
+			strncpy(base_designs[i].name, bin, sizeof(base_designs[i].name) - 1);
+			base_designs[i].name[sizeof(base_designs[i].name) - 1] = '\0';
+			strncpy(base_designs[i].base_path, "User", sizeof(base_designs[i].base_path) - 1);
+			base_designs[i].base_path[sizeof(base_designs[i].base_path) - 1] = '\0';
+			base_designs[i].active = 0;
+			base_designs[i].is_user_load = 1;
+			base_designs[i].user_load_type = flag & 1;
+			rv = base_designs[i].user_load_handle = get_free_slot_handle();
+			strncpy(base_designs[i].user_load_region, region ? region : "", sizeof(base_designs[i].user_load_region) - 1);
+			base_designs[i].user_load_region[sizeof(base_designs[i].user_load_region) - 1] = '\0';
 
-	        if (base_designs[i].user_load_type && platform.active_base)
-	            platform.active_base->active += 1;
-	        else
-	            platform.active_base = &base_designs[i];
-	    }
+			if (base_designs[i].user_load_type && platform.active_base)
+				platform.active_base->active += 1;
+			else
+				platform.active_base = &base_designs[i];
+		}
 	}
 
 
 ret:
-    dfx_set_firmware_lookup_path("");
+	dfx_set_firmware_search_path("");
 	return rv;
 }
 
@@ -1932,7 +1981,7 @@ ret:
  */
 int user_unload_overlay(char *region)
 {
-	char command[2048], ov_dir[512];
+	char ov_dir[512];
 	struct stat sb;
 	int i;
 
@@ -1941,12 +1990,9 @@ int user_unload_overlay(char *region)
 		return -1;
 	}
 
-	snprintf(ov_dir, sizeof(ov_dir), "/sys/kernel/config/device-tree/overlays/%s", region);
+	snprintf(ov_dir, sizeof(ov_dir), "%s/%s", DTBO_ROOT_DIR, region);
 	if (((stat(ov_dir, &sb) == 0) && S_ISDIR(sb.st_mode))) {
-		snprintf(command, sizeof(command), "rmdir %s", ov_dir);
-		if (system(command)) {
-			DFX_ERR("Failed system() API");
-		}
+	    remove_overlay_dir(ov_dir);
 
 		for (i = 0; (i < MAX_WATCH) && strncmp(base_designs[i].user_load_region, region, strlen(region) + 1); i++);
 		if (i == MAX_WATCH) {
@@ -2020,16 +2066,16 @@ int user_unload(int handle)
  */
 static void init_user_load(void)
 {
-    DIR *FD;
+	DIR *FD;
 
-    FD = opendir("/sys/kernel/config/device-tree/overlays/");
-    if (FD)
-	    closedir(FD);
-    else {
-	DFX_ERR("/sys/kernel/config/device-tree/overlays/ not present on the system. "
-	     "Is configfs enabled in kernel config?");
+	FD = opendir(DTBO_ROOT_DIR);
+	if (FD)
+		closedir(FD);
+	else {
+		DFX_ERR("%s not present on the"
+	" system. Is configfs enabled in kernel config?", DTBO_ROOT_DIR);
 
-    }
+	}
 }
 
 #define BUF_LEN (10 * (sizeof(struct inotify_event) + NAME_MAX + 1))
