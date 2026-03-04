@@ -82,6 +82,7 @@ typedef struct {
 	int rm_slot; /**< Reconfiguration module slot */
 	int num_chnls;	/**< number of channels */
 	acapd_chnl_t *chnls; /**< list of channels */
+	char cma_path[256];  /* CMA device path for DMA operations */
 } acapd_accel_t;
 
 acapd_accel_pkg_hd_t *acapd_alloc_pkg(size_t size);

@@ -116,8 +116,11 @@ $ cat /etc/dfx-mgrd/daemon.conf
   "default_accel":"/etc/dfx-mgrd/default_firmware", //Optional: echo the
                              //package-name to default_firmware for any
                              // accelerator to be loaded on start of daemon
- "firmware_location": ["/lib/firmware/xilinx"]  //Required:Package directories
-                        // monitored by DFX-MGR
+ "firmware_location": ["/lib/firmware/xilinx"],  //Required:Package directories
+                                                // monitored by DFX-MGR
+ "cma_path": "/dev/dma_heap/cma_reserved" // Optional: CMA device path for DMA buffer allocation
+                                         // If not specified, default system CMA is used
+                                         // Can be overridden using `-cma` command-line option
 }
 ```
 
@@ -135,7 +138,7 @@ json.
 * RPU: dfx-mgr will treat this design as RPU firmware.
 
 #### KRIA Designs.
-```json
+```
 $ cat shell.json
  {
   "shell_type" : "PL_DFX",// Required: valid values are XRT_FLAT/PL_FLAT/PL_DFX
@@ -166,7 +169,7 @@ $ cat shell.json
 > [KRIA](https://www.xilinx.com/products/som/kria.html) devices do not have AIE.
 
 #### FLAT, DFX, Segmented and Segmented+DFX Designs.
-```json
+```
 {
   "shell_type": "PL_DFX", //"Supported types are XRT_FLAT/PL_FLAT/PL_DFX"
   "num_pl_slots": 2, // Required for PL_DFX: Number of pl slots in your static shell design
@@ -187,7 +190,7 @@ addition to programming the bitstream.
 * XRT_PL_DFX: Use this option for XRT based PL accelerator.
 
 #### KRIA Designs.
-```json
+```
 $ cat accel.json
 {
   "accel_type": "", // Required: supported types are SIHA_PL_DFX / XRT_PL_DFX
@@ -221,7 +224,7 @@ $ cat accel.json
 }
 ```
 #### DFX, Segmented and Segmented+DFX Designs
-```json
+```
 {
   "accel_type": "SIHA_PL_DFX" // Required: supported types are
                       // SIHA_PL_DFX/XRT_AIE_DFX/XRT_PL_DFX
@@ -393,9 +396,26 @@ dfx-mgrd will use DFX_EXTERNAL_CONFIG_EN instead of the default DFX_NORMAL_EN fl
 calling [libdfx](https://github.com/Xilinx/libdfx) fetch function.
 
 ```
-$ dfx-mgr-client -load rp1rm0
+$ dfx-mgr-client -load <accel_name> [-cma <device>]
 ```
-When DFX-MGR successfully loads rp1rm0 accel to one of the slots, -listPackage output-would show active slot as 0.
+
+**Options:**
+- `<accel_name>` - Name of the accelerator package to load (required)
+- `-cma <device>` - Optional: Specify a custom CMA device path for DMA buffer allocations (e.g., `/dev/dma_heap/cma_reserved`)
+
+**Examples:**
+```
+$ dfx-mgr-client -load rp1rm0
+$ dfx-mgr-client -load rp1rm0 -cma /dev/dma_heap/cma_reserved
+```
+
+When DFX-MGR successfully loads rp1rm0 accel to one of the slots, -listPackage output would show active slot as 0.
+
+**CMA Path Priority:**
+1. Command-line argument (`-cma` option) - highest priority
+2. Global configuration (`cma_path` in `daemon.conf`)
+3. Default to standard paths:
+    "/dev/dma_heap/reserved" or "/dev/dma_heap/cma_reserved@800000000"
 
 ### Command to remove accelerator from the slot.
 If there is no accel in the mentioned slot, this command will do nothing.

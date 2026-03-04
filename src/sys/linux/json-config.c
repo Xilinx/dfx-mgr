@@ -556,6 +556,9 @@ void parse_config(char *config_path, struct daemon_config *config)
 		if (jsoneq(jsonData, &token[i],"rpu_fw_uptime_msec") == 0) {
                         config->rpu_fw_uptime_msec = strtof(jsonData+token[i+1].start, NULL);
                 }
+		if (jsoneq(jsonData, &token[i],"cma_path") == 0){
+			config->cma_path = strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start);
+		}
     }
     free(jsonData);
 	return;

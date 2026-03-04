@@ -29,6 +29,7 @@ int main(int argc, char *argv[])
 	int user_load_flag = 0;
 	int user_unload_flag = 0;
 	char *binfile = NULL, *overlay = NULL, *region = NULL;
+	char *cma_path = NULL;
 
 	memset (&send_message, '\0', sizeof(struct message));
 	memset (&recv_message, '\0', sizeof(struct message));
@@ -43,9 +44,21 @@ int main(int argc, char *argv[])
 			printf("-load expects a package name. Try again.\n");
 			return -1;
 		}
-		memcpy(send_message.data, argv[2], strlen(argv[2]));
+		/* Check for optional -cma argument */
+		if (argc >= 4 && !strcmp(argv[3], "-cma")) {
+			if (argc < 5) {
+				printf("Error: -cma option requires a path argument\n");
+				return -1;
+			}
+			cma_path = argv[4];
+		}
+		if (cma_path) {
+			snprintf(send_message.data, sizeof(send_message.data), "%s:%s", argv[2], cma_path);
+		} else {
+			snprintf(send_message.data, sizeof(send_message.data), "%s", argv[2]);
+		}
 		send_message.id = LOAD_ACCEL;
-		send_message.size = strlen(argv[2]);
+		send_message.size = strlen(send_message.data);
 		if (write(gs.sock_fd, &send_message, HEADERSIZE + send_message.size) < 0){
 			perror("write");
 			return -1;
@@ -172,7 +185,8 @@ int main(int argc, char *argv[])
 		printf("Usage dfx-mgr-client COMMAND\n");
 		printf("Commmands\n");
 		printf("-listPackage\t\t List locally downloaded accelerator package\n");
-		printf("-load <accel_name>\t\t Load the provided accelerator packaged\n");
+		printf("-load <accel_name> [-cma <device>]\t Load the provided accelerator package\n");
+		printf("\t Optional: -cma <device> specifies custom CMA device path\n");
 		printf("-remove <slot#>\t\t Unload package previously programmed\n");
 		printf("-listUIO [<slot#> [UIOname]]\t\t list accelerator UIOs\n");
 		printf("-listIRbuf [slot]\t\t list inter-RM buffer info\n");
@@ -183,6 +197,10 @@ int main(int argc, char *argv[])
 		printf("-getRMInfo \n");
 		printf("-getShellFD \n");
 		printf("-getClockFD \n");
+		printf("\nCMA Path Priority:\n");
+		printf("\t1. Command-line -cma option (highest priority)\n");
+		printf("\t2. Global 'cma_path' in daemon.conf\n");
+		printf("\t3. Default system paths\n");
 		printf("\nUsage for lightweight usecase\n");
 		printf("-b <bitstream> -f <type>\t Load the bitstream alone\n");
 		printf("-b <bitstream> -f <type> -o <dtbo> -n <region>\t Load the bitstream with dtbo\n");

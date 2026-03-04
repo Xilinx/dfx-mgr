@@ -54,6 +54,7 @@ process_dfx_req(int fd, fd_set *fdset)
 	ssize_t numbytes;
 	int ret, slot;
 	char *binfile = NULL, *overlay = NULL, *region = NULL, *tmp;
+	char *accel_name = NULL, *cma_path = NULL;
 
 	numbytes = read(fd, &recv_msg, sizeof(struct message));
 	if (numbytes <= 0) {
@@ -72,12 +73,16 @@ process_dfx_req(int fd, fd_set *fdset)
 	memset(&send_msg, 0, sizeof(struct message));
 	switch (recv_msg.id) {
 	case LOAD_ACCEL:
+		tmp = strdup(recv_msg.data);
+		accel_name = strtok(tmp, ":");
+		cma_path = strtok(NULL, ":");
 		DFX_PR("daemon loading accel %s", recv_msg.data);
-		slot = load_accelerator(recv_msg.data);
+		slot = load_accelerator(accel_name, cma_path);
 		send_msg.size = 1 + sprintf(send_msg.data, "%d", slot);
 
 		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
 			DFX_ERR("LOAD_ACCEL write(%d)", fd);
+		free(tmp);
 		break;
 
 	case REMOVE_ACCEL:
@@ -155,7 +160,7 @@ process_dfx_req(int fd, fd_set *fdset)
 		send_msg.size = 1 + sprintf(send_msg.data, "%d", slot);
 		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
 			DFX_ERR("USER_LOAD write(%d)", fd);
-
+		free(tmp);
 		break;
 
 	case USER_UNLOAD:

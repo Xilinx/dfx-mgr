@@ -217,7 +217,7 @@ void update_env(char *path)
     }
 }
 
-int load_accelerator(const char *accel_name)
+int load_accelerator(const char *accel_name, char *cma_path)
 {
     int i, ret;
     int rv = -DFX_MGR_LOAD_ERROR;
@@ -229,6 +229,7 @@ int load_accelerator(const char *accel_name)
     slot_info_t *slot = (slot_info_t *)malloc(sizeof(slot_info_t));
     accel_info_t *accel_info = NULL;
     char *rpmsg_ctrl_dev_name = NULL;
+	const char *resolved_cma = NULL;
 
     slot->accel = NULL;
     firmware_dir_walk();
@@ -239,6 +240,14 @@ int load_accelerator(const char *accel_name)
         goto out;
     }
     sprintf(shell_path,"%s/shell.json",base->base_path);
+
+	/* Resolve CMA path priority: CLI > config > default */
+	if (cma_path && cma_path[0] != '\0') {
+		resolved_cma = cma_path;
+	} else if (config.cma_path && config.cma_path[0] != '\0') {
+		resolved_cma = config.cma_path;
+	}
+	DFX_PR("CMA path: %s", resolved_cma ? resolved_cma : "(default)");
 
     /* Flat shell design are treated as with one slot */
     if (!strcmp(base->type,"XRT_FLAT") || !strcmp(base->type,"PL_FLAT")) {
@@ -258,6 +267,9 @@ int load_accelerator(const char *accel_name)
         strncpy(pl_accel->sys_info.tmp_dir, pkg->path,
                 sizeof(pl_accel->sys_info.tmp_dir) - 1);
         strcpy(pl_accel->type,"XRT_FLAT");
+		if (resolved_cma) {
+			snprintf(pl_accel->cma_path, sizeof(pl_accel->cma_path), "%s", resolved_cma);
+		}
         DFX_PR("load flat shell from %s", pkg->path);
         ret = load_accel(pl_accel, shell_path, 0);
         if (ret < 0){
@@ -323,6 +335,9 @@ int load_accelerator(const char *accel_name)
 				    strncpy(pl_accel->sys_info.tmp_dir, pkg->path,
 						    sizeof(pl_accel->sys_info.tmp_dir) - 1);
 				    strcpy(pl_accel->type,"PL_DFX");
+					if (resolved_cma) {
+						snprintf(pl_accel->cma_path, sizeof(pl_accel->cma_path), "%s", resolved_cma);
+					}
 				    DFX_PR("load from %s", pkg->path);
 				    ret = load_accel(pl_accel, shell_path, 0);
 				    if (ret < 0){
@@ -467,6 +482,9 @@ int load_accelerator(const char *accel_name)
 				    strcpy(pl_accel->type,accel_info->accel_type);
 				    strncpy(pl_accel->sys_info.tmp_dir, pkg->path,
 						    sizeof(pl_accel->sys_info.tmp_dir) - 1);
+					if (resolved_cma) {
+						snprintf(pl_accel->cma_path, sizeof(pl_accel->cma_path), "%s", resolved_cma);
+					}
 				    DFX_PR("load from %s", pkg->path);
 				    ret = load_accel(pl_accel, shell_path, 0);
 				    if (ret < 0){

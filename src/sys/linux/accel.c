@@ -181,7 +181,13 @@ int sys_fetch_accel(acapd_accel_t *accel, int flags)
 
 	DFX_DBG("");
 	acapd_assert(accel != NULL);
-	ret = dfx_cfg_init(accel->sys_info.tmp_dir, 0, flags);
+	if (accel->cma_path[0] != '\0') {
+		DFX_PR("Using CMA path: %s", accel->cma_path);
+		ret = dfx_cfg_init(accel->sys_info.tmp_dir, 0, flags, accel->cma_path);
+	} else {
+		DFX_PR("Using default CMA path");
+		ret = dfx_cfg_init(accel->sys_info.tmp_dir, 0, flags);
+	}
 	if (ret < 0) {
 		DFX_ERR("Failed to initialize fpga config, %d", ret);
 		return ACAPD_ACCEL_FAILURE;
