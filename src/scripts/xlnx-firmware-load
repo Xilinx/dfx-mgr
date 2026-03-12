@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: MIT
 
 # Load firmware and check the return status
-function load_firmware() {
+load_firmware() {
 	fwname=$1
 	dfx-mgr-client -load "${fwname}"
 
