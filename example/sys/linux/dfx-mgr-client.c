@@ -109,7 +109,19 @@ int main(int argc, char *argv[])
 		}
 
 	} else if(!strcmp(argv[1],"-listPackage")) {
+		int list_flag = 0;
+
+		/* Parse optional flags from remaining arguments */
+		for (int i = 2; i < argc; i++) {
+			if (!strcmp(argv[i], "-all")) {
+				list_flag |= LIST_PKG_SHOW_ALL;
+			} else if (!strcmp(argv[i], "-filter")) {
+				list_flag |= LIST_PKG_FILTER;
+			}
+		}
+
 		send_message.id = LIST_PACKAGE;
+		send_message.flags = list_flag;
 		send_message.size = 0;
 		if (write(gs.sock_fd, &send_message, HEADERSIZE + send_message.size) == -1){
 			perror("write");
@@ -184,7 +196,10 @@ int main(int argc, char *argv[])
 	} else if(!strcmp(argv[1],"-h") || !strcmp(argv[1],"--help")) {
 		printf("Usage dfx-mgr-client COMMAND\n");
 		printf("Commmands\n");
-		printf("-listPackage\t\t List locally downloaded accelerator package\n");
+		printf("-listPackage [-all] [-filter]\n");
+		printf("\t\t\t List locally downloaded accelerator package\n");
+		printf("\t\t\t -all: shows all columns (default shows simplified view)\n");
+		printf("\t\t\t -filter: filters by board name (shows only matching designs)\n");
 		printf("-load <accel_name> [-cma <device>]\t Load the provided accelerator package\n");
 		printf("\t Optional: -cma <device> specifies custom CMA device path\n");
 		printf("-remove <slot#>\t\t Unload package previously programmed\n");
@@ -224,7 +239,7 @@ int main(int argc, char *argv[])
 					break;
 				case 'f':
 					if (!strcmp(optarg, "Partial")) {
-						user_load_flag |= (1 << 0);
+						user_load_flag |= USER_LOAD_PARTIAL;
 					} else if (strcmp(optarg, "Full")) {
 						printf("Unknown value for -f: expect 'Full' or 'Partial'\n");
 						return -1;
@@ -288,14 +303,14 @@ int main(int argc, char *argv[])
 			sprintf(send_message.data, "%s", binfile);
 
 			if (overlay != NULL) {
-				if (((user_load_flag >> 0) & 1) && (region == NULL)) {
+				if ((user_load_flag & USER_LOAD_PARTIAL) && (region == NULL)) {
 					printf ("FPGA region for partial loading has not provided\n");
 					return -1;
 				}
-				user_load_flag |= (1 << 1);
+				user_load_flag |= USER_LOAD_HAS_OVERLAY;
 				sprintf(send_message.data, "%s : %s : %s", binfile, overlay, (region == NULL) ? "full" : region);
 			}
-			send_message.user_load_flag = user_load_flag;
+			send_message.flags = user_load_flag;
 			send_message.size = strlen(send_message.data);
 
 			if (write(gs.sock_fd, &send_message, HEADERSIZE + send_message.size) < 0){

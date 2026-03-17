@@ -15,6 +15,7 @@ extern "C" {
 #endif
 
 #define CONFIG_PATH		"/etc/dfx-mgrd/daemon.conf"
+#define DEFAULT_BOARD_NAME "Xilinx board"
 #define WATCH_PATH_LEN 256
 #define MAX_WATCH 500
 
@@ -24,8 +25,8 @@ extern "C" {
 #define DFX_MGR_NO_EMPTY_SLOT_ERROR		(3U)
 
 #define TRUNCATED_BASE_NAME_LEN     8
-#define MAX_BASE_NAME_DISPLAY_LEN   (TRUNCATED_BASE_NAME_LEN + 3)  // Truncated base len  + 3 dots
-#define TRUNCATED_BASE_BUFFER_SIZE  (MAX_BASE_NAME_DISPLAY_LEN + 1)  // Display length + null terminator
+#define MAX_BASE_NAME_DISPLAY_LEN   (TRUNCATED_BASE_NAME_LEN + 3)  /* Truncated base len  + 3 dots */
+#define TRUNCATED_BASE_BUFFER_SIZE  (MAX_BASE_NAME_DISPLAY_LEN + 1)  /* Display length + null terminator */
 
 int load_accelerator(const char *accel_name, char *cma_path);
 int remove_accelerator(int slot);
@@ -40,7 +41,7 @@ int siha_ir_buf_list(uint32_t sz, char *buf);
 int siha_ir_buf_set(char *user_slot_seq);
 void getShellFD();
 void getClockFD();
-char *listAccelerators();
+char *listAccelerators(int flag);
 void getRMInfo();
 int dfx_init();
 int dfx_getFDs(int slot, int *fd);

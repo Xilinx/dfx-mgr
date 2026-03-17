@@ -19,6 +19,8 @@
 #include <dfx-mgr/model.h>
 #include <dfx-mgr/json-config.h>
 #include <dfx-mgr/daemon_helper.h>
+#include <dfx-mgr/dfxmgr_client.h>
+#include <dfx-mgr/eeprom.h>
 #include <dfx-mgr/rpu.h>
 #include <sys/stat.h>
 #include <sys/inotify.h>
@@ -1162,7 +1164,7 @@ pid_uid_check(struct basePLDesign *base, int accel_idx)
 	return str;
 }
 
-char *listAccelerators()
+char *listAccelerators(int flag)
 {
     int i,j;
 	uint8_t slot;
@@ -1171,24 +1173,63 @@ char *listAccelerators()
     char show_slots[16];
 	int entry_count = 1;
 	char truncated_base[TRUNCATED_BASE_BUFFER_SIZE];
-	const char header_format[] = "%-3s%-12s%-15s%-17s%-12s%-6s%-10s%-19s%-13s%s\n";
-	const char entry_format[] = "%2d %-12s%-15s%-17s%-12s%-6s%-10s%-19s%-13s%s\n";
+	int show_all = flag & LIST_PKG_SHOW_ALL;
+	int use_filter = flag & LIST_PKG_FILTER;
+
+	/* Full format (all columns) or simplified format (4 columns) */
+	const char *header_format, *sub_header_format, *entry_format;
+
+	if (show_all) {
+		header_format = "%-3s%-12s%-10s%-10s%-12s%-6s%-13s%-8s%s\n";
+		sub_header_format = "%-3s%-12s%-10s%-10s%-12s%-6s%-13s%-8s%s\n";
+		entry_format = "%2d %-12s%-10s%-10s%-12s%-6s%-13s%-8s%s\n";
+	} else {
+		header_format = "%-3s%-12s%-12s%-13s%s\n";
+		sub_header_format = NULL;
+		entry_format = "%2d %-12s%-12s%-13s%s\n";
+	}
 
 	memset(res,0, sizeof(res));
 	firmware_dir_walk();
 
-	sprintf(msg, header_format, "#", "Accel_type", "user_load_type", "user_load_region", "Base", "Pid",
-		"Base_type", "#slots(RPU+PL+AIE)", "slot->handle", "Accelerator");
-	strcat(res,msg);
-	// TODO: This hardcoded separator lines "----" should be updated in future improvements
-	sprintf(msg, header_format, "--", "-----------", "--------------", "----------------", "-----------",
-		"-----", "---------", "------------------", "------------", "---------");
-	strcat(res,msg);
+	/* Check if filtering should be applied */
+	if (use_filter &&
+		(!platform.boardName[0] || strcasecmp(platform.boardName, DEFAULT_BOARD_NAME) == 0)) {
+		snprintf(msg, sizeof(msg), "Error: Unable to read board name from EEPROM. Filter requires valid board name.\n");
+		strcat(res, msg);
+		return strdup(res);
+	}
+
+	if (show_all) {
+		/* Row 1: Main headers */
+		snprintf(msg, sizeof(msg), header_format, "#", "Accel_type", "user_load", "user_load", "Base", "Pid",
+			"#slots", "#slot", "Accelerator");
+		strcat(res, msg);
+		/* Row 2: Sub-headers */
+		snprintf(msg, sizeof(msg), sub_header_format, "", "", "type", "Region", "", "",
+			"(RPU+PL+AIE)", "Handle", "");
+		strcat(res, msg);
+		/* Separator line */
+		snprintf(msg, sizeof(msg), header_format, "--", "-----------", "---------", "---------", "-----------",
+			"-----", "------------", "-------", "-----------");
+		strcat(res, msg);
+	} else {
+		snprintf(msg, sizeof(msg), header_format, "#", "Accel_type", "Base",
+			"slot->handle", "Accelerator");
+		strcat(res, msg);
+		snprintf(msg, sizeof(msg), header_format, "--", "-----------", "-----------",
+			"------------", "---------");
+		strcat(res, msg);
+	}
     for (i = 0; i < MAX_WATCH; i++) {
         if (base_designs[i].base_path[0] != '\0' && base_designs[i].num_pl_slots > 0) {
             for (j = 0; j < RP_SLOTS_MAX; j++) {
                 if (base_designs[i].accel_list[j].path[0] != '\0') {
                     char active_slots[16] = "";
+
+			/* Apply filter: skip if boardName not found in accelerator name */
+			if (use_filter && !strcasestr(base_designs[i].accel_list[j].name, platform.boardName))
+				continue;
 
 		    /*
 		     * For RPU num_pl_slots is used for RPU slot number
@@ -1232,16 +1273,25 @@ char *listAccelerators()
 			} else {
 				strncpy(truncated_base, base_designs[i].name, sizeof(truncated_base) - 1);
 			}
-			sprintf(msg, entry_format,
-                            entry_count++ ,
-                            base_designs[i].accel_list[j].accel_type,
-			    "-", "-",
-                            truncated_base,
-                            pid_uid_check(&base_designs[i], j),
-                            base_designs[i].type,
-                            show_slots,
-                            active_slots[0] ? active_slots : "-1",
-                            base_designs[i].accel_list[j].name);
+
+			if (show_all) {
+				snprintf(msg, sizeof(msg), entry_format,
+					entry_count++,
+					base_designs[i].accel_list[j].accel_type,
+					"-", "-",
+					truncated_base,
+					pid_uid_check(&base_designs[i], j),
+					show_slots,
+					active_slots[0] ? active_slots : "-1",
+					base_designs[i].accel_list[j].name);
+			} else {
+				snprintf(msg, sizeof(msg), entry_format,
+					entry_count++,
+					base_designs[i].accel_list[j].accel_type,
+					truncated_base,
+					active_slots[0] ? active_slots : "-1",
+					base_designs[i].accel_list[j].name);
+			}
                     strcat(res, msg);
                 }
             }
@@ -1253,14 +1303,23 @@ char *listAccelerators()
                 base_designs[i].user_load_type ? base_designs[i].user_load_region : "0",
                 base_designs[i].user_load_handle);
 
-            sprintf(msg, entry_format,
-                entry_count++,
-                "-",
-                base_designs[i].user_load_type ? "Partial" : "Full",
-                base_designs[i].user_load_region,
-                "-", "-", "-", "-",
-                tmp,
-                base_designs[i].name);
+			if (show_all) {
+				snprintf(msg, sizeof(msg), entry_format,
+					entry_count++,
+					"-",
+					base_designs[i].user_load_type ? "Partial" : "Full",
+					base_designs[i].user_load_region,
+					"-", "-", "-",
+					tmp,
+					base_designs[i].name);
+			} else {
+				snprintf(msg, sizeof(msg), entry_format,
+					entry_count++,
+					"-",
+					"-",
+					tmp,
+					base_designs[i].name);
+			}
             strcat(res, msg);
         }
     }
@@ -1877,7 +1936,7 @@ int user_load(const int flag, const char *binfile, const char *overlay, const ch
 
 	if (platform.active_base != NULL) {
 		if (platform.active_base->is_user_load) {
-			if (!(flag & 1)) {
+			if (!(flag & USER_LOAD_PARTIAL)) {
 				DFX_ERR("Remove previously loaded full bitstream, no empty slot.");
 				goto ret;
 			} else if (platform.active_base->active >= MAX_WATCH) {
@@ -1905,7 +1964,7 @@ int user_load(const int flag, const char *binfile, const char *overlay, const ch
 		}
 	}
 
-	if ((platform.active_base == NULL) && (flag & 1)) {
+	if ((platform.active_base == NULL) && (flag & USER_LOAD_PARTIAL)) {
 		DFX_ERR("Load Full bitstream before loading bitstream to any partial reconfiguration region.");
 		goto ret;
 	}
@@ -1921,7 +1980,7 @@ int user_load(const int flag, const char *binfile, const char *overlay, const ch
 	}
 
 	// ignore bits >= 1, only care about partial or full.
-	if (dfx_set_fpga_flags(flag & 1)) {
+	if (dfx_set_fpga_flags(flag & USER_LOAD_PARTIAL)) {
 		DFX_ERR("Failed to set flags");
 	}
 
@@ -1966,7 +2025,7 @@ int user_load(const int flag, const char *binfile, const char *overlay, const ch
 			base_designs[i].base_path[sizeof(base_designs[i].base_path) - 1] = '\0';
 			base_designs[i].active = 0;
 			base_designs[i].is_user_load = 1;
-			base_designs[i].user_load_type = flag & 1;
+			base_designs[i].user_load_type = flag & USER_LOAD_PARTIAL;
 			rv = base_designs[i].user_load_handle = get_free_slot_handle();
 			strncpy(base_designs[i].user_load_region, region ? region : "", sizeof(base_designs[i].user_load_region) - 1);
 			base_designs[i].user_load_region[sizeof(base_designs[i].user_load_region) - 1] = '\0';
@@ -2246,10 +2305,19 @@ int dfx_init()
 	pthread_t t;
 
 	strcpy(config.defaul_accel_name, "");
-	strcpy(platform.boardName,"Xilinx board");
+	strcpy(platform.boardName, DEFAULT_BOARD_NAME);
 	sem_init(&mutex, 0, 0);
 
 	parse_config(CONFIG_PATH, &config);
+
+	/* Read board name from EEPROM and store directly in platform.boardName */
+	if (read_board_name_from_eeprom(platform.boardName, sizeof(platform.boardName)) == 0) {
+		DFX_PR("===================================");
+		DFX_PR("Board Name: %s", platform.boardName);
+		DFX_PR("===================================");
+	} else {
+		DFX_PR("Using default board name: %s", platform.boardName);
+	}
 	pthread_create(&t, NULL,threadFunc, NULL);
 	sem_wait(&mutex);
 	//TODO Save active design on filesytem and on reboot read that

@@ -44,11 +44,20 @@ enum dfx_mgr_request {
 
 #define MAX_CLIENTS 200
 
+/* Message flag bit allocation:
+ *   Bits 0-1: USER_LOAD command
+ *   Bits 2-3: LIST_PACKAGE command
+ */
+#define USER_LOAD_PARTIAL     (1 << 0)  /* Partial bitstream (vs Full) */
+#define USER_LOAD_HAS_OVERLAY (1 << 1)  /* Overlay file provided */
+#define LIST_PKG_SHOW_ALL     (1 << 2)  /* Show all columns */
+#define LIST_PKG_FILTER       (1 << 3)  /* Filter by board name */
+
 #define HEADERSIZE 24
 struct message {
     uint32_t id;
     uint32_t size;
-    uint32_t user_load_flag;
+    uint32_t flags;
     union {
 	    uint32_t fdcount;
 	    uint32_t slot;

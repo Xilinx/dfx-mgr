@@ -103,26 +103,31 @@ will fail to load an accelerator to the slot if no partial design is found.
 
 DFX-MGR is started on Linux bootup and reads the config file
 `/etc/dfx-mgrd/daemon.conf` from device for any config settings. Any change to
-daemon.conf will need a restart of the /usr/bin/dfx-mgrd on target.
+daemon.conf will need a restart of the `/usr/bin/dfx-mgrd` on target.
 
-If you want to add another location for packages on the filesystem,
-append absolute path to the location in "firmware_location" and restart the
-daemon. The limitations around directory structure as explained above still
-apply as for "/lib/firmware/xilinx".
+**Example:**
 
-```
-$ cat /etc/dfx-mgrd/daemon.conf
+```json
 {
-  "default_accel":"/etc/dfx-mgrd/default_firmware", //Optional: echo the
-                             //package-name to default_firmware for any
-                             // accelerator to be loaded on start of daemon
- "firmware_location": ["/lib/firmware/xilinx"],  //Required:Package directories
-                                                // monitored by DFX-MGR
- "cma_path": "/dev/dma_heap/cma_reserved" // Optional: CMA device path for DMA buffer allocation
-                                         // If not specified, default system CMA is used
-                                         // Can be overridden using `-cma` command-line option
+  "default_accel": "/etc/dfx-mgrd/default_firmware",
+  "firmware_location": ["/lib/firmware/xilinx"],
+  "cma_path": "/dev/dma_heap/cma_reserved",
+  "eeprom_location": [
+    "/sys/bus/i2c/devices/*/eeprom_cc*/nvmem",
+    "/sys/bus/i2c/devices/*50/eeprom",
+    "/sys/bus/i2c/devices/*54/eeprom"
+  ]
 }
 ```
+
+**Configuration fields:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `firmware_location` | Yes | Array of directories where DFX-MGR looks for accelerator packages. The directory structure rules described above apply to each location. |
+| `default_accel` | No | Path to a file containing the package name to auto-load on daemon startup. Echo the desired package name into this file. |
+| `cma_path` | No | CMA device path for DMA buffer allocation (e.g., `/dev/dma_heap/cma_reserved`). If not specified, default system CMA paths are used. Can be overridden per-command using the `-cma` option. |
+| `eeprom_location` | No | Array of sysfs glob paths to I2C EEPROM devices used for board name detection. The detected board name is used by `dfx-mgr-client -listPackage -filter` to show only packages matching the current board. Run `ls /sys/bus/i2c/devices/` on your target to discover available devices. Wildcards are supported for bus number portability. If omitted, EEPROM board detection is skipped and `-filter` has no effect. |
 
 ### shell.json
 
@@ -278,25 +283,54 @@ accelerators.
 This command will list all packages present on target filesystem under /lib/firmware/xilinx.
 
 ```
-$ dfx-mgr-client -listPackage
-#  Accel_type  user_load_type user_load_region Base        Pid   Base_type #slots(RPU+PL+AIE) slot->handle Accelerator
--- ----------- -------------- ---------------- ----------- ----- --------- ------------------ ------------ ---------
- 1 RPU         -              -                rpu         no_id RPU       (2+0+0)            -1           vek280-r5-0-matrix-multiply
- 2 XRT_FLAT    -              -                vek280-p... id_ok XRT_FLAT  (0+0+0)            -1           vek280-pl-bram-gpio-fw
- 3 XRT_FLAT    -              -                vek280-p... id_ok XRT_FLAT  (0+0+0)            -1           vek280-pl-bram-uart-gpio-fw
- 4 SIHA_PL_DFX -              -                static      no_id PL_DFX    (0+2+0)            -1           rp1rm0
- 5 SIHA_PL_DFX -              -                static      no_id PL_DFX    (0+2+0)            -1           rp0rm0
+$ dfx-mgr-client -listPackage [-all] [-filter]
 ```
-In the above output, XRT_FLAT designs show flat shell designs that do not have dynamic reconfigurable
-partitions and hence #slots shows as (0+0+0). SIHA_PL_DFX designs show DFX-based
-accelerators with reconfigurable partitions - in this case showing (0+2+0) indicating
-0 RPU slots, 2 PL slots, and 0 AIE slots. The slot->handle column shows -1 when no
-accelerator is currently loaded to any slot.RPU entries show RPU firmware applications.
 
-UID, PID information for tracking parent-to-child relationships is in the "Pid" column:
-* "id_ok"  When PID and the base UID are present and match as expected
-* "id_err" When PID and the base UID are present but do not match.
-* "no_id"  When either PID or UID are not present.
+**Options:**
+- `-all` - Show all columns (default shows simplified 4-column view)
+- `-filter` - Filter packages by board name from EEPROM (shows only matching designs)
+
+**Default Simplified View (4 columns):**
+```
+$ dfx-mgr-client -listPackage
+#  Accel_type  Base        slot->handle Accelerator
+-- ----------- ----------- ------------ ---------
+ 1 RPU         rpu         -1           vek280-r5-0-matrix-multiply
+ 2 XRT_FLAT    vek280-p... -1           vek280-pl-bram-gpio-fw
+ 3 XRT_FLAT    vek280-p... -1           vek280-pl-bram-uart-gpio-fw
+ 4 SIHA_PL_DFX static      -1           rp1rm0
+ 5 SIHA_PL_DFX static      -1           rp0rm0
+```
+
+**Full View with -all flag:**
+```
+$ dfx-mgr-client -listPackage -all
+#  Accel_type  user_load user_load Base        Pid   #slots       #slot   Accelerator
+               type      Region                      (RPU+PL+AIE) Handle
+-- ----------- --------- --------- ----------- ----- ------------ ------- -----------
+ 1 RPU         -         -         rpu         no_id (2+0+0)      -1      vek280-r5-0-matrix-multiply
+ 2 XRT_FLAT    -         -         vek280-p... id_ok (0+0+0)      -1      vek280-pl-bram-gpio-fw
+ 3 XRT_FLAT    -         -         vek280-p... id_ok (0+0+0)      -1      vek280-pl-bram-uart-gpio-fw
+ 4 SIHA_PL_DFX -         -         static      no_id (0+2+0)      -1      rp1rm0
+ 5 SIHA_PL_DFX -         -         static      no_id (0+2+0)      -1      rp0rm0
+```
+
+In the output, XRT_FLAT designs show flat shell designs that do not have dynamic reconfigurable
+partitions. SIHA_PL_DFX designs show DFX-based accelerators with reconfigurable partitions.
+The slot->handle column shows -1 when no accelerator is currently loaded to any slot.
+RPU entries show RPU firmware applications.
+
+**UID, PID information** (visible in full view with -all flag) for tracking parent-to-child relationships is in the "Pid" column:
+* "id_ok"  - When PID and the base UID are present and match as expected
+* "id_err" - When PID and the base UID are present but do not match
+* "no_id"  - When either PID or UID are not present
+
+**Board Filtering** (using -filter flag):
+The `-filter` option uses the board name detected from EEPROM at daemon startup and shows
+only packages that match the current board. The EEPROM device paths used for board detection
+are configured via `eeprom_location` in `daemon.conf` (see [daemon.conf](#daemonconf) section).
+If `eeprom_location` is not configured, board detection is skipped and `-filter` has no effect.
+This helps in multi-board environments to quickly identify compatible accelerators.
 
 Here is an example of 2-partition designs (see:
 [kria-dfx-hw](https://github.com/Xilinx/kria-dfx-hw),

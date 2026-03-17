@@ -100,7 +100,7 @@ process_dfx_req(int fd, fd_set *fdset)
 
 	case LIST_PACKAGE:
 		// change to: listAccelerators(buf, size))
-		char *msg = listAccelerators();
+		char *msg = listAccelerators(recv_msg.flags);
 		send_msg.size = strnlen(msg, sizeof(send_msg.data));
 		memcpy(send_msg.data, msg, send_msg.size);
 		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
@@ -156,7 +156,7 @@ process_dfx_req(int fd, fd_set *fdset)
 		overlay = strtok(NULL, " : ");
 		region = strtok(NULL, " : ");
 
-		slot = user_load(recv_msg.user_load_flag, binfile, overlay, region);
+		slot = user_load(recv_msg.flags, binfile, overlay, region);
 		send_msg.size = 1 + sprintf(send_msg.data, "%d", slot);
 		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
 			DFX_ERR("USER_LOAD write(%d)", fd);

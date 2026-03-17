@@ -559,6 +559,20 @@ void parse_config(char *config_path, struct daemon_config *config)
 		if (jsoneq(jsonData, &token[i],"cma_path") == 0){
 			config->cma_path = strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start);
 		}
+		if (jsoneq(jsonData, &token[i], "eeprom_location") == 0) {
+			int k;
+			if (token[i+1].type != JSMN_ARRAY) {
+				acapd_perror("%s eeprom_location expects array\n", config_path);
+				continue;
+			}
+			config->eeprom_location = (char **)calloc(token[i+1].size, MAX_PATH_SIZE * sizeof(char));
+			for (k = 0; k < token[i+1].size; k++) {
+				config->eeprom_location[k] = strndup(jsonData + token[i+k+2].start,
+								token[i+k+2].end - token[i+k+2].start);
+			}
+			config->num_eeprom_location = token[i+1].size;
+			i += token[i+1].size;
+		}
     }
     free(jsonData);
 	return;

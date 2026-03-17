@@ -147,6 +147,8 @@ struct daemon_config {
 	int number_locations;
 	unsigned int rpu_fw_uptime_msec; /* store rpu_fw_uptime_msec from config file */
 	char *cma_path; /*CMA file path for DMA buffer allocation*/
+	char **eeprom_location;
+	int num_eeprom_location;
 };
 
 #ifdef __cplusplus
