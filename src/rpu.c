@@ -16,6 +16,8 @@
 #include <dfx-mgr/assert.h>
 #include <dfx-mgr/shell.h>
 #include <dfx-mgr/model.h>
+#include <dfx-mgr/rpu.h>
+#include <dfx-mgr/daemon_helper.h>
 #include <dfx-mgr/rpu_helper.h>
 
 
@@ -53,19 +55,55 @@ int get_number_of_rpu(void)
 
 
 /**
+ * start_rpu_firmware() - Set and start firmware on an RPU slot
+ * @fw_name: Firmware filename
+ * @rpu_slot: RPU slot number (remoteproc index)
+ *
+ * Return: 0 on success, -1 on error
+ */
+static int start_rpu_firmware(const char *fw_name, int rpu_slot)
+{
+	char cmd[1024];
+	int ret;
+
+	snprintf(cmd, sizeof(cmd),
+		 "echo %s > /sys/class/remoteproc/remoteproc%d/firmware",
+		 fw_name, rpu_slot);
+	ret = system(cmd);
+	if (ret != 0) {
+		DFX_ERR("Command not successful %s\n", cmd);
+		return -1;
+	}
+
+	DFX_DBG("Starting RPU firmware %s in slot %d\n", fw_name, rpu_slot);
+	snprintf(cmd, sizeof(cmd),
+		 "echo start > /sys/class/remoteproc/remoteproc%d/state",
+		 rpu_slot);
+	ret = system(cmd);
+	if (ret != 0) {
+		DFX_ERR("Command not successful %s\n", cmd);
+		return -1;
+	}
+
+	return 0;
+}
+
+/**
  * load_rpu() - load and start RPU firmware
  * @*rpu_path - location of the firmware
  * @rpu_slot - RPU number to load the firmware
+ * @*firmware_name - optional specific firmware filename (for new structure)
+ *                   NULL for old structure (loads all .elf files)
  *
  * This function does the following
  * 1 - Set the firmware location path
- * 2 - Load the firmware
+ * 2 - Load the firmware (specific file or all files based on firmware_name)
  * 3 - start the firmware
  *
  * Return: slot_number on success
  * 	   -1 on error
  */
-int load_rpu( char *rpu_path, int rpu_slot)
+int load_rpu(char *rpu_path, int rpu_slot, char *firmware_name)
 {
 	int ret;
 	char cmd[1024];
@@ -73,16 +111,25 @@ int load_rpu( char *rpu_path, int rpu_slot)
 	int found_firmware = 0;
 	struct dirent *d1;
 
-	DFX_DBG("rpu_path %s rpu_slot %d\n",rpu_path,rpu_slot);
+	DFX_DBG("rpu_path %s rpu_slot %d firmware_name %s\n",
+			rpu_path, rpu_slot, firmware_name ? firmware_name : "NULL");
 
 	DFX_DBG("Setting firmware location to  base_path %s\n",rpu_path);
-	sprintf(cmd,"echo -n %s > /sys/module/firmware_class/parameters/path", rpu_path);
+	snprintf(cmd, sizeof(cmd),
+		 "echo -n %s > /sys/module/firmware_class/parameters/path", rpu_path);
 	ret = system(cmd);
 	if(ret != 0 ){
 		printf("Command not successful %s\n",cmd);
 		return -1;
 	}
 
+	/* NEW structure: Load specific firmware file */
+	if (firmware_name) {
+		ret = start_rpu_firmware(firmware_name, rpu_slot);
+		return (ret == 0) ? rpu_slot : -1;
+	}
+
+	/* OLD structure: Load all .elf files in directory */
 	dir1 = opendir(rpu_path);
 	if (dir1 == NULL) {
 		DFX_ERR("Directory %s not found", rpu_path);
@@ -95,27 +142,20 @@ int load_rpu( char *rpu_path, int rpu_slot)
 		found_firmware = 1;
 		DFX_DBG("Loading RPU firmware %s in slot %d\n",d1->d_name, rpu_slot);
 
-		sprintf(cmd,"echo %s > /sys/class/remoteproc/remoteproc%d/firmware", d1->d_name, rpu_slot);
-		ret = system(cmd);
-		if(ret != 0 ){
-			DFX_ERR("Command not successful %s\n",cmd);
-			return -1;
-		}
-
-		DFX_DBG("Starting RPU firmware %s in slot %d\n",d1->d_name, rpu_slot);
-		sprintf(cmd,"echo start > /sys/class/remoteproc/remoteproc%d/state", rpu_slot);
-		ret = system(cmd);
-		if(ret != 0 ){
-			DFX_ERR("Command not successful %s\n",cmd);
+		ret = start_rpu_firmware(d1->d_name, rpu_slot);
+		if (ret != 0) {
+			closedir(dir1);
 			return -1;
 		}
 	}
+
+	closedir(dir1);
+
 	if (found_firmware == 1)
 		return rpu_slot;
-	else{
-		DFX_ERR("No firmware found in folder\n");
-		return -1;
-	}
+
+	DFX_ERR("No firmware found in folder\n");
+	return -1;
 }
 
 
@@ -344,4 +384,150 @@ void update_rpmsg_dev_list(acapd_list_t *rpmsg_dev_list, char* rpmsg_ctrl_dev, i
 	delete_inactive_rpmsgdev(rpmsg_dev_list);
 
 	return;
+}
+
+
+/**
+ * validate_rpu_slot_availability() - Check if an RPU slot is valid and available
+ * @base: Base design containing the RPU slots
+ * @slot_num: RPU slot number to validate
+ *
+ * Return: 0 on success (slot is valid and available)
+ *        -DFX_MGR_NO_EMPTY_SLOT_ERROR if slot is out of bounds or occupied
+ */
+int validate_rpu_slot_availability(struct basePLDesign *base, int slot_num)
+{
+	if (slot_num >= base->num_pl_slots) {
+		DFX_ERR("Slot %d exceeds available slots", slot_num);
+		return -DFX_MGR_NO_EMPTY_SLOT_ERROR;
+	}
+
+	if (base->slots[slot_num] != NULL) {
+		DFX_ERR("Slot %d already occupied", slot_num);
+		return -DFX_MGR_NO_EMPTY_SLOT_ERROR;
+	}
+
+	return 0;
+}
+
+/**
+ * finalize_rpu_slot_setup() - Complete RPU slot setup after firmware load
+ * @base: Base design containing the RPU
+ * @slot: Slot structure to initialize
+ * @pl_accel: Accelerator structure (can be NULL for RPU)
+ * @accel_name: Name of the accelerator
+ * @slot_num: Slot number where RPU was loaded
+ * @rpu_fw_uptime_msec: Time in ms to wait for firmware initialization
+ *
+ * This handles all common post-load operations for both NEW and OLD RPU structures:
+ * - Setting slot metadata
+ * - Waiting for firmware initialization
+ * - Discovering and storing rpmsg control device
+ * - Initializing rpmsg device list
+ * - Assigning slot to base design
+ * - Allocating and assigning slot handle
+ *
+ * Return: slot_handle on success, -1 on error
+ */
+int finalize_rpu_slot_setup(struct basePLDesign *base,
+			    slot_info_t *slot,
+			    acapd_accel_t *pl_accel,
+			    const char *accel_name,
+			    int slot_num,
+			    unsigned int rpu_fw_uptime_msec)
+{
+	char *rpmsg_ctrl_dev_name;
+
+	/* Set slot metadata */
+	snprintf(slot->name, sizeof(slot->name), "%s", accel_name);
+	slot->is_aie = 0;
+	slot->is_rpu = 1;
+
+	/* Wait for firmware to be ready */
+	DFX_DBG("RPU firmware uptime %d msec\n", rpu_fw_uptime_msec);
+	usleep(rpu_fw_uptime_msec * 1000);
+
+	/* Get new rpmsg ctrl device created by firmware */
+	rpmsg_ctrl_dev_name = get_new_rpmsg_ctrl_dev(base);
+
+	/* check if new ctrl dev is found
+		* Assumption is that ctrl dev will be created
+		* during load, dev can be dynamic.
+		* if found then record the virtio number
+		* if not found then 2 of the following are the cases
+		* 1- no dev is created by firmware
+		*    Here we just proceed, nothing to address
+		* 2- Firmware is taking time to create the channel
+		*    Increase rpu_fw_uptime_msec from config file
+		* */
+	if (rpmsg_ctrl_dev_name != NULL) {
+		snprintf(slot->rpu.rpmsg_ctrl_dev_name,
+			sizeof(slot->rpu.rpmsg_ctrl_dev_name),
+			"%s", rpmsg_ctrl_dev_name);
+		slot->rpu.virtio_num = get_virtio_number(rpmsg_ctrl_dev_name);
+		DFX_PR("rpmsg_ctrl_dev %s virtio %d",
+				slot->rpu.rpmsg_ctrl_dev_name, slot->rpu.virtio_num);
+	} else {
+		DFX_PR("No rpmsg control device found after rpu fw load");
+	}
+
+	/* Initialize rpmsg device list */
+	acapd_list_init(&slot->rpu.rpmsg_dev_list);
+
+	/* Assign slot to base design */
+	slot->accel = pl_accel;
+	base->slots[slot_num] = slot;
+
+	/* Assign a free slot_handle to slot */
+	base->slots[slot_num]->slot_handle = get_free_slot_handle();
+	DFX_PR("Loaded %s successfully to slot %d with slot_handle %d",
+			accel_name, slot_num, slot->slot_handle);
+
+	return slot->slot_handle;
+}
+
+/*
+ * parse_rpu_slot_dir() - Parse a single RPU slot directory for .elf files
+ * @base: Pointer to base design structure
+ * @slot_path: Path to slot directory (e.g., /lib/firmware/xilinx/<board>/rpu/0)
+ * @slot_num: Slot number
+ * @rpu_path: Parent RPU path
+ *
+ * Scans slot directory for .elf files and registers each as an accelerator
+ */
+void parse_rpu_slot_dir(struct basePLDesign *base, char *slot_path,
+			int slot_num, char *rpu_path)
+{
+	DIR *elf_dir;
+	struct dirent *elf_entry;
+	char elf_name[NAME_MAX];
+	accel_info_t *accel;
+
+	elf_dir = opendir(slot_path);
+	if (elf_dir == NULL) {
+		DFX_ERR("Cannot open slot directory %s", slot_path);
+		return;
+	}
+
+	while ((elf_entry = readdir(elf_dir)) != NULL) {
+		const char *ext;
+
+		if (!strcmp(elf_entry->d_name, ".") || !strcmp(elf_entry->d_name, ".."))
+			continue;
+
+		ext = strrchr(elf_entry->d_name, '.');
+		if (!ext || strcmp(ext, RPU_FIRMWARE_EXT))
+			continue;
+
+		/* Copy name without .elf extension */
+		snprintf(elf_name, sizeof(elf_name), "%.*s",
+			 (int)(ext - elf_entry->d_name), elf_entry->d_name);
+
+		accel = add_accel_to_base(base, elf_name, slot_path, rpu_path);
+		if (accel) {
+			strcpy(accel->accel_type, RPU_TYPE_STR);
+			accel->rpu.slot_num = slot_num;
+		}
+	}
+	closedir(elf_dir);
 }

@@ -16,6 +16,11 @@
 extern "C" {
 #endif
 
+/* Constants for RPU handling */
+#define RPU_TYPE_STR "RPU"
+#define RPU_FIRMWARE_EXT ".elf"
+#define RPU_FIRMWARE_NAME_MAX 128
+
 /*
  * get_number_of_rpu() - Get the number of remoteproc's created
  *
@@ -31,16 +36,18 @@ int get_number_of_rpu(void);
  * load_rpu() - load and start RPU firmware
  * @*rpu_path - location of the firmware
  * @rpu_slot - RPU number to load the firmware
+ * @*firmware_name - optional specific firmware filename (for new structure)
+ *                   NULL for old structure (loads all .elf files)
  *
  * This function does the following
  * 1 - Set the firmware location path
- * 2 - Load the firmware
+ * 2 - Load the firmware (specific file or all files based on firmware_name)
  * 3 - start the firmware
  *
  * Return: slot_number on success
  *         -1 on error
  */
-int load_rpu( char *rpu_path, int rpu_slot);
+int load_rpu(char *rpu_path, int rpu_slot, char *firmware_name);
 
 /**
  * remove_rpu() - remove/stop a loaded RPU firmware
@@ -108,6 +115,41 @@ void update_rpmsg_dev_list(acapd_list_t *rpmsg_dev_list, char* rpmsg_ctrl_dev, i
  *
  */
 void delete_rpmsg_dev_list(acapd_list_t *rpmsg_dev_list);
+
+/**
+ * validate_rpu_slot_availability() - Check if an RPU slot is valid and available
+ * @base: Base design containing the RPU slots
+ * @slot_num: RPU slot number to validate
+ *
+ * Return: 0 on success (slot is valid and available)
+ *        -DFX_MGR_NO_EMPTY_SLOT_ERROR if slot is out of bounds or occupied
+ */
+int validate_rpu_slot_availability(struct basePLDesign *base, int slot_num);
+
+/**
+ * finalize_rpu_slot_setup() - Complete RPU slot setup after firmware load
+ * @base: Base design containing the RPU
+ * @slot: Slot structure to initialize
+ * @pl_accel: Accelerator structure (can be NULL for RPU)
+ * @accel_name: Name of the accelerator
+ * @slot_num: Slot number where RPU was loaded
+ * @rpu_fw_uptime_msec: Time in ms to wait for firmware initialization
+ *
+ * Return: slot_handle on success, -1 on error
+ */
+int finalize_rpu_slot_setup(struct basePLDesign *base, slot_info_t *slot,
+			    acapd_accel_t *pl_accel, const char *accel_name,
+			    int slot_num, unsigned int rpu_fw_uptime_msec);
+
+/**
+ * parse_rpu_slot_dir() - Parse a single RPU slot directory for .elf files
+ * @base: Pointer to base design structure
+ * @slot_path: Path to slot directory
+ * @slot_num: Slot number
+ * @rpu_path: Parent RPU path
+ */
+void parse_rpu_slot_dir(struct basePLDesign *base, char *slot_path,
+			int slot_num, char *rpu_path);
 
 
 #ifdef __cplusplus

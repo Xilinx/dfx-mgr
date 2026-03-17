@@ -92,6 +92,14 @@ typedef struct {
 	char parent_path[512];
 	int wd;
 	char accel_type[32];
+	union {
+		struct {
+			int slot_num; /**< Slot number for new dir structure (-1 for old) */
+		} rpu;
+		struct {
+			int _reserved;
+		} pl;
+	};
 }accel_info_t;
 
 struct basePLDesign {

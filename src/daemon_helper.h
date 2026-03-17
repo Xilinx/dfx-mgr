@@ -10,6 +10,8 @@
 #ifndef _ACAPD_DAEMON_HELPER_H
 #define _ACAPD_DAEMON_HELPER_H
 
+#include <dfx-mgr/model.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -48,6 +50,8 @@ int dfx_getFDs(int slot, int *fd);
 int user_load(int flag, const char *binfile, const char *overlay, const char *region);
 int user_unload_overlay(const char *region);
 int user_unload(const int handle);
+int get_free_slot_handle(void);
+accel_info_t *add_accel_to_base(struct basePLDesign *base, char *name, char *path, char *parent_path);
 
 #ifdef __cplusplus
 }

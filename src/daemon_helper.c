@@ -30,6 +30,7 @@
 #include <sys/un.h>
 #include <semaphore.h>
 #include <libdfx.h>
+#include <ctype.h>
 
 #ifndef DTBO_ROOT_DIR
 #define DTBO_ROOT_DIR "/sys/kernel/config/device-tree/overlays"
@@ -230,7 +231,6 @@ int load_accelerator(const char *accel_name, char *cma_path)
     struct basePLDesign *base;
     slot_info_t *slot = (slot_info_t *)malloc(sizeof(slot_info_t));
     accel_info_t *accel_info = NULL;
-    char *rpmsg_ctrl_dev_name = NULL;
 	const char *resolved_cma = NULL;
 
     slot->accel = NULL;
@@ -391,6 +391,34 @@ int load_accelerator(const char *accel_name, char *cma_path)
 			    base->name, base->uid,
 			    base->uid == accel_info->pid ? "" : "NOT",
 			    accel_info->name, accel_info->pid);
+
+		/* For NEW RPU structure, slot is pre-determined during parse */
+		if (!strcmp(base->type, RPU_TYPE_STR) && accel_info->rpu.slot_num >= 0) {
+			char firmware_file[RPU_FIRMWARE_NAME_MAX];
+			int target_slot = accel_info->rpu.slot_num;
+
+			/* Validate slot availability using helper function */
+			rv = validate_rpu_slot_availability(base, target_slot);
+			if (rv < 0)
+				goto out;
+
+			snprintf(firmware_file, sizeof(firmware_file), "%s%s",
+						accel_info->name, RPU_FIRMWARE_EXT);
+			ret = load_rpu(accel_info->path, target_slot, firmware_file);
+			if (ret < 0) {
+				DFX_ERR("load_rpu %s failed", accel_name);
+				rv = -DFX_MGR_LOAD_ERROR;
+				goto out;
+			}
+
+			free(pkg);
+			rv = finalize_rpu_slot_setup(base, slot, pl_accel, accel_name,
+						     target_slot, config.rpu_fw_uptime_msec);
+			if (rv >= 0)
+				platform.active_rpu_base->active += 1;
+			return rv;
+		}
+
 	    for (i = 0; i < (base->num_pl_slots + base->num_aie_slots); i++) {
 		    DFX_DBG("Finding empty slot for %s i %d", accel_name, i);
 		    if (base->slots[i] == NULL){
@@ -407,63 +435,21 @@ int load_accelerator(const char *accel_name, char *cma_path)
 				     * update slot with details
 				     * increment active_rpu_base
 				     */
-				    ret = load_rpu(path,i);
+					DFX_PR("WARNING: Old RPU directory structure detected. "
+					       "Please migrate to the new numbered slot directory structure.");
+					ret = load_rpu(path, i, NULL);
 				    if (ret < 0){
 					    DFX_ERR("load_rpu %s failed", accel_name);
 					    goto out;
 				    }
 
-				    strcpy(slot->name, accel_name);
-                                    slot->is_aie = 0;
-				    slot->is_rpu = 1;
-
-				    /*
-				     * wait for firmware to be up
-				     * rpu firware uptime is set in
-				     * json file : /etc/dfx-mgr/daemon.conf
-				     * property  : rpu_fw_uptime_msec
-				     * */
-				    DFX_DBG("RPU firmware uptime %d msec\n",config.rpu_fw_uptime_msec);
-				    usleep(config.rpu_fw_uptime_msec * 1000);
-
-				    /* Get new rpmsg ctrl device created by firmware */
-				    rpmsg_ctrl_dev_name = get_new_rpmsg_ctrl_dev(base);
-
-				    /* check if new ctrl dev is found
-				     * Assumption is that ctrl dev will be created
-				     * during load, dev can be dynamic.
-				     * if found then record the virtio number
-				     * if not found then 2 of the following are the cases
-				     * 1- no dev is created by firmware
-				     *    Here we just proceed, nothing to address
-				     * 2- Firmware is taking time to create the channel
-				     *    Increase rpu_fw_uptime_msec from config file
-				     * */
-				    if (rpmsg_ctrl_dev_name != NULL) {
-					    /* Store rpmsg control dev in slot */
-					    memcpy(slot->rpu.rpmsg_ctrl_dev_name,rpmsg_ctrl_dev_name,strlen(rpmsg_ctrl_dev_name));
-					    slot->rpu.rpmsg_ctrl_dev_name[strlen(rpmsg_ctrl_dev_name)] ='\0';
-
-					    /* Get and store virtio number in slot */
-					    slot->rpu.virtio_num = get_virtio_number(rpmsg_ctrl_dev_name);
-					    DFX_PR("rpmsg_ctrl_dev %s virtio %d", slot->rpu.rpmsg_ctrl_dev_name ,slot->rpu.virtio_num);
-				    } else {
-					    DFX_PR("No rpmsg control device found after rpu fw load");
-				    }
-
-				    /* Initialize rpmsg dev list */
-				    acapd_list_init(&slot->rpu.rpmsg_dev_list);
-
-                                    slot->accel = pl_accel;
-				    base->slots[i] = slot;
-				    platform.active_rpu_base->active += 1;
-
-				    /* For RPU assign a free slot_handle to slot */
-				    base->slots[i]->slot_handle = get_free_slot_handle();
-				    DFX_PR("Loaded %s successfully to slot %d with slot_handle %d", accel_name, i,slot->slot_handle);
-                                    /* return slot_handle instead of slot number */
-				    return slot->slot_handle;
-
+					/* Complete RPU slot setup using common helper */
+					free(pkg);
+					rv = finalize_rpu_slot_setup(base, slot, pl_accel, accel_name,
+								     i, config.rpu_fw_uptime_msec);
+					if (rv >= 0)
+						platform.active_rpu_base->active += 1;
+					return rv;
                             }
 			    else {
 				    /*
@@ -1386,8 +1372,18 @@ accel_info_t *add_accel_to_base(struct basePLDesign *base, char *name, char *pat
     int j;
 
     for (j = 0; j < RP_SLOTS_MAX; j++) {
-        if (!strcmp(base->accel_list[j].path, path)) {
-			DFX_DBG("%s already exists", path);
+		/*
+		 * Check for duplicates: same name AND same path
+		 *
+		 * Changed from path-only check to name+path check to support new RPU structure
+		 * where multiple firmware files (.elf) can exist in the same slot directory.
+		 * Old structure: each firmware in separate directory (path uniquely identifies entry)
+		 * New structure: multiple firmwares per slot dir (need name+path for uniqueness)
+		 */
+		if (base->accel_list[j].path[0] != '\0' &&
+			!strcmp(base->accel_list[j].path, path) &&
+			!strcmp(base->accel_list[j].name, name)) {
+			DFX_DBG("%s at %s already exists", name, path);
             break;
         }
         if (base->accel_list[j].path[0] == '\0') {
@@ -1398,6 +1394,7 @@ accel_info_t *add_accel_to_base(struct basePLDesign *base, char *name, char *pat
             base->accel_list[j].path[sizeof(base->accel_list[j].path) - 1] = '\0';
             strcpy(base->accel_list[j].parent_path, parent_path);
             base->accel_list[j].parent_path[sizeof(base->accel_list[j].parent_path) - 1] = '\0';
+			base->accel_list[j].rpu.slot_num = -1;  /* Initialize to -1 for old structure */
             //base->accel_list[j].wd = wd;
 	    break;
         }
@@ -1430,15 +1427,26 @@ void parse_packages(struct basePLDesign *base,char *fname, char *path)
 		return;
 	}
 
-    dir1 = opendir(path);
+	/* For RPU, detect structure type on-the-fly during first scan */
+	dir1 = opendir(path);
     if (dir1 == NULL) {
         DFX_ERR("Directory %s not found", path);
 		return;
     }
-    while((d1 = readdir(dir1)) != NULL) {
-	    sprintf(first_level, "%s/%s", path, d1->d_name);
-	    if (d_name_filter(d1->d_name) || not_dir(first_level))
-		    continue;
+	while((d1 = readdir(dir1)) != NULL) {
+		sprintf(first_level, "%s/%s", path, d1->d_name);
+		if (d_name_filter(d1->d_name) || not_dir(first_level))
+			continue;
+
+		/* For RPU: detect new structure (numeric dir with .elf files) inline */
+		if (!strcmp(base->type, RPU_TYPE_STR) && isdigit(d1->d_name[0])) {
+			char *endptr;
+			long slot_num = strtol(d1->d_name, &endptr, 10);
+			if (*endptr == '\0') {
+				parse_rpu_slot_dir(base, first_level, (int)slot_num, path);
+				continue;
+			}
+		}
 
 		if (path_to_watch(first_level) == NULL) {
 			wd = inotify_add_watch(inotifyFd, first_level, IN_ALL_EVENTS);
