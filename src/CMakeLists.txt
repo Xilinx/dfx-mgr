@@ -20,6 +20,7 @@ collect (PROJECT_LIB_HEADERS conio.h)
 collect (PROJECT_LIB_HEADERS rpu.h)
 collect (PROJECT_LIB_HEADERS rpu_helper.h)
 collect (PROJECT_LIB_HEADERS eeprom.h)
+collect (PROJECT_LIB_HEADERS user_load.h)
 
 collect (PROJECT_LIB_SOURCES accel.c)
 collect (PROJECT_LIB_SOURCES assert.c)
@@ -32,6 +33,7 @@ collect (PROJECT_LIB_SOURCES daemon_helper.c)
 collect (PROJECT_LIB_SOURCES rpu.c)
 collect (PROJECT_LIB_SOURCES rpu_helper.c)
 collect (PROJECT_LIB_SOURCES eeprom.c)
+collect (PROJECT_LIB_SOURCES user_load.c)
 
 add_subdirectory (sys)
 

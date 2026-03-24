@@ -22,6 +22,7 @@
 #include <dfx-mgr/dfxmgr_client.h>
 #include <dfx-mgr/eeprom.h>
 #include <dfx-mgr/rpu.h>
+#include <dfx-mgr/user_load.h>
 #include <sys/stat.h>
 #include <sys/inotify.h>
 #include <fcntl.h>
@@ -32,10 +33,6 @@
 #include <libdfx.h>
 #include <ctype.h>
 #include <inttypes.h>
-
-#ifndef DTBO_ROOT_DIR
-#define DTBO_ROOT_DIR "/sys/kernel/config/device-tree/overlays"
-#endif
 
 struct daemon_config config;
 struct watch *active_watch = NULL;
@@ -1733,187 +1730,6 @@ firmware_dir_walk(void)
 	}
 }
 
-/**
- * fpga_state() - check the current state of the FPGA.
- *
- * This static function checks the operational state of the FPGA by reading
- * the state from the sysfs interface.
- *
- * Return: 0 if the FPGA is in a valid state,
- *        -1 on error or if the state is not valid.
- */
-static int fpga_state(void)
-{
-    const char *state_operating = "operating";
-    const char *state_unknown = "unknown";
-    char read_buf[128];
-
-    if (dfx_get_fpga_state(read_buf, sizeof(read_buf)) < 0) {
-        DFX_ERR("Failed to determine the fpga state -"
-        " could not read state file");
-        return -1;
-    }
-
-    DFX_DBG("FPGA state read as: `%s`", read_buf);
-
-    if (strcmp(read_buf, state_operating) == 0 ||
-        strcmp(read_buf, state_unknown) == 0) {
-        return 0;
-        }
-
-    DFX_ERR("FPGA is in a bad state. State: `%s`", read_buf);
-    return -1;
-}
-
-/**
- * check_overlay_was_applied(...) - check that an overlay was applied
- *
- *
- * @overlay_dir:      Path to the overlay directory in configfs.
- * @requested_path:   The overlay path to write to the `path` attribute.
- *
- * This function checks that an overlay was properly applied by reading
- * the overlay status and the overlay path by checking files in the configfs.
- * It checks that "applied" is in the overlay's `status` attribute
- * and that the `path` attribute contains the requested_path, i.e. the overlay
- * file which was requested
- *
- * Return: 0 if the overlay status "applied" and path matches requested_path,
- *        -1 on error or if either assertion is false
- */
-static int check_overlay_was_applied(const char *overlay_dir, const char *requested_path)
-{
-    char read_buf[128];
-    const char *state_applied = "applied";
-
-
-    /* Check overlay path */
-    if (dfx_get_overlay_path(overlay_dir, read_buf, sizeof(read_buf)) < 0) {
-        DFX_ERR("Failed to check the overlay was applied -"
-                " could not read path file");
-        return -1;
-    }
-
-    DFX_DBG("Overlay path read as: `%s`", read_buf);
-
-    if (strcmp(read_buf, requested_path) != 0) {
-        DFX_ERR("Overlay path does not match written path:\n"
-                "\tRequested: `%s`\n"
-                "\tCurrent:   `%s`",
-                requested_path, read_buf);
-        return -1;
-    }
-
-    /* Check overlay status */
-    if (dfx_get_overlay_status(overlay_dir, read_buf, sizeof(read_buf)) < 0) {
-        DFX_ERR("Failed to check the overlay was applied -"
-                " could not read status file");
-        return -1;
-    }
-
-    DFX_DBG("Overlay status read as: `%s`", read_buf);
-
-    if (strcmp(read_buf, state_applied) != 0) {
-        DFX_ERR("Overlay status is `%s`, expected `%s`",
-                read_buf, state_applied);
-        return -1;
-    }
-
-    return 0;
-}
-
-
-/**
- * user_load_sysfs() - load FPGA firmware via sysfs.
- * @bin: name of the bitstream file to load.
- *
- * This static function loads the FPGA by writing the provided bitstream
- * file name to the sysfs interface at /sys/class/fpga_manager/fpga0/firmware.
- * It then checks the FPGA state to ensure it is in a valid state after loading.
- *
- * Return: 0 on success,
- *        -1 on failure.
- */
-static int user_load_sysfs(const char *bin)
-{
-	if (dfx_set_fpga_firmware(bin)) {
-		DFX_ERR("Failed to load firmware - failed to request bitstream load");
-		return -1;
-	}
-	if (fpga_state()) {
-		DFX_ERR("Failed to load firmware - write succeeded, but fpga reports"
-				" bad state (or state could not be determined)");
-		return -1;
-	}
-	return 0;
-}
-
-/**
- * remove_overlay_dir() - remove device tree overlay from configfs interface.
- *
- * @dir: the overlay directory to be removed
- *
- * This function attempts to remove the directory provided, with additional logging.
- *
- */
-static void remove_overlay_dir(const char *dir)
-{
-	if (rmdir(dir) != 0) {
-		DFX_ERR("Failed to remove directory `%s`", dir);
-	} else {
-		DFX_DBG("Directory `%s` removed", dir);
-	}
-}
-
-/**
- * user_load_overlay() - Load device tree overlay using configfs interface.
- *
- * @ov:    Name of the device tree overlay file to load.
- * @region: Name of the region where the overlay should be loaded.
- *
- * This function handles the process of loading device tree overlays to the
- * specified region using the configfs interface.
- *
- * Return: 0 on success,
- *        -1 on failure.
- */
-static int user_load_overlay(const char *ov, const char *region) {
-	char ov_dir[512];
-	char* overlays_root_path = DTBO_ROOT_DIR;
-	struct stat sb;
-
-	snprintf(ov_dir, sizeof(ov_dir), "%s/%s", overlays_root_path, region);
-	if (((stat(ov_dir, &sb) == 0) && S_ISDIR(sb.st_mode))) {
-		DFX_ERR("Overlay already exists in the live tree");
-		return -1;
-	}
-
-	// here, mode (0755) is ignored by the kernel so can be anything.
-	if (mkdir(ov_dir, 0755)) {
-		DFX_ERR("Failed to create overlay dir");
-		return -1;
-	}
-
-	if (dfx_set_overlay_path(ov_dir, ov)) {
-		DFX_ERR("Failed to set overlay's source path");
-		remove_overlay_dir(ov_dir);
-		return -1;
-	}
-
-	if (check_overlay_was_applied(ov_dir, ov)) {
-		DFX_ERR("Overlay failed to apply - state or path was wrong");
-		remove_overlay_dir(ov_dir);
-		return -1;
-	}
-
-	if (fpga_state()) {
-		DFX_ERR("Bitstream loading failed during overlay application");
-		remove_overlay_dir(ov_dir);
-		return -1;
-	}
-
-	return 0;
-}
 
 /**
  * user_load() - load pl bitstream with optional device tree overlay.
@@ -1940,7 +1756,7 @@ static int user_load_overlay(const char *ov, const char *region) {
  */
 int user_load(const int flag, const char *binfile, const char *overlay, const char *region)
 {
-	char *bin = NULL, *ov = NULL, *tmp, *token;
+	const char *bin;
 	int rv = -1;
 
 	if (platform.active_base != NULL) {
@@ -1983,38 +1799,21 @@ int user_load(const int flag, const char *binfile, const char *overlay, const ch
 		goto ret;
 	}
 
-	tmp = strdup(binfile);
-	while((token = strsep(&tmp, "/"))) {
-		bin = token;
-	}
-
-	// ignore bits >= 1, only care about partial or full.
-	if (dfx_set_fpga_flags(flag & USER_LOAD_PARTIAL)) {
-		DFX_ERR("Failed to set flags");
-	}
-
-	// Check between bitstream load via overlay, or direct.
+	/* Validate overlay requirements if flag indicates overlay loading */
 	if ((flag >> 1) & 1) {
 		if (region == NULL) {
 			DFX_ERR("Provide overlay region name");
 			goto ret;
 		}
-
 		if (overlay == NULL) {
 			DFX_ERR("Error: Provide path for device tree overlay file\n");
 			goto ret;
 		}
-
-		tmp = strdup(overlay);
-		while((token = strsep(&tmp, "/"))) {
-			ov = token;
-		}
-		dfx_set_firmware_search_path(overlay);
-		rv = user_load_overlay(ov, region);
-	} else {
-		dfx_set_firmware_search_path(binfile);
-		rv = user_load_sysfs(bin);
 	}
+
+	bin = path_basename(binfile);
+
+	rv = user_load_bitstream(binfile, overlay, region, flag & USER_LOAD_PARTIAL);
 
 	if (!rv) {
 		int i;
@@ -2048,7 +1847,6 @@ int user_load(const int flag, const char *binfile, const char *overlay, const ch
 
 
 ret:
-	dfx_set_firmware_search_path("");
 	return rv;
 }
 

@@ -4,9 +4,6 @@
  * SPDX-License-Identifier: MIT
  */
 
-/*
- * @file    daemon_helper.h
- */
 #ifndef _ACAPD_DAEMON_HELPER_H
 #define _ACAPD_DAEMON_HELPER_H
 
