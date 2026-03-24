@@ -218,6 +218,37 @@ void update_env(char *path)
     }
 }
 
+/**
+ * assign_slot() - Assign accelerator to slot and return handle
+ * @base: Base design
+ * @slot: Slot structure
+ * @pl_accel: Accelerator structure
+ * @accel_name: Accelerator name
+ * @slot_num: Slot number
+ *
+ * Common slot bookkeeping for both user load and traditional paths.
+ * Caller must set platform.active_base and update base->active before calling.
+ *
+ * Return: slot_handle on success
+ */
+static int assign_slot(struct basePLDesign *base,
+                       slot_info_t *slot,
+                       acapd_accel_t *pl_accel,
+                       const char *accel_name,
+                       int slot_num)
+{
+	strncpy(slot->name, accel_name, sizeof(slot->name) - 1);
+	slot->name[sizeof(slot->name) - 1] = '\0';
+	slot->accel = pl_accel;
+	slot->is_aie = 0;
+	base->slots[slot_num] = slot;
+	base->slots[slot_num]->slot_handle = get_free_slot_handle();
+	DFX_PR("Loaded %s successfully to slot %d with slot_handle %d",
+	       accel_name, slot_num, slot->slot_handle);
+
+	return slot->slot_handle;
+}
+
 int load_accelerator(const char *accel_name, char *cma_path)
 {
     int i, ret;
@@ -239,7 +270,7 @@ int load_accelerator(const char *accel_name, char *cma_path)
         rv = -DFX_MGR_NO_PACKAGE_FOUND_ERROR;
         goto out;
     }
-    sprintf(shell_path,"%s/shell.json",base->base_path);
+    snprintf(shell_path, sizeof(shell_path), "%s/shell.json", base->base_path);
 
 	/* Resolve CMA path priority: CLI > config > default */
 	if (cma_path && cma_path[0] != '\0') {
@@ -260,42 +291,45 @@ int load_accelerator(const char *accel_name, char *cma_path)
             rv = -DFX_MGR_NO_EMPTY_SLOT_ERROR;
             goto out;
         }
-        sprintf(pkg->name,"%s",accel_name);
+        snprintf(pkg->name, sizeof(pkg->name), "%s", accel_name);
         pkg->path = base->base_path;
         pkg->type = ACAPD_ACCEL_PKG_TYPE_NONE;
-        init_accel(pl_accel, pkg);
-        strncpy(pl_accel->sys_info.tmp_dir, pkg->path,
-                sizeof(pl_accel->sys_info.tmp_dir) - 1);
-        strcpy(pl_accel->type,"XRT_FLAT");
-		if (resolved_cma) {
-			snprintf(pl_accel->cma_path, sizeof(pl_accel->cma_path), "%s", resolved_cma);
-		}
-        DFX_PR("load flat shell from %s", pkg->path);
-        ret = load_accel(pl_accel, shell_path, 0);
-        if (ret < 0){
-            DFX_ERR("load_accel %s", accel_name);
-            base->active = 0;
-            goto out;
+
+        /* Route to appropriate loading mechanism */
+        if (platform.use_user_load_path) {
+            DFX_PR("Using user load path for %s", accel_name);
+            ret = user_load_from_dir(base->base_path, accel_name, 0);
+            if (ret < 0){
+                DFX_ERR("load_accel %s", accel_name);
+                base->active = 0;
+                goto out;
+            }
+            user_load_init_accel(pl_accel, pkg, 0, base->type);
+        } else {
+            init_accel(pl_accel, pkg);
+            strncpy(pl_accel->sys_info.tmp_dir, pkg->path,
+                    sizeof(pl_accel->sys_info.tmp_dir) - 1);
+            strcpy(pl_accel->type,"XRT_FLAT");
+            if (resolved_cma) {
+                snprintf(pl_accel->cma_path, sizeof(pl_accel->cma_path), "%s", resolved_cma);
+            }
+            DFX_PR("load flat shell from %s", pkg->path);
+            ret = load_accel(pl_accel, shell_path, 0);
+            if (ret < 0){
+                DFX_ERR("load_accel %s", accel_name);
+                base->active = 0;
+                goto out;
+            }
+            pl_accel->rm_slot = 0;
+            base->fpga_cfg_id = pl_accel->sys_info.fpga_cfg_id;
         }
-		pl_accel->rm_slot = 0;
-        base->fpga_cfg_id = pl_accel->sys_info.fpga_cfg_id;
-        base->active += 1;
-		slot->accel = pl_accel;
-		slot->is_aie = 0;
-        base->slots[0] = slot;
         platform.active_base = base;
-
-	/*
-	 * For PL_FLAT only single slot is available
-	 * assign free slot_handle to slot 0
-	 */
-	base->slots[0]->slot_handle = get_free_slot_handle();
-	DFX_PR("Loaded %s successfully to slot 0 with slot_handle %d", accel_name,base->slots[0]->slot_handle);
-
+        base->active += 1;
+        rv = assign_slot(base, slot, pl_accel, accel_name, 0);
         /* VART libary for SOM desings needs .xclbin path to be written to a file*/
-		if(!strcmp(base->type,"XRT_FLAT"))
-			update_env(pkg->path);
-        return 0;
+        if (!strcmp(base->type, "XRT_FLAT"))
+            update_env(pkg->path);
+        return rv;
     }
     for (i = 0; i < RP_SLOTS_MAX; i++){
         if(!strcmp(base->accel_list[i].name, accel_name)) {
@@ -327,26 +361,37 @@ int load_accelerator(const char *accel_name, char *cma_path)
 			    goto out;
 		    }
 		    if (platform.active_base == NULL) {
-			    sprintf(pkg->name,"%s",base->name);
+			    snprintf(pkg->name, sizeof(pkg->name), "%s", base->name);
 			    pkg->path = base->base_path;
 			    pkg->type = ACAPD_ACCEL_PKG_TYPE_NONE;
 			    if (base->load_base_design) {
-				    init_accel(pl_accel, pkg);
-				    strncpy(pl_accel->sys_info.tmp_dir, pkg->path,
-						    sizeof(pl_accel->sys_info.tmp_dir) - 1);
-				    strcpy(pl_accel->type,"PL_DFX");
-					if (resolved_cma) {
-						snprintf(pl_accel->cma_path, sizeof(pl_accel->cma_path), "%s", resolved_cma);
-					}
-				    DFX_PR("load from %s", pkg->path);
-				    ret = load_accel(pl_accel, shell_path, 0);
-				    if (ret < 0){
-					    DFX_ERR("load_accel %s", accel_name);
-					    base->active = 0;
-					    goto out;
+				    /* Route to appropriate loading mechanism for base design */
+				    if (platform.use_user_load_path) {
+					    DFX_PR("Using user load path for base design");
+					    ret = user_load_from_dir(base->base_path, base->name, 0);
+					    if (ret < 0){
+						    DFX_ERR("load_accel %s", accel_name);
+						    base->active = 0;
+						    goto out;
+					    }
+				    } else {
+					    init_accel(pl_accel, pkg);
+					    strncpy(pl_accel->sys_info.tmp_dir, pkg->path,
+							    sizeof(pl_accel->sys_info.tmp_dir) - 1);
+					    strcpy(pl_accel->type,"PL_DFX");
+					    if (resolved_cma) {
+						    snprintf(pl_accel->cma_path, sizeof(pl_accel->cma_path), "%s", resolved_cma);
+					    }
+					    DFX_PR("load from %s", pkg->path);
+					    ret = load_accel(pl_accel, shell_path, 0);
+					    if (ret < 0){
+						    DFX_ERR("load_accel %s", accel_name);
+						    base->active = 0;
+						    goto out;
+					    }
+					    base->fpga_cfg_id = pl_accel->sys_info.fpga_cfg_id;
 				    }
 				    DFX_PR("Loaded %s successfully", base->name);
-				    base->fpga_cfg_id = pl_accel->sys_info.fpga_cfg_id;
 			    }
 			    if (base->slots == NULL)
 				    base->slots = calloc(base->num_pl_slots + base->num_aie_slots,
@@ -420,7 +465,7 @@ int load_accelerator(const char *accel_name, char *cma_path)
 	    for (i = 0; i < (base->num_pl_slots + base->num_aie_slots); i++) {
 		    DFX_DBG("Finding empty slot for %s i %d", accel_name, i);
 		    if (base->slots[i] == NULL){
-			    sprintf(path,"%s/%s_slot%d", accel_info->path, accel_info->name,i);
+			    snprintf(path, sizeof(path), "%s/%s_slot%d", accel_info->path, accel_info->name, i);
 			    if (access(path,F_OK) != 0){
 				    continue;
 			    }
@@ -453,39 +498,42 @@ int load_accelerator(const char *accel_name, char *cma_path)
 				    /*
 				     * For basetype PL_DFX
 				     */
-				    strcpy(slot->name, accel_name);
 				    if (!strcmp(accel_info->accel_type,"XRT_AIE_DFX")) {
 					    DFX_ERR("%s: XRT_AIE_DFX unsupported", accel_name);
 					    goto out;
 				    }
-				    slot->is_aie = 0;
 				    strcpy(pkg->name, accel_name);
 				    pkg->path = path;
 				    pkg->type = ACAPD_ACCEL_PKG_TYPE_NONE;
-				    init_accel(pl_accel, pkg);
-				    /* Set rm_slot before load_accel() so isolation for appropriate slot can be applied*/
-				    pl_accel->rm_slot = i;
-				    strcpy(pl_accel->type,accel_info->accel_type);
-				    strncpy(pl_accel->sys_info.tmp_dir, pkg->path,
-						    sizeof(pl_accel->sys_info.tmp_dir) - 1);
-					if (resolved_cma) {
-						snprintf(pl_accel->cma_path, sizeof(pl_accel->cma_path), "%s", resolved_cma);
-					}
-				    DFX_PR("load from %s", pkg->path);
-				    ret = load_accel(pl_accel, shell_path, 0);
-				    if (ret < 0){
-					    DFX_ERR("load_accel %s", accel_name);
-					    goto out;
+
+				    /* Route to appropriate loading mechanism for slot design */
+				    if (platform.use_user_load_path) {
+					    DFX_PR("Using user load path for slot design");
+					    ret = user_load_from_dir(path, accel_name, 1);
+					    if (ret < 0){
+						    DFX_ERR("load_accel %s", accel_name);
+						    goto out;
+					    }
+					    user_load_init_accel(pl_accel, pkg, i, accel_info->accel_type);
+				    } else {
+					    init_accel(pl_accel, pkg);
+					    /* Set rm_slot before load_accel() so isolation for appropriate slot can be applied*/
+					    pl_accel->rm_slot = i;
+					    strcpy(pl_accel->type,accel_info->accel_type);
+					    strncpy(pl_accel->sys_info.tmp_dir, pkg->path,
+							    sizeof(pl_accel->sys_info.tmp_dir) - 1);
+					    if (resolved_cma) {
+						    snprintf(pl_accel->cma_path, sizeof(pl_accel->cma_path), "%s", resolved_cma);
+					    }
+					    DFX_PR("load from %s", pkg->path);
+					    ret = load_accel(pl_accel, shell_path, 0);
+					    if (ret < 0){
+						    DFX_ERR("load_accel %s", accel_name);
+						    goto out;
+					    }
 				    }
 				    platform.active_base->active += 1;
-				    slot->accel = pl_accel;
-				    base->slots[i] = slot;
-
-				    /* For PL_DFX assign a free slot_handle to slot */
-				    base->slots[i]->slot_handle = get_free_slot_handle();
-				    DFX_PR("Loaded %s successfully to slot %d with slot_handle %d", pkg->name, i,slot->slot_handle);
-                                    /* return slot_handle instead of slot number */
-				    return slot->slot_handle;
+				    return assign_slot(base, slot, pl_accel, accel_name, i);
 			    }
 		    }
 	    }
@@ -518,7 +566,15 @@ remove_accel_base(void)
 		DFX_PR("Can't remove active base PL design: %s", base->name);
 	else {
 		DFX_PR("Unload base: %s", base->name);
-		ret = remove_base(base->fpga_cfg_id);
+		/* For user load path, remove base overlay and skip libdfx call */
+		if (!platform.use_user_load_path) {
+			ret = remove_base(base->fpga_cfg_id);
+		} else {
+			char ov_dir[512];
+			snprintf(ov_dir, sizeof(ov_dir), "%s/%s", DTBO_ROOT_DIR, base->name);
+			remove_overlay_dir(ov_dir);
+			ret = 0;
+		}
 		if (ret == 0) {
 			free(base->slots);
 			base->slots = NULL;
@@ -598,7 +654,16 @@ int remove_accelerator(int slot_handle)
                         accel = base->slots[slot]->accel;
                         DFX_PR("Removing accel %s from slot %d", accel->pkg->name, slot);
 
-                        ret = remove_accel(accel, 0);
+                        if (platform.use_user_load_path) {
+                                char ov_dir[512];
+                                snprintf(ov_dir, sizeof(ov_dir), "%s/%s",
+                                         DTBO_ROOT_DIR, accel->pkg->name);
+                                remove_overlay_dir(ov_dir);
+                                ret = 0;
+                        } else {
+                                ret = remove_accel(accel, 0);
+                        }
+
                         platform.available_slot_handle[slot_handle] = 0;
                         free(accel->pkg);
                         free(accel);
@@ -1245,6 +1310,7 @@ char *listAccelerators(int flag)
                             }
                             else if (base_designs[i].slots[slot] != NULL && !base_designs[i].slots[slot]->is_aie &&
                                      !base_designs[i].slots[slot]->is_rpu &&
+                                     base_designs[i].slots[slot]->accel != NULL &&
 				     !strcmp(base_designs[i].slots[slot]->accel->pkg->name, base_designs[i].accel_list[j].name)) {
 				    sprintf(tmp,"%d->%d,",slot, base_designs[i].slots[slot]->slot_handle);
                                     strcat(active_slots,tmp);
@@ -1730,7 +1796,6 @@ firmware_dir_walk(void)
 	}
 }
 
-
 /**
  * user_load() - load pl bitstream with optional device tree overlay.
  *
@@ -2125,6 +2190,12 @@ int dfx_init()
 	} else {
 		DFX_PR("Using default board name: %s", platform.boardName);
 	}
+	/* Detect if platform requires user load path */
+	if (is_user_load_platform()) {
+		platform.use_user_load_path = 1;
+		DFX_PR("Platform requires user load path");
+	}
+
 	pthread_create(&t, NULL,threadFunc, NULL);
 	sem_wait(&mutex);
 	//TODO Save active design on filesytem and on reboot read that

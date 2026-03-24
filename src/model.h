@@ -147,6 +147,7 @@ typedef struct {
 	 *    marking it as un-used and can be used for next load
 	 */
 	int available_slot_handle[SLOT_HANDLE_MAX]; /* To track available slot handles */
+	int use_user_load_path; /* route -load through sysfs/configfs user path */
 }platform_info_t;
 
 struct daemon_config {
