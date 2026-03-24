@@ -26,6 +26,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <inttypes.h>
 
 #define JSMN_PARENT_LINKS
 #include <jsmn.h>
@@ -71,7 +72,7 @@ rp_comms_inter(struct basePLDesign *base, char *jdat, jsmntok_t *token)
 		if (!jsoneq(jdat, &token[i + 1], slotX)) {
 			addr = strtoul(jdat + token[i + 2].start, NULL, 16);
 			base->inter_rp_comm[j] = addr;
-			DFX_PR("%d.inter_rp_comm= %#lx", j, addr);
+			DFX_PR("%d.inter_rp_comm= %#" PRIx64, j, addr);
 		}
 	}
 }

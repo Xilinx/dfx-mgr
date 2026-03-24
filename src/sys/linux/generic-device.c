@@ -16,6 +16,7 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <inttypes.h>
 
 int acapd_generic_device_bind(acapd_device_t *dev, const char *drv)
 {
@@ -152,7 +153,7 @@ static int acapd_generic_device_get_uio_path(acapd_device_t *dev)
 				goto out;
 			}
 			dev->reg_size = strtoull(size_str, NULL, 16);
-			DFX_DBG("%s = %#lx", tmpstr, dev->reg_size);
+			DFX_DBG("%s = %#zx", tmpstr, dev->reg_size);
 
 			close(fd);
 			ret = 0;
@@ -213,7 +214,7 @@ static int acapd_generic_device_open(acapd_device_t *dev)
 		dev->va = mmap(NULL, dev->reg_size, PROT_READ | PROT_WRITE,
 			       MAP_SHARED, fd, 0);
 		if (dev->va == MAP_FAILED) {
-			DFX_ERR("mmap %s, 0x%lx", dev->path, dev->reg_size);
+			DFX_ERR("mmap %s, 0x%zx", dev->path, dev->reg_size);
 			dev->va = NULL;
 			close(fd);
 			return -EINVAL;

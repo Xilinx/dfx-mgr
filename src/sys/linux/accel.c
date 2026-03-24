@@ -26,6 +26,7 @@
 #include "accel.h"
 #include <zynq_ioctl.h>
 #include "generic-device.h"
+#include <inttypes.h>
 
 #define MAX_BUFFERS 40
 acapd_buffer_t *buffer_list = NULL;
@@ -449,7 +450,7 @@ int sys_send_fd_pa(acapd_buffer_t *buff)
 		DFX_ERR("sendmsg");
 		return -1;
 	}
-	DFX_PR("Server Sending fd %d PA %lu",buff->fd, buff->PA);
+	DFX_PR("Server Sending fd %d PA %"PRIu64,buff->fd, buff->PA);
 	ret =  write(socket_d2,&buff->PA,sizeof(uint64_t));
 	if (ret == -1) {
 		DFX_ERR("write. Failed to send PA for buffer");
@@ -500,7 +501,7 @@ acapd_buffer_t * sys_alloc_buffer(uint64_t size)
 	}
 	buff->PA = boInfo.paddr;
 	buff->size = boInfo.size;
-	DFX_PR("allocated BO size %lu paddr %lu",boInfo.size,buff->PA);
+	DFX_PR("allocated BO size %"PRIu64" paddr %"PRIu64,boInfo.size,buff->PA);
 
 	struct drm_prime_handle bo_h = {bo.handle, DRM_RDWR, -1};
 	if (ioctl(buff->drm_fd, DRM_IOCTL_PRIME_HANDLE_TO_FD, &bo_h) < 0) {
@@ -534,8 +535,8 @@ int sys_free_buffer(uint64_t pa){
 	DFX_DBG("");
 	for (i = 0; i < MAX_BUFFERS; i++) {
 		if (buffer_list[i].PA == pa) {
-			DFX_PR("Free buffer pa %lu", pa);
-			DFX_PR("Free buffer size %lu", buffer_list[i].size);
+			DFX_PR("Free buffer pa %"PRIu64, pa);
+			DFX_PR("Free buffer size %"PRIu64, buffer_list[i].size);
 			struct drm_gem_close closeInfo = {0, 0};
 			closeInfo.handle = buffer_list[i].handle;
 			ioctl(buffer_list[i].drm_fd, DRM_IOCTL_GEM_CLOSE, &closeInfo);
@@ -546,7 +547,7 @@ int sys_free_buffer(uint64_t pa){
 			return 0;
 		}
 	}
-	DFX_ERR("No buffer allocation found for pa %lu", pa);
+	DFX_ERR("No buffer allocation found for pa %"PRIu64, pa);
 	return -1;
 }
 
@@ -554,7 +555,7 @@ int sys_print_buffers(){
 	int i;
 	DFX_DBG("");
 	for (i = 0; i < MAX_BUFFERS; i++) {
-		DFX_PR("buffer pa %lu", buffer_list[i].PA);
+		DFX_PR("buffer pa %"PRIu64, buffer_list[i].PA);
 	}
 	return 0;
 }

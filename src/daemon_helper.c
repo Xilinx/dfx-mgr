@@ -31,6 +31,7 @@
 #include <semaphore.h>
 #include <libdfx.h>
 #include <ctype.h>
+#include <inttypes.h>
 
 #ifndef DTBO_ROOT_DIR
 #define DTBO_ROOT_DIR "/sys/kernel/config/device-tree/overlays"
@@ -620,17 +621,17 @@ int remove_accelerator(int slot_handle)
 
 void sendBuff(uint64_t size)
 {
-    DFX_PR("buffer size %lu", size);
+	DFX_PR("buffer size %"PRIu64, size);
     //sendBuffer(size, socket_d);
 }
 void allocBuffer(uint64_t size)
 {
-    DFX_PR("buffer size %lu", size);
+	DFX_PR("buffer size %"PRIu64, size);
     allocateBuffer(size);
 }
 void freeBuff(uint64_t pa)
 {
-    DFX_DBG("free buffer PA %lu", pa);
+	DFX_DBG("free buffer PA %"PRIu64, pa);
     freeBuffer(pa);
 }
 
@@ -901,12 +902,12 @@ dm_format(char *buf, struct data_mover_cfg *p_dm)
 		}
 
 	return sprintf(buf, slot == '='
-		       ? "  memory_addr%c%#12lx sz=%#8x\n"
-		       : " DataMover[%c]=%#12lx sz=%#8x\n",
+				? "  memory_addr%c%#12"PRIx64" sz=%#8x\n"
+				: " DataMover[%c]=%#12"PRIx64" sz=%#8x\n",
 		       slot, addr, p_dm->dm_size_lo);
 }
 
-#define DMCFG(p, f) (*(uint32_t *)((p) + offsetof(struct data_mover_cfg, f)))
+#define DMCFG(p, f) (*(uint32_t *)((uintptr_t)(p) + offsetof(struct data_mover_cfg, f)))
 /**
  * siha_ir_buf_list - list DMs configuration
  * @sz:  the size of the buf
@@ -951,14 +952,14 @@ siha_ir_buf_list(uint32_t sz, char *buf)
 		p += sprintf(p, "DataMover[%hhu]: %p\n", slot, reg);
 		/* dm_cr:1 (bit 1) is Clear-on-Read: do not read it */
 		if (reg) {
-			uint64_t cr = (uint64_t)reg + DM_MM2S_OFFT;
+			uintptr_t cr = (uintptr_t)reg + DM_MM2S_OFFT;
 
 			dm_cfg.dm_addr_lo = DMCFG(cr, dm_addr_lo);
 			dm_cfg.dm_addr_hi = DMCFG(cr, dm_addr_hi);
 			dm_cfg.dm_size_lo = DMCFG(cr, dm_size_lo);
 			p += sprintf(p, " DataToAccel[%hhu]  ", slot);
 			p += dm_format(p, &dm_cfg);
-			cr = (uint64_t)reg + DM_S2MM_OFFT;
+			cr = (uintptr_t)reg + DM_S2MM_OFFT;
 			dm_cfg.dm_addr_lo = DMCFG(cr, dm_addr_lo);
 			dm_cfg.dm_addr_hi = DMCFG(cr, dm_addr_hi);
 			dm_cfg.dm_size_lo = DMCFG(cr, dm_size_lo);
@@ -1005,7 +1006,7 @@ siha_ir_buf(acapd_accel_t *src, acapd_accel_t *dst, uint8_t clear)
 	ir_buf_lo = base->inter_rp_comm[dst_slot] & 0xFFFFFFFF;
 	ir_buf_hi = base->inter_rp_comm[dst_slot] >> 32;
 	DFX_DBG("src,dst=%u,%u addr=%p", src->rm_slot, dst_slot,
-		(void *)base->inter_rp_comm[dst_slot]);
+	(void *)(uintptr_t)base->inter_rp_comm[dst_slot]);
 
 	/* set s2mm in src_dm to write to dst IR-buf */
 	/* set mm2s in dst_dm to read from its own IR-buf */
