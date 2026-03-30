@@ -119,7 +119,8 @@ int load_rpu(char *rpu_path, int rpu_slot, char *firmware_name)
 		 "echo -n %s > /sys/module/firmware_class/parameters/path", rpu_path);
 	ret = system(cmd);
 	if(ret != 0 ){
-		printf("Command not successful %s\n",cmd);
+		DFX_ERR("Command not successful for rpu_path %s slot %d: %s",
+			rpu_path, rpu_slot, cmd);
 		return -1;
 	}
 
@@ -154,7 +155,7 @@ int load_rpu(char *rpu_path, int rpu_slot, char *firmware_name)
 	if (found_firmware == 1)
 		return rpu_slot;
 
-	DFX_ERR("No firmware found in folder\n");
+	DFX_ERR("No firmware found in %s", rpu_path);
 	return -1;
 }
 
@@ -179,7 +180,7 @@ int remove_rpu(int rpu_num)
 	sprintf(cmd,"echo stop > /sys/class/remoteproc/remoteproc%d/state", rpu_num);
 	ret = system(cmd);
 	if(ret != 0 ){
-		printf("Command not successful %s\n",cmd);
+		DFX_ERR("Command not successful for rpu %d: %s", rpu_num, cmd);
 		return -1;
 	}
 	return 0;

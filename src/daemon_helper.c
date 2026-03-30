@@ -287,7 +287,7 @@ static int load_accelerator_core(struct basePLDesign *base, const char *accel_na
                                  sizeof(slot_info_t *));
 
         if(platform.active_base != NULL && platform.active_base->active > 0) {
-            DFX_ERR("Unload previously loaded accelerator, no empty slot");
+            DFX_ERR("Unload previously loaded accelerator, no empty slot for %s", accel_name);
             rv = -DFX_MGR_NO_EMPTY_SLOT_ERROR;
             goto out;
         }
@@ -357,7 +357,8 @@ static int load_accelerator_core(struct basePLDesign *base, const char *accel_na
 		    }
 		    else if(platform.active_base != NULL && platform.active_base->active > 0 &&
 				    strcmp(platform.active_base->base_path, accel_info->parent_path)) {
-			    DFX_ERR("Active base design doesn't match this accel base");
+			    DFX_ERR("Active base design (%s) doesn't match accel base (%s)",
+				    platform.active_base->name, accel_info->parent_path);
 			    goto out;
 		    }
 		    if (platform.active_base == NULL) {
@@ -417,7 +418,8 @@ static int load_accelerator_core(struct basePLDesign *base, const char *accel_na
 		    }
 		    else if(platform.active_rpu_base != NULL && platform.active_rpu_base->active > 0 &&
 				    strcmp(platform.active_rpu_base->base_path, accel_info->parent_path)) {
-			    DFX_ERR("Active base design doesn't match this accel base");
+			    DFX_ERR("Active RPU base design (%s) doesn't match accel base (%s)",
+				    platform.active_rpu_base->name, accel_info->parent_path);
 			    goto out;
 		    }
 		    if (platform.active_rpu_base == NULL) {
@@ -985,7 +987,7 @@ list_accel_uio(int slot_handle, char *buf, size_t sz)
 	{
 		slot = find_slot_from_handle(base, slot_handle);
 		if (slot == -1){
-			DFX_ERR("slot not found");
+			DFX_ERR("slot not found for slot_handle %d", slot_handle);
 			return;
 		}
 	}
@@ -1069,7 +1071,7 @@ get_accel_uio_by_name(int slot_handle, const char *name)
         {
                 slot = find_slot_from_handle(base, slot_handle);
                 if (slot == -1){
-                        DFX_ERR("slot not found");
+                        DFX_ERR("slot not found for slot_handle %d", slot_handle);
                         return NULL;
                 }
         }
@@ -1597,7 +1599,7 @@ void add_to_watch(int wd, char *name, char *path, char *parent_name, char *paren
             return;
         }
     }
-    DFX_ERR("no room to add more watch");
+    DFX_ERR("no room to add more watch for path %s", path);
 }
 
 struct watch *get_watch(int wd)
@@ -2165,7 +2167,7 @@ int user_unload_overlay(const char *region)
 
 		return 0;
 	} else {
-		DFX_ERR("Overlay doesn't exist.");
+		DFX_ERR("Overlay directory %s doesn't exist for region %s", ov_dir, region);
 		return -1;
 	}
 }

@@ -74,8 +74,8 @@ static int check_overlay_was_applied(const char *overlay_dir, const char *reques
 
     /* Check overlay path */
     if (dfx_get_overlay_path(overlay_dir, read_buf, sizeof(read_buf)) < 0) {
-        DFX_ERR("Failed to check the overlay was applied -"
-                " could not read path file");
+        DFX_ERR("Failed to check overlay was applied for %s"
+                " - could not read path file", overlay_dir);
         return -1;
     }
 
@@ -91,8 +91,8 @@ static int check_overlay_was_applied(const char *overlay_dir, const char *reques
 
     /* Check overlay status */
     if (dfx_get_overlay_status(overlay_dir, read_buf, sizeof(read_buf)) < 0) {
-        DFX_ERR("Failed to check the overlay was applied -"
-                " could not read status file");
+        DFX_ERR("Failed to check overlay was applied for %s"
+                " - could not read status file", overlay_dir);
         return -1;
     }
 
@@ -121,12 +121,14 @@ static int check_overlay_was_applied(const char *overlay_dir, const char *reques
 static int user_load_sysfs(const char *bin)
 {
 	if (dfx_set_fpga_firmware(bin)) {
-		DFX_ERR("Failed to load firmware - failed to request bitstream load");
+		DFX_ERR("Failed to load firmware '%s'"
+			" - failed to request bitstream load", bin);
 		return -1;
 	}
 	if (fpga_state()) {
-		DFX_ERR("Failed to load firmware - write succeeded, but fpga reports"
-				" bad state (or state could not be determined)");
+		DFX_ERR("Failed to load firmware '%s' - write succeeded,"
+			" but fpga reports bad state"
+			" (or state could not be determined)", bin);
 		return -1;
 	}
 	return 0;
@@ -173,24 +175,27 @@ static int user_load_overlay(const char *ov, const char *region) {
 
 	// here, mode (0755) is ignored by the kernel so can be anything.
 	if (mkdir(ov_dir, 0755)) {
-		DFX_ERR("Failed to create overlay dir");
+		DFX_ERR("Failed to create overlay dir %s", ov_dir);
 		return -1;
 	}
 
 	if (dfx_set_overlay_path(ov_dir, ov)) {
-		DFX_ERR("Failed to set overlay's source path");
+		DFX_ERR("Failed to set overlay source path for %s in region %s",
+			ov, region);
 		remove_overlay_dir(ov_dir);
 		return -1;
 	}
 
 	if (check_overlay_was_applied(ov_dir, ov)) {
-		DFX_ERR("Overlay failed to apply - state or path was wrong");
+		DFX_ERR("Overlay %s failed to apply in region %s"
+			" - state or path was wrong", ov, region);
 		remove_overlay_dir(ov_dir);
 		return -1;
 	}
 
 	if (fpga_state()) {
-		DFX_ERR("Bitstream loading failed during overlay application");
+		DFX_ERR("Bitstream loading failed during overlay %s"
+			" application in region %s", ov, region);
 		remove_overlay_dir(ov_dir);
 		return -1;
 	}
@@ -332,7 +337,8 @@ int user_load_bitstream(const char *bitstream, const char *overlay,
 	bin = path_basename(bitstream);
 
 	if (dfx_set_fpga_flags(is_partial)) {
-		DFX_ERR("Failed to set flags");
+		DFX_ERR("Failed to set fpga flags for %s (partial=%d)",
+			bitstream, is_partial);
 	}
 
 	if (overlay && region) {

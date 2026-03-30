@@ -140,7 +140,8 @@ int main(int argc, char *argv[])
 		printf("Expects an argument. Use -h to see options\n");
 		return -1;
 	}
-	initSocket(&gs);
+	if (initSocket(&gs) < 0)
+		return -1;
 
 	if (!strcmp(argv[1],"-load")) {
 		if (argc < 3) {

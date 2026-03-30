@@ -450,7 +450,11 @@ int initSocket(socket_t* gs)
 
 	gs->socket_address = su;
 	if (connect(gs->sock_fd, (const struct sockaddr *)&su, sizeof(su)) < 0){
-		DFX_ERR("connect(%s)", SERVER_SOCKET);
+		if (errno == EACCES || errno == EPERM)
+			DFX_ERR("connect(%s): insufficient permissions"
+				" (run with sudo)", SERVER_SOCKET);
+		else
+			DFX_ERR("connect(%s)", SERVER_SOCKET);
 		return -1;
 	}
 	return 0;

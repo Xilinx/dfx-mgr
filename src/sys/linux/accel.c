@@ -190,7 +190,8 @@ int sys_fetch_accel(acapd_accel_t *accel, int flags)
 		ret = dfx_cfg_init(accel->sys_info.tmp_dir, 0, flags);
 	}
 	if (ret < 0) {
-		DFX_ERR("Failed to initialize fpga config, %d", ret);
+		DFX_ERR("Failed to initialize fpga config for %s, ret=%d",
+			accel->sys_info.tmp_dir, ret);
 		return ACAPD_ACCEL_FAILURE;
 	}
 	accel->sys_info.fpga_cfg_id = ret;
@@ -212,7 +213,8 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 	fpga_cfg_id = accel->sys_info.fpga_cfg_id;
 	ret = dfx_cfg_load(fpga_cfg_id);
 	if (ret != 0) {
-		DFX_ERR("Failed to load fpga config: %d", fpga_cfg_id);
+		DFX_ERR("Failed to load fpga config for %s (id=%d)",
+			accel->sys_info.tmp_dir, fpga_cfg_id);
 		dfx_cfg_destroy(fpga_cfg_id);
 		return ACAPD_ACCEL_FAILURE;
 	}
@@ -317,12 +319,14 @@ int sys_remove_base(int fpga_cfg_id)
 	DFX_DBG("");
 	ret = dfx_cfg_remove(fpga_cfg_id);
 	if (ret != 0) {
-		DFX_ERR("Failed to remove accel: %d", ret);
+		DFX_ERR("Failed to remove base (fpga_cfg_id=%d): %d",
+			fpga_cfg_id, ret);
 		return -1;
 	}
 	ret = dfx_cfg_destroy(fpga_cfg_id);
 	if (ret != 0) {
-		DFX_ERR("Failed to destroy accel: %d", ret);
+		DFX_ERR("Failed to destroy base (fpga_cfg_id=%d): %d",
+			fpga_cfg_id, ret);
 		return -1;
 	}
 	return 0;
@@ -350,12 +354,14 @@ int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
 	}
 	ret = dfx_cfg_remove(fpga_cfg_id);
 	if (ret != 0) {
-		DFX_ERR("Failed to remove accel: %d", ret);
+		DFX_ERR("Failed to remove accel %s (fpga_cfg_id=%d): %d",
+			accel->sys_info.tmp_dir, fpga_cfg_id, ret);
 		goto out;
 	}
 	ret = dfx_cfg_destroy(fpga_cfg_id);
 	if (ret != 0) {
-		DFX_ERR("Failed to destroy accel: %d", ret);
+		DFX_ERR("Failed to destroy accel %s (fpga_cfg_id=%d): %d",
+			accel->sys_info.tmp_dir, fpga_cfg_id, ret);
 		goto out;
 	}
 out:
