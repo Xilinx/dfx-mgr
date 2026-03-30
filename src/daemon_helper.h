@@ -28,7 +28,7 @@ extern "C" {
 #define TRUNCATED_BASE_BUFFER_SIZE  (MAX_BASE_NAME_DISPLAY_LEN + 1)  /* Display length + null terminator */
 
 int load_accelerator(const char *accel_name, char *cma_path);
-int remove_accelerator(int slot);
+int unload_accelerator(int slot);
 void allocBuffer(uint64_t size);
 void sendBuff(uint64_t size);
 void freeBuff(uint64_t pa);

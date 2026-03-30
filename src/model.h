@@ -140,7 +140,7 @@ typedef struct {
 	 * structure
 	 * 3) the value in that index is set to 1,marking as used
 	 *
-	 * When accel/rpu is unloaded/removed,
+	 * When accel/rpu is unloaded,
 	 * 1) slot_handle needs to be passed
 	 * 2) slot associated with the slot_handle is identified and removed
 	 * 3) The value available_slot_handle[slot_handle] is set to 1

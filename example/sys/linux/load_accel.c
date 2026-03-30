@@ -30,5 +30,5 @@ int main(int argc, char *argv[])
 	dfxmgr_uio_by_name(uio_path, ret, "rm_comm_box");
 	printf("%s rm_comm_box\n", uio_path);
 
-	return dfxmgr_remove(ret);
+	return dfxmgr_unload(ret);
 }

@@ -287,7 +287,7 @@ int load_accelerator(const char *accel_name, char *cma_path)
                                  sizeof(slot_info_t *));
 
         if(platform.active_base != NULL && platform.active_base->active > 0) {
-            DFX_ERR("Remove previously loaded accelerator, no empty slot");
+            DFX_ERR("Unload previously loaded accelerator, no empty slot");
             rv = -DFX_MGR_NO_EMPTY_SLOT_ERROR;
             goto out;
         }
@@ -553,7 +553,7 @@ out:
 }
 
 static int
-remove_accel_base(void)
+unload_accel_base(void)
 {
 	struct basePLDesign *base = platform.active_base;
 	int ret = -1;
@@ -563,7 +563,7 @@ remove_accel_base(void)
 	else if (strcmp(base->type, "PL_DFX"))
 		DFX_PR("Invalid base type: %s", base->type);
 	else if (base->active)
-		DFX_PR("Can't remove active base PL design: %s", base->name);
+		DFX_PR("Can't unload active base PL design: %s", base->name);
 	else {
 		DFX_PR("Unload base: %s", base->name);
 		/* For user load path, remove base overlay and skip libdfx call */
@@ -586,16 +586,16 @@ remove_accel_base(void)
 
 
 /**
- * remove_accelerator() - remove accel or rpu from give slot handle
+ * unload_accelerator() - unload accel or rpu from given slot handle
  * @slot_handle - slot handle number
  *
- * This function removes an accel/rpu firmware from provided slot_handle
+ * This function unloads an accel/rpu firmware from provided slot_handle
  * the slot_handle is mapped to slots for each accel/rpu
  *
  * Return:  0 on success
  *         -1 on failure
  */
-int remove_accelerator(int slot_handle)
+int unload_accelerator(int slot_handle)
 {
 	struct basePLDesign *base = platform.active_base;
         struct basePLDesign *rpu_base = platform.active_rpu_base; /* get active rpu base */
@@ -603,25 +603,25 @@ int remove_accelerator(int slot_handle)
 	int ret = -1;
 	int slot = -1;
 
-	/* slot -1 means remove base PL design */
+	/* slot -1 means unload base PL design */
 	if (slot_handle == -1)
-		return remove_accel_base();
+		return unload_accel_base();
 
 	/* check if base for pl or rpu is active */
 	if ((!base && !rpu_base) || slot_handle < 0 ) {
-		DFX_ERR("No Accel or invalid slot %d", slot_handle);
+		DFX_ERR("No accel or invalid slot_handle %d", slot_handle);
 		return -1;
 	}
 
 	/*
 	 * if rpu base is active and slot_handle is found in active rpu base
-	 * then remove the rpu firmware by getting the slot number mapped to
+	 * then unload the rpu firmware by getting the slot number mapped to
 	 * slot_handle
 	 */
 	if(rpu_base){
 		slot = find_slot_from_handle(rpu_base, slot_handle);
 		if (slot != -1){
-			DFX_DBG("Removing rpu %s from slot %d slot_handle %d", rpu_base->slots[slot]->name, slot,rpu_base->slots[slot]->slot_handle);
+			DFX_DBG("Unloading rpu %s from slot %d slot_handle %d", rpu_base->slots[slot]->name, slot,rpu_base->slots[slot]->slot_handle);
 			ret = remove_rpu(slot);
 			platform.available_slot_handle[slot_handle] = 0;
 			/* delete rpmsg_dev_list from slot */
@@ -636,7 +636,7 @@ int remove_accelerator(int slot_handle)
 
 	/*
 	 * if pl base is active and slot_handle is found in active pl base
-	 * then remove_accel by getting the slot number mapped to slot_handle
+	 * then unload accel by getting the slot number mapped to slot_handle
 	 */
 	if (base) {
 		/* Call user_unload() if the design is user managed one */
@@ -652,7 +652,8 @@ int remove_accelerator(int slot_handle)
                                 return 0;
                         }
                         accel = base->slots[slot]->accel;
-                        DFX_PR("Removing accel %s from slot %d", accel->pkg->name, slot);
+                        DFX_PR("Unloading accel %s from slot %d", accel->pkg->name, slot);
+
 
                         if (platform.use_user_load_path) {
                                 char ov_dir[512];
@@ -1827,22 +1828,22 @@ int user_load(const int flag, const char *binfile, const char *overlay, const ch
 	if (platform.active_base != NULL) {
 		if (platform.active_base->is_user_load) {
 			if (!(flag & USER_LOAD_PARTIAL)) {
-				DFX_ERR("Remove previously loaded full bitstream, no empty slot.");
+				DFX_ERR("Unload previously loaded full bitstream, no empty slot.");
 				goto ret;
 			} else if (platform.active_base->active >= MAX_WATCH) {
-				DFX_ERR("Remove previously loaded partial bitstream, no empty slot.");
+				DFX_ERR("Unload previously loaded partial bitstream, no empty slot.");
 				goto ret;
 			}
 		}
 
 		if (!strcmp(platform.active_base->type, "XRT_FLAT") || !strcmp(platform.active_base->type, "PL_FLAT")) {
-			DFX_ERR("Remove previously loaded FLAT design, no empty slot.");
+			DFX_ERR("Unload previously loaded FLAT design, no empty slot.");
 			goto ret;
 		}
 
 		if (!strcmp(platform.active_base->type, "PL_DFX")) {
 			if (platform.active_base->active > 0) {
-				DFX_ERR("Remove previously loaded DFX designs, no empty slot.");
+				DFX_ERR("Unload previously loaded DFX designs, no empty slot.");
 				goto ret;
 			} else {
 				/* Remove existing DFX base design before loading new user managed design */
@@ -1920,7 +1921,7 @@ ret:
  *
  * @region: Name of the overlay region to unload.
  *
- * This function removes the specified overlay from the configfs interface.
+ * This function unloads the specified overlay from the configfs interface.
  * It also cleans up the corresponding entry in the base_designs array.
  *
  * This function is used by the daemon to unload device tree overlays for user-managed designs.
@@ -1962,7 +1963,7 @@ int user_unload_overlay(const char *region)
  *
  * @handle: An integer handle that uniquely identifies the user managed design to be unloaded.
  *
- * This function removes the user managed design from the base_designs array and
+ * This function unloads the user managed design from the base_designs array and
  * unloads the associated device tree overlay if it exists.
  * It also decrements the active count of the base design if it is a partial load.
  *
@@ -1986,7 +1987,7 @@ int user_unload(const int handle)
 	}
 
 	if (!base_designs[i].user_load_type && (platform.active_base->active > 0)) {
-		DFX_ERR("Remove all partial bitstreams before removing full bitstream.");
+		DFX_ERR("Unload all partial bitstreams before unloading full bitstream.");
 		return -1;
 	}
 

@@ -85,17 +85,17 @@ process_dfx_req(int fd, fd_set *fdset)
 		free(tmp);
 		break;
 
-	case REMOVE_ACCEL:
+	case UNLOAD_ACCEL:
 		slot = -1;	/* assume base */
 		if (strcasecmp(recv_msg.data, "base")) {
 			slot = atoi(recv_msg.data);
-			DFX_PR("daemon REMOVE_ACCEL in slot %d", slot);
+			DFX_PR("daemon UNLOAD_ACCEL in slot %d", slot);
 		}
-		ret = remove_accelerator(slot);
+		ret = unload_accelerator(slot);
 		send_msg.size = 1 + sprintf(send_msg.data, "%d", ret);
 
 		if (write(fd, &send_msg, HEADERSIZE+ send_msg.size) < 0)
-			DFX_ERR("REMOVE_ACCEL write(%d)", fd);
+			DFX_ERR("UNLOAD_ACCEL write(%d)", fd);
 		break;
 
 	case LIST_PACKAGE:

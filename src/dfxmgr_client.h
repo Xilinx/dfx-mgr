@@ -29,7 +29,7 @@ enum dfx_mgr_request {
 	GRAPH_GET_IOBUFF,
 	GRAPH_SET_IOBUFF,
 	LOAD_ACCEL,
-	REMOVE_ACCEL,
+	UNLOAD_ACCEL,
 	LIST_PACKAGE,
 	LIST_ACCEL_UIO,
 	DFX_MGR_REQ_10,		/* unused */
@@ -94,7 +94,7 @@ typedef struct fds{
 } fds_t;
 
 extern int dfxmgr_load(char* packageName);
-extern int dfxmgr_remove(int slot);
+extern int dfxmgr_unload(int slot);
 extern char *dfxmgr_uio_by_name(char *obuf, int slot, const char *name);
 extern char *dfxmgr_siha_ir_list(uint32_t sz, char *obuf);
 extern int dfxmgr_siha_ir_buf_set(const char *user_slot_seq);

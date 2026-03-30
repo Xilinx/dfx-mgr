@@ -391,7 +391,7 @@ int user_load_from_dir(const char *search_path,
  *
  * The user load path bypasses libdfx (init_accel + load_accel), so the accel
  * structure is never fully populated. This function fills in the
- * fields required by remove_accelerator (pkg, type) and listPackage (pkg->name)
+ * fields required by unload_accelerator (pkg, type) and listPackage (pkg->name)
  * to operate correctly. Fields like ip_dev, num_ip_devs, and fpga_cfg_id are
  * left zeroed since the user load removal path does not use them.
  */

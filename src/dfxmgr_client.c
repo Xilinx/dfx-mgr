@@ -206,7 +206,7 @@ int dfxmgr_load(char* pkg_name)
 	return atoi(recv_msg.data);
 }
 
-int dfxmgr_remove(int slot)
+int dfxmgr_unload(int slot)
 {
 	struct message send_msg, recv_msg;
 	socket_t gs;
@@ -217,7 +217,7 @@ int dfxmgr_remove(int slot)
 	}
 
 	initSocket(&gs);
-	send_msg.id = REMOVE_ACCEL;
+	send_msg.id = UNLOAD_ACCEL;
 	send_msg.size = 2;
 	sprintf(send_msg.data, "%d", slot);
 	if (write(gs.sock_fd, &send_msg, HEADERSIZE + send_msg.size) < 0) {
@@ -230,7 +230,7 @@ int dfxmgr_remove(int slot)
 		return -1;
 	}
 
-	DFX_PR("remove from slot %d returns: %s (%s)", slot, recv_msg.data,
+	DFX_PR("unload from slot %d returns: %s (%s)", slot, recv_msg.data,
 		recv_msg.data[0] == '0' ? "Ok" : "Error");
 	return  recv_msg.data[0] == '0' ? 0 : -1;
 }

@@ -451,11 +451,11 @@ When DFX-MGR successfully loads rp1rm0 accel to one of the slots, -listPackage o
 3. Default to standard paths:
     "/dev/dma_heap/reserved" or "/dev/dma_heap/cma_reserved@800000000"
 
-### Command to remove accelerator from the slot.
+### Command to unload accelerator from the slot.
 If there is no accel in the mentioned slot, this command will do nothing.
 
 ```
-$ dfx-mgr-client -remove 0
+$ dfx-mgr-client -unload 0
 ```
 
 ## Lightweight use cases
@@ -493,7 +493,7 @@ $ dfx-mgr-client -remove 0
 
 4. Command for unloading bitstream.
 ```
- dfx-mgr-client -remove <handle>
+ dfx-mgr-client -unload <handle>
 
  where <handle> is the unique id retuned while loading the bitstream
 ```

@@ -86,10 +86,14 @@ int main(int argc, char *argv[])
 		}
 
 	} else if(!strcmp(argv[1],"-remove")) {
+		printf("WARNING: '-remove' is deprecated. Use '-unload' instead.\n");
+		return -1;
+
+	} else if(!strcmp(argv[1],"-unload")) {
 		/* If no slot number provided default to 0*/
 		char *slot = (argc < 3) ? "0" : argv[2];
 		send_message.size = 1 + sprintf(send_message.data, "%s", slot);
-		send_message.id = REMOVE_ACCEL;
+		send_message.id = UNLOAD_ACCEL;
 		if (write(gs.sock_fd, &send_message, HEADERSIZE + send_message.size) < 0){
 			perror("write");
 			return -1;
@@ -100,10 +104,10 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 		if (recv_message.data[0] == '0'){
-			printf("remove from slot %s returns: %s (Ok)\n", slot,
+			printf("unload from slot %s returns: %s (Ok)\n", slot,
 					recv_message.data);
 		} else {
-			printf("remove from slot %s returns: %s (Error)\n", slot,
+			printf("unload from slot %s returns: %s (Error)\n", slot,
 					recv_message.data);
 			return -1;
 		}
@@ -202,7 +206,7 @@ int main(int argc, char *argv[])
 		printf("\t\t\t -filter: filters by board name (shows only matching designs)\n");
 		printf("-load <accel_name> [-cma <device>]\t Load the provided accelerator package\n");
 		printf("\t Optional: -cma <device> specifies custom CMA device path\n");
-		printf("-remove <slot#>\t\t Unload package previously programmed\n");
+		printf("-unload <slot#>\t\t Unload package previously programmed\n");
 		printf("-listUIO [<slot#> [UIOname]]\t\t list accelerator UIOs\n");
 		printf("-listIRbuf [slot]\t\t list inter-RM buffer info\n");
 		printf("-setIRbuf a,b\t\t set RM stream from slot a to b\n");
@@ -220,7 +224,7 @@ int main(int argc, char *argv[])
 		printf("-b <bitstream> -f <type>\t Load the bitstream alone\n");
 		printf("-b <bitstream> -f <type> -o <dtbo> -n <region>\t Load the bitstream with dtbo\n");
 		printf("-R -n <region>\t\t Remove overlay from livetree\n");
-		printf("-remove <slot#>\t\t Unload bitstream and remove associated overlay\n");
+		printf("-unload <slot#>\t\t Unload bitstream and unload associated overlay\n");
 		printf("Options:\n\t -b <bitstream>\t Absolute path of bitstream file\n");
 		printf("\t -o <dtbo>\t Absolute path of device tree overlay file\n");
 		printf("\t -f <type>\t Bitstream type: <Full | Partial>\n");
