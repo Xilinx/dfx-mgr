@@ -1218,7 +1218,7 @@ char *listAccelerators(int flag)
 {
     int i,j;
 	uint8_t slot;
-    char msg[330];	/* compiler warning if 326 bytes or less */
+    char msg[350];
 	char res[8*1024];
     char show_slots[16];
 	int entry_count = 1;
@@ -1226,17 +1226,16 @@ char *listAccelerators(int flag)
 	int show_all = flag & LIST_PKG_SHOW_ALL;
 	int use_filter = flag & LIST_PKG_FILTER;
 
-	/* Full format (all columns) or simplified format (4 columns) */
 	const char *header_format, *sub_header_format, *entry_format;
 
 	if (show_all) {
-		header_format = "%-3s%-12s%-10s%-10s%-12s%-6s%-13s%-8s%s\n";
-		sub_header_format = "%-3s%-12s%-10s%-10s%-12s%-6s%-13s%-8s%s\n";
-		entry_format = "%2d %-12s%-10s%-10s%-12s%-6s%-13s%-8s%s\n";
+		header_format = "%-3s%-12s%-10s%-10s%-12s%-6s%-13s%-9s%-7s%s\n";
+		sub_header_format = "%-3s%-12s%-10s%-10s%-12s%-6s%-13s%-9s%-7s%s\n";
+		entry_format = "%2d %-12s%-10s%-10s%-12s%-6s%-13s%-9s%-7s%s\n";
 	} else {
-		header_format = "%-3s%-12s%-12s%-13s%s\n";
+		header_format = "%-3s%-12s%-12s%-8s%s\n";
 		sub_header_format = NULL;
-		entry_format = "%2d %-12s%-12s%-13s%s\n";
+		entry_format = "%2d %-12s%-12s%-8s%s\n";
 	}
 
 	memset(res,0, sizeof(res));
@@ -1252,33 +1251,35 @@ char *listAccelerators(int flag)
 
 	if (show_all) {
 		/* Row 1: Main headers */
-		snprintf(msg, sizeof(msg), header_format, "#", "Accel_type", "user_load", "user_load", "Base", "Pid",
-			"#slots", "#slot", "Accelerator");
+		snprintf(msg, sizeof(msg), header_format, "#", "accelType", "userLoad", "userLoad", "Base", "Pid",
+			"#slots", "slot", "load", "Accelerator");
 		strcat(res, msg);
 		/* Row 2: Sub-headers */
 		snprintf(msg, sizeof(msg), sub_header_format, "", "", "type", "Region", "", "",
-			"(RPU+PL+AIE)", "Handle", "");
+			"(RPU+PL+AIE)", "Location", "Handle", "");
 		strcat(res, msg);
 		/* Separator line */
 		snprintf(msg, sizeof(msg), header_format, "--", "-----------", "---------", "---------", "-----------",
-			"-----", "------------", "-------", "-----------");
+			"-----", "------------", "--------", "------", "-----------");
 		strcat(res, msg);
 	} else {
-		snprintf(msg, sizeof(msg), header_format, "#", "Accel_type", "Base",
-			"slot->handle", "Accelerator");
+		snprintf(msg, sizeof(msg), header_format, "#", "accelType", "Base",
+			"slotLoc", "Accelerator");
 		strcat(res, msg);
 		snprintf(msg, sizeof(msg), header_format, "--", "-----------", "-----------",
-			"------------", "---------");
+			"-------", "-----------");
 		strcat(res, msg);
 	}
     for (i = 0; i < MAX_WATCH; i++) {
         if (base_designs[i].base_path[0] != '\0' && base_designs[i].num_pl_slots > 0) {
             for (j = 0; j < RP_SLOTS_MAX; j++) {
                 if (base_designs[i].accel_list[j].path[0] != '\0') {
-                    char active_slots[16] = "";
+                    char slot_locs[16] = "";
+                    char load_handles[16] = "";
+                    const char *accel_name = base_designs[i].accel_list[j].name;
 
 			/* Apply filter: skip if boardName not found in accelerator name */
-			if (use_filter && !strcasestr(base_designs[i].accel_list[j].name, platform.boardName))
+			if (use_filter && !strcasestr(accel_name, platform.boardName))
 				continue;
 
 		    /*
@@ -1301,23 +1302,35 @@ char *listAccelerators(int flag)
 		    }
 
                     if (base_designs[i].active) {
-                        char tmp[10];
-                        for(slot = 0; slot < (base_designs[i].num_pl_slots +  base_designs[i].num_aie_slots); slot++) {
-                           if (base_designs[i].slots[slot] != NULL &&
-					   (base_designs[i].slots[slot]->is_aie || base_designs[i].slots[slot]->is_rpu) &&
-					   !strcmp(base_designs[i].slots[slot]->name, base_designs[i].accel_list[j].name)) {
-				    sprintf(tmp,"%d->%d,",slot, base_designs[i].slots[slot]->slot_handle);
-                                    strcat(active_slots,tmp);
+                        for (slot = 0; slot < (base_designs[i].num_pl_slots + base_designs[i].num_aie_slots); slot++) {
+                            slot_info_t *slot_info = base_designs[i].slots[slot];
+                            int matched = 0;
+
+                            if (slot_info == NULL)
+                                continue;
+
+                            if ((slot_info->is_aie || slot_info->is_rpu) &&
+                                !strcmp(slot_info->name, accel_name)) {
+                                matched = 1;
+                            } else if (!slot_info->is_aie && !slot_info->is_rpu &&
+                                       slot_info->accel != NULL &&
+                                       !strcmp(slot_info->accel->pkg->name, accel_name)) {
+                                matched = 1;
                             }
-                            else if (base_designs[i].slots[slot] != NULL && !base_designs[i].slots[slot]->is_aie &&
-                                     !base_designs[i].slots[slot]->is_rpu &&
-                                     base_designs[i].slots[slot]->accel != NULL &&
-				     !strcmp(base_designs[i].slots[slot]->accel->pkg->name, base_designs[i].accel_list[j].name)) {
-				    sprintf(tmp,"%d->%d,",slot, base_designs[i].slots[slot]->slot_handle);
-                                    strcat(active_slots,tmp);
+
+                            if (matched) {
+                                int len = strlen(slot_locs);
+                                snprintf(slot_locs + len, sizeof(slot_locs) - len, "%d,", slot);
+                                len = strlen(load_handles);
+                                snprintf(load_handles + len, sizeof(load_handles) - len, "%d,",
+                                         slot_info->slot_handle);
                             }
                         }
                     }
+                    if (slot_locs[0])
+                        slot_locs[strlen(slot_locs) - 1] = '\0';
+                    if (load_handles[0])
+                        load_handles[strlen(load_handles) - 1] = '\0';
                     if (strlen(base_designs[i].name) > MAX_BASE_NAME_DISPLAY_LEN) {
 			snprintf(truncated_base, sizeof(truncated_base),
 				"%.*s...", TRUNCATED_BASE_NAME_LEN, base_designs[i].name);
@@ -1333,26 +1346,24 @@ char *listAccelerators(int flag)
 					truncated_base,
 					pid_uid_check(&base_designs[i], j),
 					show_slots,
-					active_slots[0] ? active_slots : "-1",
-					base_designs[i].accel_list[j].name);
+					slot_locs[0] ? slot_locs : "-1",
+					load_handles[0] ? load_handles : "-1",
+					accel_name);
 			} else {
 				snprintf(msg, sizeof(msg), entry_format,
 					entry_count++,
 					base_designs[i].accel_list[j].accel_type,
 					truncated_base,
-					active_slots[0] ? active_slots : "-1",
-					base_designs[i].accel_list[j].name);
+					slot_locs[0] ? slot_locs : "-1",
+					accel_name);
 			}
                     strcat(res, msg);
                 }
             }
         }
         if (base_designs[i].is_user_load) {
-            char tmp[1024];
-
-            sprintf(tmp, "%s->%d",
-                base_designs[i].user_load_type ? base_designs[i].user_load_region : "0",
-                base_designs[i].user_load_handle);
+            char handle_str[16];
+            snprintf(handle_str, sizeof(handle_str), "%d", base_designs[i].user_load_handle);
 
 			if (show_all) {
 				snprintf(msg, sizeof(msg), entry_format,
@@ -1361,14 +1372,15 @@ char *listAccelerators(int flag)
 					base_designs[i].user_load_type ? "Partial" : "Full",
 					base_designs[i].user_load_region,
 					"-", "-", "-",
-					tmp,
+					"-",
+					handle_str,
 					base_designs[i].name);
 			} else {
 				snprintf(msg, sizeof(msg), entry_format,
 					entry_count++,
 					"-",
 					"-",
-					tmp,
+					"-",
 					base_designs[i].name);
 			}
             strcat(res, msg);
