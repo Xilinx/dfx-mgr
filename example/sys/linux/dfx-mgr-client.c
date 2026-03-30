@@ -85,6 +85,33 @@ static int format_load_request(int argc, char *argv[], char *data,
 	return 0;
 }
 
+static int print_load_result(const char *label, const char *id_str,
+			     const char *resp)
+{
+	long ret;
+
+	if (resp[0] != '-') {
+		printf("%s%s%s: Loaded with slot_handle %s\n",
+		       label, label[0] ? " " : "", id_str, resp);
+		return 0;
+	}
+
+	ret = strtol(&resp[1], NULL, 10);
+	printf("Load Error: ");
+	switch (ret) {
+	case 2:
+		printf("No package found for %s%s%s\n", label, label[0] ? " " : "", id_str);
+		break;
+	case 3:
+		printf("No empty slot for %s%s%s\n", label, label[0] ? " " : "", id_str);
+		break;
+	default:
+		printf("Unable to load %s%s%s\n", label, label[0] ? " " : "", id_str);
+		break;
+	}
+	return -(int)ret;
+}
+
 static int print_unload_result(const char *label, const char *id_str,
 			       const char *resp)
 {
@@ -131,21 +158,9 @@ int main(int argc, char *argv[])
 		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
 			return -1;
 		resp = strip_warning_prefix(recv_message.data);
-		if (resp[0] == '-'){
-			printf("Load Error: ");
-			ret = strtol(&resp[1], NULL, 10);
-			switch (ret) {
-				case 2: printf("No package found for ID %s\n", argv[2]);
-					break;
-				case 3: printf("No empty slot for ID %s\n", argv[2]);
-					break;
-				default: printf("Unable to load ID %s\n", argv[2]);
-					break;
-			}
-			return -ret;
-		} else {
-			printf("ID %s: Loaded with slot_handle %s\n", argv[2], resp);
-		}
+		ret = print_load_result("ID", argv[2], resp);
+		if (ret)
+			return ret;
 
 	} else if(!strcmp(argv[1],"-remove")) {
 		printf("WARNING: '-remove' is deprecated. Use '-unload' instead.\n");
@@ -166,6 +181,32 @@ int main(int argc, char *argv[])
 			return -1;
 		resp = strip_warning_prefix(recv_message.data);
 		return print_unload_result("ID", argv[2], resp);
+
+	} else if(!strcmp(argv[1],"-loadByName")) {
+		if (argc < 3) {
+			printf("-loadByName expects an accelerator name. Try again.\n");
+			return -1;
+		}
+		if (format_load_request(argc, argv, send_message.data,
+					 sizeof(send_message.data)) < 0)
+			return -1;
+		send_message.id = LOAD_ACCEL_BY_NAME;
+		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
+			return -1;
+		ret = print_load_result("", argv[2], recv_message.data);
+		if (ret)
+			return ret;
+
+	} else if(!strcmp(argv[1],"-unloadByName")) {
+		if (argc < 3) {
+			printf("-unloadByName expects an accelerator name. Try again.\n");
+			return -1;
+		}
+		snprintf(send_message.data, sizeof(send_message.data), "%s", argv[2]);
+		send_message.id = UNLOAD_ACCEL_BY_NAME;
+		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
+			return -1;
+		return print_unload_result("", argv[2], recv_message.data);
 
 	} else if(!strcmp(argv[1],"-listPackage")) {
 		int list_flag = 0;
@@ -228,9 +269,14 @@ int main(int argc, char *argv[])
 		printf("\t\t\t List locally downloaded accelerator packages\n");
 		printf("\t\t\t -all: shows all columns (default shows simplified view)\n");
 		printf("\t\t\t -filter: filters by board name (shows only matching designs)\n");
+		printf("\nID-based commands (use ID from -listPackage):\n");
 		printf("-load <ID> [-cma <device>]\t Load accelerator by ID\n");
 		printf("-unload <ID>\t\t\t Unload accelerator by ID (0 = base design)\n");
-		printf("-listUIO [<slot#> [UIOname]]\t\t list accelerator UIOs\n");
+		printf("\nName-based commands:\n");
+		printf("-loadByName <name> [-cma <device>]\t Load accelerator by name\n");
+		printf("-unloadByName <name>\t\t\t Unload accelerator by name\n");
+		printf("\nOther commands:\n");
+		printf("-listUIO [<slot#> [UIOname]]\t list accelerator UIOs\n");
 		printf("-listIRbuf [slot]\t\t list inter-RM buffer info\n");
 		printf("-setIRbuf a,b\t\t set RM stream from slot a to b\n");
 		printf("-allocBuffer <size> \t\t Allocate buffer of size and return its DMA fd and pa\n");

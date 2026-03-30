@@ -432,16 +432,20 @@ calling [libdfx](https://github.com/Xilinx/libdfx) fetch function.
 
 ```
 $ dfx-mgr-client -load <ID> [-cma <device>]
+$ dfx-mgr-client -loadByName <name> [-cma <device>]
 ```
 
 **Options:**
-- `<ID>` - Numeric ID from `-listPackage` output (required)
+- `<ID>` - Numeric ID from `-listPackage` output
+- `<name>` - Accelerator package name (as shown in the **Accelerator** column of `-listPackage`)
 - `-cma <device>` - Optional: Specify a custom CMA device path for DMA buffer allocations (e.g., `/dev/dma_heap/cma_reserved`)
 
 **Examples:**
 ```
 $ dfx-mgr-client -load 4
 $ dfx-mgr-client -load 4 -cma /dev/dma_heap/cma_reserved
+$ dfx-mgr-client -loadByName rp0rm0
+$ dfx-mgr-client -loadByName rp0rm0 -cma /dev/dma_heap/cma_reserved
 ```
 
 When DFX-MGR successfully loads an accelerator to one of the slots, `-listPackage` output would show the active slot and handle.
@@ -456,15 +460,18 @@ When DFX-MGR successfully loads an accelerator to one of the slots, `-listPackag
 
 ```
 $ dfx-mgr-client -unload <ID>
+$ dfx-mgr-client -unloadByName <name>
 ```
 
 **Options:**
 - `<ID>` - Numeric ID from `-listPackage` output. Use `0` to unload the base design.
+- `<name>` - Name of the currently loaded accelerator to unload. The daemon searches active RPU base slots, user-loaded entries, and PL base slots for the first loaded instance matching the given name.
 
 **Examples:**
 ```
 $ dfx-mgr-client -unload 4
-$ dfx-mgr-client -unload 0    # unload base design
+$ dfx-mgr-client -unload 0              # unload base design
+$ dfx-mgr-client -unloadByName rp0rm0
 ```
 
 ## Lightweight use cases

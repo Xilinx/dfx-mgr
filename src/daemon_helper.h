@@ -31,7 +31,7 @@ int load_accelerator(const char *accel_name, char *cma_path);
 int load_accelerator_by_id(int id, char *cma_path);
 int unload_accelerator(int slot);
 int unload_accelerator_by_id(int id);
-
+int unload_accelerator_by_name(const char *name);
 bool is_pkg_listing_dirty(void);
 void allocBuffer(uint64_t size);
 void sendBuff(uint64_t size);

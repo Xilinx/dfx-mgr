@@ -203,6 +203,26 @@ process_dfx_req(int fd, fd_set *fdset)
 			DFX_ERR("UNLOAD_ACCEL_BY_ID write(%d)", fd);
 		break;
 
+	case LOAD_ACCEL_BY_NAME:
+		tmp = strdup(recv_msg.data);
+		accel_name = strtok(tmp, ":");
+		cma_path = strtok(NULL, ":");
+		DFX_PR("daemon loading accel by name %s", accel_name);
+		slot = load_accelerator(accel_name, cma_path);
+		send_msg.size = 1 + sprintf(send_msg.data, "%d", slot);
+		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
+			DFX_ERR("LOAD_ACCEL_BY_NAME write(%d)", fd);
+		free(tmp);
+		break;
+
+	case UNLOAD_ACCEL_BY_NAME:
+		DFX_PR("daemon unloading accel by name %s", recv_msg.data);
+		ret = unload_accelerator_by_name(recv_msg.data);
+		send_msg.size = 1 + sprintf(send_msg.data, "%d", ret);
+		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
+			DFX_ERR("UNLOAD_ACCEL_BY_NAME write(%d)", fd);
+		break;
+
 	default:
 		send_msg.size = 1 + sprintf(send_msg.data,
 				"Unsupported message id %d", recv_msg.id);

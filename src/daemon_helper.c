@@ -695,6 +695,30 @@ int unload_accelerator(int slot_handle)
 	return ret;
 }
 
+static int find_slot_handle_by_name(const char *name)
+{
+	struct basePLDesign *rpu_base = platform.active_rpu_base;
+	struct basePLDesign *base = platform.active_base;
+
+	if (rpu_base && rpu_base->slots) {
+		for (int i = 0; i < (rpu_base->num_pl_slots + rpu_base->num_aie_slots); i++) {
+			if (rpu_base->slots[i] && !strcmp(rpu_base->slots[i]->name, name))
+				return rpu_base->slots[i]->slot_handle;
+		}
+	}
+	for (int i = 0; i < MAX_WATCH; i++) {
+		if (base_designs[i].is_user_load && !strcmp(base_designs[i].name, name))
+			return base_designs[i].user_load_handle;
+	}
+	if (base && base->slots) {
+		for (int i = 0; i < (base->num_pl_slots + base->num_aie_slots); i++) {
+			if (base->slots[i] && !strcmp(base->slots[i]->name, name))
+				return base->slots[i]->slot_handle;
+		}
+	}
+	return -1;
+}
+
 /**
  * find_accel_by_list_id() - Find accelerator entry by its listPackage ID
  * @id: The list_id to search for
@@ -797,6 +821,26 @@ int unload_accelerator_by_id(int id)
 		return -1;
 	}
 	return unload_accelerator(result.slot_handle);
+}
+
+/**
+ * unload_accelerator_by_name() - Unload accelerator by name (first match)
+ * @name: Accelerator name to unload
+ *
+ * Walks active PL base, RPU base, and user_load entries to find the first
+ * loaded instance whose name matches, then unloads it.
+ *
+ * Return: 0 on success, -1 on failure
+ */
+int unload_accelerator_by_name(const char *name)
+{
+	int handle = find_slot_handle_by_name(name);
+
+	if (handle >= 0)
+		return unload_accelerator(handle);
+
+	DFX_ERR("No loaded accelerator found for name %s", name);
+	return -1;
 }
 
 void sendBuff(uint64_t size)
