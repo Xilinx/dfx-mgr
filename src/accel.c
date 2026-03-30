@@ -18,6 +18,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <dfx-mgr/user_load.h>
 
 void init_accel(acapd_accel_t *accel, acapd_accel_pkg_hd_t *pkg)
 {
@@ -50,11 +51,45 @@ int acapd_parse_config(acapd_accel_t *accel, const char *shell_config)
 
 static int get_fpga_flags(acapd_accel_t *accel)
 {
-	char cmd[FILENAME_MAX];
+	int flags = DFX_NORMAL_EN;
+	char *dtbo_path;
+	FILE *fp;
+	long size;
+	char *buf;
 
-	snprintf(cmd, sizeof(cmd), "grep -sq external-fpga-config %s/*.dtbo",
-		 accel->sys_info.tmp_dir);
-	return (system(cmd) == 0) ? DFX_EXTERNAL_CONFIG_EN : DFX_NORMAL_EN;
+	dtbo_path = find_overlay_file(accel->sys_info.tmp_dir);
+	if (!dtbo_path)
+		return DFX_NORMAL_EN;
+
+	fp = fopen(dtbo_path, "rb");
+	if (!fp) {
+		free_overlay_file_path(dtbo_path);
+		return DFX_NORMAL_EN;
+	}
+
+	fseek(fp, 0, SEEK_END);
+	size = ftell(fp);
+	rewind(fp);
+
+	if (size > 0) {
+		buf = malloc(size);
+		if (buf && fread(buf, 1, size, fp) == (size_t)size) {
+			const char *needle = "external-fpga-config";
+			size_t nlen = strlen(needle);
+
+			for (long i = 0; i <= size - (long)nlen; i++) {
+				if (memcmp(buf + i, needle, nlen) == 0) {
+					flags = DFX_EXTERNAL_CONFIG_EN;
+					break;
+				}
+			}
+		}
+		free(buf);
+	}
+
+	fclose(fp);
+	free_overlay_file_path(dtbo_path);
+	return flags;
 }
 
 int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int async)

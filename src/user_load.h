@@ -32,6 +32,8 @@ void user_load_init_accel(acapd_accel_t *pl_accel,
 			  acapd_accel_pkg_hd_t *pkg,
 			  int slot_num, const char *accel_type);
 void remove_overlay_dir(const char *dir);
+char *find_overlay_file(const char *path);
+void free_overlay_file_path(char *path);
 
 #ifdef __cplusplus
 }

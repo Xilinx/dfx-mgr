@@ -285,13 +285,23 @@ static char *find_bitstream_file(const char *path)
  *
  * Searches for overlay files with extension: .dtbo
  *
- * Return: allocated string with full file path on success,
- *         NULL if no overlay file found
+ * Return: heap-allocated full path on success, NULL if no overlay file found.
+ *         Caller must release with free_overlay_file_path() only (pairs with
+ *         this allocator).
  */
-static char *find_overlay_file(const char *path)
+char *find_overlay_file(const char *path)
 {
 	static const char *extension = ".dtbo";
 	return find_file_with_extensions(path, &extension, 1, "overlay", 0);
+}
+
+/**
+ * free_overlay_file_path() - release path from find_overlay_file()
+ * @path: pointer returned by find_overlay_file(), or NULL
+ */
+void free_overlay_file_path(char *path)
+{
+	free(path);
 }
 
 /**
@@ -382,8 +392,7 @@ int user_load_from_dir(const char *search_path,
 	ret = user_load_bitstream(bitstream, overlay, region, is_partial);
 
 	free(bitstream);
-	if (overlay)
-		free(overlay);
+	free_overlay_file_path(overlay);
 
 	return ret;
 }
