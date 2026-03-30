@@ -223,6 +223,15 @@ process_dfx_req(int fd, fd_set *fdset)
 			DFX_ERR("UNLOAD_ACCEL_BY_NAME write(%d)", fd);
 		break;
 
+	case UNLOAD_ACCEL_BY_HANDLE: ;
+		int handle = atoi(recv_msg.data);
+		DFX_PR("daemon unloading accel by handle %d", handle);
+		ret = unload_accelerator(handle);
+		send_msg.size = 1 + sprintf(send_msg.data, "%d", ret);
+		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
+			DFX_ERR("UNLOAD_ACCEL_BY_HANDLE write(%d)", fd);
+		break;
+
 	default:
 		send_msg.size = 1 + sprintf(send_msg.data,
 				"Unsupported message id %d", recv_msg.id);

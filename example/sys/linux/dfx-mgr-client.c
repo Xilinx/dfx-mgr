@@ -208,6 +208,21 @@ int main(int argc, char *argv[])
 			return -1;
 		return print_unload_result("", argv[2], recv_message.data);
 
+	} else if(!strcmp(argv[1],"-unloadByHandle")) {
+		if (argc < 3) {
+			printf("-unloadByHandle expects a slot handle number. Try again.\n");
+			return -1;
+		}
+		if (validate_numeric_arg(argv[2], -1) < 0) {
+			printf("Error: -unloadByHandle expects a numeric slot handle.\n");
+			return -1;
+		}
+		snprintf(send_message.data, sizeof(send_message.data), "%s", argv[2]);
+		send_message.id = UNLOAD_ACCEL_BY_HANDLE;
+		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
+			return -1;
+		return print_unload_result("handle", argv[2], recv_message.data);
+
 	} else if(!strcmp(argv[1],"-listPackage")) {
 		int list_flag = 0;
 
