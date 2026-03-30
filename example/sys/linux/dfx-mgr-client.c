@@ -21,6 +21,82 @@
 #include <dfx-mgr/daemon_helper.h>
 #include <dfx-mgr/dfxmgr_client.h>
 
+/**
+ * strip_warning_prefix() - Strip and print any pkg-dirty warning prefix from daemon response
+ * @data: Response data buffer (modified in-place if warning found)
+ *
+ * If the response starts with "WARNING:", prints the warning and returns
+ * a pointer past the warning to the actual result value.
+ *
+ * Return: pointer to the actual result within data
+ */
+static char *strip_warning_prefix(char *data)
+{
+	if (strncmp(data, "WARNING:", 8) != 0)
+		return data;
+
+	char *result_start = strrchr(data, ' ');
+	if (result_start) {
+		*result_start = '\0';
+		printf("%s\n", data);
+		return result_start + 1;
+	}
+	return data;
+}
+
+static int send_and_recv_msg(socket_t *gs, struct message *send_msg,
+		     struct message *recv_msg)
+{
+	send_msg->size = strlen(send_msg->data);
+	if (write(gs->sock_fd, send_msg, HEADERSIZE + send_msg->size) < 0) {
+		perror("write");
+		return -1;
+	}
+	if (read(gs->sock_fd, recv_msg, sizeof(struct message)) <= 0) {
+		perror("No message or read error");
+		return -1;
+	}
+	return 0;
+}
+
+static int validate_numeric_arg(const char *str, long min_val)
+{
+	char *endptr;
+	long val = strtol(str, &endptr, 10);
+	return (*endptr == '\0' && val >= min_val) ? 0 : -1;
+}
+
+static int format_load_request(int argc, char *argv[], char *data,
+				size_t data_size)
+{
+	char *cma_path = NULL;
+
+	if (argc >= 4 && !strcmp(argv[3], "-cma")) {
+		if (argc < 5) {
+			printf("Error: -cma option requires a path argument\n");
+			return -1;
+		}
+		cma_path = argv[4];
+	}
+	if (cma_path)
+		snprintf(data, data_size, "%s:%s", argv[2], cma_path);
+	else
+		snprintf(data, data_size, "%s", argv[2]);
+	return 0;
+}
+
+static int print_unload_result(const char *label, const char *id_str,
+			       const char *resp)
+{
+	const char *sep = label[0] ? " " : "";
+	if (resp[0] == '0') {
+		printf("unload %s%s%s returns: %s (Ok)\n", label, sep, id_str, resp);
+		return 0;
+	}
+	printf("unload %s%s%s returns: %s (Error)\n", label, sep, id_str, resp);
+	return -1;
+}
+
 int main(int argc, char *argv[])
 {
 	socket_t gs;
@@ -29,7 +105,7 @@ int main(int argc, char *argv[])
 	int user_load_flag = 0;
 	int user_unload_flag = 0;
 	char *binfile = NULL, *overlay = NULL, *region = NULL;
-	char *cma_path = NULL;
+	char *resp;
 
 	memset (&send_message, '\0', sizeof(struct message));
 	memset (&recv_message, '\0', sizeof(struct message));
@@ -41,48 +117,34 @@ int main(int argc, char *argv[])
 
 	if (!strcmp(argv[1],"-load")) {
 		if (argc < 3) {
-			printf("-load expects a package name. Try again.\n");
+			printf("-load expects an ID. Try again.\n");
 			return -1;
 		}
-		/* Check for optional -cma argument */
-		if (argc >= 4 && !strcmp(argv[3], "-cma")) {
-			if (argc < 5) {
-				printf("Error: -cma option requires a path argument\n");
-				return -1;
-			}
-			cma_path = argv[4];
-		}
-		if (cma_path) {
-			snprintf(send_message.data, sizeof(send_message.data), "%s:%s", argv[2], cma_path);
-		} else {
-			snprintf(send_message.data, sizeof(send_message.data), "%s", argv[2]);
-		}
-		send_message.id = LOAD_ACCEL;
-		send_message.size = strlen(send_message.data);
-		if (write(gs.sock_fd, &send_message, HEADERSIZE + send_message.size) < 0){
-			perror("write");
+		if (validate_numeric_arg(argv[2], 1) < 0) {
+			printf("Error: -load expects a numeric ID. Use -loadByName for name-based loading.\n");
 			return -1;
 		}
-		ret = read(gs.sock_fd, &recv_message, sizeof (struct message));
-		if (ret <= 0){
-			perror("No message or read error");
+		if (format_load_request(argc, argv, send_message.data,
+					 sizeof(send_message.data)) < 0)
 			return -1;
-		}
-		if (recv_message.data[0] == '-'){
-			printf("Load Error: %s: ", recv_message.data);
-			ret = strtol(&recv_message.data[1], NULL, 10);
+		send_message.id = LOAD_ACCEL_BY_ID;
+		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
+			return -1;
+		resp = strip_warning_prefix(recv_message.data);
+		if (resp[0] == '-'){
+			printf("Load Error: ");
+			ret = strtol(&resp[1], NULL, 10);
 			switch (ret) {
-				case 2: printf("No package found for %s\n", argv[2]);
+				case 2: printf("No package found for ID %s\n", argv[2]);
 					break;
-				case 3: printf("No empty slot for %s\n", argv[2]);
+				case 3: printf("No empty slot for ID %s\n", argv[2]);
 					break;
-				default: printf("Unable to load %s\n", argv[2]);
+				default: printf("Unable to load ID %s\n", argv[2]);
 					break;
 			}
-			/* return error code when load error happened */
 			return -ret;
 		} else {
-			printf("%s: Loaded with slot_handle %s\n", argv[2], recv_message.data);
+			printf("ID %s: Loaded with slot_handle %s\n", argv[2], resp);
 		}
 
 	} else if(!strcmp(argv[1],"-remove")) {
@@ -90,27 +152,20 @@ int main(int argc, char *argv[])
 		return -1;
 
 	} else if(!strcmp(argv[1],"-unload")) {
-		/* If no slot number provided default to 0*/
-		char *slot = (argc < 3) ? "0" : argv[2];
-		send_message.size = 1 + sprintf(send_message.data, "%s", slot);
-		send_message.id = UNLOAD_ACCEL;
-		if (write(gs.sock_fd, &send_message, HEADERSIZE + send_message.size) < 0){
-			perror("write");
+		if (argc < 3) {
+			printf("-unload expects an ID (from -listPackage, 0 = base design). Try again.\n");
 			return -1;
 		}
-		ret = read(gs.sock_fd, &recv_message, sizeof (struct message));
-		if (ret <= 0){
-			perror("No message or read error");
+		if (validate_numeric_arg(argv[2], 0) < 0) {
+			printf("Error: -unload expects a numeric ID (0 = base design). Use -unloadByName.\n");
 			return -1;
 		}
-		if (recv_message.data[0] == '0'){
-			printf("unload from slot %s returns: %s (Ok)\n", slot,
-					recv_message.data);
-		} else {
-			printf("unload from slot %s returns: %s (Error)\n", slot,
-					recv_message.data);
+		snprintf(send_message.data, sizeof(send_message.data), "%s", argv[2]);
+		send_message.id = UNLOAD_ACCEL_BY_ID;
+		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
 			return -1;
-		}
+		resp = strip_warning_prefix(recv_message.data);
+		return print_unload_result("ID", argv[2], resp);
 
 	} else if(!strcmp(argv[1],"-listPackage")) {
 		int list_flag = 0;
@@ -126,16 +181,8 @@ int main(int argc, char *argv[])
 
 		send_message.id = LIST_PACKAGE;
 		send_message.flags = list_flag;
-		send_message.size = 0;
-		if (write(gs.sock_fd, &send_message, HEADERSIZE + send_message.size) == -1){
-			perror("write");
+		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
 			return -1;
-		}
-		ret = read(gs.sock_fd, &recv_message, sizeof (struct message));
-		if (ret <= 0){
-			perror("No message or read error");
-			return -1;
-		}
 		printf("%s",recv_message.data);
 
 	} else if(!strcmp(argv[1],"-listUIO")) {
@@ -148,30 +195,15 @@ int main(int argc, char *argv[])
 		send_message._u.slot = (argc == 3 || argc == 4)
 			? 0xff & strtol(argv[2], NULL, 10)
 			: 0;
-		send_message.size = 1 + sprintf(send_message.data, "%s", uio);
+		sprintf(send_message.data, "%s", uio);
 		send_message.id = LIST_ACCEL_UIO;
-		if (write(gs.sock_fd, &send_message, HEADERSIZE + send_message.size) == -1){
-			perror("write");
+		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
 			return -1;
-		}
-		ret = read(gs.sock_fd, &recv_message, sizeof (struct message));
-		if (ret <= 0){
-			perror("No message or read error");
-			return -1;
-		}
 		printf("%s\n", recv_message.data);
 	} else if (!strcmp(argv[1], "-listIRbuf")) {
 		send_message.id = SIHA_IR_LIST;
-		send_message.size = 0;
-		if (write(gs.sock_fd, &send_message, HEADERSIZE + send_message.size) == -1) {
-			perror("write");
+		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
 			return -1;
-		}
-		ret = read(gs.sock_fd, &recv_message, sizeof(struct message));
-		if (ret <= 0) {
-			perror("No message or read error");
-			return -1;
-		}
 		printf("%s\n", recv_message.data);
 	} else if (!strcmp(argv[1], "-setIRbuf")) {
 		if (argc < 3) {
@@ -179,17 +211,9 @@ int main(int argc, char *argv[])
 			return -1;
 		}
 		send_message.id = SIHA_IR_SET;
-		send_message.size = strlen(argv[2]);
-		memcpy(send_message.data, argv[2], send_message.size);
-		if (write(gs.sock_fd, &send_message, HEADERSIZE + send_message.size) == -1) {
-			perror("write");
+		snprintf(send_message.data, sizeof(send_message.data), "%s", argv[2]);
+		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
 			return -1;
-		}
-		ret = read(gs.sock_fd, &recv_message, sizeof(struct message));
-		if (ret <= 0) {
-			perror("No message or read error");
-			return -1;
-		}
 		printf("%s\n", recv_message.data);
 	} else if(!strcmp(argv[1],"-allocBuffer")) {
 	} else if(!strcmp(argv[1],"-freeBuffer")) {
@@ -199,14 +223,13 @@ int main(int argc, char *argv[])
 	} else if(!strcmp(argv[1],"-getClockFD")) {
 	} else if(!strcmp(argv[1],"-h") || !strcmp(argv[1],"--help")) {
 		printf("Usage dfx-mgr-client COMMAND\n");
-		printf("Commmands\n");
+		printf("Commands\n");
 		printf("-listPackage [-all] [-filter]\n");
-		printf("\t\t\t List locally downloaded accelerator package\n");
+		printf("\t\t\t List locally downloaded accelerator packages\n");
 		printf("\t\t\t -all: shows all columns (default shows simplified view)\n");
 		printf("\t\t\t -filter: filters by board name (shows only matching designs)\n");
-		printf("-load <accel_name> [-cma <device>]\t Load the provided accelerator package\n");
-		printf("\t Optional: -cma <device> specifies custom CMA device path\n");
-		printf("-unload <slot#>\t\t Unload package previously programmed\n");
+		printf("-load <ID> [-cma <device>]\t Load accelerator by ID\n");
+		printf("-unload <ID>\t\t\t Unload accelerator by ID (0 = base design)\n");
 		printf("-listUIO [<slot#> [UIOname]]\t\t list accelerator UIOs\n");
 		printf("-listIRbuf [slot]\t\t list inter-RM buffer info\n");
 		printf("-setIRbuf a,b\t\t set RM stream from slot a to b\n");
@@ -224,7 +247,7 @@ int main(int argc, char *argv[])
 		printf("-b <bitstream> -f <type>\t Load the bitstream alone\n");
 		printf("-b <bitstream> -f <type> -o <dtbo> -n <region>\t Load the bitstream with dtbo\n");
 		printf("-R -n <region>\t\t Remove overlay from livetree\n");
-		printf("-unload <slot#>\t\t Unload bitstream and unload associated overlay\n");
+		printf("-unload <ID>\t\t Unload bitstream and unload associated overlay\n");
 		printf("Options:\n\t -b <bitstream>\t Absolute path of bitstream file\n");
 		printf("\t -o <dtbo>\t Absolute path of device tree overlay file\n");
 		printf("\t -f <type>\t Bitstream type: <Full | Partial>\n");
@@ -279,17 +302,8 @@ int main(int argc, char *argv[])
 
 			send_message.id = USER_UNLOAD;
 			sprintf(send_message.data, "%s", (region == NULL) ? "full" : region);
-			send_message.size = strlen(send_message.data);
-
-			if (write(gs.sock_fd, &send_message, HEADERSIZE + send_message.size) < 0){
-				perror("write");
+			if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
 				return -1;
-			}
-			ret = read(gs.sock_fd, &recv_message, sizeof (struct message));
-			if (ret <= 0){
-				perror("No message or read error");
-				return -1;
-			}
 			if (recv_message.data[0] == '0'){
 				printf("Removed device tree overlay: %s\n", send_message.data);
 			} else {
@@ -315,17 +329,8 @@ int main(int argc, char *argv[])
 				sprintf(send_message.data, "%s : %s : %s", binfile, overlay, (region == NULL) ? "full" : region);
 			}
 			send_message.flags = user_load_flag;
-			send_message.size = strlen(send_message.data);
-
-			if (write(gs.sock_fd, &send_message, HEADERSIZE + send_message.size) < 0){
-				perror("write");
+			if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
 				return -1;
-			}
-			ret = read(gs.sock_fd, &recv_message, sizeof (struct message));
-			if (ret <= 0){
-				perror("No message or read error");
-				return -1;
-			}
 			if (recv_message.data[0] == '-'){
 				printf("Load Error: %s\n", recv_message.data);
 				return -1;

@@ -33,6 +33,7 @@
 #include <libdfx.h>
 #include <ctype.h>
 #include <inttypes.h>
+#include <stdatomic.h>
 
 struct daemon_config config;
 struct watch *active_watch = NULL;
@@ -40,7 +41,14 @@ struct basePLDesign *base_designs = NULL;
 static int inotifyFd;
 platform_info_t platform;
 sem_t mutex;
+static _Atomic bool pkg_listing_dirty = false;
 static void firmware_dir_walk(void);
+static void assign_list_ids(void);
+
+bool is_pkg_listing_dirty(void)
+{
+	return pkg_listing_dirty;
+}
 
 struct watch {
     int wd;
@@ -249,7 +257,7 @@ static int assign_slot(struct basePLDesign *base,
 	return slot->slot_handle;
 }
 
-int load_accelerator(const char *accel_name, char *cma_path)
+static int load_accelerator_core(struct basePLDesign *base, const char *accel_name, char *cma_path)
 {
     int i, ret;
     int rv = -DFX_MGR_LOAD_ERROR;
@@ -257,19 +265,11 @@ int load_accelerator(const char *accel_name, char *cma_path)
     char shell_path[600];
     acapd_accel_t *pl_accel = (acapd_accel_t *)calloc(1, sizeof(acapd_accel_t));
     acapd_accel_pkg_hd_t *pkg = (acapd_accel_pkg_hd_t *)calloc(1, sizeof(acapd_accel_pkg_hd_t));
-    struct basePLDesign *base;
     slot_info_t *slot = (slot_info_t *)malloc(sizeof(slot_info_t));
     accel_info_t *accel_info = NULL;
 	const char *resolved_cma = NULL;
 
     slot->accel = NULL;
-    firmware_dir_walk();
-    base = findBaseDesign(accel_name);
-    if(base == NULL) {
-        DFX_ERR("No package found for %s", accel_name);
-        rv = -DFX_MGR_NO_PACKAGE_FOUND_ERROR;
-        goto out;
-    }
     snprintf(shell_path, sizeof(shell_path), "%s/shell.json", base->base_path);
 
 	/* Resolve CMA path priority: CLI > config > default */
@@ -552,6 +552,19 @@ out:
     return rv;
 }
 
+int load_accelerator(const char *accel_name, char *cma_path)
+{
+    struct basePLDesign *base;
+
+    firmware_dir_walk();
+    base = findBaseDesign(accel_name);
+    if (base == NULL) {
+        DFX_ERR("No package found for %s", accel_name);
+        return -DFX_MGR_NO_PACKAGE_FOUND_ERROR;
+    }
+    return load_accelerator_core(base, accel_name, cma_path);
+}
+
 static int
 unload_accel_base(void)
 {
@@ -680,6 +693,110 @@ int unload_accelerator(int slot_handle)
         }
 
 	return ret;
+}
+
+/**
+ * find_accel_by_list_id() - Find accelerator entry by its listPackage ID
+ * @id: The list_id to search for
+ * @result: Output struct populated on success
+ *
+ * Return: 0 on success, -1 if not found
+ */
+static int find_accel_by_list_id(int id, list_id_result_t *result)
+{
+	for (int i = 0; i < MAX_WATCH; i++) {
+		if (base_designs[i].base_path[0] != '\0' && base_designs[i].num_pl_slots > 0) {
+			for (int j = 0; j < RP_SLOTS_MAX; j++) {
+				if (base_designs[i].accel_list[j].path[0] != '\0' &&
+				    base_designs[i].accel_list[j].list_id == id) {
+					result->base = &base_designs[i];
+					result->accel = &base_designs[i].accel_list[j];
+					result->is_user_load = 0;
+					result->slot_handle = -1;
+					if (base_designs[i].slots) {
+						int total = base_designs[i].num_pl_slots + base_designs[i].num_aie_slots;
+						for (int k = 0; k < total; k++) {
+							if (base_designs[i].slots[k] &&
+							    !strcmp(base_designs[i].slots[k]->name,
+								    base_designs[i].accel_list[j].name)) {
+								result->slot_handle = base_designs[i].slots[k]->slot_handle;
+								break;
+							}
+						}
+					}
+					return 0;
+				}
+			}
+		}
+		if (base_designs[i].is_user_load && base_designs[i].list_id == id) {
+			result->base = &base_designs[i];
+			result->accel = NULL;
+			result->is_user_load = 1;
+			result->slot_handle = base_designs[i].user_load_handle;
+			return 0;
+		}
+	}
+	return -1;
+}
+
+/**
+ * load_accelerator_by_id() - Load accelerator by its listPackage ID
+ * @id: The list_id from listPackage
+ * @cma_path: Optional CMA device path (can be NULL)
+ *
+ * Resolves the ID to the exact base design via find_accel_by_list_id(),
+ * then calls load_accelerator_core() directly, bypassing name-based
+ * lookup to avoid ambiguity when multiple accelerators share the same name.
+ *
+ * Return: slot_handle on success, negative error code on failure
+ */
+int load_accelerator_by_id(int id, char *cma_path)
+{
+	list_id_result_t result;
+
+	firmware_dir_walk();
+
+	if (find_accel_by_list_id(id, &result) != 0) {
+		DFX_ERR("No package found for ID %d", id);
+		return -DFX_MGR_NO_PACKAGE_FOUND_ERROR;
+	}
+
+	if (result.is_user_load) {
+		DFX_ERR("ID %d is a user-loaded design, cannot load via -load", id);
+		return -DFX_MGR_LOAD_ERROR;
+	}
+
+	return load_accelerator_core(result.base, result.accel->name, cma_path);
+}
+
+/**
+ * unload_accelerator_by_id() - Unload accelerator by its listPackage ID
+ * @id: The list_id from listPackage
+ *
+ * Resolves the ID to find the loaded instance's slot_handle,
+ * then delegates to unload_accelerator().
+ *
+ * Return: 0 on success, -1 on failure
+ */
+int unload_accelerator_by_id(int id)
+{
+	list_id_result_t result;
+
+	if (id == 0)
+		return unload_accel_base();
+
+	firmware_dir_walk();
+
+	if (find_accel_by_list_id(id, &result) != 0) {
+		DFX_ERR("No package found for ID %d", id);
+		return -1;
+	}
+	if (result.slot_handle < 0) {
+		DFX_ERR("ID %d (%s) is not currently loaded", id,
+			result.accel ? result.accel->name : "user_load");
+		return -1;
+	}
+	return unload_accelerator(result.slot_handle);
 }
 
 void sendBuff(uint64_t size)
@@ -1214,6 +1331,38 @@ pid_uid_check(struct basePLDesign *base, int accel_idx)
 	return str;
 }
 
+/**
+ * assign_list_ids() - Assign sequential IDs to all listPackage entries
+ *
+ * Iterates base_designs[] in the same order as listAccelerators() and stamps
+ * a sequential list_id on each entry. Called after package list changes.
+ */
+static void assign_list_ids(void)
+{
+	int id = 1;
+
+	if (base_designs == NULL)
+		return;
+
+	for (int i = 0; i < MAX_WATCH; i++) {
+		if (base_designs[i].base_path[0] != '\0' && base_designs[i].num_pl_slots > 0) {
+			for (int j = 0; j < RP_SLOTS_MAX; j++) {
+				if (base_designs[i].accel_list[j].path[0] != '\0')
+					base_designs[i].accel_list[j].list_id = id++;
+			}
+		}
+		if (base_designs[i].is_user_load)
+			base_designs[i].list_id = id++;
+	}
+}
+
+static void mark_pkg_listing_dirty(void)
+{
+	assign_list_ids();
+	pkg_listing_dirty = true;
+	DFX_PR("Package list updated - IDs have been reassigned");
+}
+
 char *listAccelerators(int flag)
 {
     int i,j;
@@ -1221,7 +1370,6 @@ char *listAccelerators(int flag)
     char msg[350];
 	char res[8*1024];
     char show_slots[16];
-	int entry_count = 1;
 	char truncated_base[TRUNCATED_BASE_BUFFER_SIZE];
 	int show_all = flag & LIST_PKG_SHOW_ALL;
 	int use_filter = flag & LIST_PKG_FILTER;
@@ -1240,6 +1388,8 @@ char *listAccelerators(int flag)
 
 	memset(res,0, sizeof(res));
 	firmware_dir_walk();
+	assign_list_ids();
+	pkg_listing_dirty = false;
 
 	/* Check if filtering should be applied */
 	if (use_filter &&
@@ -1251,7 +1401,7 @@ char *listAccelerators(int flag)
 
 	if (show_all) {
 		/* Row 1: Main headers */
-		snprintf(msg, sizeof(msg), header_format, "#", "accelType", "userLoad", "userLoad", "Base", "Pid",
+		snprintf(msg, sizeof(msg), header_format, "ID", "accelType", "userLoad", "userLoad", "Base", "Pid",
 			"#slots", "slot", "load", "Accelerator");
 		strcat(res, msg);
 		/* Row 2: Sub-headers */
@@ -1263,7 +1413,7 @@ char *listAccelerators(int flag)
 			"-----", "------------", "--------", "------", "-----------");
 		strcat(res, msg);
 	} else {
-		snprintf(msg, sizeof(msg), header_format, "#", "accelType", "Base",
+		snprintf(msg, sizeof(msg), header_format, "ID", "accelType", "Base",
 			"slotLoc", "Accelerator");
 		strcat(res, msg);
 		snprintf(msg, sizeof(msg), header_format, "--", "-----------", "-----------",
@@ -1340,7 +1490,7 @@ char *listAccelerators(int flag)
 
 			if (show_all) {
 				snprintf(msg, sizeof(msg), entry_format,
-					entry_count++,
+					base_designs[i].accel_list[j].list_id,
 					base_designs[i].accel_list[j].accel_type,
 					"-", "-",
 					truncated_base,
@@ -1351,7 +1501,7 @@ char *listAccelerators(int flag)
 					accel_name);
 			} else {
 				snprintf(msg, sizeof(msg), entry_format,
-					entry_count++,
+					base_designs[i].accel_list[j].list_id,
 					base_designs[i].accel_list[j].accel_type,
 					truncated_base,
 					slot_locs[0] ? slot_locs : "-1",
@@ -1367,7 +1517,7 @@ char *listAccelerators(int flag)
 
 			if (show_all) {
 				snprintf(msg, sizeof(msg), entry_format,
-					entry_count++,
+					base_designs[i].list_id,
 					"-",
 					base_designs[i].user_load_type ? "Partial" : "Full",
 					base_designs[i].user_load_region,
@@ -1377,7 +1527,7 @@ char *listAccelerators(int flag)
 					base_designs[i].name);
 			} else {
 				snprintf(msg, sizeof(msg), entry_format,
-					entry_count++,
+					base_designs[i].list_id,
 					"-",
 					"-",
 					"-",
@@ -1920,6 +2070,12 @@ int user_load(const int flag, const char *binfile, const char *overlay, const ch
 				platform.active_base->active += 1;
 			else
 				platform.active_base = &base_designs[i];
+
+			/* User load: new user-loaded design is added to base_designs.
+			 * Reassign list IDs and mark the package listing dirty so clients know
+			 * to re-list before using load/unload-by-ID.
+			 */
+			mark_pkg_listing_dirty();
 		}
 	}
 
@@ -2015,7 +2171,14 @@ int user_unload(const int handle)
 	base_designs[i].base_path[0] = '\0';
 	base_designs[i].is_user_load = 0;
 	base_designs[i].user_load_handle = -1;
+	base_designs[i].list_id = 0;
 	platform.available_slot_handle[handle] = 0;
+
+	/* User unload: user-loaded entry is removed from base_designs.
+	 * Reassign list IDs and mark the package listing dirty so clients know
+	 * to re-list before using load/unload-by-ID.
+	 */
+	mark_pkg_listing_dirty();
 
 	return 0;
 }
@@ -2063,6 +2226,7 @@ void *threadFunc([[maybe_unused]] void *_)
         DFX_ERR("inotify_init");
 
     firmware_dir_walk();
+	assign_list_ids();
 	/* Done parsing on target accelerators, now load a default one if present in config file */
 	sem_post(&mutex);
 
@@ -2099,13 +2263,15 @@ void *threadFunc([[maybe_unused]] void *_)
 					struct watch *w = get_watch(event->wd);
 					if (w == NULL)
 						break;
+					mark_pkg_listing_dirty();
 					base = findBaseDesign_path(w->path);
 					if (base == NULL)
 						break;
 					sprintf(fname,"%s/%s",w->path,"shell.json");
 					ret = initBaseDesign(base, fname);
-					if (ret == 0)
+					if (ret == 0) {
 						parse_packages(base,w->name, w->path);
+					}
 				}
 				else if(!strcmp(event->name,"accel.json")) {
 					struct watch *w, *parent_watch;
@@ -2121,6 +2287,7 @@ void *threadFunc([[maybe_unused]] void *_)
 						break;
 					}
 
+					mark_pkg_listing_dirty();
 					base = findBaseDesign_path(parent_watch->parent_path);
 					if (base == NULL) {
 						break;
@@ -2142,6 +2309,7 @@ void *threadFunc([[maybe_unused]] void *_)
 				else
 					remove_base_design(new_dir, w->path, 0);
                 remove_watch(new_dir);
+				mark_pkg_listing_dirty();
             }
             else if((event->mask & IN_MOVED_FROM) && (event->mask & IN_ISDIR)) {
 				struct watch *w = get_watch(event->wd);
@@ -2153,6 +2321,7 @@ void *threadFunc([[maybe_unused]] void *_)
 				else
 					remove_base_design(new_dir, w->path, 0);
 				remove_watch(new_dir);
+				mark_pkg_listing_dirty();
             }
             else if(event->mask & IN_MOVED_TO){
 				/*
@@ -2170,13 +2339,15 @@ void *threadFunc([[maybe_unused]] void *_)
 					} else {
 						sprintf(new_dir,"%s",w->path);
 					}
+					mark_pkg_listing_dirty();
 					base = findBaseDesign_path(new_dir);
 					if (base == NULL)
 						break;
 					sprintf(fname,"%s/%s",new_dir,"shell.json");
 					ret = initBaseDesign(base, fname);
-					if (ret == 0)
+					if (ret == 0) {
 						parse_packages(base,w->name, new_dir);
+					}
 				}
             }
             p += sizeof(struct inotify_event) + event->len;

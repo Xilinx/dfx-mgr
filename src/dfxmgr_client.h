@@ -40,6 +40,8 @@ enum dfx_mgr_request {
 	SIHA_IR_SET,
 	USER_LOAD,
 	USER_UNLOAD,
+	LOAD_ACCEL_BY_ID,
+	UNLOAD_ACCEL_BY_ID,
 };
 
 #define MAX_CLIENTS 200

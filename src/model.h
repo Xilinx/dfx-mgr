@@ -92,6 +92,7 @@ typedef struct {
 	char parent_path[512];
 	int wd;
 	char accel_type[32];
+	int list_id;  /**< ID shown in listPackage, assigned by assign_list_ids() */
 	union {
 		struct {
 			int slot_num; /**< Slot number for new dir structure (-1 for old) */
@@ -123,6 +124,7 @@ struct basePLDesign {
 	int user_load_type;          /* 0 for full, 1 for partial bitstream load */
 	int user_load_handle;        /* slot handle for user managed design */
 	char user_load_region[128];  /* full or partial reconfiguration region of FPGA in device tree */
+	int list_id;                 /* ID shown in listPackage for user_load entries */
 };
 
 typedef struct {
@@ -159,6 +161,13 @@ struct daemon_config {
 	char **eeprom_location;
 	int num_eeprom_location;
 };
+
+typedef struct {
+	struct basePLDesign *base;
+	accel_info_t *accel;  /* non-NULL for normal packages, NULL for user_load */
+	int is_user_load;
+	int slot_handle;      /* resolved slot_handle, -1 if not currently loaded */
+} list_id_result_t;
 
 #ifdef __cplusplus
 }

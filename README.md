@@ -293,7 +293,7 @@ $ dfx-mgr-client -listPackage [-all] [-filter]
 **Default Simplified View (4 columns):**
 ```
 $ dfx-mgr-client -listPackage
-#  Accel_type  Base        slot->handle Accelerator
+ID Accel_type  Base        slot->handle Accelerator
 -- ----------- ----------- ------------ ---------
  1 RPU         rpu         -1           vek280-r5-0-matrix-multiply
  2 XRT_FLAT    vek280-p... -1           vek280-pl-bram-gpio-fw
@@ -305,7 +305,7 @@ $ dfx-mgr-client -listPackage
 **Full View with -all flag:**
 ```
 $ dfx-mgr-client -listPackage -all
-#  Accel_type  user_load user_load Base        Pid   #slots       #slot   Accelerator
+ID Accel_type  user_load user_load Base        Pid   #slots       #slot   Accelerator
                type      Region                      (RPU+PL+AIE) Handle
 -- ----------- --------- --------- ----------- ----- ------------ ------- -----------
  1 RPU         -         -         rpu         no_id (2+0+0)      -1      vek280-r5-0-matrix-multiply
@@ -315,7 +315,8 @@ $ dfx-mgr-client -listPackage -all
  5 SIHA_PL_DFX -         -         static      no_id (0+2+0)      -1      rp0rm0
 ```
 
-In the output, XRT_FLAT designs show flat shell designs that do not have dynamic reconfigurable
+In the output, the **ID** column is a identifier used by `-load` and `-unload` commands.
+XRT_FLAT designs show flat shell designs that do not have dynamic reconfigurable
 partitions. SIHA_PL_DFX designs show DFX-based accelerators with reconfigurable partitions.
 The slot->handle column shows -1 when no accelerator is currently loaded to any slot.
 RPU entries show RPU firmware applications.
@@ -430,20 +431,20 @@ dfx-mgrd will use DFX_EXTERNAL_CONFIG_EN instead of the default DFX_NORMAL_EN fl
 calling [libdfx](https://github.com/Xilinx/libdfx) fetch function.
 
 ```
-$ dfx-mgr-client -load <accel_name> [-cma <device>]
+$ dfx-mgr-client -load <ID> [-cma <device>]
 ```
 
 **Options:**
-- `<accel_name>` - Name of the accelerator package to load (required)
+- `<ID>` - Numeric ID from `-listPackage` output (required)
 - `-cma <device>` - Optional: Specify a custom CMA device path for DMA buffer allocations (e.g., `/dev/dma_heap/cma_reserved`)
 
 **Examples:**
 ```
-$ dfx-mgr-client -load rp1rm0
-$ dfx-mgr-client -load rp1rm0 -cma /dev/dma_heap/cma_reserved
+$ dfx-mgr-client -load 4
+$ dfx-mgr-client -load 4 -cma /dev/dma_heap/cma_reserved
 ```
 
-When DFX-MGR successfully loads rp1rm0 accel to one of the slots, -listPackage output would show active slot as 0.
+When DFX-MGR successfully loads an accelerator to one of the slots, `-listPackage` output would show the active slot and handle.
 
 **CMA Path Priority:**
 1. Command-line argument (`-cma` option) - highest priority
@@ -451,11 +452,19 @@ When DFX-MGR successfully loads rp1rm0 accel to one of the slots, -listPackage o
 3. Default to standard paths:
     "/dev/dma_heap/reserved" or "/dev/dma_heap/cma_reserved@800000000"
 
-### Command to unload accelerator from the slot.
-If there is no accel in the mentioned slot, this command will do nothing.
+### Command to unload accelerator.
 
 ```
-$ dfx-mgr-client -unload 0
+$ dfx-mgr-client -unload <ID>
+```
+
+**Options:**
+- `<ID>` - Numeric ID from `-listPackage` output. Use `0` to unload the base design.
+
+**Examples:**
+```
+$ dfx-mgr-client -unload 4
+$ dfx-mgr-client -unload 0    # unload base design
 ```
 
 ## Lightweight use cases
@@ -493,9 +502,9 @@ $ dfx-mgr-client -unload 0
 
 4. Command for unloading bitstream.
 ```
- dfx-mgr-client -unload <handle>
+ dfx-mgr-client -unload <ID>
 
- where <handle> is the unique id retuned while loading the bitstream
+ where <ID> is the numeric ID from -listPackage output
 ```
 
 ### Using library API

@@ -47,6 +47,16 @@ void dfx_exit(char *msg)
 	exit(EXIT_FAILURE);
 }
 
+static void format_response_with_warning(struct message *msg, int value)
+{
+	if (is_pkg_listing_dirty())
+		msg->size = 1 + sprintf(msg->data,
+			"WARNING: Package IDs have changed since last -listPackage. %d",
+			value);
+	else
+		msg->size = 1 + sprintf(msg->data, "%d", value);
+}
+
 static void
 process_dfx_req(int fd, fd_set *fdset)
 {
@@ -168,6 +178,29 @@ process_dfx_req(int fd, fd_set *fdset)
 		send_msg.size = 1 + sprintf(send_msg.data, "%d", ret);
 		if (write(fd, &send_msg, HEADERSIZE+ send_msg.size) < 0)
 			DFX_ERR("USER_UNLOAD write(%d)", fd);
+		break;
+
+	case LOAD_ACCEL_BY_ID:
+		char *id_str;
+		tmp = strdup(recv_msg.data);
+		id_str = strtok(tmp, ":");
+		cma_path = strtok(NULL, ":");
+		int load_id = atoi(id_str);
+		DFX_PR("daemon loading accel by ID %d", load_id);
+		slot = load_accelerator_by_id(load_id, cma_path);
+		format_response_with_warning(&send_msg, slot);
+		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
+			DFX_ERR("LOAD_ACCEL_BY_ID write(%d)", fd);
+		free(tmp);
+		break;
+
+	case UNLOAD_ACCEL_BY_ID:
+		int unload_id = atoi(recv_msg.data);
+		DFX_PR("daemon unloading accel by ID %d", unload_id);
+		ret = unload_accelerator_by_id(unload_id);
+		format_response_with_warning(&send_msg, ret);
+		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
+			DFX_ERR("UNLOAD_ACCEL_BY_ID write(%d)", fd);
 		break;
 
 	default:
