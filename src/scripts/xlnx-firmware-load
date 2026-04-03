@@ -7,7 +7,7 @@
 # Load firmware and check the return status
 function load_firmware() {
 	fwname=$1
-	dfx-mgr-client -load "${fwname}"
+	dfx-mgr-client -loadByName "${fwname}"
 
 	rv=$?
 	if [ $rv -eq 0 ]; then
