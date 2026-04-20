@@ -641,6 +641,7 @@ int unload_accelerator(int slot_handle)
 			platform.available_slot_handle[slot_handle] = 0;
 			/* delete rpmsg_dev_list from slot */
 			delete_rpmsg_dev_list(&rpu_base->slots[slot]->rpu.rpmsg_dev_list);
+			free(rpu_base->slots[slot]->accel);
 			free(rpu_base->slots[slot]);
 			rpu_base->slots[slot] = NULL;
 			platform.active_rpu_base->active -= 1;

@@ -62,19 +62,20 @@ int load_rpu(char *rpu_path, int rpu_slot, char *firmware_name);
 int remove_rpu(int slot);
 
 /**
- * get_new_rpmsg_ctrl_dev() - return new rpmsg control dev found
- * @struct basePLDesign *base - PL base design
+ * get_new_rpmsg_ctrl_dev() - find a newly created rpmsg control device
+ * @*base - PL base design containing existing slot records
+ * @*buf - caller-provided buffer to store the device name
+ * @buflen - size of @buf in bytes
  *
  * This function checks if new rpmsg control dev is created by
  * RPU firmware and return the same, it does this by parsing through
  * /sys/device/rpmsg/devices directory takes each entries and comparing
  * with the previously stored data in base design structure
  *
- * Return: rpmsg_ctrl_dev_name on success
- *         NULL on failure
- *
+ * Return: @buf on success, NULL if no new control device is found
  */
-char* get_new_rpmsg_ctrl_dev(struct basePLDesign *base);
+char* get_new_rpmsg_ctrl_dev(struct basePLDesign *base, char *buf,
+			     size_t buflen);
 
 /**
  * get_virtio_number() - return virtio number

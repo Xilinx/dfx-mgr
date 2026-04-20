@@ -283,8 +283,11 @@ int main(int argc, char **argv)
 	while (1) {
 		readfds = fds;
 		// monitor readfds for readiness for reading
-		if (select(fdmax + 1, &readfds, NULL, NULL, NULL) == -1)
+		if (select(fdmax + 1, &readfds, NULL, NULL, NULL) == -1) {
+			if (errno == EINTR)
+				continue;
 			dfx_exit("select");
+		}
 
 		// Some sockets are ready. Examine readfds
 		for (int fd = 0; fd < (fdmax + 1); fd++) {
