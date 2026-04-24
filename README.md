@@ -1,4 +1,4 @@
-#### Copyright (c) 2025, Xilinx Inc. and Contributors. All rights reserved.
+#### Copyright (c) 2022 - 2026, Advanced Micro Devices, Inc. and Contributors. All rights reserved.
 #### SPDX-License-Identifier: MIT
 
 ## Overview
@@ -17,7 +17,7 @@ and dynamic region). As you can see in the diagram below DFX-MGR can load a 3RP
 design and a 2RP design with the corresponding accelerators dynamically without
 having to reboot the board.
 
-DFX-MGR now support lightweight use cases. User can load PL bitstream alone or
+DFX-MGR now supports lightweight use cases. User can load PL bitstream alone or
 along with device tree overlay from any path. User can provide the absolute
 path of bitstream and overlay file as command line options.
 See Usage guidelines for more details.
@@ -83,19 +83,28 @@ will fail to load an accelerator to the slot if no partial design is found.
     ├── <flat_shell>.dtbo                # Flat device tree overlay
     └── shell.json                       # Flat design configuration
 ```
-#### RPU Designs
+#### RPU Designs (New Structure - Recommended)
 ```
 /lib/firmware/xilinx/
-└──rpu/                                  # RPU directory structure (case-insensitive)
-  └── <rpu-application-name>/
-      └── <rpu-application>_slot0/
-          └── <firmware>.elf             # RPU firmware file
+└── <board>/
+    └── rpu/                                 # RPU base (recognized by directory name)
+        ├── 0/                               # Slot 0 directory
+        │   ├── <firmware-a>.elf             # Each .elf = separate accelerator
+        │   └── <firmware-b>.elf
+```
+#### RPU Designs (Old Structure - Will be deprecated in a future release)
+```
+/lib/firmware/xilinx/
+└── rpu/                                     # RPU directory structure (case-insensitive)
+    └── <rpu-application-name>/
+        └── <rpu-application>_slot0/
+            └── <firmware>.elf               # RPU firmware file
 ```
 
 **Key Requirements:**
-- Base/static design directory must contain `shell.json`
-- Accelerator subdirectories must follow `<name>_slot<N>` naming convention
-- Each slot directory must contain `accel.json` for proper recognition
+- Base/static design directory must contain `shell.json` (not required for RPU bases, which are detected by directory name `rpu`/`RPU`)
+- PL DFX accelerator subdirectories must follow `<name>_slot<N>` naming convention. New RPU structure uses numeric slot directories (`0/`, `1/`, ...).
+- Each PL slot directory must contain `accel.json` for proper recognition.
 - Supports up to 5 hierarchical directory levels under `/lib/firmware/xilinx`
 
 
@@ -112,6 +121,7 @@ daemon.conf will need a restart of the `/usr/bin/dfx-mgrd` on target.
   "default_accel": "/etc/dfx-mgrd/default_firmware",
   "firmware_location": ["/lib/firmware/xilinx"],
   "cma_path": "/dev/dma_heap/cma_reserved",
+  "rpu_fw_uptime_msec": 0,
   "eeprom_location": [
     "/sys/bus/i2c/devices/*/eeprom_cc*/nvmem",
     "/sys/bus/i2c/devices/*50/eeprom",
@@ -127,6 +137,7 @@ daemon.conf will need a restart of the `/usr/bin/dfx-mgrd` on target.
 | `firmware_location` | Yes | Array of directories where DFX-MGR looks for accelerator packages. The directory structure rules described above apply to each location. |
 | `default_accel` | No | Path to a file containing the package name to auto-load on daemon startup. Echo the desired package name into this file. |
 | `cma_path` | No | CMA device path for DMA buffer allocation (e.g., `/dev/dma_heap/cma_reserved`). If not specified, default system CMA paths are used. Can be overridden per-command using the `-cma` option. |
+| `rpu_fw_uptime_msec` | No | Time in milliseconds to wait for RPU firmware initialization after loading. Default: 0. |
 | `eeprom_location` | No | Array of sysfs glob paths to I2C EEPROM devices used for board name detection. The detected board name is used by `dfx-mgr-client -listPackage -filter` to show only packages matching the current board. Run `ls /sys/bus/i2c/devices/` on your target to discover available devices. Wildcards are supported for bus number portability. If omitted, EEPROM board detection is skipped and `-filter` has no effect. |
 
 ### shell.json
@@ -140,7 +151,6 @@ path to the active xclbin on success.
 * PL_FLAT: dfx-mgr will program the PL bitstream and treat the design as static.
 * PL_DFX: dfx-mgr will treat the design as DFX with number of slots as mentioned in
 json.
-* RPU: dfx-mgr will treat this design as RPU firmware.
 
 #### KRIA Designs.
 ```
@@ -256,7 +266,7 @@ To compile using yocto in 2021.1 onwards, do `bitbake dfx-mgr`.
 You would need to provide dependency libraries using -DCMAKE_LIBRARY_PATH for
 cmake.
 
-There is generic cmake toolchian file for generic Linux which is in
+There is generic cmake toolchain file for generic Linux which is in
 `cmake/platforms/cross-linux-gcc.cmake`
 
 Set the path where you have all the dependent libraries in build.sh.
@@ -287,38 +297,38 @@ $ dfx-mgr-client -listPackage [-all] [-filter]
 ```
 
 **Options:**
-- `-all` - Show all columns (default shows simplified 4-column view)
+- `-all` - Show all columns (default shows simplified view)
 - `-filter` - Filter packages by board name from EEPROM (shows only matching designs)
 
-**Default Simplified View (4 columns):**
+**Default Simplified View:**
 ```
 $ dfx-mgr-client -listPackage
-ID Accel_type  Base        slot->handle Accelerator
--- ----------- ----------- ------------ ---------
- 1 RPU         rpu         -1           vek280-r5-0-matrix-multiply
- 2 XRT_FLAT    vek280-p... -1           vek280-pl-bram-gpio-fw
- 3 XRT_FLAT    vek280-p... -1           vek280-pl-bram-uart-gpio-fw
- 4 SIHA_PL_DFX static      -1           rp1rm0
- 5 SIHA_PL_DFX static      -1           rp0rm0
+ID accelType   Base        slotLoc Accelerator
+-- ----------- ----------- ------- -----------
+ 1 RPU         rpu         -1      vek280-r5-0-matrix-multiply
+ 2 XRT_FLAT    vek280-p... -1      vek280-pl-bram-gpio-fw
+ 3 XRT_FLAT    vek280-p... -1      vek280-pl-bram-uart-gpio-fw
+ 4 SIHA_PL_DFX static      -1      rp1rm0
+ 5 SIHA_PL_DFX static      -1      rp0rm0
 ```
 
 **Full View with -all flag:**
 ```
 $ dfx-mgr-client -listPackage -all
-ID Accel_type  user_load user_load Base        Pid   #slots       #slot   Accelerator
-               type      Region                      (RPU+PL+AIE) Handle
--- ----------- --------- --------- ----------- ----- ------------ ------- -----------
- 1 RPU         -         -         rpu         no_id (2+0+0)      -1      vek280-r5-0-matrix-multiply
- 2 XRT_FLAT    -         -         vek280-p... id_ok (0+0+0)      -1      vek280-pl-bram-gpio-fw
- 3 XRT_FLAT    -         -         vek280-p... id_ok (0+0+0)      -1      vek280-pl-bram-uart-gpio-fw
- 4 SIHA_PL_DFX -         -         static      no_id (0+2+0)      -1      rp1rm0
- 5 SIHA_PL_DFX -         -         static      no_id (0+2+0)      -1      rp0rm0
+ID accelType   userLoad  userLoad  Base        Pid   #slots       slot     load   Accelerator
+               type      Region                      (RPU+PL+AIE) Location Handle
+-- ----------- --------- --------- ----------- ----- ------------ -------- ------ -----------
+ 1 RPU         -         -         rpu         no_id (2+0+0)      -1       -1     vek280-r5-0-matrix-multiply
+ 2 XRT_FLAT    -         -         vek280-p... id_ok (0+0+0)      -1       -1     vek280-pl-bram-gpio-fw
+ 3 XRT_FLAT    -         -         vek280-p... id_ok (0+0+0)      -1       -1     vek280-pl-bram-uart-gpio-fw
+ 4 SIHA_PL_DFX -         -         static      no_id (0+2+0)      -1       -1     rp1rm0
+ 5 SIHA_PL_DFX -         -         static      no_id (0+2+0)      -1       -1     rp0rm0
 ```
 
 In the output, the **ID** column is a identifier used by `-load` and `-unload` commands.
 XRT_FLAT designs show flat shell designs that do not have dynamic reconfigurable
 partitions. SIHA_PL_DFX designs show DFX-based accelerators with reconfigurable partitions.
-The slot->handle column shows -1 when no accelerator is currently loaded to any slot.
+The slotLoc column shows -1 when no accelerator is currently loaded to any slot.
 RPU entries show RPU firmware applications.
 
 **UID, PID information** (visible in full view with -all flag) for tracking parent-to-child relationships is in the "Pid" column:
@@ -330,7 +340,8 @@ RPU entries show RPU firmware applications.
 The `-filter` option uses the board name detected from EEPROM at daemon startup and shows
 only packages that match the current board. The EEPROM device paths used for board detection
 are configured via `eeprom_location` in `daemon.conf` (see [daemon.conf](#daemonconf) section).
-If `eeprom_location` is not configured, board detection is skipped and `-filter` has no effect.
+If `eeprom_location` is not configured or the board name could not be read from EEPROM,
+`-filter` will return an error indicating that a valid board name is required.
 This helps in multi-board environments to quickly identify compatible accelerators.
 
 Here is an example of 2-partition designs (see:
@@ -501,9 +512,9 @@ $ dfx-mgr-client -unloadByName rp0rm0
 
 3. Command for unloading device tree overlay alone.
 ```
- dfx-mgr-client -R -n <region>
+ dfx-mgr-client -R [-n <region>]
 
- where <region> is the device tree overlay region to be removed
+ where <region> is the device tree overlay region to be removed (defaults to "full" if omitted)
 ```
 
 
@@ -517,14 +528,14 @@ $ dfx-mgr-client -unloadByName rp0rm0
 ### Using library API
 
 Users can write applications to interact with daemon. Refer to example source
-code in `repo/example/sys/linux/load_accel.c` for a simple example how to load
+code in `example/sys/linux/load_accel.c` for a simple example how to load
 an accelerator. The applications, including dfx-mgr-client connect to the daemon
 via `/var/run/dfx-mgrd.socket` file. This allows a client running in a docker
-container to connect to the dfx_mgrd running outside the container.
+container to connect to the dfx-mgrd running outside the container.
 
 ## Known limitations
 
-1. DFX-MGR uses i-notify for firmware file updates and i-notify doesn't work
+1. DFX-MGR uses inotify for firmware file updates and inotify doesn't work
 with network filesystem.  Hence it is recommended to NOT boot linux over NFS for
 correct functionality of DFX-MGR daemon.
 
@@ -535,3 +546,15 @@ creating long filenames.
 3. I/O nodes don't support zero copy.
 
 4. DFX-MGR supports Zynq-7000, Zynq UltraScale+MPSoC, Versal, and Versal Gen2 platforms.
+
+## Glossary
+
+### dfx-mgr Concepts
+
+- **Accelerator** — A loadable hardware or firmware module (PL partial bitstream or RPU firmware) that can be dynamically deployed to a slot.
+- **Base Design (Shell)** — The static PL design that defines the platform's slot layout. It is loaded automatically before accelerators and identified by `shell.json`.
+- **Package** — A firmware directory under `/lib/firmware/xilinx` containing a base design and/or its accelerators, as recognized by dfx-mgr.
+- **Slot** — A reconfigurable region in PL (partial reconfiguration region) or an RPU core index where an accelerator can be loaded.
+- **Slot Handle** — A runtime identifier assigned by dfx-mgr when an accelerator is loaded into a slot; used for unload and query operations.
+- **Flat Shell/Design** — A base design with no reconfigurable partitions; the entire PL is programmed as one unit.
+- **DFX (Dynamic Function eXchange)** — AMD/Xilinx technology for partial reconfiguration, allowing portions of the FPGA to be reprogrammed at runtime while the rest continues operating.
