@@ -336,13 +336,11 @@ RPU entries show RPU firmware applications.
 * "id_err" - When PID and the base UID are present but do not match
 * "no_id"  - When either PID or UID are not present
 
-**Board Filtering** (using -filter flag):
-The `-filter` option uses the board name detected from EEPROM at daemon startup and shows
-only packages that match the current board. The EEPROM device paths used for board detection
-are configured via `eeprom_location` in `daemon.conf` (see [daemon.conf](#daemonconf) section).
-If `eeprom_location` is not configured or the board name could not be read from EEPROM,
-`-filter` will return an error indicating that a valid board name is required.
-This helps in multi-board environments to quickly identify compatible accelerators.
+**Board Filtering** (using -filter flag) shows only the packages that match the current board.
+* Board name is read at daemon startup from the EEPROM paths configured via `eeprom_location` in `daemon.conf`.
+* If `eeprom_location` is not configured or the board name cannot be read, `-filter` returns an error indicating that a valid board name is required
+* Supported on Zynq UltraScale+ MPSoC (ZynqMP) and Versal Gen1/Gen2 platforms
+* Not supported on legacy Zynq-7000 platforms (e.g., ZC702, ZC706), as these older boards EEPROMs are not flashed in FRU format.
 
 Here is an example of 2-partition designs (see:
 [kria-dfx-hw](https://github.com/Xilinx/kria-dfx-hw),
