@@ -143,7 +143,6 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 		}
 		DFX_DBG("shell_release_isolation done");
 	}
-	//ret = sys_load_accel_post(accel);
 	return ret;
 }
 

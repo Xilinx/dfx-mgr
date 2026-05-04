@@ -19,7 +19,6 @@ extern "C" {
 /* Constants for RPU handling */
 #define RPU_TYPE_STR "RPU"
 #define RPU_FIRMWARE_EXT ".elf"
-#define RPU_FIRMWARE_NAME_MAX 128
 
 /*
  * get_number_of_rpu() - Get the number of remoteproc's created

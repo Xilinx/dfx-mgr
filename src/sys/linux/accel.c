@@ -234,56 +234,6 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 	return ACAPD_ACCEL_SUCCESS;
 }
 
-int sys_load_accel_post(acapd_accel_t *accel)
-{
-	acapd_assert(accel != NULL);
-	char cmd[512];
-	char tmpstr[512];
-	int ret;
-
-	DFX_DBG("");
-	sprintf(cmd,"docker run --ulimit memlock=67108864:67108864 --rm -v /usr/lib:/x_usrlib -v /usr/bin/:/xbin/ -v /lib/:/xlib -v %s:%s ",accel->sys_info.tmp_dir,accel->sys_info.tmp_dir);
-	for (int i = 0; i < accel->num_ip_devs; i++) {
-		//int ret;
-		char tmpstr[512];
-
-		//ret = acapd_device_open(&accel->ip_dev[i]);
-		//if (ret != 0) {
-		//	DFX_ERR("%s: failed to open accel ip %s.\n",
-		//		     __func__, accel->ip_dev[i].dev_name);
-		//	return -EINVAL;
-		//}
-		sprintf(tmpstr,"--device=%s:%s ",accel->ip_dev[i].path,accel->ip_dev[i].path);
-		strcat(cmd,tmpstr);
-		strcat(cmd,"--device=/dev/vfio:/dev/vfio ");
-	}
-	for (int i = 0; i < accel->num_chnls; i++) {
-		ret = acapd_generic_device_bind(accel->chnls[i].dev,
-						accel->chnls[i].dev->driver);
-		if (ret != 0) {
-			DFX_ERR("failed to open chnl dev %s",
-				accel->chnls[i].dev->dev_name);
-			return -EINVAL;
-		}
-	}
-
-	sprintf(tmpstr, "%s/container.tar", accel->sys_info.tmp_dir);
-	if (access(tmpstr, F_OK) != 0) {
-		DFX_DBG("no need to launch container");
-		return 0;
-	}
-	sprintf(tmpstr,"docker load < %s/container.tar",accel->sys_info.tmp_dir);
-	DFX_DBG("Loading docker container");
-	ret = system(tmpstr);
-
-	sprintf(tmpstr," -e \"ACCEL_CONFIG_PATH=%s/accel.json\"",accel->sys_info.tmp_dir);
-	strcat(cmd, tmpstr);
-	strcat(cmd, " -it container");
-	DFX_DBG("docker run cmd: %s", cmd);
-	ret = system(cmd);
-	return ret;
-}
-
 int sys_close_accel(acapd_accel_t *accel)
 {
 	DFX_DBG("");

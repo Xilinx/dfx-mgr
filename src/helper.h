@@ -22,6 +22,7 @@ typedef struct acapd_list {
 	struct acapd_list *next, *prev;
 }acapd_list_t;
 
+#define MAX_PATH_SIZE 512
 #define ACAPD_INIT_LIST(name) { .next = &name, .prev = &name }
 #define ACAPD_DECLARE_LIST(name)			\
 	acapd_list_t name = ACAPD_INIT_LIST(name)

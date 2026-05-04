@@ -537,9 +537,11 @@ container to connect to the dfx-mgrd running outside the container.
 with network filesystem.  Hence it is recommended to NOT boot linux over NFS for
 correct functionality of DFX-MGR daemon.
 
-2. DFX-MGR package names i.e. firmware folder names are limited to 64 character
-currently and absolute path lengths are limited to 512 char. Hence avoid
-creating long filenames.
+2. DFX-MGR package names i.e. firmware folder names are limited to 127
+character currently and absolute path lengths are limited to 512 char.
+Hence avoid creating long filenames.
+   - Names exceeding the limit are filtered out and will not appear
+     in `-listPackage`.
 
 3. I/O nodes don't support zero copy.
 

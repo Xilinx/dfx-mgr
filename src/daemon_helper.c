@@ -52,19 +52,19 @@ bool is_pkg_listing_dirty(void)
 
 struct watch {
     int wd;
-	char name[64];
+	char name[ACCEL_NAME_MAX];
     char path[WATCH_PATH_LEN];
-	char parent_name[64];
+	char parent_name[ACCEL_NAME_MAX];
     char parent_path[WATCH_PATH_LEN];
 };
 
 /*
- * Filter: path a is over 64 char, "." and ".."
+ * Filter: path a exceeds ACCEL_NAME_MAX-1, or is "." / ".."
  */
 static int
 d_name_filter(char *a)
 {
-	return (strlen(a) > 64) ||
+	return (strlen(a) > ACCEL_NAME_MAX - 1) ||
 		(a[0] == '.' && (a[1] == 0 || (a[1] == '.' && a[2] == 0)));
 }
 
@@ -439,7 +439,8 @@ static int load_accelerator_core(struct basePLDesign *base, const char *accel_na
 
 		/* For NEW RPU structure, slot is pre-determined during parse */
 		if (!strcmp(base->type, RPU_TYPE_STR) && accel_info->rpu.slot_num >= 0) {
-			char firmware_file[RPU_FIRMWARE_NAME_MAX];
+			/* Buffer holds accel name + ".elf" + NUL; sizeof(EXT) covers NUL. */
+			char firmware_file[ACCEL_NAME_MAX + sizeof(RPU_FIRMWARE_EXT)];
 			int target_slot = accel_info->rpu.slot_num;
 
 			/* Validate slot availability using helper function */
@@ -1593,9 +1594,9 @@ void add_to_watch(int wd, char *name, char *path, char *parent_name, char *paren
     for (i = 0; i < MAX_WATCH; i++) {
         if (active_watch[i].wd == -1) {
             active_watch[i].wd = wd;
-            strncpy(active_watch[i].name, name, 64 -1);
+            strncpy(active_watch[i].name, name, sizeof(active_watch[i].name) - 1);
             strncpy(active_watch[i].path, path, WATCH_PATH_LEN -1);
-            strncpy(active_watch[i].parent_name, parent_name, 64 -1);
+            strncpy(active_watch[i].parent_name, parent_name, sizeof(active_watch[i].parent_name) - 1);
             strncpy(active_watch[i].parent_path, parent_path, WATCH_PATH_LEN -1);
             return;
         }
@@ -1662,8 +1663,7 @@ accel_info_t *add_accel_to_base(struct basePLDesign *base, char *name, char *pat
         }
         if (base->accel_list[j].path[0] == '\0') {
 			DFX_DBG("adding %s to base %s", path, parent_path);
-            strcpy(base->accel_list[j].name, name);
-            base->accel_list[j].name[sizeof(base->accel_list[j].name) - 1] = '\0';
+            snprintf(base->accel_list[j].name, sizeof(base->accel_list[j].name), "%s", name);
             strcpy(base->accel_list[j].path, path);
             base->accel_list[j].path[sizeof(base->accel_list[j].path) - 1] = '\0';
             strcpy(base->accel_list[j].parent_path, parent_path);
@@ -1694,7 +1694,7 @@ void parse_packages(struct basePLDesign *base,char *fname, char *path)
 	/* For flat shell design there is no subfolder so assign the base path as the accel path */
 	if (!strcmp(base->type,"XRT_FLAT") || !strcmp(base->type,"PL_FLAT")) {
 		DFX_DBG("%s : %s", base->name, base->type);
-        strcpy(base->accel_list[0].name, base->name);
+        snprintf(base->accel_list[0].name, sizeof(base->accel_list[0].name), "%s", base->name);
         strcpy(base->accel_list[0].path, base->base_path);
         strcpy(base->accel_list[0].parent_path, base->base_path);
         strcpy(base->accel_list[0].accel_type, base->type);

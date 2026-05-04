@@ -118,12 +118,6 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 	}
 }
 
-int sys_load_accel_post(acapd_accel_t *accel)
-{
-	(void)accel;
-	return 0;
-}
-
 int sys_close_accel(acapd_accel_t *accel)
 {
 	(void)accel;

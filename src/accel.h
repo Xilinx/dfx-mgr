@@ -118,7 +118,6 @@ int sys_needs_load_accel(acapd_accel_t *accel);
 int sys_accel_config(acapd_accel_t *accel);
 int sys_fetch_accel(acapd_accel_t *accel, int flags);
 int sys_load_accel(acapd_accel_t *accel, unsigned int async);
-int sys_load_accel_post(acapd_accel_t *accel);
 int sys_close_accel(acapd_accel_t *accel);
 int sys_remove_accel(acapd_accel_t *accel, unsigned int async);
 int sys_remove_base(int fpga_cfg_id);

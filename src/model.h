@@ -21,7 +21,7 @@ extern "C" {
 #include <stdbool.h>
 #include <dfx-mgr/helper.h>
 
-#define MAX_PATH_SIZE 512
+#define ACCEL_NAME_MAX 128 /* Max length of accel/base/RPU package name (incl NUL) */
 #define RP_SLOTS_MAX 10
 #define SLOT_HANDLE_MAX 30 /* MAX number of slot handles */
 #define ARRAY_SIZE(a) (sizeof(a)/sizeof((a)[0]))
@@ -52,7 +52,7 @@ typedef struct {
 
 
 typedef struct {
-	char name[64];
+	char name[ACCEL_NAME_MAX];
 	char path[512];
 	int uid;
 	int parent_uid; /**< future: 2+ deep hierarchal reconfiguration */
@@ -86,9 +86,9 @@ typedef struct {
 typedef struct {
 	int uid;
 	int pid; /**< parent's UID should match shell's UID */
-	char name[64];
+	char name[ACCEL_NAME_MAX];
 	char path[512];
-	char parent_name[64];
+	char parent_name[ACCEL_NAME_MAX];
 	char parent_path[512];
 	int wd;
 	char accel_type[32];
@@ -106,7 +106,7 @@ typedef struct {
 struct basePLDesign {
 	int uid;
 	int fpga_cfg_id;
-	char name[64];
+	char name[ACCEL_NAME_MAX];
 	char base_path[512];
 	char parent_path[512];
 	char type[128];
@@ -153,7 +153,7 @@ typedef struct {
 }platform_info_t;
 
 struct daemon_config {
-	char defaul_accel_name[64];
+	char defaul_accel_name[ACCEL_NAME_MAX];
 	char **firmware_locations;
 	int number_locations;
 	unsigned int rpu_fw_uptime_msec; /* store rpu_fw_uptime_msec from config file */
