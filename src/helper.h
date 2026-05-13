@@ -84,6 +84,14 @@ static inline acapd_list_t *acapd_list_first(acapd_list_t *list)
 	     (node) != (list);			\
 	     (node) = (node)->next)
 
+/* Safe variant: caches the next pointer so the current node may be
+ * removed from the list and/or freed inside the loop body.
+ */
+#define acapd_list_for_each_safe(list, node, tmp)		\
+	for ((node) = (list)->next, (tmp) = (node)->next;	\
+	     (node) != (list);					\
+	     (node) = (tmp), (tmp) = (node)->next)
+
 #define offset_of(structure, member)    \
     ((uintptr_t)&(((structure *)0)->member))
 

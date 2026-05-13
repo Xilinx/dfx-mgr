@@ -20,7 +20,6 @@
 #include <dfx-mgr/daemon_helper.h>
 #include <dfx-mgr/rpu_helper.h>
 
-
 /**
  * get_number_of_rpu() - Get the number of remoteproc's created
  *
@@ -50,6 +49,7 @@ int get_number_of_rpu(void)
                         no_of_rpu++;
         }
 
+        closedir(dir_rpu);
         return no_of_rpu;
 }
 
@@ -289,21 +289,17 @@ char* get_new_rpmsg_ctrl_dev(struct basePLDesign *base, char *buf,
  */
 void delete_rpmsg_dev_list(acapd_list_t *rpmsg_dev_list)
 {
+	acapd_list_t *rpmsg_dev_node, *next_node;
 
 	if (rpmsg_dev_list == NULL) {
 		DFX_DBG("List is empty\n");
 		return;
 	}
 
-	acapd_list_t *rpmsg_dev_node;
-
-	/* traverse through the list */
-	acapd_list_for_each(rpmsg_dev_list, rpmsg_dev_node) {
-		rpmsg_dev_t *rpmsg_dev;
-
-		rpmsg_dev = (rpmsg_dev_t *)acapd_container_of(rpmsg_dev_node, rpmsg_dev_t,
-				rpmsg_node);
-		/* delete node */
+	acapd_list_for_each_safe(rpmsg_dev_list, rpmsg_dev_node, next_node) {
+		rpmsg_dev_t *rpmsg_dev = acapd_container_of(rpmsg_dev_node,
+							    rpmsg_dev_t,
+							    rpmsg_node);
 		acapd_list_del(&rpmsg_dev->rpmsg_node);
 		free(rpmsg_dev);
 	}
@@ -381,6 +377,8 @@ void update_rpmsg_dev_list(acapd_list_t *rpmsg_dev_list, char* rpmsg_ctrl_dev, i
 			acapd_list_add_tail(rpmsg_dev_list, &rpmsg_dev->rpmsg_node);
 
 	}
+
+	closedir(dir);
 
 	/* delete all inactive node by checking active flag */
 	delete_inactive_rpmsgdev(rpmsg_dev_list);

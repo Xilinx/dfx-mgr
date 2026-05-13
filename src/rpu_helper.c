@@ -47,7 +47,8 @@ char *get_rpmsg_ept_dev_name(const char *rpmsg_char_name,
 		}
 		if ( fgets(svc_name, sizeof(svc_name), fp) == NULL){
 			DFX_DBG("failed to read %s\n", svc_name);
-			return NULL;//added
+			fclose(fp);
+			return NULL;
 		}
 
 		fclose(fp);
@@ -208,7 +209,7 @@ void set_src_dst(char *out, struct rpmsg_endpoint_info *pep)
 int setup_rpmsg_ept_dev(char *rpmsg_dev_name, char *rpmsg_ctrl_dev_name, char *ept_dev_name)
 {
 	struct rpmsg_endpoint_info eptinfo;
-	int charfd,ret=0;
+	int charfd = -1, ret = 0;
 	char rpmsg_char_name[16];
 	char *ept_name="rpmsg-openamp-demo-channel";
 	char *rpmsg_dev_cpy;
@@ -233,8 +234,8 @@ int setup_rpmsg_ept_dev(char *rpmsg_dev_name, char *rpmsg_ctrl_dev_name, char *e
 	/* bind rpmsg chr device */
 	ret = bind_rpmsg_chrdev(rpmsg_dev_name);
 	if (ret < 0) {
-		free(rpmsg_dev_cpy);
-		return -1;
+		ret = -1;
+		goto out;
 	}
 
 	/* setup rpmsg_ctrl device */
@@ -244,8 +245,8 @@ int setup_rpmsg_ept_dev(char *rpmsg_dev_name, char *rpmsg_ctrl_dev_name, char *e
 		/* may be kernel is < 6.0 try previous path */
 		charfd = get_rpmsg_chrdev_fd(rpmsg_dev_name, rpmsg_char_name);
 		if (charfd < 0) {
-			free(rpmsg_dev_cpy);
-			return -1;
+			ret = -1;
+			goto out;
 		}
 	}
 
@@ -255,18 +256,22 @@ int setup_rpmsg_ept_dev(char *rpmsg_dev_name, char *rpmsg_ctrl_dev_name, char *e
 	ret = app_rpmsg_create_ept(charfd, &eptinfo);
 	if (ret) {
 		fprintf(stderr, "app_rpmsg_create_ept %s\n", strerror(errno));
-		free(rpmsg_dev_cpy);
-		return -1;
+		ret = -1;
+		goto out;
 	}
 
 	/* get ept dev name */
 	if (!get_rpmsg_ept_dev_name(rpmsg_char_name, eptinfo.name,
 				ept_dev_name)) {
-		free(rpmsg_dev_cpy);
-		return -1;
+		ret = -1;
+		goto out;
 	}
+
+out:
+	if (charfd >= 0)
+		close(charfd);
 	free(rpmsg_dev_cpy);
-	return 0;
+	return ret;
 }
 
 
@@ -413,18 +418,17 @@ int check_rpmsg_dev_active(acapd_list_t *rpmsg_dev_list, char* rpmsg_dev_name, i
  * */
 void delete_inactive_rpmsgdev(acapd_list_t *rpmsg_dev_list)
 {
-	acapd_list_t *rpmsg_dev_node;
+	acapd_list_t *rpmsg_dev_node, *next_node;
 
 	if (rpmsg_dev_list == NULL) {
 		DFX_DBG("List is empty\n");
 		return;
 	}
 
-	acapd_list_for_each(rpmsg_dev_list, rpmsg_dev_node) {
-		rpmsg_dev_t *rpmsg_dev;
-
-		rpmsg_dev = (rpmsg_dev_t *)acapd_container_of(rpmsg_dev_node, rpmsg_dev_t,
-				rpmsg_node);
+	acapd_list_for_each_safe(rpmsg_dev_list, rpmsg_dev_node, next_node) {
+		rpmsg_dev_t *rpmsg_dev = acapd_container_of(rpmsg_dev_node,
+							    rpmsg_dev_t,
+							    rpmsg_node);
 
 		if (rpmsg_dev->active == 0) {
 			acapd_list_del(&rpmsg_dev->rpmsg_node);

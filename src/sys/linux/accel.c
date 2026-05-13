@@ -59,6 +59,7 @@ static int remove_directory(const char *path)
 			buf = malloc(len);
 			if (buf == NULL) {
 				DFX_ERR("Failed to allocate memory");
+				closedir(d);
 				return -1;
 			}
 
@@ -251,11 +252,13 @@ int sys_close_accel(acapd_accel_t *accel)
 		accel->num_chnls = 0;
 	}
 	for (int i = 0; i < accel->num_ip_devs; i++) {
-		DFX_DBG("closing accel ip %d %s", i, accel->ip_dev[i].dev_name);
+		DFX_DBG("closing accel ip %d %s", i,
+			accel->ip_dev[i].dev_name ? accel->ip_dev[i].dev_name : "(null)");
 		acapd_device_close(&accel->ip_dev[i]);
+		free(accel->ip_dev[i].dev_name);
+		accel->ip_dev[i].dev_name = NULL;
 	}
 	if (accel->num_ip_devs > 0) {
-		free(accel->ip_dev->dev_name);
 		free(accel->ip_dev);
 		accel->ip_dev = NULL;
 		accel->num_ip_devs = 0;

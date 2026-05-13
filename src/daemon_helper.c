@@ -1736,6 +1736,10 @@ void parse_packages(struct basePLDesign *base,char *fname, char *path)
 			if (stat(filename,&stat_info)){
 
 				dir2 = opendir(first_level);
+				if (dir2 == NULL) {
+					DFX_ERR("opendir failed on %s", first_level);
+					continue;
+				}
 				while((d2 = readdir(dir2)) != NULL) {
 					sprintf(second_level,"%s/%s", first_level, d2->d_name);
 					if (d_name_filter(d2->d_name) || not_dir(second_level))
@@ -1756,6 +1760,8 @@ void parse_packages(struct basePLDesign *base,char *fname, char *path)
 					initAccel(accel, second_level);
 					}
 				}
+				closedir(dir2);
+				dir2 = NULL;
 				/* accel.json file not there for RPU
 				 * Check if base-type is "RPU"
 				 */
