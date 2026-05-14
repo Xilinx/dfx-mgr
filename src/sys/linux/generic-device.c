@@ -32,7 +32,7 @@ int acapd_generic_device_bind(acapd_device_t *dev, const char *drv)
 	if (dev->bus_name == NULL) {
 		dev->bus_name = "platform";
 	}
-	sprintf(tmpstr, "/sys/bus/%s/drivers", dev->bus_name);
+	snprintf(tmpstr, sizeof(tmpstr), "/sys/bus/%s/drivers", dev->bus_name);
 	d = opendir(tmpstr);
 	if (d == NULL) {
 		ret = -errno;
@@ -41,7 +41,7 @@ int acapd_generic_device_bind(acapd_device_t *dev, const char *drv)
 	}
 	while((dir = readdir(d)) != NULL) {
 		if (dir->d_type == DT_DIR && strlen(dir->d_name) <= 64) {
-			sprintf(tmpstr, "/sys/bus/%s/drivers/%s/%s",
+			snprintf(tmpstr, sizeof(tmpstr), "/sys/bus/%s/drivers/%s/%s",
 				dev->bus_name, dir->d_name, dev->dev_name);
 			if (access(tmpstr, F_OK) == 0) {
 				if (strcmp(dir->d_name, drv) == 0) {
@@ -51,7 +51,7 @@ int acapd_generic_device_bind(acapd_device_t *dev, const char *drv)
 					goto out;
 				}
 				/* Unbind driver */
-				sprintf(tmpstr, "/sys/bus/%s/drivers/%s/unbind",
+				snprintf(tmpstr, sizeof(tmpstr), "/sys/bus/%s/drivers/%s/unbind",
 					dev->bus_name, dir->d_name);
 				fd = open(tmpstr, O_WRONLY);
 				if (fd < 0) {
@@ -71,7 +71,7 @@ int acapd_generic_device_bind(acapd_device_t *dev, const char *drv)
 		}
 	}
 	/* Bind new driver */
-	sprintf(tmpstr, "/sys/bus/%s/devices/%s/driver_override",
+	snprintf(tmpstr, sizeof(tmpstr), "/sys/bus/%s/devices/%s/driver_override",
 		dev->bus_name, dev->dev_name);
 	fd = open(tmpstr, O_WRONLY);
 	if (fd < 0) {
@@ -85,7 +85,7 @@ int acapd_generic_device_bind(acapd_device_t *dev, const char *drv)
 		close(fd);
 		goto out;
 	}
-	sprintf(tmpstr, "/sys/bus/%s/drivers/%s/bind",
+	snprintf(tmpstr, sizeof(tmpstr), "/sys/bus/%s/drivers/%s/bind",
 		dev->bus_name, drv);
 	fd = open(tmpstr, O_WRONLY);
 	if (fd < 0) {
@@ -116,7 +116,7 @@ static int acapd_generic_device_get_uio_path(acapd_device_t *dev)
 	acapd_assert(dev != NULL);
 	acapd_assert(dev->dev_name != NULL);
 
-	sprintf(tmpstr, "/sys/bus/%s/devices/%s/uio",
+	snprintf(tmpstr, sizeof(tmpstr), "/sys/bus/%s/devices/%s/uio",
 		dev->bus_name, dev->dev_name);
 	DFX_DBG("%s", tmpstr);
 	d = opendir(tmpstr);
@@ -133,11 +133,11 @@ static int acapd_generic_device_get_uio_path(acapd_device_t *dev)
 
 			memset(dev->path, 0, sizeof(dev->path));
 			memset(tmpname, 0, sizeof(tmpname));
-			strcpy(tmpname, dir->d_name);
-			sprintf(dev->path, "/dev/%s", tmpname);
+			snprintf(tmpname, sizeof(tmpname), "%s", dir->d_name);
+			snprintf(dev->path, sizeof(dev->path), "/dev/%s", tmpname);
 
 			/* get io region size */
-			sprintf(tmpstr, "/sys/bus/%s/devices/%s/uio/%s/maps/map0/size",
+			snprintf(tmpstr, sizeof(tmpstr), "/sys/bus/%s/devices/%s/uio/%s/maps/map0/size",
 				dev->bus_name, dev->dev_name, dir->d_name);
 			fd = open(tmpstr, O_RDONLY);
 			if (fd < 0) {
