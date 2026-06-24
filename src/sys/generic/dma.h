@@ -9,7 +9,6 @@
  * @brief	Generic specific DMA definition.
  */
 
-
 #ifndef _ACAPD_GENERIC_DMA_H
 #define _ACAPD_GENERIC_DMA_H
 

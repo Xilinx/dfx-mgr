@@ -31,7 +31,7 @@ static int remove_directory(const char *path)
 
 		path_len = strlen(path);
 		r = 0;
-		while (!r && (p=readdir(d))) {
+		while (!r && (p = readdir(d))) {
 			int r2 = -1;
 			char *buf;
 			size_t len;
@@ -39,8 +39,7 @@ static int remove_directory(const char *path)
 
 			/* Skip the names "." and ".." as we don't want
 			 * to recurse on them. */
-			if (!strcmp(p->d_name, ".") ||
-			    !strcmp(p->d_name, "..")) {
+			if (!strcmp(p->d_name, ".") || !strcmp(p->d_name, "..")) {
 				continue;
 			}
 			len = path_len + strlen(p->d_name) + 2;
@@ -83,10 +82,9 @@ int sys_accel_config(acapd_accel_t *accel)
 	DFX_DBG("%s", pkg ? pkg->path : "");
 	env_config_path = getenv("ACCEL_CONFIG_PATH");
 	memset(config_path, 0, sizeof(config_path));
-	if(env_config_path == NULL) {
-		if(pkg->type == ACAPD_ACCEL_PKG_TYPE_TAR_GZ) {
-			DFX_DBG("Found .tar.gz package, extracting %s",
-				pkg->path);
+	if (env_config_path == NULL) {
+		if (pkg->type == ACAPD_ACCEL_PKG_TYPE_TAR_GZ) {
+			DFX_DBG("Found .tar.gz package, extracting %s", pkg->path);
 			tmp_dirname = mkdtemp(template);
 			if (tmp_dirname == NULL) {
 				DFX_ERR("mkdtemp");
@@ -106,15 +104,12 @@ int sys_accel_config(acapd_accel_t *accel)
 				DFX_ERR("path is too long: %s", tmp_dirname);
 				return ACAPD_ACCEL_FAILURE;
 			}
-		}
-		else if(pkg->type == ACAPD_ACCEL_PKG_TYPE_NONE) {
+		} else if (pkg->type == ACAPD_ACCEL_PKG_TYPE_NONE) {
 			DFX_DBG("No need to extract pkg %s", pkg->path);
 			sprintf(accel->sys_info.tmp_dir, "%s/", pkg->path);
 			len = strlen(accel->sys_info.tmp_dir);
-		}
-		else {
-			DFX_ERR("unhandled package type for accel %s",
-				pkg->path);
+		} else {
+			DFX_ERR("unhandled package type for accel %s", pkg->path);
 			return ACAPD_ACCEL_FAILURE;
 		}
 		strncpy(config_path, accel->sys_info.tmp_dir, len);
@@ -179,8 +174,7 @@ int sys_fetch_accel(acapd_accel_t *accel, int flags)
 		ret = dfx_cfg_init(accel->sys_info.tmp_dir, 0, flags);
 	}
 	if (ret < 0) {
-		DFX_ERR("Failed to initialize fpga config for %s, ret=%d",
-			accel->sys_info.tmp_dir, ret);
+		DFX_ERR("Failed to initialize fpga config for %s, ret=%d", accel->sys_info.tmp_dir, ret);
 		return ACAPD_ACCEL_FAILURE;
 	}
 	accel->sys_info.fpga_cfg_id = ret;
@@ -202,12 +196,11 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 	fpga_cfg_id = accel->sys_info.fpga_cfg_id;
 	ret = dfx_cfg_load(fpga_cfg_id);
 	if (ret != 0) {
-		DFX_ERR("Failed to load fpga config for %s (id=%d)",
-			accel->sys_info.tmp_dir, fpga_cfg_id);
+		DFX_ERR("Failed to load fpga config for %s (id=%d)", accel->sys_info.tmp_dir, fpga_cfg_id);
 		dfx_cfg_destroy(fpga_cfg_id);
 		return ACAPD_ACCEL_FAILURE;
 	}
-	if ( !strcmp(accel->type,"XRT_FLAT") || !strcmp(accel->type, "PL_FLAT")) {
+	if (!strcmp(accel->type, "XRT_FLAT") || !strcmp(accel->type, "PL_FLAT")) {
 		DFX_PR("Successfully loaded base design.");
 		return ACAPD_ACCEL_SUCCESS;
 	}
@@ -215,8 +208,7 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 		int ret;
 		ret = acapd_device_open(&accel->ip_dev[i]);
 		if (ret != 0) {
-			DFX_ERR("failed to open accel ip %s",
-				accel->ip_dev[i].dev_name);
+			DFX_ERR("failed to open accel ip %s", accel->ip_dev[i].dev_name);
 			return -EINVAL;
 		}
 	}
@@ -241,7 +233,7 @@ int sys_close_accel(acapd_accel_t *accel)
 	}
 	for (int i = 0; i < accel->num_ip_devs; i++) {
 		DFX_DBG("closing accel ip %d %s", i,
-			accel->ip_dev[i].dev_name ? accel->ip_dev[i].dev_name : "(null)");
+				accel->ip_dev[i].dev_name ? accel->ip_dev[i].dev_name : "(null)");
 		acapd_device_close(&accel->ip_dev[i]);
 		free(accel->ip_dev[i].dev_name);
 		accel->ip_dev[i].dev_name = NULL;
@@ -260,14 +252,12 @@ int sys_remove_base(int fpga_cfg_id)
 	DFX_DBG("");
 	ret = dfx_cfg_remove(fpga_cfg_id);
 	if (ret != 0) {
-		DFX_ERR("Failed to remove base (fpga_cfg_id=%d): %d",
-			fpga_cfg_id, ret);
+		DFX_ERR("Failed to remove base (fpga_cfg_id=%d): %d", fpga_cfg_id, ret);
 		return -1;
 	}
 	ret = dfx_cfg_destroy(fpga_cfg_id);
 	if (ret != 0) {
-		DFX_ERR("Failed to destroy base (fpga_cfg_id=%d): %d",
-			fpga_cfg_id, ret);
+		DFX_ERR("Failed to destroy base (fpga_cfg_id=%d): %d", fpga_cfg_id, ret);
 		return -1;
 	}
 	return 0;
@@ -295,14 +285,14 @@ int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
 	}
 	ret = dfx_cfg_remove(fpga_cfg_id);
 	if (ret != 0) {
-		DFX_ERR("Failed to remove accel %s (fpga_cfg_id=%d): %d",
-			accel->sys_info.tmp_dir, fpga_cfg_id, ret);
+		DFX_ERR("Failed to remove accel %s (fpga_cfg_id=%d): %d", accel->sys_info.tmp_dir,
+				fpga_cfg_id, ret);
 		goto out;
 	}
 	ret = dfx_cfg_destroy(fpga_cfg_id);
 	if (ret != 0) {
-		DFX_ERR("Failed to destroy accel %s (fpga_cfg_id=%d): %d",
-			accel->sys_info.tmp_dir, fpga_cfg_id, ret);
+		DFX_ERR("Failed to destroy accel %s (fpga_cfg_id=%d): %d", accel->sys_info.tmp_dir,
+				fpga_cfg_id, ret);
 		goto out;
 	}
 out:

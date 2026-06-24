@@ -14,14 +14,12 @@
 #include <stdio.h>
 #include <string.h>
 
-int acapd_alloc_shm(char *shm_allocator_name, acapd_shm_t *shm,
-		    size_t size, uint32_t attr)
+int acapd_alloc_shm(char *shm_allocator_name, acapd_shm_t *shm, size_t size, uint32_t attr)
 {
 	(void)shm_allocator_name;
 	shm->refcount = 0;
 	acapd_list_init(&shm->refs);
-	return acapd_default_shm_allocator.alloc(&acapd_default_shm_allocator,
-					         shm, size, attr);
+	return acapd_default_shm_allocator.alloc(&acapd_default_shm_allocator, shm, size, attr);
 }
 
 int acapd_free_shm(acapd_shm_t *shm)
@@ -29,11 +27,10 @@ int acapd_free_shm(acapd_shm_t *shm)
 	acapd_list_t *node;
 
 	/* Detach shared memory first */
-	acapd_list_for_each(&shm->refs, node) {
+	acapd_list_for_each (&shm->refs, node) {
 		acapd_device_t *dev;
 
-		dev = (acapd_device_t *)acapd_container_of(node, acapd_chnl_t,
-							  node);
+		dev = (acapd_device_t *)acapd_container_of(node, acapd_chnl_t, node);
 		if (dev->ops && dev->ops->detach) {
 			dev->ops->detach(dev, shm);
 		}
@@ -99,8 +96,8 @@ void *acapd_accel_alloc_shm(acapd_accel_t *accel, size_t size, acapd_shm_t *shm)
 	return shm->va;
 }
 
-int acapd_accel_write_data(acapd_accel_t *accel, acapd_shm_t *shm,
-			   void *va, size_t size, int wait_for_complete, uint8_t tid)
+int acapd_accel_write_data(acapd_accel_t *accel, acapd_shm_t *shm, void *va, size_t size,
+						   int wait_for_complete, uint8_t tid)
 {
 	acapd_chnl_t *chnl = NULL;
 	acapd_dma_config_t config;
@@ -155,8 +152,7 @@ int acapd_accel_write_data(acapd_accel_t *accel, acapd_shm_t *shm,
 	acapd_dma_init_config(&config, shm, va, size, tid);
 	ret = acapd_dma_transfer(chnl, &config);
 	if (ret < 0) {
-		acapd_perror("%s: failed to transfer data\n",
-			     __func__);
+		acapd_perror("%s: failed to transfer data\n", __func__);
 		return -EINVAL;
 	}
 	transfered_len = ret;
@@ -165,16 +161,15 @@ int acapd_accel_write_data(acapd_accel_t *accel, acapd_shm_t *shm,
 		acapd_debug("%s: wait for chnl to complete\n", __func__);
 		ret = acapd_dma_poll(chnl, 1, NULL, 0);
 		if (ret < 0) {
-			acapd_perror("%s: chnl is not done successfully\n",
-				     __func__);
+			acapd_perror("%s: chnl is not done successfully\n", __func__);
 			return -EINVAL;
 		}
 	}
 	return transfered_len;
 }
 
-int acapd_accel_read_data(acapd_accel_t *accel, acapd_shm_t *shm,
-			  void *va, size_t size, int wait_for_complete)
+int acapd_accel_read_data(acapd_accel_t *accel, acapd_shm_t *shm, void *va, size_t size,
+						  int wait_for_complete)
 {
 	acapd_chnl_t *chnl = NULL;
 	acapd_dma_config_t config;
@@ -231,8 +226,7 @@ int acapd_accel_read_data(acapd_accel_t *accel, acapd_shm_t *shm,
 	acapd_dma_init_config(&config, shm, va, size, 0);
 	ret = acapd_dma_transfer(chnl, &config);
 	if (ret < 0) {
-		acapd_perror("%s: failed to transfer data\n",
-			     __func__);
+		acapd_perror("%s: failed to transfer data\n", __func__);
 		return -EINVAL;
 	}
 	transfered_len = ret;
@@ -241,8 +235,7 @@ int acapd_accel_read_data(acapd_accel_t *accel, acapd_shm_t *shm,
 		acapd_debug("%s: wait for chnl to complete\n", __func__);
 		ret = acapd_dma_poll(chnl, 1, NULL, 0);
 		if (ret < 0) {
-			acapd_perror("%s: chnl is not done successfully\n",
-				     __func__);
+			acapd_perror("%s: chnl is not done successfully\n", __func__);
 			return -EINVAL;
 		}
 	}
@@ -285,11 +278,9 @@ int acapd_accel_read_complete(acapd_accel_t *accel)
 	acapd_debug("%s: wait for chnl to complete\n", __func__);
 	ret = acapd_dma_poll(chnl, 1, NULL, 0);
 	if (ret < 0) {
-		acapd_perror("%s: chnl is not done successfully\n",
-			     __func__);
+		acapd_perror("%s: chnl is not done successfully\n", __func__);
 		return -EINVAL;
 	}
 	acapd_debug("%s: channel is complete\n", __func__);
 	return transfered_len;
 }
-

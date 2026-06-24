@@ -15,7 +15,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#define DATA_SIZE_BYTES (4*1024)
+#define DATA_SIZE_BYTES (4 * 1024)
 
 static acapd_accel_t bzip2_accel;
 static acapd_device_t shell_dev;
@@ -24,7 +24,7 @@ static acapd_device_t ip_dev[2];
 static acapd_device_t dma_dev;
 static acapd_chnl_t chnls[2];
 
-void usage (const char *cmd)
+void usage(const char *cmd)
 {
 	fprintf(stdout, "Usage %s -p <pkg_path>\n", cmd);
 }
@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
 
 	signal(SIGINT, sig_handler);
 	printf("Loading accel %s.\n", pkg_path);
-	ret = load_accel(&bzip2_accel,NULL, 0);
+	ret = load_accel(&bzip2_accel, NULL, 0);
 	if (ret != 0) {
 		fprintf(stderr, "ERROR: failed to load accel.\n");
 		goto error;
@@ -101,8 +101,7 @@ int main(int argc, char *argv[])
 	*((volatile uint32_t *)va) = 0xdeadbeef;
 	v = *((volatile uint32_t *)va);
 	if (v != 0xdeadbeef) {
-		fprintf(stderr, "ERROR: failed to read from accel: 0x%x.\n",
-			v);
+		fprintf(stderr, "ERROR: failed to read from accel: 0x%x.\n", v);
 		ret = -1;
 		goto error;
 	}
@@ -114,4 +113,3 @@ error:
 	remove_accel(&bzip2_accel, 0);
 	return ret;
 }
-

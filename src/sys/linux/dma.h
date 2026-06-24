@@ -9,7 +9,6 @@
  * @brief	Linux specific DMA definition.
  */
 
-
 #ifndef _ACAPD_LINUX_DMA_H
 #define _ACAPD_LINUX_DMA_H
 

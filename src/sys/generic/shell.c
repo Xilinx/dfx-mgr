@@ -32,9 +32,7 @@ int sys_shell_config(acapd_shell_t *shell, const char *config)
 		return ACAPD_ACCEL_FAILURE;
 	}
 	shell->dev.va = (void *)((uintptr_t)shell->dev.reg_pa);
-	acapd_debug("%s: shell va = %p, pa = 0x%lx.\n",
-		    __func__, shell->dev.va, shell->dev.reg_pa);
+	acapd_debug("%s: shell va = %p, pa = 0x%lx.\n", __func__, shell->dev.va, shell->dev.reg_pa);
 
 	return ACAPD_ACCEL_SUCCESS;
 }
-

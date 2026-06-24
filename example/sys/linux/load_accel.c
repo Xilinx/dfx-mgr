@@ -13,7 +13,7 @@ static char uio_path[NAME_MAX];
 int main(int argc, char *argv[])
 {
 	int ret;
-	
+
 	if (argc < 2) {
 		printf("Enter the package to load\n");
 		return 0;

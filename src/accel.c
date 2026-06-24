@@ -29,7 +29,7 @@ int acapd_parse_config(acapd_accel_t *accel, const char *shell_config)
 	int ret;
 
 	/* Flat design don't have accel.json so do not parse */
-	if(!strcmp(accel->type,"XRT_AIE_DFX")){
+	if (!strcmp(accel->type, "XRT_AIE_DFX")) {
 		ret = sys_accel_config(accel);
 		if (ret < 0) {
 			DFX_ERR("failed to config accel");
@@ -262,4 +262,3 @@ void *acapd_accel_get_reg_va(acapd_accel_t *accel, const char *name)
 	}
 	return dev->va;
 }
-

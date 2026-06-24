@@ -12,8 +12,8 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-static int acapd_vfio_alloc_shm(acapd_shm_allocator_t *allocator,
-				acapd_shm_t *shm, size_t size, uint32_t attr)
+static int acapd_vfio_alloc_shm(acapd_shm_allocator_t *allocator, acapd_shm_t *shm, size_t size,
+								uint32_t attr)
 {
 	(void)allocator;
 	(void)attr;
@@ -28,22 +28,19 @@ static int acapd_vfio_alloc_shm(acapd_shm_allocator_t *allocator,
 	if (shm->flags == 0) {
 		shm->flags = MAP_PRIVATE | MAP_ANONYMOUS;
 	}
-	shm->va = mmap(NULL, size, PROT_READ | PROT_WRITE,
-		       shm->flags, shm->id, 0);
+	shm->va = mmap(NULL, size, PROT_READ | PROT_WRITE, shm->flags, shm->id, 0);
 
 	if (shm->va == MAP_FAILED) {
-		acapd_perror("%s: failed to allocate memory from fd %d, %s.\n",
-			     __func__, shm->id, strerror(errno));
+		acapd_perror("%s: failed to allocate memory from fd %d, %s.\n", __func__, shm->id,
+					 strerror(errno));
 	} else {
-		acapd_debug("%s: allocated memory %p from fd %d.\n",
-			    __func__, shm->va, shm->id);
+		acapd_debug("%s: allocated memory %p from fd %d.\n", __func__, shm->va, shm->id);
 	}
 	shm->size = size;
 	return 0;
 }
 
-static void acapd_vfio_free_shm(acapd_shm_allocator_t *allocator,
-			       acapd_shm_t *shm)
+static void acapd_vfio_free_shm(acapd_shm_allocator_t *allocator, acapd_shm_t *shm)
 {
 	(void)allocator;
 	if (shm == NULL) {

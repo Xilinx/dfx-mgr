@@ -35,12 +35,10 @@ void *acapd_device_attach_shm(acapd_device_t *dev, acapd_shm_t *shm)
 
 	acapd_assert(dev != NULL);
 	acapd_assert(shm != NULL);
-	acapd_list_for_each(&shm->refs, node) {
+	acapd_list_for_each (&shm->refs, node) {
 		acapd_device_t *tmpdev;
 
-		tmpdev = (acapd_device_t *)acapd_container_of(node,
-							      acapd_device_t,
-							      node);
+		tmpdev = (acapd_device_t *)acapd_container_of(node, acapd_device_t, node);
 		if (dev == tmpdev) {
 			/* TODO: in some cases, different device
 			 * can map different the same memory differently.
@@ -70,12 +68,10 @@ int acapd_device_detach_shm(acapd_device_t *dev, acapd_shm_t *shm)
 
 	acapd_assert(dev != NULL);
 	acapd_assert(shm != NULL);
-	acapd_list_for_each(&shm->refs, node) {
+	acapd_list_for_each (&shm->refs, node) {
 		acapd_device_t *tmpdev;
 
-		tmpdev = (acapd_device_t *)acapd_container_of(node,
-							      acapd_device_t,
-							      node);
+		tmpdev = (acapd_device_t *)acapd_container_of(node, acapd_device_t, node);
 		if (tmpdev == dev) {
 			if (dev->ops != NULL && dev->ops->detach != NULL) {
 				int ret;
@@ -97,8 +93,7 @@ void *acapd_device_get_reg_va(acapd_device_t *dev)
 {
 	acapd_assert(dev != NULL);
 	if (dev->va == NULL) {
-		acapd_perror("%s: %s is not opened.\n", __func__,
-			     dev->dev_name);
+		acapd_perror("%s: %s is not opened.\n", __func__, dev->dev_name);
 	}
 	return dev->va;
 }
@@ -118,8 +113,7 @@ int acapd_device_get(acapd_device_t *dev)
 		dev->refs = 0;
 		ret = acapd_device_open(dev);
 		if (ret < 0) {
-			acapd_perror("%s, failed to open %s.\n", __func__,
-				     dev->dev_name);
+			acapd_perror("%s, failed to open %s.\n", __func__, dev->dev_name);
 			return -EINVAL;
 		}
 	}

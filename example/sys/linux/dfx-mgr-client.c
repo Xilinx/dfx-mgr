@@ -36,8 +36,7 @@ static char *strip_warning_prefix(char *data)
 	return data;
 }
 
-static int send_and_recv_msg(socket_t *gs, struct message *send_msg,
-		     struct message *recv_msg)
+static int send_and_recv_msg(socket_t *gs, struct message *send_msg, struct message *recv_msg)
 {
 	send_msg->size = strlen(send_msg->data);
 	if (write(gs->sock_fd, send_msg, HEADERSIZE + send_msg->size) < 0) {
@@ -58,8 +57,7 @@ static int validate_numeric_arg(const char *str, long min_val)
 	return (*endptr == '\0' && val >= min_val) ? 0 : -1;
 }
 
-static int format_load_request(int argc, char *argv[], char *data,
-				size_t data_size)
+static int format_load_request(int argc, char *argv[], char *data, size_t data_size)
 {
 	char *cma_path = NULL;
 
@@ -77,14 +75,12 @@ static int format_load_request(int argc, char *argv[], char *data,
 	return 0;
 }
 
-static int print_load_result(const char *label, const char *id_str,
-			     const char *resp)
+static int print_load_result(const char *label, const char *id_str, const char *resp)
 {
 	long ret;
 
 	if (resp[0] != '-') {
-		printf("%s%s%s: Loaded with slot_handle %s\n",
-		       label, label[0] ? " " : "", id_str, resp);
+		printf("%s%s%s: Loaded with slot_handle %s\n", label, label[0] ? " " : "", id_str, resp);
 		return 0;
 	}
 
@@ -104,8 +100,7 @@ static int print_load_result(const char *label, const char *id_str,
 	return -(int)ret;
 }
 
-static int print_unload_result(const char *label, const char *id_str,
-			       const char *resp)
+static int print_unload_result(const char *label, const char *id_str, const char *resp)
 {
 	const char *sep = label[0] ? " " : "";
 	if (resp[0] == '0') {
@@ -126,8 +121,8 @@ int main(int argc, char *argv[])
 	char *binfile = NULL, *overlay = NULL, *region = NULL;
 	char *resp;
 
-	memset (&send_message, '\0', sizeof(struct message));
-	memset (&recv_message, '\0', sizeof(struct message));
+	memset(&send_message, '\0', sizeof(struct message));
+	memset(&recv_message, '\0', sizeof(struct message));
 	if (argc < 2) {
 		printf("Expects an argument. Use -h to see options\n");
 		return -1;
@@ -135,7 +130,7 @@ int main(int argc, char *argv[])
 	if (initSocket(&gs) < 0)
 		return -1;
 
-	if (!strcmp(argv[1],"-load")) {
+	if (!strcmp(argv[1], "-load")) {
 		if (argc < 3) {
 			printf("-load expects an ID. Try again.\n");
 			return -1;
@@ -144,8 +139,7 @@ int main(int argc, char *argv[])
 			printf("Error: -load expects a numeric ID. Use -loadByName for name-based loading.\n");
 			return -1;
 		}
-		if (format_load_request(argc, argv, send_message.data,
-					 sizeof(send_message.data)) < 0)
+		if (format_load_request(argc, argv, send_message.data, sizeof(send_message.data)) < 0)
 			return -1;
 		send_message.id = LOAD_ACCEL_BY_ID;
 		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
@@ -155,11 +149,11 @@ int main(int argc, char *argv[])
 		if (ret)
 			return ret;
 
-	} else if(!strcmp(argv[1],"-remove")) {
+	} else if (!strcmp(argv[1], "-remove")) {
 		printf("WARNING: '-remove' is deprecated. Use '-unload' instead.\n");
 		return -1;
 
-	} else if(!strcmp(argv[1],"-unload")) {
+	} else if (!strcmp(argv[1], "-unload")) {
 		if (argc < 3) {
 			printf("-unload expects an ID (from -listPackage, 0 = base design). Try again.\n");
 			return -1;
@@ -175,13 +169,12 @@ int main(int argc, char *argv[])
 		resp = strip_warning_prefix(recv_message.data);
 		return print_unload_result("ID", argv[2], resp);
 
-	} else if(!strcmp(argv[1],"-loadByName")) {
+	} else if (!strcmp(argv[1], "-loadByName")) {
 		if (argc < 3) {
 			printf("-loadByName expects an accelerator name. Try again.\n");
 			return -1;
 		}
-		if (format_load_request(argc, argv, send_message.data,
-					 sizeof(send_message.data)) < 0)
+		if (format_load_request(argc, argv, send_message.data, sizeof(send_message.data)) < 0)
 			return -1;
 		send_message.id = LOAD_ACCEL_BY_NAME;
 		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
@@ -190,7 +183,7 @@ int main(int argc, char *argv[])
 		if (ret)
 			return ret;
 
-	} else if(!strcmp(argv[1],"-unloadByName")) {
+	} else if (!strcmp(argv[1], "-unloadByName")) {
 		if (argc < 3) {
 			printf("-unloadByName expects an accelerator name. Try again.\n");
 			return -1;
@@ -201,7 +194,7 @@ int main(int argc, char *argv[])
 			return -1;
 		return print_unload_result("", argv[2], recv_message.data);
 
-	} else if(!strcmp(argv[1],"-unloadByHandle")) {
+	} else if (!strcmp(argv[1], "-unloadByHandle")) {
 		if (argc < 3) {
 			printf("-unloadByHandle expects a slot handle number. Try again.\n");
 			return -1;
@@ -216,7 +209,7 @@ int main(int argc, char *argv[])
 			return -1;
 		return print_unload_result("handle", argv[2], recv_message.data);
 
-	} else if(!strcmp(argv[1],"-listPackage")) {
+	} else if (!strcmp(argv[1], "-listPackage")) {
 		int list_flag = 0;
 
 		/* Parse optional flags from remaining arguments */
@@ -232,24 +225,22 @@ int main(int argc, char *argv[])
 		send_message.flags = list_flag;
 		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
 			return -1;
-		printf("%s",recv_message.data);
+		printf("%s", recv_message.data);
 
-	} else if(!strcmp(argv[1],"-listUIO")) {
+	} else if (!strcmp(argv[1], "-listUIO")) {
 		/*
 		 * Need to convert to getopt_long. If argc=2, use slot 0.
 		 * No UIO name means "list all", else get the first match
 		 */
 		char *uio = (argc < 4) ? "" : argv[3];
 
-		send_message._u.slot = (argc == 3 || argc == 4)
-			? 0xff & strtol(argv[2], NULL, 10)
-			: 0;
+		send_message._u.slot = (argc == 3 || argc == 4) ? 0xff & strtol(argv[2], NULL, 10) : 0;
 		sprintf(send_message.data, "%s", uio);
 		send_message.id = LIST_ACCEL_UIO;
 		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
 			return -1;
 		printf("%s\n", recv_message.data);
-	} else if(!strcmp(argv[1],"-h") || !strcmp(argv[1],"--help")) {
+	} else if (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help")) {
 		printf("Usage dfx-mgr-client COMMAND\n");
 		printf("Commands\n");
 		printf("-listPackage [-all] [-filter]\n");
@@ -276,41 +267,45 @@ int main(int argc, char *argv[])
 		printf("Options:\n\t -b <bitstream>\t Absolute path of bitstream file\n");
 		printf("\t -o <dtbo>\t Absolute path of device tree overlay file\n");
 		printf("\t -f <type>\t Bitstream type: <Full | Partial>\n");
-		printf("\t -n <region>\t Full or Partial reconfiguration region of FPGA in device tree (max 8 chars)\n");
+		printf(
+			"\t -n <region>\t Full or Partial reconfiguration region of FPGA in device tree (max 8 "
+			"chars)\n");
 		printf("\t -R\t\t Remove overlay from live tree without unloading bitstream\n");
 	} else {
 		int unknown_arg = 1;
 		while ((opt = getopt(argc, argv, "b:o:f:n:R?:")) != -1) {
 			unknown_arg = 0;
 			switch (opt) {
-				case 'b':
-					binfile = optarg;
-					break;
-				case 'o':
-					overlay = optarg;
-					break;
-				case 'f':
-					if (!strcmp(optarg, "Partial")) {
-						user_load_flag |= USER_LOAD_PARTIAL;
-					} else if (strcmp(optarg, "Full")) {
-						printf("Unknown value for -f: expect 'Full' or 'Partial'\n");
-						return -1;
-					}
-					break;
-				case 'n':
-					if (strlen(optarg) > MAX_REGION_NAME_LEN) {
-						printf("Error: Region name must be %d characters or less (provided: %s, length: %d)\n",
-							MAX_REGION_NAME_LEN, optarg, (int)strlen(optarg));
-						return -1;
-					}
-					region = optarg;
-					break;
-				case 'R':
-					user_unload_flag = 1;
-					break;
-				default:
-					unknown_arg = 1;
-					break;
+			case 'b':
+				binfile = optarg;
+				break;
+			case 'o':
+				overlay = optarg;
+				break;
+			case 'f':
+				if (!strcmp(optarg, "Partial")) {
+					user_load_flag |= USER_LOAD_PARTIAL;
+				} else if (strcmp(optarg, "Full")) {
+					printf("Unknown value for -f: expect 'Full' or 'Partial'\n");
+					return -1;
+				}
+				break;
+			case 'n':
+				if (strlen(optarg) > MAX_REGION_NAME_LEN) {
+					printf(
+						"Error: Region name must be %d characters or less (provided: %s, length: "
+						"%d)\n",
+						MAX_REGION_NAME_LEN, optarg, (int)strlen(optarg));
+					return -1;
+				}
+				region = optarg;
+				break;
+			case 'R':
+				user_unload_flag = 1;
+				break;
+			default:
+				unknown_arg = 1;
+				break;
 			}
 		}
 
@@ -329,7 +324,7 @@ int main(int argc, char *argv[])
 			sprintf(send_message.data, "%s", (region == NULL) ? "full" : region);
 			if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
 				return -1;
-			if (recv_message.data[0] == '0'){
+			if (recv_message.data[0] == '0') {
 				printf("Removed device tree overlay: %s\n", send_message.data);
 			} else {
 				printf("Failed to remove overlay: %s\n", send_message.data);
@@ -338,7 +333,7 @@ int main(int argc, char *argv[])
 
 		} else {
 			if (binfile == NULL) {
-				printf ("Not provided the bitstream path\n");
+				printf("Not provided the bitstream path\n");
 				return -1;
 			}
 
@@ -347,22 +342,23 @@ int main(int argc, char *argv[])
 
 			if (overlay != NULL) {
 				if ((user_load_flag & USER_LOAD_PARTIAL) && (region == NULL)) {
-					printf ("FPGA region for partial loading has not provided\n");
+					printf("FPGA region for partial loading has not provided\n");
 					return -1;
 				}
 				user_load_flag |= USER_LOAD_HAS_OVERLAY;
-				sprintf(send_message.data, "%s : %s : %s", binfile, overlay, (region == NULL) ? "full" : region);
+				sprintf(send_message.data, "%s : %s : %s", binfile, overlay,
+						(region == NULL) ? "full" : region);
 			}
 			send_message.flags = user_load_flag;
 			if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
 				return -1;
-			if (recv_message.data[0] == '-'){
+			if (recv_message.data[0] == '-') {
 				printf("Load Error: %s\n", recv_message.data);
 				return -1;
 			} else {
 				printf("Loaded with slot_handle %s\n", recv_message.data);
 			}
 		}
-	}	
+	}
 	return 0;
 }

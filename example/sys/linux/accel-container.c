@@ -17,7 +17,7 @@
 
 static acapd_accel_t bzip2_accel;
 
-void usage (const char *cmd)
+void usage(const char *cmd)
 {
 	fprintf(stdout, "Usage %s -p <pkg_path> -a <app_path>\n", cmd);
 }
@@ -75,4 +75,3 @@ error:
 	remove_accel(&bzip2_accel, 0);
 	return ret;
 }
-

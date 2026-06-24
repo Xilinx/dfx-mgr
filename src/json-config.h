@@ -10,7 +10,6 @@
  * @brief	Linux specific Json config definition.
  */
 
-
 #ifndef _ACAPD_LINUX_JSON_CONFIG_H
 #define _ACAPD_LINUX_JSON_CONFIG_H
 

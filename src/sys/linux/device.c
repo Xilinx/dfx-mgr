@@ -36,10 +36,8 @@ int sys_device_open(acapd_device_t *dev)
 	} else if (strcmp(dev->driver, "vfio-platform") == 0) {
 		dev->ops = &acapd_vfio_dev_ops;
 	} else {
-		acapd_perror("%s: no ops found for device %s.\n",
-			     __func__, dev->dev_name);
+		acapd_perror("%s: no ops found for device %s.\n", __func__, dev->dev_name);
 		return -EINVAL;
 	}
 	return dev->ops->open(dev);
 }
-

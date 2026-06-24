@@ -24,13 +24,11 @@ extern "C" {
 
 int is_user_load_platform(void);
 const char *path_basename(const char *path);
-int user_load_bitstream(const char *bitstream, const char *overlay,
-			const char *region, int is_partial);
-int user_load_from_dir(const char *search_path, const char *region,
-		       int is_partial);
-void user_load_init_accel(acapd_accel_t *pl_accel,
-			  acapd_accel_pkg_hd_t *pkg,
-			  int slot_num, const char *accel_type);
+int user_load_bitstream(const char *bitstream, const char *overlay, const char *region,
+						int is_partial);
+int user_load_from_dir(const char *search_path, const char *region, int is_partial);
+void user_load_init_accel(acapd_accel_t *pl_accel, acapd_accel_pkg_hd_t *pkg, int slot_num,
+						  const char *accel_type);
 void remove_overlay_dir(const char *dir);
 char *find_overlay_file(const char *path);
 void free_overlay_file_path(char *path);

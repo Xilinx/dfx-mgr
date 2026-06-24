@@ -45,7 +45,7 @@ static char *str_trim(char *str)
 	return str;
 }
 
-static const char *known_separators[] = { ": ", "-" };
+static const char *known_separators[] = {": ", "-"};
 #define NUM_SEPARATORS (sizeof(known_separators) / sizeof(known_separators[0]))
 
 /**
@@ -59,8 +59,7 @@ static const char *known_separators[] = { ": ", "-" };
  *
  * Return: 0 on success (board name found), -1 on failure
  */
-static int try_read_board_from_eeprom(const char *path,
-					char *board_name, size_t size)
+static int try_read_board_from_eeprom(const char *path, char *board_name, size_t size)
 {
 	glob_t glob_result;
 	char cmd[512];
@@ -83,9 +82,9 @@ static int try_read_board_from_eeprom(const char *path,
 
 	for (s = 0; s < NUM_SEPARATORS; s++) {
 		snprintf(cmd, sizeof(cmd),
-			"ipmi-fru --fru-file=%s --interpret-oem-data 2>/dev/null | "
-			"awk -F\"%s\" '/FRU Board Product/ {print $2}'",
-			glob_result.gl_pathv[0], known_separators[s]);
+				 "ipmi-fru --fru-file=%s --interpret-oem-data 2>/dev/null | "
+				 "awk -F\"%s\" '/FRU Board Product/ {print $2}'",
+				 glob_result.gl_pathv[0], known_separators[s]);
 
 		fp = popen(cmd, "r");
 		if (!fp)
@@ -133,8 +132,7 @@ int read_board_name_from_eeprom(char *board_name, size_t size)
 
 	for (i = 0; i < config.num_eeprom_location; i++) {
 		if (try_read_board_from_eeprom(config.eeprom_location[i], board_name, size) == 0) {
-			DFX_PR("Board name from %s: %s",
-					config.eeprom_location[i], board_name);
+			DFX_PR("Board name from %s: %s", config.eeprom_location[i], board_name);
 			return 0;
 		}
 	}

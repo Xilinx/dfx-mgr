@@ -40,15 +40,13 @@ int sys_accel_config(acapd_accel_t *accel)
 	acapd_assert(sys_pkg->accel_json_pa != 0);
 	acapd_assert(sys_pkg->accel_json_size != 0);
 	json_config = (const char *)((uintptr_t)sys_pkg->accel_json_pa);
-	ret = parseAccelJson(accel, json_config,
-			     (size_t)sys_pkg->accel_json_size);
+	ret = parseAccelJson(accel, json_config, (size_t)sys_pkg->accel_json_size);
 	for (int i = 0; i < accel->num_ip_devs; i++) {
 		acapd_device_t *dev;
 
 		dev = &(accel->ip_dev[i]);
-		dev->va = (void*)((uintptr_t)(dev->reg_pa));
-		acapd_debug("%s: ipdev[%d], %p:0x%lx.\n",
-			    __func__, i, dev->va, dev->reg_pa);
+		dev->va = (void *)((uintptr_t)(dev->reg_pa));
+		acapd_debug("%s: ipdev[%d], %p:0x%lx.\n", __func__, i, dev->va, dev->reg_pa);
 	}
 	for (int i = 0; i < accel->num_chnls; i++) {
 		acapd_chnl_t *chnl;
@@ -57,8 +55,7 @@ int sys_accel_config(acapd_accel_t *accel)
 		chnl = &(accel->chnls[i]);
 		dev = chnl->dev;
 		dev->va = (void *)((uintptr_t)(dev->reg_pa));
-		acapd_debug("%s: channel[%d], %p:0x%lx.\n",
-			    __func__, i, dev->va, dev->reg_pa);
+		acapd_debug("%s: channel[%d], %p:0x%lx.\n", __func__, i, dev->va, dev->reg_pa);
 	}
 	return ret;
 }
@@ -83,8 +80,8 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 	sys_pkg = (acapd_accel_sys_t *)(accel->pkg);
 	acapd_assert(sys_pkg->accel_pdi_pa != 0);
 	acapd_assert(sys_pkg->accel_pdi_size != 0);
-	acapd_debug("%s: pdi pa: 0x%llx, size=0x%llx.\n",
-		    __func__, sys_pkg->accel_pdi_pa, sys_pkg->accel_pdi_size);
+	acapd_debug("%s: pdi pa: 0x%llx, size=0x%llx.\n", __func__, sys_pkg->accel_pdi_pa,
+				sys_pkg->accel_pdi_size);
 
 	ret = XFpga_Initialize(&XFpgaInst);
 	if (ret != XST_SUCCESS) {
@@ -111,11 +108,8 @@ int sys_close_accel(acapd_accel_t *accel)
 
 int sys_remove_accel(acapd_accel_t *accel, unsigned int async)
 {
-
 	/* TODO: Do nothing for now */
 	(void)async;
 	(void)accel;
 	return ACAPD_ACCEL_SUCCESS;
 }
-
-

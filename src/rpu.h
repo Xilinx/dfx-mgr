@@ -73,8 +73,7 @@ int remove_rpu(int slot);
  *
  * Return: @buf on success, NULL if no new control device is found
  */
-char* get_new_rpmsg_ctrl_dev(struct basePLDesign *base, char *buf,
-			     size_t buflen);
+char *get_new_rpmsg_ctrl_dev(struct basePLDesign *base, char *buf, size_t buflen);
 
 /**
  * get_virtio_number() - return virtio number
@@ -86,7 +85,7 @@ char* get_new_rpmsg_ctrl_dev(struct basePLDesign *base, char *buf,
  * Return: virtio number on success
  *         0 if not found
  */
-int get_virtio_number(char* rpmsg_dev_name);
+int get_virtio_number(char *rpmsg_dev_name);
 
 /**
  * update_rpmsg_dev_list() - updates rpmsg device list and setup
@@ -104,7 +103,7 @@ int get_virtio_number(char* rpmsg_dev_name);
  * Return:  void
  *
  */
-void update_rpmsg_dev_list(acapd_list_t *rpmsg_dev_list, char* rpmsg_ctrl_dev, int virtio_num);
+void update_rpmsg_dev_list(acapd_list_t *rpmsg_dev_list, char *rpmsg_ctrl_dev, int virtio_num);
 
 /**
  * delete_rpmsg_dev_list - delete complete rpmsg_dev_list
@@ -137,9 +136,8 @@ int validate_rpu_slot_availability(struct basePLDesign *base, int slot_num);
  *
  * Return: slot_handle on success, -1 on error
  */
-int finalize_rpu_slot_setup(struct basePLDesign *base, slot_info_t *slot,
-			    acapd_accel_t *pl_accel, const char *accel_name,
-			    int slot_num, unsigned int rpu_fw_uptime_msec);
+int finalize_rpu_slot_setup(struct basePLDesign *base, slot_info_t *slot, acapd_accel_t *pl_accel,
+							const char *accel_name, int slot_num, unsigned int rpu_fw_uptime_msec);
 
 /**
  * parse_rpu_slot_dir() - Parse a single RPU slot directory for .elf files
@@ -148,9 +146,7 @@ int finalize_rpu_slot_setup(struct basePLDesign *base, slot_info_t *slot,
  * @slot_num: Slot number
  * @rpu_path: Parent RPU path
  */
-void parse_rpu_slot_dir(struct basePLDesign *base, char *slot_path,
-			int slot_num, char *rpu_path);
-
+void parse_rpu_slot_dir(struct basePLDesign *base, char *slot_path, int slot_num, char *rpu_path);
 
 #ifdef __cplusplus
 }

@@ -19,16 +19,16 @@ extern "C" {
 #include <dfx-mgr/helper.h>
 
 typedef struct acapd_vfio_mmap {
-	void *va; /**< logical address */
-	uint64_t da; /**< device address */
-	size_t size; /**< size of the mmapped memory */
+	void *va;		   /**< logical address */
+	uint64_t da;	   /**< device address */
+	size_t size;	   /**< size of the mmapped memory */
 	acapd_list_t node; /**< node */
 } acapd_vfio_mmap_t;
 
 typedef struct acapd_vfio {
-	int container; /**< vfio container fd */
-	int group; /**< vfio group id */
-	int device; /**< vfio device fd */
+	int container;		/**< vfio container fd */
+	int group;			/**< vfio group id */
+	int device;			/**< vfio device fd */
 	acapd_list_t mmaps; /**< memory maps list */
 } acapd_vfio_t;
 

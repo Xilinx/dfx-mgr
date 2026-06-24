@@ -13,19 +13,20 @@
 extern "C" {
 #endif
 
-#define CONFIG_PATH		"/etc/dfx-mgrd/daemon.conf"
+#define CONFIG_PATH "/etc/dfx-mgrd/daemon.conf"
 #define DEFAULT_BOARD_NAME "Xilinx board"
 #define WATCH_PATH_LEN 256
 #define MAX_WATCH 500
 
 /* Error codes */
-#define DFX_MGR_LOAD_ERROR			(1U)
-#define DFX_MGR_NO_PACKAGE_FOUND_ERROR		(2U)
-#define DFX_MGR_NO_EMPTY_SLOT_ERROR		(3U)
+#define DFX_MGR_LOAD_ERROR (1U)
+#define DFX_MGR_NO_PACKAGE_FOUND_ERROR (2U)
+#define DFX_MGR_NO_EMPTY_SLOT_ERROR (3U)
 
-#define TRUNCATED_BASE_NAME_LEN     8
-#define MAX_BASE_NAME_DISPLAY_LEN   (TRUNCATED_BASE_NAME_LEN + 3)  /* Truncated base len  + 3 dots */
-#define TRUNCATED_BASE_BUFFER_SIZE  (MAX_BASE_NAME_DISPLAY_LEN + 1)  /* Display length + null terminator */
+#define TRUNCATED_BASE_NAME_LEN 8
+#define MAX_BASE_NAME_DISPLAY_LEN (TRUNCATED_BASE_NAME_LEN + 3) /* Truncated base len  + 3 dots */
+#define TRUNCATED_BASE_BUFFER_SIZE \
+	(MAX_BASE_NAME_DISPLAY_LEN + 1) /* Display length + null terminator */
 
 int load_accelerator(const char *accel_name, char *cma_path);
 int load_accelerator_by_id(int id, char *cma_path);
@@ -41,7 +42,8 @@ int user_load(int flag, const char *binfile, const char *overlay, const char *re
 int user_unload_overlay(const char *region);
 int user_unload(const int handle);
 int get_free_slot_handle(void);
-accel_info_t *add_accel_to_base(struct basePLDesign *base, char *name, char *path, char *parent_path);
+accel_info_t *add_accel_to_base(struct basePLDesign *base, char *name, char *path,
+								char *parent_path);
 
 #ifdef __cplusplus
 }

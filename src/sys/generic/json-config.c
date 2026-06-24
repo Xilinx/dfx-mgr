@@ -17,19 +17,20 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-static int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
-  if (tok->type == JSMN_STRING && (int)strlen(s) == tok->end - tok->start &&
-      strncmp(json + tok->start, s, tok->end - tok->start) == 0) {
-    return 0;
-  }
-  return -1;
+static int jsoneq(const char *json, jsmntok_t *tok, const char *s)
+{
+	if (tok->type == JSMN_STRING && (int)strlen(s) == tok->end - tok->start &&
+		strncmp(json + tok->start, s, tok->end - tok->start) == 0) {
+		return 0;
+	}
+	return -1;
 }
 
 int parseAccelJson(acapd_accel_t *accel, const char *config, size_t csize)
 {
 	jsmn_parser parser;
 	jsmntok_t token[128];
-	int ret,i;
+	int ret, i;
 	const char *jsonData;
 	size_t numBytes;
 	acapd_device_t *dma_dev;
@@ -42,20 +43,20 @@ int parseAccelJson(acapd_accel_t *accel, const char *config, size_t csize)
 
 	jsonData = config;
 	numBytes = csize;
-	acapd_praw("jsonData read:\n %s\n",jsonData);
+	acapd_praw("jsonData read:\n %s\n", jsonData);
 
 	jsmn_init(&parser);
-	ret = jsmn_parse(&parser, jsonData, numBytes, token, sizeof(token)/sizeof(token[0]));
-	if (ret < 0){
+	ret = jsmn_parse(&parser, jsonData, numBytes, token, sizeof(token) / sizeof(token[0]));
+	if (ret < 0) {
 		acapd_praw("Failed to parse JSON: %d\n", ret);
 	}
 
-	for(i=1; i < ret; i++){
+	for (i = 1; i < ret; i++) {
 		if (token[i].type == JSMN_OBJECT)
 			continue;
-		if (jsoneq(jsonData, &token[i],"accel_devices") == 0){
+		if (jsoneq(jsonData, &token[i], "accel_devices") == 0) {
 			int j;
-			int numDevices = token[i+1].size;
+			int numDevices = token[i + 1].size;
 			acapd_device_t *devs;
 			devs = (acapd_device_t *)calloc(numDevices, sizeof(*devs));
 			if (devs == NULL) {
@@ -63,43 +64,65 @@ int parseAccelJson(acapd_accel_t *accel, const char *config, size_t csize)
 				ret = -ENOMEM;
 				goto error;
 			}
-			i+=2;
+			i += 2;
 
 			accel->num_ip_devs = numDevices;
-			for(j=0; j < numDevices; j++){
-				if (jsoneq(jsonData, &token[i+j+1],"dev_name") == 0)
-					devs[j].dev_name = strndup(jsonData+token[i+j+2].start, token[i+j+2].end - token[i+j+2].start);
-				if (jsoneq(jsonData, &token[i+j+3],"reg_base") == 0)
-					devs[j].reg_pa = (uint64_t)strtoll(strndup(jsonData+token[i+j+4].start, token[i+j+4].end - token[i+j+4].start), NULL, 16);
-				if (jsoneq(jsonData, &token[i+j+5],"reg_size") == 0)
-					devs[j].reg_size = (size_t)strtoll(strndup(jsonData+token[i+j+6].start, token[i+j+6].end - token[i+j+6].start), NULL, 16);
-				i+=6;
+			for (j = 0; j < numDevices; j++) {
+				if (jsoneq(jsonData, &token[i + j + 1], "dev_name") == 0)
+					devs[j].dev_name = strndup(jsonData + token[i + j + 2].start,
+											   token[i + j + 2].end - token[i + j + 2].start);
+				if (jsoneq(jsonData, &token[i + j + 3], "reg_base") == 0)
+					devs[j].reg_pa =
+						(uint64_t)strtoll(strndup(jsonData + token[i + j + 4].start,
+												  token[i + j + 4].end - token[i + j + 4].start),
+										  NULL, 16);
+				if (jsoneq(jsonData, &token[i + j + 5], "reg_size") == 0)
+					devs[j].reg_size =
+						(size_t)strtoll(strndup(jsonData + token[i + j + 6].start,
+												token[i + j + 6].end - token[i + j + 6].start),
+										NULL, 16);
+				i += 6;
 			}
 			accel->ip_dev = devs;
 		}
-		if (jsoneq(jsonData, &token[i],"accel_reg_base") == 0){}
-		if (jsoneq(jsonData, &token[i],"accel_reg_size") == 0){}
-		if (jsoneq(jsonData, &token[i],"sizeInKB")== 0){}
-		if (jsoneq(jsonData, &token[i],"sharedMemType") == 0){}
-		if (jsoneq(jsonData, &token[i],"dma_dev_name") == 0)
-			dma_dev->dev_name = strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start);
-		if (jsoneq(jsonData, &token[i],"dma_driver") == 0)
-			dma_dev->driver = strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start);
-		if (jsoneq(jsonData, &token[i],"dma_reg_base") == 0){
-			dma_dev->reg_pa = (uint64_t)strtoll(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 16);
+		if (jsoneq(jsonData, &token[i], "accel_reg_base") == 0) {
 		}
-		if (jsoneq(jsonData, &token[i],"dma_reg_size") == 0){
-			dma_dev->reg_size = (size_t)strtoll(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 16);
+		if (jsoneq(jsonData, &token[i], "accel_reg_size") == 0) {
 		}
-		if (jsoneq(jsonData, &token[i],"iommu_group") == 0)
-			dma_dev->iommu_group = atoi(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start));
-		if (jsoneq(jsonData, &token[i],"Bus") == 0){}
-		if (jsoneq(jsonData, &token[i],"HWType") == 0){}
-		if (jsoneq(jsonData, &token[i],"dataMoverCacheCoherent") == 0){}
-		if (jsoneq(jsonData, &token[i],"dataMoverVirtualAddress") == 0){}
-		if (jsoneq(jsonData, &token[i],"dataMoverChnls") == 0){
+		if (jsoneq(jsonData, &token[i], "sizeInKB") == 0) {
+		}
+		if (jsoneq(jsonData, &token[i], "sharedMemType") == 0) {
+		}
+		if (jsoneq(jsonData, &token[i], "dma_dev_name") == 0)
+			dma_dev->dev_name =
+				strndup(jsonData + token[i + 1].start, token[i + 1].end - token[i + 1].start);
+		if (jsoneq(jsonData, &token[i], "dma_driver") == 0)
+			dma_dev->driver =
+				strndup(jsonData + token[i + 1].start, token[i + 1].end - token[i + 1].start);
+		if (jsoneq(jsonData, &token[i], "dma_reg_base") == 0) {
+			dma_dev->reg_pa = (uint64_t)strtoll(
+				strndup(jsonData + token[i + 1].start, token[i + 1].end - token[i + 1].start), NULL,
+				16);
+		}
+		if (jsoneq(jsonData, &token[i], "dma_reg_size") == 0) {
+			dma_dev->reg_size = (size_t)strtoll(
+				strndup(jsonData + token[i + 1].start, token[i + 1].end - token[i + 1].start), NULL,
+				16);
+		}
+		if (jsoneq(jsonData, &token[i], "iommu_group") == 0)
+			dma_dev->iommu_group =
+				atoi(strndup(jsonData + token[i + 1].start, token[i + 1].end - token[i + 1].start));
+		if (jsoneq(jsonData, &token[i], "Bus") == 0) {
+		}
+		if (jsoneq(jsonData, &token[i], "HWType") == 0) {
+		}
+		if (jsoneq(jsonData, &token[i], "dataMoverCacheCoherent") == 0) {
+		}
+		if (jsoneq(jsonData, &token[i], "dataMoverVirtualAddress") == 0) {
+		}
+		if (jsoneq(jsonData, &token[i], "dataMoverChnls") == 0) {
 			int j;
-			int numChnls = token[i+1].size;
+			int numChnls = token[i + 1].size;
 			acapd_chnl_t *chnls;
 
 			chnls = (acapd_chnl_t *)calloc(numChnls, sizeof(*chnls));
@@ -109,29 +132,33 @@ int parseAccelJson(acapd_accel_t *accel, const char *config, size_t csize)
 				goto error;
 			}
 
-			i+=2;
-			for(j=0; j < numChnls; j++){
-				if (jsoneq(jsonData, &token[i+j+1],"chnl_id") == 0){
-					chnls[j].chnl_id = atoi(strndup(jsonData+token[i+j+2].start, token[i+j+2].end - token[i+j+2].start));
+			i += 2;
+			for (j = 0; j < numChnls; j++) {
+				if (jsoneq(jsonData, &token[i + j + 1], "chnl_id") == 0) {
+					chnls[j].chnl_id = atoi(strndup(jsonData + token[i + j + 2].start,
+													token[i + j + 2].end - token[i + j + 2].start));
 				}
-				if (jsoneq(jsonData, &token[i+j+3],"chnl_dir") == 0){
-					char *dir = strndup(jsonData+token[i+j+4].start, token[i+j+4].end - token[i+j+4].start);
-					if (!strcmp(dir,"ACAPD_DMA_DEV_R"))
+				if (jsoneq(jsonData, &token[i + j + 3], "chnl_dir") == 0) {
+					char *dir = strndup(jsonData + token[i + j + 4].start,
+										token[i + j + 4].end - token[i + j + 4].start);
+					if (!strcmp(dir, "ACAPD_DMA_DEV_R"))
 						chnls[j].dir = ACAPD_DMA_DEV_R;
-					else if (!strcmp(dir,"ACAPD_DMA_DEV_W"))
+					else if (!strcmp(dir, "ACAPD_DMA_DEV_W"))
 						chnls[j].dir = ACAPD_DMA_DEV_W;
-					else if (!strcmp(dir,"ACAPD_DMA_DEV_RW"))
+					else if (!strcmp(dir, "ACAPD_DMA_DEV_RW"))
 						chnls[j].dir = ACAPD_DMA_DEV_RW;
 				}
 				chnls[j].dev = dma_dev;
 				chnls[j].ops = &axidma_generic_ops;
-				i+=4;//move token to point to next channel in array
+				i += 4;	 // move token to point to next channel in array
 			}
 			accel->num_chnls = numChnls;
 			accel->chnls = chnls;
 		}
-		if (jsoneq(jsonData, &token[i],"AccelHandshakeType") == 0){}
-		if (jsoneq(jsonData, &token[i],"fallbackBehaviour") == 0){}
+		if (jsoneq(jsonData, &token[i], "AccelHandshakeType") == 0) {
+		}
+		if (jsoneq(jsonData, &token[i], "fallbackBehaviour") == 0) {
+		}
 	}
 	return 0;
 error:
@@ -156,35 +183,41 @@ int parseShellJson(acapd_shell_t *shell, const char *config, size_t csize)
 	size_t numBytes;
 	jsmn_parser parser;
 	jsmntok_t token[128];
-	int ret,i;
+	int ret, i;
 	const char *jsonData;
 	acapd_device_t *dev;
 
 	acapd_assert(shell != NULL);
 	numBytes = csize;
 	jsonData = config;
-	acapd_praw("jsonData read:\n %s\n",jsonData);
+	acapd_praw("jsonData read:\n %s\n", jsonData);
 
 	jsmn_init(&parser);
-	ret = jsmn_parse(&parser, jsonData, numBytes, token, sizeof(token)/sizeof(token[0]));
-	if (ret < 0){
+	ret = jsmn_parse(&parser, jsonData, numBytes, token, sizeof(token) / sizeof(token[0]));
+	if (ret < 0) {
 		acapd_praw("Failed to parse JSON: %d\n", ret);
 	}
 
 	dev = &shell->dev;
-	for(i=1; i < ret; i++){
+	for (i = 1; i < ret; i++) {
 		if (token[i].type == JSMN_OBJECT)
 			continue;
-		if (jsoneq(jsonData, &token[i],"device_name") == 0)
-			dev->dev_name = strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start);
-		if (jsoneq(jsonData, &token[i],"shell_type") == 0) {
-			acapd_praw("Shell is %s\n",strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start));
+		if (jsoneq(jsonData, &token[i], "device_name") == 0)
+			dev->dev_name =
+				strndup(jsonData + token[i + 1].start, token[i + 1].end - token[i + 1].start);
+		if (jsoneq(jsonData, &token[i], "shell_type") == 0) {
+			acapd_praw("Shell is %s\n", strndup(jsonData + token[i + 1].start,
+												token[i + 1].end - token[i + 1].start));
 		}
-		if (jsoneq(jsonData, &token[i],"reg_base")== 0)
-			dev->reg_pa = (uint64_t)strtoll(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 16);
-		if (jsoneq(jsonData, &token[i],"reg_size") == 0){}
-			dev->reg_size = (size_t)strtoll(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 16);
+		if (jsoneq(jsonData, &token[i], "reg_base") == 0)
+			dev->reg_pa = (uint64_t)strtoll(
+				strndup(jsonData + token[i + 1].start, token[i + 1].end - token[i + 1].start), NULL,
+				16);
+		if (jsoneq(jsonData, &token[i], "reg_size") == 0) {
+		}
+		dev->reg_size = (size_t)strtoll(
+			strndup(jsonData + token[i + 1].start, token[i + 1].end - token[i + 1].start), NULL,
+			16);
 	}
 	return 0;
 }
-

@@ -15,9 +15,9 @@ void acapd_debug(const char *format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
-	fprintf(stdout, "DFX-MGRD> DEBUG: " );
+	fprintf(stdout, "DFX-MGRD> DEBUG: ");
 	vfprintf(stdout, format, argptr);
-	fprintf(stdout, "\n" );
+	fprintf(stdout, "\n");
 	va_end(argptr);
 }
 #endif
@@ -26,9 +26,9 @@ void acapd_print(const char *format, ...)
 {
 	va_list argptr;
 	va_start(argptr, format);
-	fprintf(stdout, "DFX-MGRD> " );
+	fprintf(stdout, "DFX-MGRD> ");
 	vfprintf(stdout, format, argptr);
-	fprintf(stdout, "\n" );
+	fprintf(stdout, "\n");
 	va_end(argptr);
 }
 
@@ -37,7 +37,7 @@ void acapd_perror(const char *format, ...)
 	int errnum = errno;
 	va_list argptr;
 	va_start(argptr, format);
-	fprintf(stderr, "DFX-MGRD> ERROR: " );
+	fprintf(stderr, "DFX-MGRD> ERROR: ");
 	vfprintf(stderr, format, argptr);
 	fprintf(stderr, "%s\n", errnum ? strerror(errnum) : "");
 	va_end(argptr);

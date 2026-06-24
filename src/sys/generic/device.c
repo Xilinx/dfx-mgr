@@ -83,4 +83,3 @@ acapd_device_ops_t sys_generic_dev_ops = {
 	.detach = sys_generic_device_detach,
 	.va_to_da = sys_generic_device_va_to_da,
 };
-

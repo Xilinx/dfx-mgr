@@ -15,13 +15,13 @@ extern "C" {
 #include <sys/types.h>
 
 #define SERVER_SOCKET "/var/run/dfx-mgrd.socket"
-#define BACKLOG                   10
+#define BACKLOG 10
 
-#define MAX_REGION_NAME_LEN  8
+#define MAX_REGION_NAME_LEN 8
 
 enum dfx_mgr_request {
 	DFX_MGR_REQ_FIRST,
-	QUIT	= DFX_MGR_REQ_FIRST,
+	QUIT = DFX_MGR_REQ_FIRST,
 	GRAPH_INIT,
 	GRAPH_FINALISE,
 	GRAPH_STAGED,
@@ -31,12 +31,12 @@ enum dfx_mgr_request {
 	UNLOAD_ACCEL,
 	LIST_PACKAGE,
 	LIST_ACCEL_UIO,
-	DFX_MGR_REQ_10,		/* unused */
+	DFX_MGR_REQ_10, /* unused */
 	GRAPH_INIT_DONE,
 	GRAPH_FINALISE_DONE,
 	GRAPH_STAGED_DONE,
-	DFX_MGR_REQ_14,		/* unused */
-	DFX_MGR_REQ_15,		/* unused */
+	DFX_MGR_REQ_14, /* unused */
+	DFX_MGR_REQ_15, /* unused */
 	USER_LOAD,
 	USER_UNLOAD,
 	LOAD_ACCEL_BY_ID,
@@ -50,31 +50,31 @@ enum dfx_mgr_request {
  *   Bits 0-1: USER_LOAD command
  *   Bits 2-3: LIST_PACKAGE command
  */
-#define USER_LOAD_PARTIAL     (1 << 0)  /* Partial bitstream (vs Full) */
-#define USER_LOAD_HAS_OVERLAY (1 << 1)  /* Overlay file provided */
-#define LIST_PKG_SHOW_ALL     (1 << 2)  /* Show all columns */
-#define LIST_PKG_FILTER       (1 << 3)  /* Filter by board name */
+#define USER_LOAD_PARTIAL (1 << 0)	   /* Partial bitstream (vs Full) */
+#define USER_LOAD_HAS_OVERLAY (1 << 1) /* Overlay file provided */
+#define LIST_PKG_SHOW_ALL (1 << 2)	   /* Show all columns */
+#define LIST_PKG_FILTER (1 << 3)	   /* Filter by board name */
 
 #define HEADERSIZE 24
 struct message {
-    uint32_t id;
-    uint32_t size;
-    uint32_t flags;
-    union {
-	    uint32_t fdcount;
-	    uint32_t slot;
-    } _u;
-    char data [32*1024];
+	uint32_t id;
+	uint32_t size;
+	uint32_t flags;
+	union {
+		uint32_t fdcount;
+		uint32_t slot;
+	} _u;
+	char data[32 * 1024];
 };
 
 typedef struct {
-        int sock_fd;
-        struct sockaddr_un socket_address;
+	int sock_fd;
+	struct sockaddr_un socket_address;
 } socket_t;
 
 extern int initSocket(socket_t *gs);
 
-extern int dfxmgr_load(char* packageName);
+extern int dfxmgr_load(char *packageName);
 extern int dfxmgr_unload(int slot);
 extern char *dfxmgr_uio_by_name(char *obuf, int slot, const char *name);
 

@@ -11,8 +11,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-
-void usage (const char *cmd)
+void usage(const char *cmd)
 {
 	fprintf(stdout, "Usage %s -p <pkg_path>\n", cmd);
 }
@@ -49,4 +48,3 @@ int main(int argc, char *argv[])
 	remove_accel(&bzip2_accel, 0);
 	return 0;
 }
-

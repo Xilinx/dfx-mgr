@@ -24,32 +24,30 @@ extern "C" {
 #define ACCEL_NAME_MAX 128 /* Max length of accel/base/RPU package name (incl NUL) */
 #define RP_SLOTS_MAX 10
 #define SLOT_HANDLE_MAX 30 /* MAX number of slot handles */
-#define ARRAY_SIZE(a) (sizeof(a)/sizeof((a)[0]))
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
-#define EPT_DEV_LEN     32
-#define EPT_NAME_LEN    32
+#define EPT_DEV_LEN 32
+#define EPT_NAME_LEN 32
 
-typedef struct rpmsg_dev{
-        /* name used to query - rpmsg-openamp-demo-channel.-1.1024 */
-        char rpmsg_channel_name[NAME_MAX];
-        /* Store ept dev name (/dev/rpmsg0) */
-        char ept_rpmsg_dev_name[EPT_DEV_LEN];
-        /* set to 1 if active */
-        bool active;
-        /* rpmsg_dev_t node list */
+typedef struct rpmsg_dev {
+	/* name used to query - rpmsg-openamp-demo-channel.-1.1024 */
+	char rpmsg_channel_name[NAME_MAX];
+	/* Store ept dev name (/dev/rpmsg0) */
+	char ept_rpmsg_dev_name[EPT_DEV_LEN];
+	/* set to 1 if active */
+	bool active;
+	/* rpmsg_dev_t node list */
 	acapd_list_t rpmsg_node;
-}rpmsg_dev_t;
-
+} rpmsg_dev_t;
 
 typedef struct {
 	/* virtio number of rpmsg created by firmware */
-        unsigned int virtio_num;
+	unsigned int virtio_num;
 	/* to store rpmsg_ctrl_dev name */
 	char rpmsg_ctrl_dev_name[NAME_MAX];
 	/* rpmsg dev list for referencing to rpmsg_dev_t */
 	acapd_list_t rpmsg_dev_list;
-}rpu_info_t;
-
+} rpu_info_t;
 
 typedef struct {
 	char name[ACCEL_NAME_MAX];
@@ -79,9 +77,9 @@ typedef struct {
 	 * and internally the action on the actual slot.
 	 */
 	int slot_handle;
-	acapd_accel_t *accel; // This tracks active PL dfx in this slot
-	rpu_info_t rpu; //This stores the rpu specific info in this slot
-}slot_info_t;
+	acapd_accel_t *accel;  // This tracks active PL dfx in this slot
+	rpu_info_t rpu;		   // This stores the rpu specific info in this slot
+} slot_info_t;
 
 typedef struct {
 	int uid;
@@ -92,7 +90,7 @@ typedef struct {
 	char parent_path[512];
 	int wd;
 	char accel_type[32];
-	int list_id;  /**< ID shown in listPackage, assigned by assign_list_ids() */
+	int list_id; /**< ID shown in listPackage, assigned by assign_list_ids() */
 	union {
 		struct {
 			int slot_num; /**< Slot number for new dir structure (-1 for old) */
@@ -101,7 +99,7 @@ typedef struct {
 			int _reserved;
 		} pl;
 	};
-}accel_info_t;
+} accel_info_t;
 
 struct basePLDesign {
 	int uid;
@@ -113,23 +111,23 @@ struct basePLDesign {
 	uint8_t num_pl_slots;
 	uint8_t num_aie_slots;
 	int active;
-	int wd; //inotify watch desc
+	int wd;	 // inotify watch desc
 	int load_base_design;
 	slot_info_t **slots;
 	accel_info_t accel_list[RP_SLOTS_MAX];
 
 	/* Added for User Managed Design*/
-	int is_user_load;            /* 1 if user managed design, 0 otherwise */
-	int user_load_type;          /* 0 for full, 1 for partial bitstream load */
-	int user_load_handle;        /* slot handle for user managed design */
-	char user_load_region[128];  /* full or partial reconfiguration region of FPGA in device tree */
-	int list_id;                 /* ID shown in listPackage for user_load entries */
+	int is_user_load;			/* 1 if user managed design, 0 otherwise */
+	int user_load_type;			/* 0 for full, 1 for partial bitstream load */
+	int user_load_handle;		/* slot handle for user managed design */
+	char user_load_region[128]; /* full or partial reconfiguration region of FPGA in device tree */
+	int list_id;				/* ID shown in listPackage for user_load entries */
 };
 
 typedef struct {
 	char boardName[128];
-	struct basePLDesign* active_base;
-	struct basePLDesign* active_rpu_base;
+	struct basePLDesign *active_base;
+	struct basePLDesign *active_rpu_base;
 	/*
 	 * @available_slot_handle - To track available slot handle
 	 * SLOT_HANDLE_MAX - max slots possible for RPU and PL
@@ -148,24 +146,24 @@ typedef struct {
 	 *    marking it as un-used and can be used for next load
 	 */
 	int available_slot_handle[SLOT_HANDLE_MAX]; /* To track available slot handles */
-	int use_user_load_path; /* route -load through sysfs/configfs user path */
-}platform_info_t;
+	int use_user_load_path;						/* route -load through sysfs/configfs user path */
+} platform_info_t;
 
 struct daemon_config {
 	char defaul_accel_name[ACCEL_NAME_MAX];
 	char **firmware_locations;
 	int number_locations;
 	unsigned int rpu_fw_uptime_msec; /* store rpu_fw_uptime_msec from config file */
-	char *cma_path; /*CMA file path for DMA buffer allocation*/
+	char *cma_path;					 /*CMA file path for DMA buffer allocation*/
 	char **eeprom_location;
 	int num_eeprom_location;
 };
 
 typedef struct {
 	struct basePLDesign *base;
-	accel_info_t *accel;  /* non-NULL for normal packages, NULL for user_load */
+	accel_info_t *accel; /* non-NULL for normal packages, NULL for user_load */
 	int is_user_load;
-	int slot_handle;      /* resolved slot_handle, -1 if not currently loaded */
+	int slot_handle; /* resolved slot_handle, -1 if not currently loaded */
 } list_id_result_t;
 
 #ifdef __cplusplus

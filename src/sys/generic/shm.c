@@ -11,8 +11,8 @@
 #include <string.h>
 #include <unistd.h>
 
-static int acapd_generic_alloc_shm(acapd_shm_allocator_t *allocator,
-				   acapd_shm_t *shm, size_t size, uint32_t attr)
+static int acapd_generic_alloc_shm(acapd_shm_allocator_t *allocator, acapd_shm_t *shm, size_t size,
+								   uint32_t attr)
 {
 	(void)allocator;
 	(void)attr;
@@ -25,18 +25,15 @@ static int acapd_generic_alloc_shm(acapd_shm_allocator_t *allocator,
 	}
 	shm->va = malloc(size);
 	if (shm->va == NULL) {
-		acapd_perror("%s: failed to allocate memory.\n",
-			     __func__);
+		acapd_perror("%s: failed to allocate memory.\n", __func__);
 	} else {
-		acapd_debug("%s: allocated memory %p, size 0x%x.\n",
-			    __func__, shm->va, size);
+		acapd_debug("%s: allocated memory %p, size 0x%x.\n", __func__, shm->va, size);
 	}
 	shm->size = size;
 	return 0;
 }
 
-static void acapd_generic_free_shm(acapd_shm_allocator_t *allocator,
-				   acapd_shm_t *shm)
+static void acapd_generic_free_shm(acapd_shm_allocator_t *allocator, acapd_shm_t *shm)
 {
 	(void)allocator;
 	if (shm == NULL) {

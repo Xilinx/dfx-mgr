@@ -29,7 +29,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define VFIO_CONTAINER  "/dev/vfio/vfio"
+#define VFIO_CONTAINER "/dev/vfio/vfio"
 
 static int acapd_vfio_bind(acapd_device_t *dev)
 {
@@ -39,8 +39,7 @@ static int acapd_vfio_bind(acapd_device_t *dev)
 	/* Check if it is able to access sysfs */
 	sprintf(tmpstr, "/sys/bus/platform/drivers/vfio-platform");
 	if (access(tmpstr, F_OK) != 0) {
-		acapd_debug("%s: no sysfs access, maybe in container, go ahead.\n",
-			    __func__);
+		acapd_debug("%s: no sysfs access, maybe in container, go ahead.\n", __func__);
 		return 0;
 	}
 	return acapd_generic_device_bind(dev, "vfio-platform");
@@ -48,7 +47,7 @@ static int acapd_vfio_bind(acapd_device_t *dev)
 
 static int acapd_vfio_device_open(acapd_device_t *dev)
 {
-	struct vfio_device_info device_info = { .argsz = sizeof(device_info)};
+	struct vfio_device_info device_info = {.argsz = sizeof(device_info)};
 	char group_path[64];
 	uint32_t i;
 	acapd_vfio_t *vdev;
@@ -59,8 +58,7 @@ static int acapd_vfio_device_open(acapd_device_t *dev)
 		return -EINVAL;
 	}
 	if (dev->priv != NULL) {
-		acapd_debug("%s: dev %s already opened.\n",
-			    __func__, dev->dev_name);
+		acapd_debug("%s: dev %s already opened.\n", __func__, dev->dev_name);
 		return 0;
 	}
 	/* Check if vfio device has been opened */
@@ -72,40 +70,34 @@ static int acapd_vfio_device_open(acapd_device_t *dev)
 	memset(vdev, 0, sizeof(*vdev));
 	acapd_list_init(&vdev->mmaps);
 	snprintf(group_path, 64, "/dev/vfio/%d", dev->iommu_group);
-	acapd_debug("%s: %s, bind vfio driver.\n",
-		    __func__, dev->dev_name);
+	acapd_debug("%s: %s, bind vfio driver.\n", __func__, dev->dev_name);
 	ret = acapd_vfio_bind(dev);
 	if (ret < 0) {
-		acapd_perror("%s: %s failed to bind driver.\n",
-			     __func__, dev->dev_name);
+		acapd_perror("%s: %s failed to bind driver.\n", __func__, dev->dev_name);
 		ret = -EINVAL;
 		goto error;
 	}
-	acapd_debug("%s: %s, open container.\n",
-		    __func__, dev->dev_name);
-	vdev->container = open(VFIO_CONTAINER,O_RDWR);
+	acapd_debug("%s: %s, open container.\n", __func__, dev->dev_name);
+	vdev->container = open(VFIO_CONTAINER, O_RDWR);
 	if (vdev->container < 0) {
-		acapd_perror("%s: failed to open container.\n",
-			     __func__);
+		acapd_perror("%s: failed to open container.\n", __func__);
 		ret = -EINVAL;
 		goto error;
 	}
 	acapd_debug("%s: open group.\n", __func__);
 	vdev->group = open(group_path, O_RDWR);
 	if (vdev->group < 0) {
-		acapd_perror("%s:%s failed to open group, %s.\n",
-			     __func__, dev->dev_name, strerror(errno));
+		acapd_perror("%s:%s failed to open group, %s.\n", __func__, dev->dev_name, strerror(errno));
 		ret = -EINVAL;
 		goto error;
 	}
 
-	 /* Add the group to the container */
+	/* Add the group to the container */
 	acapd_debug("%s: add group to container.\n", __func__);
-	ret = ioctl(vdev->group, VFIO_GROUP_SET_CONTAINER,
-		    &vdev->container);
+	ret = ioctl(vdev->group, VFIO_GROUP_SET_CONTAINER, &vdev->container);
 	if (ret < 0) {
-		acapd_perror("%s: %s failed to group set container ioctl:%s.\n", 
-			     __func__, dev->dev_name, strerror(errno));
+		acapd_perror("%s: %s failed to group set container ioctl:%s.\n", __func__, dev->dev_name,
+					 strerror(errno));
 		ret = -EINVAL;
 		goto error;
 	}
@@ -113,17 +105,15 @@ static int acapd_vfio_device_open(acapd_device_t *dev)
 	/* Enable the IOMMU mode we want */
 	acapd_debug("%s: enable IOMMU mode.\n", __func__);
 	ret = ioctl(vdev->container, VFIO_SET_IOMMU, VFIO_TYPE1_IOMMU);
-	if (ret <0) {
+	if (ret < 0) {
 		ret = -EINVAL;
 		goto error;
 	}
 
 	acapd_debug("%s: get vfio device.\n", __func__);
-	ret = ioctl(vdev->group,
-		    VFIO_GROUP_GET_DEVICE_FD, dev->dev_name);
+	ret = ioctl(vdev->group, VFIO_GROUP_GET_DEVICE_FD, dev->dev_name);
 	if (ret < 0) {
-		acapd_perror("%s: Failed to get device %s, %s.\n",
-			     __func__, dev->dev_name, strerror(ret));
+		acapd_perror("%s: Failed to get device %s, %s.\n", __func__, dev->dev_name, strerror(ret));
 		ret = -EINVAL;
 		goto error;
 	}
@@ -131,32 +121,28 @@ static int acapd_vfio_device_open(acapd_device_t *dev)
 
 	ret = ioctl(vdev->device, VFIO_DEVICE_GET_INFO, &device_info);
 	if (ret < 0) {
-		acapd_perror("%s: Failed to get %s device information:%s.\n",
-			     __func__, dev->dev_name, strerror(ret));
+		acapd_perror("%s: Failed to get %s device information:%s.\n", __func__, dev->dev_name,
+					 strerror(ret));
 		ret = -EINVAL;
 		goto error;
 	}
-	for (i = 0; i < device_info.num_regions; i++){
-		struct vfio_region_info reg = { .argsz = sizeof(reg)};
+	for (i = 0; i < device_info.num_regions; i++) {
+		struct vfio_region_info reg = {.argsz = sizeof(reg)};
 
 		reg.index = 0;
 		ret = ioctl(vdev->device, VFIO_DEVICE_GET_REGION_INFO, &reg);
 		if (ret < 0) {
-			acapd_perror("%s: Failed to get io of %s, %s.\n",
-				     __func__, dev->dev_name, strerror(ret));
+			acapd_perror("%s: Failed to get io of %s, %s.\n", __func__, dev->dev_name,
+						 strerror(ret));
 			ret = -EINVAL;
 			goto error;
 		}
 		if (reg.flags & VFIO_REGION_INFO_FLAG_MMAP) {
-			dev->va = mmap(0, reg.size,
-				       PROT_READ | PROT_WRITE,
-				       MAP_SHARED,
-				       vdev->device,
-				       reg.offset);
+			dev->va =
+				mmap(0, reg.size, PROT_READ | PROT_WRITE, MAP_SHARED, vdev->device, reg.offset);
 			if (dev->va == MAP_FAILED) {
-				acapd_perror("%s:%s Failed to mmap: 0x%llx.\n",
-					     __func__, dev->dev_name,
-					     reg.offset);
+				acapd_perror("%s:%s Failed to mmap: 0x%llx.\n", __func__, dev->dev_name,
+							 reg.offset);
 				dev->va = NULL;
 				ret = -EINVAL;
 				goto error;
@@ -230,8 +216,7 @@ static void *acapd_vfio_device_attach(acapd_device_t *dev, acapd_shm_t *shm)
 
 	vdev = (acapd_vfio_t *)dev->priv;
 	if (vdev == NULL) {
-		acapd_perror("%s: %s vfio dev is NULL.\n", __func__,
-			     dev->dev_name);
+		acapd_perror("%s: %s vfio dev is NULL.\n", __func__, dev->dev_name);
 		return NULL;
 	}
 	size = acapd_align_up(shm->size, (4 * 1024));
@@ -240,7 +225,7 @@ static void *acapd_vfio_device_attach(acapd_device_t *dev, acapd_shm_t *shm)
 	dma_map.flags = VFIO_DMA_MAP_FLAG_READ | VFIO_DMA_MAP_FLAG_WRITE;
 	/* Calculate da address */
 	da = 0x1000;
-	acapd_list_for_each(&vdev->mmaps, node) {
+	acapd_list_for_each (&vdev->mmaps, node) {
 		uint64_t tmp;
 
 		mmap = (acapd_vfio_mmap_t *)(acapd_container_of(node, acapd_vfio_mmap_t, node));
@@ -255,15 +240,13 @@ static void *acapd_vfio_device_attach(acapd_device_t *dev, acapd_shm_t *shm)
 	dma_map.iova = da;
 	ret = ioctl(vdev->container, VFIO_IOMMU_MAP_DMA, &dma_map);
 	if (ret) {
-		acapd_perror("%s: Could not map DMA memory %d,%s. %p, 0x%llx, 0x%lx\n",
-			     __func__, vdev->container, strerror(ret),
-			     shm->va, da, size);
+		acapd_perror("%s: Could not map DMA memory %d,%s. %p, 0x%llx, 0x%lx\n", __func__,
+					 vdev->container, strerror(ret), shm->va, da, size);
 		return NULL;
 	}
 	mmap = malloc(sizeof(*mmap));
 	if (mmap == NULL) {
-		acapd_perror("%s: failed to alloc memory for mmap struct.\n",
-			     __func__);
+		acapd_perror("%s: failed to alloc memory for mmap struct.\n", __func__);
 		return NULL;
 	}
 	mmap->va = shm->va;
@@ -293,21 +276,19 @@ static int acapd_vfio_device_detach(acapd_device_t *dev, acapd_shm_t *shm)
 
 	vdev = (acapd_vfio_t *)dev->priv;
 	if (vdev == NULL) {
-		acapd_perror("%s: %s vfio dev is NULL.\n", __func__,
-			     dev->dev_name);
+		acapd_perror("%s: %s vfio dev is NULL.\n", __func__, dev->dev_name);
 		return -EINVAL;
 	}
 
 	ret = -EINVAL;
 	dma_unmap.size = shm->size;
-	acapd_list_for_each(&vdev->mmaps, node) {
+	acapd_list_for_each (&vdev->mmaps, node) {
 		mmap = (acapd_vfio_mmap_t *)(acapd_container_of(node, acapd_vfio_mmap_t, node));
 		if (mmap->va == shm->va) {
 			dma_unmap.iova = mmap->da;
 			ret = ioctl(vdev->container, VFIO_IOMMU_UNMAP_DMA, dma_unmap);
 			if (ret < 0) {
-				acapd_perror("%s: %s failed ioctl unmap.\n",
-					     __func__, dev->dev_name);
+				acapd_perror("%s: %s failed ioctl unmap.\n", __func__, dev->dev_name);
 			}
 			acapd_list_del(&mmap->node);
 			free(mmap);
@@ -330,12 +311,11 @@ static uint64_t acapd_vfio_device_va_to_da(acapd_device_t *dev, void *va)
 	}
 	vdev = (acapd_vfio_t *)dev->priv;
 	if (vdev == NULL) {
-		acapd_perror("%s: %s vfio device is NULL.\n", __func__,
-			     dev->dev_name);
+		acapd_perror("%s: %s vfio device is NULL.\n", __func__, dev->dev_name);
 		return -EINVAL;
 	}
 
-	acapd_list_for_each(&vdev->mmaps, node) {
+	acapd_list_for_each (&vdev->mmaps, node) {
 		mmap = (acapd_vfio_mmap_t *)(acapd_container_of(node, acapd_vfio_mmap_t, node));
 		if (lva >= (char *)mmap->va && lva < ((char *)mmap->va + mmap->size)) {
 			uint64_t offset;
@@ -354,4 +334,3 @@ acapd_device_ops_t acapd_vfio_dev_ops = {
 	.detach = acapd_vfio_device_detach,
 	.va_to_da = acapd_vfio_device_va_to_da,
 };
-

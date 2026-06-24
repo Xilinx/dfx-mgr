@@ -18,7 +18,7 @@ void *acapd_dma_attach(acapd_chnl_t *chnl, acapd_shm_t *shm)
 		acapd_perror("%s: channel pointer is NULL.\n", __func__);
 		return NULL;
 	}
-	if (shm ==  NULL) {
+	if (shm == NULL) {
 		acapd_perror("%s: shm is NULL.\n", __func__);
 		return NULL;
 	}
@@ -32,7 +32,7 @@ int acapd_dma_detach(acapd_chnl_t *chnl, acapd_shm_t *shm)
 		acapd_perror("%s: channel pointer is NULL.\n", __func__);
 		return -EINVAL;
 	}
-	if (shm ==  NULL) {
+	if (shm == NULL) {
 		acapd_perror("%s: shm is NULL.\n", __func__);
 		return -EINVAL;
 	}
@@ -62,7 +62,7 @@ int acapd_dma_transfer(acapd_chnl_t *chnl, acapd_dma_config_t *config)
 		acapd_perror("%s: channel config is NULL.\n", __func__);
 		return -EINVAL;
 	}
-	if (config->shm ==  NULL) {
+	if (config->shm == NULL) {
 		acapd_perror("%s: channel config shm is NULL.\n", __func__);
 		return -EINVAL;
 	}
@@ -70,10 +70,9 @@ int acapd_dma_transfer(acapd_chnl_t *chnl, acapd_dma_config_t *config)
 	size = config->size;
 	shm = config->shm;
 	acapd_debug("%s: =>%p, =>%p \n", __func__, va, shm->va);
-	if ((char *)va < (char *)shm->va ||
-	    (char *)va + size > (char *)shm->va + shm->size) {
-		acapd_perror("%s: %p,size 0x%llx is beyond %p,size 0x%llx.\n",
-				__func__, va, size, shm->va, shm->size);
+	if ((char *)va < (char *)shm->va || (char *)va + size > (char *)shm->va + shm->size) {
+		acapd_perror("%s: %p,size 0x%llx is beyond %p,size 0x%llx.\n", __func__, va, size, shm->va,
+					 shm->size);
 		return -EINVAL;
 	}
 	return chnl->ops->transfer(chnl, config);
@@ -96,8 +95,8 @@ int acapd_dma_stop(acapd_chnl_t *chnl)
 	return chnl->ops->stop(chnl);
 }
 
-int acapd_dma_poll(acapd_chnl_t *chnl, uint32_t wait_for_complete,
-		   acapd_dma_cb_t cb, uint32_t timeout)
+int acapd_dma_poll(acapd_chnl_t *chnl, uint32_t wait_for_complete, acapd_dma_cb_t cb,
+				   uint32_t timeout)
 {
 	acapd_chnl_status_t status;
 
@@ -120,14 +119,12 @@ int acapd_dma_poll(acapd_chnl_t *chnl, uint32_t wait_for_complete,
 		status = chnl->ops->poll(chnl);
 		if (status == ACAPD_CHNL_ERRORS) {
 			return (int)(-status);
-		}
-		else if (status == ACAPD_CHNL_IDLE) {
+		} else if (status == ACAPD_CHNL_IDLE) {
 			return 0;
-		}
-		else if (status == ACAPD_CHNL_STALLED) {
+		} else if (status == ACAPD_CHNL_STALLED) {
 			return ACAPD_CHNL_STALLED;
 		}
-	}while(wait_for_complete);
+	} while (wait_for_complete);
 	return (int)ACAPD_CHNL_INPROGRESS;
 }
 
@@ -166,8 +163,7 @@ int acapd_dma_open(acapd_chnl_t *chnl)
 	}
 	ret = chnl->ops->open(chnl);
 	if (ret != 0) {
-		acapd_perror("%s: system failed to open DMA channel.\n",
-			     __func__);
+		acapd_perror("%s: system failed to open DMA channel.\n", __func__);
 		return -EINVAL;
 	}
 	chnl->is_open = 1;
@@ -190,9 +186,8 @@ int acapd_dma_close(acapd_chnl_t *chnl)
 	return chnl->ops->close(chnl);
 }
 
-int acapd_create_dma_channel(const char *name, acapd_device_t *dev,
-			     acapd_chnl_conn_t conn_type, int chnl_id,
-			     acapd_dir_t dir, acapd_chnl_t *chnl)
+int acapd_create_dma_channel(const char *name, acapd_device_t *dev, acapd_chnl_conn_t conn_type,
+							 int chnl_id, acapd_dir_t dir, acapd_chnl_t *chnl)
 {
 	if (chnl == NULL) {
 		acapd_perror("%s: channel pointer is NULL.\n", __func__);

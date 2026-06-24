@@ -48,15 +48,14 @@ void dfx_exit(char *msg)
 static void format_response_with_warning(struct message *msg, int value)
 {
 	if (is_pkg_listing_dirty())
-		msg->size = 1 + sprintf(msg->data,
-			"WARNING: Package IDs have changed since last -listPackage. %d",
-			value);
+		msg->size =
+			1 + sprintf(msg->data, "WARNING: Package IDs have changed since last -listPackage. %d",
+						value);
 	else
 		msg->size = 1 + sprintf(msg->data, "%d", value);
 }
 
-static void
-process_dfx_req(int fd, fd_set *fdset)
+static void process_dfx_req(int fd, fd_set *fdset)
 {
 	struct message recv_msg, send_msg;
 	ssize_t numbytes;
@@ -94,7 +93,7 @@ process_dfx_req(int fd, fd_set *fdset)
 		break;
 
 	case UNLOAD_ACCEL:
-		slot = -1;	/* assume base */
+		slot = -1; /* assume base */
 		if (strcasecmp(recv_msg.data, "base")) {
 			slot = atoi(recv_msg.data);
 			DFX_PR("daemon UNLOAD_ACCEL in slot %d", slot);
@@ -102,7 +101,7 @@ process_dfx_req(int fd, fd_set *fdset)
 		ret = unload_accelerator(slot);
 		send_msg.size = 1 + sprintf(send_msg.data, "%d", ret);
 
-		if (write(fd, &send_msg, HEADERSIZE+ send_msg.size) < 0)
+		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
 			DFX_ERR("UNLOAD_ACCEL write(%d)", fd);
 		break;
 
@@ -153,7 +152,7 @@ process_dfx_req(int fd, fd_set *fdset)
 	case USER_UNLOAD:
 		ret = user_unload_overlay(recv_msg.data);
 		send_msg.size = 1 + sprintf(send_msg.data, "%d", ret);
-		if (write(fd, &send_msg, HEADERSIZE+ send_msg.size) < 0)
+		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
 			DFX_ERR("USER_UNLOAD write(%d)", fd);
 		break;
 
@@ -200,7 +199,7 @@ process_dfx_req(int fd, fd_set *fdset)
 			DFX_ERR("UNLOAD_ACCEL_BY_NAME write(%d)", fd);
 		break;
 
-	case UNLOAD_ACCEL_BY_HANDLE: ;
+	case UNLOAD_ACCEL_BY_HANDLE:;
 		int handle = atoi(recv_msg.data);
 		DFX_PR("daemon unloading accel by handle %d", handle);
 		ret = unload_accelerator(handle);
@@ -210,8 +209,7 @@ process_dfx_req(int fd, fd_set *fdset)
 		break;
 
 	default:
-		send_msg.size = 1 + sprintf(send_msg.data,
-				"Unsupported message id %d", recv_msg.id);
+		send_msg.size = 1 + sprintf(send_msg.data, "Unsupported message id %d", recv_msg.id);
 		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
 			DFX_ERR("default write(%d)", fd);
 		DFX_PR("%s", send_msg.data);
@@ -222,7 +220,7 @@ int main(int argc, char **argv)
 {
 	const struct sockaddr_un su = {
 		.sun_family = AF_UNIX,
-		.sun_path   = SERVER_SOCKET,
+		.sun_path = SERVER_SOCKET,
 	};
 	struct stat statbuf;
 	fd_set fds, readfds;
@@ -273,7 +271,7 @@ int main(int argc, char **argv)
 				if (fd == socket_d) {
 					// request for new connection
 					fd_new = accept(socket_d, NULL, NULL);
-					if (fd_new  == -1)
+					if (fd_new == -1)
 						dfx_exit("accept");
 
 					FD_SET(fd_new, &fds);

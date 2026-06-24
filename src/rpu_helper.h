@@ -40,27 +40,19 @@ extern "C" {
 #include <dfx-mgr/helper.h>
 #include <dfx-mgr/print.h>
 
-
 #define RPMSG_BUS_SYS "/sys/bus/rpmsg"
-
 
 /* Function taken from openamp application */
 int app_rpmsg_create_ept(int rpfd, struct rpmsg_endpoint_info *eptinfo);
 
-
 /* Function taken from openamp application */
-char *get_rpmsg_ept_dev_name(const char *rpmsg_char_name,
-		const char *ept_name,
-		char *ept_dev_name);
-
+char *get_rpmsg_ept_dev_name(const char *rpmsg_char_name, const char *ept_name, char *ept_dev_name);
 
 /* Function taken from openamp application */
 int bind_rpmsg_chrdev(const char *rpmsg_dev_name);
 
-
 /* Function taken from openamp application */
 int get_rpmsg_chrdev_fd(const char *rpmsg_dev_name, char *rpmsg_ctrl_name);
-
 
 /* Function taken from openamp application */
 void set_src_dst(char *out, struct rpmsg_endpoint_info *pep);
@@ -79,7 +71,6 @@ void set_src_dst(char *out, struct rpmsg_endpoint_info *pep);
  * */
 int setup_rpmsg_ept_dev(char *rpmsg_dev_name, char *rpmsg_ctrl_dev_name, char *ept_dev_name);
 
-
 /**
  *
  * create_rpmsg_dev -
@@ -92,7 +83,7 @@ int setup_rpmsg_ept_dev(char *rpmsg_dev_name, char *rpmsg_ctrl_dev_name, char *e
  * return - *rpmsg_dev_t on success
  * 	    NULL on failure
  * */
-rpmsg_dev_t* create_rpmsg_dev(char *rpmsg_dev_name, char *rpmsg_ctrl_dev);
+rpmsg_dev_t *create_rpmsg_dev(char *rpmsg_dev_name, char *rpmsg_ctrl_dev);
 
 /**
  *
@@ -120,8 +111,7 @@ void reset_active(acapd_list_t *rpmsg_dev_list);
  * 	    1 - if found
  *
  * */
-int check_rpmsg_dev_active(acapd_list_t *rpmsg_dev_list, char* rpmsg_dev_name, int virtio_num);
-
+int check_rpmsg_dev_active(acapd_list_t *rpmsg_dev_list, char *rpmsg_dev_name, int virtio_num);
 
 /**
  *

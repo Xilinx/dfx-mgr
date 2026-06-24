@@ -31,28 +31,27 @@
  */
 int get_number_of_rpu(void)
 {
-        int no_of_rpu=0;
-        char *rpu_path = "/sys/class/remoteproc/";
-        DIR *dir_rpu = NULL;
-        struct dirent *drpu;
+	int no_of_rpu = 0;
+	char *rpu_path = "/sys/class/remoteproc/";
+	DIR *dir_rpu = NULL;
+	struct dirent *drpu;
 
-        dir_rpu = opendir(rpu_path);
-        if (dir_rpu == NULL) {
-                DFX_ERR("Directory %s not found", rpu_path);
-                return 0;
-        }
+	dir_rpu = opendir(rpu_path);
+	if (dir_rpu == NULL) {
+		DFX_ERR("Directory %s not found", rpu_path);
+		return 0;
+	}
 
-        while((drpu = readdir(dir_rpu)) != NULL) {
-                if (!strcmp(drpu->d_name, ".") || !strcmp(drpu->d_name, ".."))
-                        continue;    /* skip self and parent */
-                if (strstr(drpu->d_name, "remoteproc"))
-                        no_of_rpu++;
-        }
+	while ((drpu = readdir(dir_rpu)) != NULL) {
+		if (!strcmp(drpu->d_name, ".") || !strcmp(drpu->d_name, ".."))
+			continue; /* skip self and parent */
+		if (strstr(drpu->d_name, "remoteproc"))
+			no_of_rpu++;
+	}
 
-        closedir(dir_rpu);
-        return no_of_rpu;
+	closedir(dir_rpu);
+	return no_of_rpu;
 }
-
 
 /**
  * start_rpu_firmware() - Set and start firmware on an RPU slot
@@ -66,9 +65,8 @@ static int start_rpu_firmware(const char *fw_name, int rpu_slot)
 	char cmd[1024];
 	int ret;
 
-	snprintf(cmd, sizeof(cmd),
-		 "echo %s > /sys/class/remoteproc/remoteproc%d/firmware",
-		 fw_name, rpu_slot);
+	snprintf(cmd, sizeof(cmd), "echo %s > /sys/class/remoteproc/remoteproc%d/firmware", fw_name,
+			 rpu_slot);
 	ret = system(cmd);
 	if (ret != 0) {
 		DFX_ERR("Command not successful %s\n", cmd);
@@ -76,9 +74,7 @@ static int start_rpu_firmware(const char *fw_name, int rpu_slot)
 	}
 
 	DFX_DBG("Starting RPU firmware %s in slot %d\n", fw_name, rpu_slot);
-	snprintf(cmd, sizeof(cmd),
-		 "echo start > /sys/class/remoteproc/remoteproc%d/state",
-		 rpu_slot);
+	snprintf(cmd, sizeof(cmd), "echo start > /sys/class/remoteproc/remoteproc%d/state", rpu_slot);
 	ret = system(cmd);
 	if (ret != 0) {
 		DFX_ERR("Command not successful %s\n", cmd);
@@ -111,16 +107,14 @@ int load_rpu(char *rpu_path, int rpu_slot, char *firmware_name)
 	int found_firmware = 0;
 	struct dirent *d1;
 
-	DFX_DBG("rpu_path %s rpu_slot %d firmware_name %s\n",
-			rpu_path, rpu_slot, firmware_name ? firmware_name : "NULL");
+	DFX_DBG("rpu_path %s rpu_slot %d firmware_name %s\n", rpu_path, rpu_slot,
+			firmware_name ? firmware_name : "NULL");
 
-	DFX_DBG("Setting firmware location to  base_path %s\n",rpu_path);
-	snprintf(cmd, sizeof(cmd),
-		 "echo -n %s > /sys/module/firmware_class/parameters/path", rpu_path);
+	DFX_DBG("Setting firmware location to  base_path %s\n", rpu_path);
+	snprintf(cmd, sizeof(cmd), "echo -n %s > /sys/module/firmware_class/parameters/path", rpu_path);
 	ret = system(cmd);
-	if(ret != 0 ){
-		DFX_ERR("Command not successful for rpu_path %s slot %d: %s",
-			rpu_path, rpu_slot, cmd);
+	if (ret != 0) {
+		DFX_ERR("Command not successful for rpu_path %s slot %d: %s", rpu_path, rpu_slot, cmd);
 		return -1;
 	}
 
@@ -137,11 +131,11 @@ int load_rpu(char *rpu_path, int rpu_slot, char *firmware_name)
 		return -1;
 	}
 
-	while((d1 = readdir(dir1)) != NULL) {
+	while ((d1 = readdir(dir1)) != NULL) {
 		if (!strcmp(d1->d_name, ".") || !strcmp(d1->d_name, ".."))
-			continue;    /* skip self and parent */
+			continue; /* skip self and parent */
 		found_firmware = 1;
-		DFX_DBG("Loading RPU firmware %s in slot %d\n",d1->d_name, rpu_slot);
+		DFX_DBG("Loading RPU firmware %s in slot %d\n", d1->d_name, rpu_slot);
 
 		ret = start_rpu_firmware(d1->d_name, rpu_slot);
 		if (ret != 0) {
@@ -158,7 +152,6 @@ int load_rpu(char *rpu_path, int rpu_slot, char *firmware_name)
 	DFX_ERR("No firmware found in %s", rpu_path);
 	return -1;
 }
-
 
 /**
  * remove_rpu() - remove/stop a loaded RPU firmware
@@ -177,9 +170,9 @@ int remove_rpu(int rpu_num)
 
 	DFX_DBG("Remove firmware from RPU number %d", rpu_num);
 
-	sprintf(cmd,"echo stop > /sys/class/remoteproc/remoteproc%d/state", rpu_num);
+	sprintf(cmd, "echo stop > /sys/class/remoteproc/remoteproc%d/state", rpu_num);
 	ret = system(cmd);
-	if(ret != 0 ){
+	if (ret != 0) {
 		DFX_ERR("Command not successful for rpu %d: %s", rpu_num, cmd);
 		return -1;
 	}
@@ -197,13 +190,13 @@ int remove_rpu(int rpu_num)
  *         0 if not found
  */
 
-int get_virtio_number(char* rpmsg_dev_name)
+int get_virtio_number(char *rpmsg_dev_name)
 {
 	char *rpmsg_dev = strdup(rpmsg_dev_name); /* copy of dev name */
 	char *virtio_str;
 	int virtio_num = 0;
 
-	virtio_str = strtok(rpmsg_dev,".");
+	virtio_str = strtok(rpmsg_dev, ".");
 	if (virtio_str != NULL) {
 		while (*virtio_str) {
 			if (isdigit(*virtio_str)) {
@@ -232,8 +225,7 @@ int get_virtio_number(char* rpmsg_dev_name)
  *
  * Return: @buf on success, NULL if no new control device is found
  */
-char* get_new_rpmsg_ctrl_dev(struct basePLDesign *base, char *buf,
-			     size_t buflen)
+char *get_new_rpmsg_ctrl_dev(struct basePLDesign *base, char *buf, size_t buflen)
 {
 	char dpath[] = "/sys/bus/rpmsg/devices";
 	DIR *dir = opendir(dpath);
@@ -245,17 +237,19 @@ char* get_new_rpmsg_ctrl_dev(struct basePLDesign *base, char *buf,
 		return NULL;
 	}
 	while ((ent = readdir(dir)) != NULL) {
-		if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, "..") || strstr(ent->d_name, "rpmsg_ns"))
-			continue;    /* skip self and parent */
+		if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, "..") ||
+			strstr(ent->d_name, "rpmsg_ns"))
+			continue; /* skip self and parent */
 
 		/* Find rpmsg ctrl dev file created */
 		if (strstr(ent->d_name, "rpmsg_ctrl")) {
 			/* Check if ctrl is already recorded */
-			for(int i = 0; i < (base->num_pl_slots + base->num_aie_slots); i++) {
+			for (int i = 0; i < (base->num_pl_slots + base->num_aie_slots); i++) {
 				/* Check if slot exists */
 				if (base->slots[i]) {
 					/* Compare with existing records */
-					if (!strncmp(base->slots[i]->rpu.rpmsg_ctrl_dev_name,ent->d_name,strlen(ent->d_name))) {
+					if (!strncmp(base->slots[i]->rpu.rpmsg_ctrl_dev_name, ent->d_name,
+								 strlen(ent->d_name))) {
 						DFX_DBG("rpmsg ctrl dev already recorded\n");
 						rpmsg_ctrl_found = 1;
 						break;
@@ -296,10 +290,8 @@ void delete_rpmsg_dev_list(acapd_list_t *rpmsg_dev_list)
 		return;
 	}
 
-	acapd_list_for_each_safe(rpmsg_dev_list, rpmsg_dev_node, next_node) {
-		rpmsg_dev_t *rpmsg_dev = acapd_container_of(rpmsg_dev_node,
-							    rpmsg_dev_t,
-							    rpmsg_node);
+	acapd_list_for_each_safe (rpmsg_dev_list, rpmsg_dev_node, next_node) {
+		rpmsg_dev_t *rpmsg_dev = acapd_container_of(rpmsg_dev_node, rpmsg_dev_t, rpmsg_node);
 		acapd_list_del(&rpmsg_dev->rpmsg_node);
 		free(rpmsg_dev);
 	}
@@ -323,7 +315,7 @@ void delete_rpmsg_dev_list(acapd_list_t *rpmsg_dev_list)
  * Return:  void
  *
  */
-void update_rpmsg_dev_list(acapd_list_t *rpmsg_dev_list, char* rpmsg_ctrl_dev, int virtio_num)
+void update_rpmsg_dev_list(acapd_list_t *rpmsg_dev_list, char *rpmsg_ctrl_dev, int virtio_num)
 {
 	char dpath[] = "/sys/bus/rpmsg/devices";
 	DIR *dir = opendir(dpath);
@@ -346,9 +338,9 @@ void update_rpmsg_dev_list(acapd_list_t *rpmsg_dev_list, char* rpmsg_ctrl_dev, i
 	reset_active(rpmsg_dev_list);
 
 	while ((ent = readdir(dir)) != NULL) {
-		if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, "..") || strstr(ent->d_name, "rpmsg_ns")
-				|| strstr(ent->d_name, "rpmsg_ctrl"))
-			continue;    /* skip self, parent and ctrl dev */
+		if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, "..") ||
+			strstr(ent->d_name, "rpmsg_ns") || strstr(ent->d_name, "rpmsg_ctrl"))
+			continue; /* skip self, parent and ctrl dev */
 
 		/* check if virtio num matches */
 		v_num = get_virtio_number(ent->d_name);
@@ -373,9 +365,8 @@ void update_rpmsg_dev_list(acapd_list_t *rpmsg_dev_list, char* rpmsg_ctrl_dev, i
 		rpmsg_dev = create_rpmsg_dev(ent->d_name, rpmsg_ctrl_dev);
 
 		/* new rpmsg device node created, insert to end of list */
-		if ( rpmsg_dev != NULL)
+		if (rpmsg_dev != NULL)
 			acapd_list_add_tail(rpmsg_dev_list, &rpmsg_dev->rpmsg_node);
-
 	}
 
 	closedir(dir);
@@ -385,7 +376,6 @@ void update_rpmsg_dev_list(acapd_list_t *rpmsg_dev_list, char* rpmsg_ctrl_dev, i
 
 	return;
 }
-
 
 /**
  * validate_rpu_slot_availability() - Check if an RPU slot is valid and available
@@ -429,12 +419,8 @@ int validate_rpu_slot_availability(struct basePLDesign *base, int slot_num)
  *
  * Return: slot_handle on success, -1 on error
  */
-int finalize_rpu_slot_setup(struct basePLDesign *base,
-			    slot_info_t *slot,
-			    acapd_accel_t *pl_accel,
-			    const char *accel_name,
-			    int slot_num,
-			    unsigned int rpu_fw_uptime_msec)
+int finalize_rpu_slot_setup(struct basePLDesign *base, slot_info_t *slot, acapd_accel_t *pl_accel,
+							const char *accel_name, int slot_num, unsigned int rpu_fw_uptime_msec)
 {
 	char *rpmsg_ctrl_dev_name;
 	char ctrl_dev_buf[NAME_MAX];
@@ -449,26 +435,23 @@ int finalize_rpu_slot_setup(struct basePLDesign *base,
 	usleep(rpu_fw_uptime_msec * 1000);
 
 	/* Get new rpmsg ctrl device created by firmware */
-	rpmsg_ctrl_dev_name = get_new_rpmsg_ctrl_dev(base, ctrl_dev_buf,
-						     sizeof(ctrl_dev_buf));
+	rpmsg_ctrl_dev_name = get_new_rpmsg_ctrl_dev(base, ctrl_dev_buf, sizeof(ctrl_dev_buf));
 
 	/* check if new ctrl dev is found
-		* Assumption is that ctrl dev will be created
-		* during load, dev can be dynamic.
-		* if found then record the virtio number
-		* if not found then 2 of the following are the cases
-		* 1- no dev is created by firmware
-		*    Here we just proceed, nothing to address
-		* 2- Firmware is taking time to create the channel
-		*    Increase rpu_fw_uptime_msec from config file
-		* */
+	 * Assumption is that ctrl dev will be created
+	 * during load, dev can be dynamic.
+	 * if found then record the virtio number
+	 * if not found then 2 of the following are the cases
+	 * 1- no dev is created by firmware
+	 *    Here we just proceed, nothing to address
+	 * 2- Firmware is taking time to create the channel
+	 *    Increase rpu_fw_uptime_msec from config file
+	 * */
 	if (rpmsg_ctrl_dev_name != NULL) {
-		snprintf(slot->rpu.rpmsg_ctrl_dev_name,
-			sizeof(slot->rpu.rpmsg_ctrl_dev_name),
-			"%s", rpmsg_ctrl_dev_name);
+		snprintf(slot->rpu.rpmsg_ctrl_dev_name, sizeof(slot->rpu.rpmsg_ctrl_dev_name), "%s",
+				 rpmsg_ctrl_dev_name);
 		slot->rpu.virtio_num = get_virtio_number(rpmsg_ctrl_dev_name);
-		DFX_PR("rpmsg_ctrl_dev %s virtio %d",
-				slot->rpu.rpmsg_ctrl_dev_name, slot->rpu.virtio_num);
+		DFX_PR("rpmsg_ctrl_dev %s virtio %d", slot->rpu.rpmsg_ctrl_dev_name, slot->rpu.virtio_num);
 	} else {
 		DFX_PR("No rpmsg control device found after rpu fw load");
 	}
@@ -482,8 +465,8 @@ int finalize_rpu_slot_setup(struct basePLDesign *base,
 
 	/* Assign a free slot_handle to slot */
 	base->slots[slot_num]->slot_handle = get_free_slot_handle();
-	DFX_PR("Loaded %s successfully to slot %d with slot_handle %d",
-			accel_name, slot_num, slot->slot_handle);
+	DFX_PR("Loaded %s successfully to slot %d with slot_handle %d", accel_name, slot_num,
+		   slot->slot_handle);
 
 	return slot->slot_handle;
 }
@@ -497,8 +480,7 @@ int finalize_rpu_slot_setup(struct basePLDesign *base,
  *
  * Scans slot directory for .elf files and registers each as an accelerator
  */
-void parse_rpu_slot_dir(struct basePLDesign *base, char *slot_path,
-			int slot_num, char *rpu_path)
+void parse_rpu_slot_dir(struct basePLDesign *base, char *slot_path, int slot_num, char *rpu_path)
 {
 	DIR *elf_dir;
 	struct dirent *elf_entry;
@@ -522,8 +504,8 @@ void parse_rpu_slot_dir(struct basePLDesign *base, char *slot_path,
 			continue;
 
 		/* Copy name without .elf extension */
-		snprintf(elf_name, sizeof(elf_name), "%.*s",
-			 (int)(ext - elf_entry->d_name), elf_entry->d_name);
+		snprintf(elf_name, sizeof(elf_name), "%.*s", (int)(ext - elf_entry->d_name),
+				 elf_entry->d_name);
 
 		accel = add_accel_to_base(base, elf_name, slot_path, rpu_path);
 		if (accel) {

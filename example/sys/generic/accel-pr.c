@@ -11,7 +11,7 @@
 #include <unistd.h>
 #include <xil_printf.h>
 
-#define DATA_SIZE_BYTES (4*1024)
+#define DATA_SIZE_BYTES (4 * 1024)
 
 extern unsigned char __START_ACCEL0[];
 static acapd_shm_t tx_shm, rx_shm;
@@ -52,7 +52,7 @@ int main(void)
 		goto error;
 	}
 	dptr = (uint32_t *)tx_va;
-	for (uint32_t i = 0; i < DATA_SIZE_BYTES/4; i++) {
+	for (uint32_t i = 0; i < DATA_SIZE_BYTES / 4; i++) {
 		*((uint32_t *)dptr) = i + 1;
 		dptr++;
 	}
@@ -90,10 +90,9 @@ int main(void)
 		return -EINVAL;
 	}
 	dptr = (uint32_t *)rx_va;
-	for (uint32_t i = 0; i < DATA_SIZE_BYTES/4; i++) {
+	for (uint32_t i = 0; i < DATA_SIZE_BYTES / 4; i++) {
 		if (*((uint32_t *)dptr) != (i + 1)) {
-			xil_printf("ERROR: wrong data: [%d]: 0x%x.\n",
-				i, *((volatile uint32_t *)dptr));
+			xil_printf("ERROR: wrong data: [%d]: 0x%x.\n", i, *((volatile uint32_t *)dptr));
 			ret = -EINVAL;
 			goto error;
 		}
@@ -106,4 +105,3 @@ error:
 	remove_accel(&accel, 0);
 	return ret;
 }
-

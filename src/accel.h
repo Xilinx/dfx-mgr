@@ -23,66 +23,65 @@ extern "C" {
 #include <dfx-mgr/helper.h>
 #include <dfx-mgr/sys/@PROJECT_SYSTEM@/accel.h>
 
-#define ACAPD_ACCEL_STATUS_UNLOADED	0U
-#define ACAPD_ACCEL_STATUS_LOADING	1U
-#define ACAPD_ACCEL_STATUS_INUSE	2U
-#define ACAPD_ACCEL_STATUS_UNLOADING	3U
+#define ACAPD_ACCEL_STATUS_UNLOADED 0U
+#define ACAPD_ACCEL_STATUS_LOADING 1U
+#define ACAPD_ACCEL_STATUS_INUSE 2U
+#define ACAPD_ACCEL_STATUS_UNLOADING 3U
 
-#define ACAPD_ACCEL_SUCCESS		0
-#define ACAPD_ACCEL_FAILURE		(-1)
-#define ACAPD_ACCEL_TIMEDOUT		(-2)
-#define ACAPD_ACCEL_MISMATCHED		(-3)
-#define ACAPD_ACCEL_RSCLOCKED		(-4)
-#define ACAPD_ACCEL_NOTSUPPORTED	(-5)
-#define ACAPD_ACCEL_INVALID		(-6)
-#define ACAPD_ACCEL_LOAD_INUSE		(-7)
+#define ACAPD_ACCEL_SUCCESS 0
+#define ACAPD_ACCEL_FAILURE (-1)
+#define ACAPD_ACCEL_TIMEDOUT (-2)
+#define ACAPD_ACCEL_MISMATCHED (-3)
+#define ACAPD_ACCEL_RSCLOCKED (-4)
+#define ACAPD_ACCEL_NOTSUPPORTED (-5)
+#define ACAPD_ACCEL_INVALID (-6)
+#define ACAPD_ACCEL_LOAD_INUSE (-7)
 
-#define ACAPD_ACCEL_INPROGRESS		1
+#define ACAPD_ACCEL_INPROGRESS 1
 
-#define ACAPD_ACCEL_PKG_TYPE_NONE	0U
-#define ACAPD_ACCEL_PKG_TYPE_TAR_GZ	1U
-#define ACAPD_ACCEL_PKG_TYPE_LAST	2U
+#define ACAPD_ACCEL_PKG_TYPE_NONE 0U
+#define ACAPD_ACCEL_PKG_TYPE_TAR_GZ 1U
+#define ACAPD_ACCEL_PKG_TYPE_LAST 2U
 
-#define FIRMWARE_PATH	"/lib/firmware/xilinx"
+#define FIRMWARE_PATH "/lib/firmware/xilinx"
 
 /**
  * @brief accel package information structure
  */
 typedef struct {
-	uint32_t type; /**< type of package element */
-	char name[128]; /**< name of the package element */
-	char *path; /** path on the filesystem */
-	uint64_t size; /**< size of package element */
+	uint32_t type;	 /**< type of package element */
+	char name[128];	 /**< name of the package element */
+	char *path;		 /** path on the filesystem */
+	uint64_t size;	 /**< size of package element */
 	uint32_t is_end; /**< if it is the end of package */
 } acapd_accel_pkg_hd_t;
 
 typedef struct {
-    int socket_d; /* stream socket desc*/
-    int drm_fd;
-    int fd;
-    uint32_t handle;
-    uint64_t PA;
-    uint64_t size;
+	int socket_d; /* stream socket desc*/
+	int drm_fd;
+	int fd;
+	uint32_t handle;
+	uint64_t PA;
+	uint64_t size;
 } acapd_buffer_t;
-
 
 /**
  * @brief accel structure
  */
 typedef struct {
-	acapd_accel_pkg_hd_t *pkg; /**< pointer to the package */
+	acapd_accel_pkg_hd_t *pkg;	/**< pointer to the package */
 	acapd_accel_sys_t sys_info; /**< system specific accel information */
-	char type[32]; /**< type of the accelarator */
-	unsigned int status; /**< status of the accelarator */
-	unsigned int is_cached; /**< if the accelerator is cached */
-	int load_failure; /**< load failure */
-	int num_ip_devs; /**< number of accelerator devices */
-	acapd_device_t *shell_dev; /**< shell device reg structure */
-	acapd_device_t *ip_dev; /**< accelerator IPs reg structure */
-	int rm_slot; /**< Reconfiguration module slot */
-	int num_chnls;	/**< number of channels */
-	acapd_chnl_t *chnls; /**< list of channels */
-	char cma_path[256];  /* CMA device path for DMA operations */
+	char type[32];				/**< type of the accelarator */
+	unsigned int status;		/**< status of the accelarator */
+	unsigned int is_cached;		/**< if the accelerator is cached */
+	int load_failure;			/**< load failure */
+	int num_ip_devs;			/**< number of accelerator devices */
+	acapd_device_t *shell_dev;	/**< shell device reg structure */
+	acapd_device_t *ip_dev;		/**< accelerator IPs reg structure */
+	int rm_slot;				/**< Reconfiguration module slot */
+	int num_chnls;				/**< number of channels */
+	acapd_chnl_t *chnls;		/**< list of channels */
+	char cma_path[256];			/* CMA device path for DMA operations */
 } acapd_accel_t;
 
 acapd_accel_pkg_hd_t *acapd_alloc_pkg(size_t size);
@@ -91,12 +90,12 @@ acapd_accel_pkg_hd_t *acapd_alloc_pkg(size_t size);
  * Library is not going to allocate the memory for it. This function is supposed
  * to be replaced by a host tool.
  */
-int acapd_config_pkg(acapd_accel_pkg_hd_t *pkg, uint32_t type, char *name,
-		     size_t size, void *data, int is_end);
+int acapd_config_pkg(acapd_accel_pkg_hd_t *pkg, uint32_t type, char *name, size_t size, void *data,
+					 int is_end);
 
 void init_accel(acapd_accel_t *accel, acapd_accel_pkg_hd_t *pkg);
 
-int load_accel(acapd_accel_t *accel, const char* shell_config, unsigned int async);
+int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int async);
 int acapd_accel_config(acapd_accel_t *accel);
 int accel_load_status(acapd_accel_t *accel);
 int acapd_accel_wait_for_data_ready(acapd_accel_t *accel);

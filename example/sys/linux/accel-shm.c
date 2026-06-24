@@ -15,12 +15,12 @@
 #include <string.h>
 #include <unistd.h>
 
-#define DATA_SIZE_BYTES (4*1024)
+#define DATA_SIZE_BYTES (4 * 1024)
 
 static acapd_accel_t bzip2_accel;
 static acapd_shm_t tx_shm, rx_shm;
 
-void usage (const char *cmd)
+void usage(const char *cmd)
 {
 	fprintf(stdout, "Usage %s -p <pkg_path>\n", cmd);
 }
@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
 		goto error;
 	}
 	dptr = (uint32_t *)tx_va;
-	for (uint32_t i = 0; i < DATA_SIZE_BYTES/4; i++) {
+	for (uint32_t i = 0; i < DATA_SIZE_BYTES / 4; i++) {
 		*((uint32_t *)dptr) = i + 1;
 		dptr++;
 	}
@@ -116,10 +116,9 @@ int main(int argc, char *argv[])
 		return -EINVAL;
 	}
 	dptr = (uint32_t *)rx_va;
-	for (uint32_t i = 0; i < DATA_SIZE_BYTES/4; i++) {
+	for (uint32_t i = 0; i < DATA_SIZE_BYTES / 4; i++) {
 		if (*((uint32_t *)dptr) != (i + 1)) {
-			fprintf(stderr, "ERROR: wrong data: [%d]: 0x%x.\n",
-				i, *((volatile uint32_t *)dptr));
+			fprintf(stderr, "ERROR: wrong data: [%d]: 0x%x.\n", i, *((volatile uint32_t *)dptr));
 			ret = -EINVAL;
 			goto error;
 		}
@@ -132,4 +131,3 @@ error:
 	remove_accel(&bzip2_accel, 0);
 	return ret;
 }
-

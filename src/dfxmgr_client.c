@@ -17,7 +17,7 @@
 #include <dfx-mgr/print.h>
 #include "dfxmgr_client.h"
 
-int dfxmgr_load(char* pkg_name)
+int dfxmgr_load(char *pkg_name)
 {
 	struct message send_msg, recv_msg;
 	socket_t gs;
@@ -50,7 +50,7 @@ int dfxmgr_unload(int slot)
 	struct message send_msg, recv_msg;
 	socket_t gs;
 
-	if (slot < 0){
+	if (slot < 0) {
 		DFX_ERR("invalid slot %d", slot);
 		return -1;
 	}
@@ -64,14 +64,14 @@ int dfxmgr_unload(int slot)
 		return -1;
 	}
 
-	if (read(gs.sock_fd, &recv_msg, sizeof (struct message)) < 0) {
+	if (read(gs.sock_fd, &recv_msg, sizeof(struct message)) < 0) {
 		DFX_ERR("No message or read(%d) error", gs.sock_fd);
 		return -1;
 	}
 
 	DFX_PR("unload from slot %d returns: %s (%s)", slot, recv_msg.data,
-		recv_msg.data[0] == '0' ? "Ok" : "Error");
-	return  recv_msg.data[0] == '0' ? 0 : -1;
+		   recv_msg.data[0] == '0' ? "Ok" : "Error");
+	return recv_msg.data[0] == '0' ? 0 : -1;
 }
 
 /*
@@ -81,9 +81,7 @@ int dfxmgr_unload(int slot)
  * "output may be truncated copying .." error for strncpy.
  * Add __attribute__((nonstring)) to avoid the error message.
  */
-char *
-dfxmgr_uio_by_name(char *obuf __attribute__((nonstring)),
-		   int slot, const char *name)
+char *dfxmgr_uio_by_name(char *obuf __attribute__((nonstring)), int slot, const char *name)
 {
 	struct message send_msg, recv_msg;
 	socket_t gs;
@@ -111,23 +109,25 @@ dfxmgr_uio_by_name(char *obuf __attribute__((nonstring)),
 	return obuf;
 }
 
-int initSocket(socket_t* gs)
+int initSocket(socket_t *gs)
 {
 	const struct sockaddr_un su = {
 		.sun_family = AF_UNIX,
-		.sun_path   = SERVER_SOCKET,
+		.sun_path = SERVER_SOCKET,
 	};
 
-	if ((gs->sock_fd = socket(AF_UNIX, SOCK_SEQPACKET, 0)) == -1){
+	if ((gs->sock_fd = socket(AF_UNIX, SOCK_SEQPACKET, 0)) == -1) {
 		DFX_ERR("socket(AF_UNIX, SOCK_SEQPACKET, 0)");
 		return -1;
 	}
 
 	gs->socket_address = su;
-	if (connect(gs->sock_fd, (const struct sockaddr *)&su, sizeof(su)) < 0){
+	if (connect(gs->sock_fd, (const struct sockaddr *)&su, sizeof(su)) < 0) {
 		if (errno == EACCES || errno == EPERM)
-			DFX_ERR("connect(%s): insufficient permissions"
-				" (run with sudo)", SERVER_SOCKET);
+			DFX_ERR(
+				"connect(%s): insufficient permissions"
+				" (run with sudo)",
+				SERVER_SOCKET);
 		else
 			DFX_ERR("connect(%s)", SERVER_SOCKET);
 		return -1;

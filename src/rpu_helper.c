@@ -22,11 +22,8 @@ int app_rpmsg_create_ept(int rpfd, struct rpmsg_endpoint_info *eptinfo)
 	return ret;
 }
 
-
 /* Function taken from openamp application */
-char *get_rpmsg_ept_dev_name(const char *rpmsg_char_name,
-		const char *ept_name,
-		char *ept_dev_name)
+char *get_rpmsg_ept_dev_name(const char *rpmsg_char_name, const char *ept_name, char *ept_dev_name)
 {
 	char sys_rpmsg_ept_name_path[64];
 	char svc_name[64];
@@ -36,8 +33,7 @@ char *get_rpmsg_ept_dev_name(const char *rpmsg_char_name,
 	long unsigned int ept_name_len;
 
 	for (i = 0; i < 128; i++) {
-		sprintf(sys_rpmsg_ept_name_path, "%s/%s/rpmsg%d/name",
-				sys_rpmsg_path, rpmsg_char_name, i);
+		sprintf(sys_rpmsg_ept_name_path, "%s/%s/rpmsg%d/name", sys_rpmsg_path, rpmsg_char_name, i);
 		if (access(sys_rpmsg_ept_name_path, F_OK) < 0)
 			continue;
 		fp = fopen(sys_rpmsg_ept_name_path, "r");
@@ -45,7 +41,7 @@ char *get_rpmsg_ept_dev_name(const char *rpmsg_char_name,
 			DFX_DBG("failed to open %s", sys_rpmsg_ept_name_path);
 			break;
 		}
-		if ( fgets(svc_name, sizeof(svc_name), fp) == NULL){
+		if (fgets(svc_name, sizeof(svc_name), fp) == NULL) {
 			DFX_DBG("failed to read %s\n", svc_name);
 			fclose(fp);
 			return NULL;
@@ -54,7 +50,7 @@ char *get_rpmsg_ept_dev_name(const char *rpmsg_char_name,
 		fclose(fp);
 		ept_name_len = strlen(ept_name);
 
-		if (ept_name_len != (strlen(svc_name)-1))
+		if (ept_name_len != (strlen(svc_name) - 1))
 			continue;
 
 		if (!strncmp(svc_name, ept_name, ept_name_len)) {
@@ -63,11 +59,9 @@ char *get_rpmsg_ept_dev_name(const char *rpmsg_char_name,
 		}
 	}
 
-	DFX_DBG("Not able to RPMsg endpoint file for %s:%s.",
-			rpmsg_char_name, ept_name);
+	DFX_DBG("Not able to RPMsg endpoint file for %s:%s.", rpmsg_char_name, ept_name);
 	return NULL;
 }
-
 
 /* Function taken from openamp application */
 int bind_rpmsg_chrdev(const char *rpmsg_dev_name)
@@ -79,19 +73,16 @@ int bind_rpmsg_chrdev(const char *rpmsg_dev_name)
 	int ret;
 
 	/* rpmsg dev overrides path */
-	sprintf(fpath, "%s/devices/%s/driver_override",
-			RPMSG_BUS_SYS, rpmsg_dev_name);
+	sprintf(fpath, "%s/devices/%s/driver_override", RPMSG_BUS_SYS, rpmsg_dev_name);
 	fd = open(fpath, O_RDWR);
 	if (fd < 0) {
-		fprintf(stderr, "Failed to open %s, %s\n",
-				fpath, strerror(errno));
+		fprintf(stderr, "Failed to open %s, %s\n", fpath, strerror(errno));
 		return -EINVAL;
 	}
 
 	ret = read(fd, drv_override, sizeof(drv_override));
 	if (ret < 0) {
-		fprintf(stderr, "Failed to read %s (%s)\n",
-				fpath, strerror(errno));
+		fprintf(stderr, "Failed to read %s (%s)\n", fpath, strerror(errno));
 		close(fd);
 		return ret;
 	}
@@ -106,16 +97,14 @@ int bind_rpmsg_chrdev(const char *rpmsg_dev_name)
 		close(fd);
 		return 0;
 	} else if (strncmp(drv_override, "(null)", strlen("(null)")) != 0) {
-		fprintf(stderr, "error: device %s is busy, drv bind=%s\n",
-				rpmsg_dev_name, drv_override);
+		fprintf(stderr, "error: device %s is busy, drv bind=%s\n", rpmsg_dev_name, drv_override);
 		close(fd);
 		return -EBUSY;
 	}
 
 	ret = write(fd, rpmsg_chdrv, strlen(rpmsg_chdrv) + 1);
 	if (ret < 0) {
-		fprintf(stderr, "Failed to write %s to %s, %s\n",
-				rpmsg_chdrv, fpath, strerror(errno));
+		fprintf(stderr, "Failed to write %s to %s, %s\n", rpmsg_chdrv, fpath, strerror(errno));
 		close(fd);
 		return -EINVAL;
 	}
@@ -125,15 +114,13 @@ int bind_rpmsg_chrdev(const char *rpmsg_dev_name)
 	sprintf(fpath, "%s/drivers/%s/bind", RPMSG_BUS_SYS, rpmsg_chdrv);
 	fd = open(fpath, O_WRONLY);
 	if (fd < 0) {
-		fprintf(stderr, "Failed to open %s, %s\n",
-				fpath, strerror(errno));
+		fprintf(stderr, "Failed to open %s, %s\n", fpath, strerror(errno));
 		return -EINVAL;
 	}
 	DFX_DBG("write %s to %s", rpmsg_dev_name, fpath);
 	ret = write(fd, rpmsg_dev_name, strlen(rpmsg_dev_name) + 1);
 	if (ret < 0) {
-		fprintf(stderr, "Failed to write %s to %s, %s\n",
-				rpmsg_dev_name, fpath, strerror(errno));
+		fprintf(stderr, "Failed to write %s to %s, %s\n", rpmsg_dev_name, fpath, strerror(errno));
 		close(fd);
 		return -EINVAL;
 	}
@@ -141,11 +128,10 @@ int bind_rpmsg_chrdev(const char *rpmsg_dev_name)
 	return 0;
 }
 
-
 /* Function taken from openamp application */
 int get_rpmsg_chrdev_fd(const char *rpmsg_dev_name, char *rpmsg_ctrl_name)
 {
-	char dpath[2*NAME_MAX];
+	char dpath[2 * NAME_MAX];
 	DIR *dir;
 	struct dirent *ent;
 	int fd;
@@ -162,8 +148,7 @@ int get_rpmsg_chrdev_fd(const char *rpmsg_dev_name, char *rpmsg_ctrl_name)
 			closedir(dir);
 			fd = open(dpath, O_RDWR | O_NONBLOCK);
 			if (fd < 0) {
-				fprintf(stderr, "open %s, %s\n",
-						dpath, strerror(errno));
+				fprintf(stderr, "open %s, %s\n", dpath, strerror(errno));
 				return fd;
 			}
 			sprintf(rpmsg_ctrl_name, "%s", ent->d_name);
@@ -176,7 +161,6 @@ int get_rpmsg_chrdev_fd(const char *rpmsg_dev_name, char *rpmsg_ctrl_name)
 	return -EINVAL;
 }
 
-
 /* Function taken from openamp application */
 void set_src_dst(char *out, struct rpmsg_endpoint_info *pep)
 {
@@ -186,13 +170,11 @@ void set_src_dst(char *out, struct rpmsg_endpoint_info *pep)
 	if (lastdot == NULL)
 		return;
 	dst = strtol(lastdot + 1, NULL, 10);
-	if ((errno == ERANGE && (dst == LONG_MAX || dst == LONG_MIN))
-			|| (errno != 0 && dst == 0)) {
+	if ((errno == ERANGE && (dst == LONG_MAX || dst == LONG_MIN)) || (errno != 0 && dst == 0)) {
 		return;
 	}
 	pep->dst = (unsigned int)dst;
 }
-
 
 /**
  *
@@ -211,7 +193,7 @@ int setup_rpmsg_ept_dev(char *rpmsg_dev_name, char *rpmsg_ctrl_dev_name, char *e
 	struct rpmsg_endpoint_info eptinfo;
 	int charfd = -1, ret = 0;
 	char rpmsg_char_name[16];
-	char *ept_name="rpmsg-openamp-demo-channel";
+	char *ept_name = "rpmsg-openamp-demo-channel";
 	char *rpmsg_dev_cpy;
 
 	/*
@@ -219,16 +201,16 @@ int setup_rpmsg_ept_dev(char *rpmsg_dev_name, char *rpmsg_ctrl_dev_name, char *e
 	 * rpmsg_dev_name : virtio0.rpmsg-openamp-demo-channel.-1.1024
 	 * ept name : rpmsg-openamp-demo-channel
 	 * */
-	rpmsg_dev_cpy=strdup(rpmsg_dev_name);
-	if(rpmsg_dev_cpy != NULL){
-		ept_name = strtok(rpmsg_dev_cpy,".");
-		ept_name = strtok(NULL,".");
+	rpmsg_dev_cpy = strdup(rpmsg_dev_name);
+	if (rpmsg_dev_cpy != NULL) {
+		ept_name = strtok(rpmsg_dev_cpy, ".");
+		ept_name = strtok(NULL, ".");
 	}
 
 	/* setup rpmsg eptinfo structure (ept_name,src and dst)*/
-	memcpy(eptinfo.name,ept_name,strlen(ept_name));
-	eptinfo.name[strlen(ept_name)]='\0';
-	eptinfo.src=0;
+	memcpy(eptinfo.name, ept_name, strlen(ept_name));
+	eptinfo.name[strlen(ept_name)] = '\0';
+	eptinfo.src = 0;
 	set_src_dst(rpmsg_dev_name, &eptinfo);
 
 	/* bind rpmsg chr device */
@@ -251,8 +233,7 @@ int setup_rpmsg_ept_dev(char *rpmsg_dev_name, char *rpmsg_ctrl_dev_name, char *e
 	}
 
 	/* Create endpoint from rpmsg char driver */
-	DFX_DBG("app_rpmsg_create_ept: %s[src=%#x,dst=%#x]\n",
-			eptinfo.name, eptinfo.src, eptinfo.dst);
+	DFX_DBG("app_rpmsg_create_ept: %s[src=%#x,dst=%#x]\n", eptinfo.name, eptinfo.src, eptinfo.dst);
 	ret = app_rpmsg_create_ept(charfd, &eptinfo);
 	if (ret) {
 		fprintf(stderr, "app_rpmsg_create_ept %s\n", strerror(errno));
@@ -261,8 +242,7 @@ int setup_rpmsg_ept_dev(char *rpmsg_dev_name, char *rpmsg_ctrl_dev_name, char *e
 	}
 
 	/* get ept dev name */
-	if (!get_rpmsg_ept_dev_name(rpmsg_char_name, eptinfo.name,
-				ept_dev_name)) {
+	if (!get_rpmsg_ept_dev_name(rpmsg_char_name, eptinfo.name, ept_dev_name)) {
 		ret = -1;
 		goto out;
 	}
@@ -273,8 +253,6 @@ out:
 	free(rpmsg_dev_cpy);
 	return ret;
 }
-
-
 
 /**
  *
@@ -288,9 +266,9 @@ out:
  * return - *rpmsg_dev_t on success
  * 	    NULL on failure
  * */
-rpmsg_dev_t* create_rpmsg_dev(char *rpmsg_dev_name, char *rpmsg_ctrl_dev)
+rpmsg_dev_t *create_rpmsg_dev(char *rpmsg_dev_name, char *rpmsg_ctrl_dev)
 {
-	rpmsg_dev_t* rpmsg_dev;
+	rpmsg_dev_t *rpmsg_dev;
 	char *rpmsg_channel_name;
 	char ept_dev_name[16];
 	int ret = 0;
@@ -301,7 +279,7 @@ rpmsg_dev_t* create_rpmsg_dev(char *rpmsg_dev_name, char *rpmsg_ctrl_dev)
 	}
 
 	/* allocation memory */
-	rpmsg_dev = (rpmsg_dev_t*)malloc(sizeof(rpmsg_dev_t));
+	rpmsg_dev = (rpmsg_dev_t *)malloc(sizeof(rpmsg_dev_t));
 	if (rpmsg_dev == NULL) {
 		DFX_DBG("rpmsg dev allocation failed");
 		return NULL;
@@ -320,7 +298,7 @@ rpmsg_dev_t* create_rpmsg_dev(char *rpmsg_dev_name, char *rpmsg_ctrl_dev)
 	 * - rpmsg_channel_name (rpmsg-openamp-demo-channel.-1.1024)
 	 * */
 	rpmsg_channel_name = strchr(rpmsg_dev_name, '.');
-	strcpy(rpmsg_dev->rpmsg_channel_name,rpmsg_channel_name+1);
+	strcpy(rpmsg_dev->rpmsg_channel_name, rpmsg_channel_name + 1);
 
 	/* store setup ept_dev_name (/dev/rpmsg#) */
 	sprintf(rpmsg_dev->ept_rpmsg_dev_name, "/dev/%s", ept_dev_name);
@@ -349,11 +327,10 @@ void reset_active(acapd_list_t *rpmsg_dev_list)
 		DFX_DBG("List is empty\n");
 	}
 
-	acapd_list_for_each(rpmsg_dev_list, rpmsg_dev_node) {
+	acapd_list_for_each (rpmsg_dev_list, rpmsg_dev_node) {
 		rpmsg_dev_t *rpmsg_dev;
 
-		rpmsg_dev = (rpmsg_dev_t *)acapd_container_of(rpmsg_dev_node, rpmsg_dev_t,
-				rpmsg_node);
+		rpmsg_dev = (rpmsg_dev_t *)acapd_container_of(rpmsg_dev_node, rpmsg_dev_t, rpmsg_node);
 		rpmsg_dev->active = 0;
 	}
 }
@@ -372,7 +349,7 @@ void reset_active(acapd_list_t *rpmsg_dev_list)
  * 	    1 - if found
  *
  * */
-int check_rpmsg_dev_active(acapd_list_t *rpmsg_dev_list, char* rpmsg_dev_name, int virtio_num)
+int check_rpmsg_dev_active(acapd_list_t *rpmsg_dev_list, char *rpmsg_dev_name, int virtio_num)
 {
 	acapd_list_t *rpmsg_dev_node;
 	char rpmsg_virtio_dev_name[NAME_MAX + 10];
@@ -383,28 +360,25 @@ int check_rpmsg_dev_active(acapd_list_t *rpmsg_dev_list, char* rpmsg_dev_name, i
 		return found;
 	}
 
-	acapd_list_for_each(rpmsg_dev_list, rpmsg_dev_node) {
+	acapd_list_for_each (rpmsg_dev_list, rpmsg_dev_node) {
 		rpmsg_dev_t *rpmsg_dev;
 
-		rpmsg_dev = (rpmsg_dev_t *)acapd_container_of(rpmsg_dev_node, rpmsg_dev_t,
-				rpmsg_node);
+		rpmsg_dev = (rpmsg_dev_t *)acapd_container_of(rpmsg_dev_node, rpmsg_dev_t, rpmsg_node);
 		/*
 		 * Form virtio dev using virtio_num and rpmsg_channel_name
 		 * virtio0.rpmsg-openamp-demo-channel.-1.1024
 		 * */
-		sprintf(rpmsg_virtio_dev_name,"virtio%d.%s",virtio_num,rpmsg_dev->rpmsg_channel_name);
+		sprintf(rpmsg_virtio_dev_name, "virtio%d.%s", virtio_num, rpmsg_dev->rpmsg_channel_name);
 		if (!strncmp(rpmsg_virtio_dev_name, rpmsg_dev_name, strlen(rpmsg_dev_name))) {
-			DFX_DBG("Device %s already recorded",rpmsg_virtio_dev_name);
+			DFX_DBG("Device %s already recorded", rpmsg_virtio_dev_name);
 			found = 1;
 			/* set active flag */
 			rpmsg_dev->active = 1;
 			break;
 		}
-
 	}
 	return found;
 }
-
 
 /**
  *
@@ -425,10 +399,8 @@ void delete_inactive_rpmsgdev(acapd_list_t *rpmsg_dev_list)
 		return;
 	}
 
-	acapd_list_for_each_safe(rpmsg_dev_list, rpmsg_dev_node, next_node) {
-		rpmsg_dev_t *rpmsg_dev = acapd_container_of(rpmsg_dev_node,
-							    rpmsg_dev_t,
-							    rpmsg_node);
+	acapd_list_for_each_safe (rpmsg_dev_list, rpmsg_dev_node, next_node) {
+		rpmsg_dev_t *rpmsg_dev = acapd_container_of(rpmsg_dev_node, rpmsg_dev_t, rpmsg_node);
 
 		if (rpmsg_dev->active == 0) {
 			acapd_list_del(&rpmsg_dev->rpmsg_node);

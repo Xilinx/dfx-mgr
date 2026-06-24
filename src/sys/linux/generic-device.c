@@ -39,20 +39,17 @@ int acapd_generic_device_bind(acapd_device_t *dev, const char *drv)
 		DFX_ERR("opendir(%s)", tmpstr);
 		return ret;
 	}
-	while((dir = readdir(d)) != NULL) {
+	while ((dir = readdir(d)) != NULL) {
 		if (dir->d_type == DT_DIR && strlen(dir->d_name) <= 64) {
-			sprintf(tmpstr, "/sys/bus/%s/drivers/%s/%s",
-				dev->bus_name, dir->d_name, dev->dev_name);
+			sprintf(tmpstr, "/sys/bus/%s/drivers/%s/%s", dev->bus_name, dir->d_name, dev->dev_name);
 			if (access(tmpstr, F_OK) == 0) {
 				if (strcmp(dir->d_name, drv) == 0) {
-					DFX_DBG("dev %s already bound",
-						dev->dev_name);
+					DFX_DBG("dev %s already bound", dev->dev_name);
 					ret = 0;
 					goto out;
 				}
 				/* Unbind driver */
-				sprintf(tmpstr, "/sys/bus/%s/drivers/%s/unbind",
-					dev->bus_name, dir->d_name);
+				sprintf(tmpstr, "/sys/bus/%s/drivers/%s/unbind", dev->bus_name, dir->d_name);
 				fd = open(tmpstr, O_WRONLY);
 				if (fd < 0) {
 					ret = -errno;
@@ -61,8 +58,7 @@ int acapd_generic_device_bind(acapd_device_t *dev, const char *drv)
 				}
 				ret = write(fd, dev->dev_name, strlen(dev->dev_name) + 1);
 				if (ret < 0) {
-					DFX_ERR("write %s to %s",
-						dev->dev_name, tmpstr);
+					DFX_ERR("write %s to %s", dev->dev_name, tmpstr);
 					close(fd);
 					goto out;
 				}
@@ -71,8 +67,7 @@ int acapd_generic_device_bind(acapd_device_t *dev, const char *drv)
 		}
 	}
 	/* Bind new driver */
-	sprintf(tmpstr, "/sys/bus/%s/devices/%s/driver_override",
-		dev->bus_name, dev->dev_name);
+	sprintf(tmpstr, "/sys/bus/%s/devices/%s/driver_override", dev->bus_name, dev->dev_name);
 	fd = open(tmpstr, O_WRONLY);
 	if (fd < 0) {
 		ret = -errno;
@@ -85,8 +80,7 @@ int acapd_generic_device_bind(acapd_device_t *dev, const char *drv)
 		close(fd);
 		goto out;
 	}
-	sprintf(tmpstr, "/sys/bus/%s/drivers/%s/bind",
-		dev->bus_name, drv);
+	sprintf(tmpstr, "/sys/bus/%s/drivers/%s/bind", dev->bus_name, drv);
 	fd = open(tmpstr, O_WRONLY);
 	if (fd < 0) {
 		ret = -errno;
@@ -116,8 +110,7 @@ static int acapd_generic_device_get_uio_path(acapd_device_t *dev)
 	acapd_assert(dev != NULL);
 	acapd_assert(dev->dev_name != NULL);
 
-	sprintf(tmpstr, "/sys/bus/%s/devices/%s/uio",
-		dev->bus_name, dev->dev_name);
+	sprintf(tmpstr, "/sys/bus/%s/devices/%s/uio", dev->bus_name, dev->dev_name);
 	DFX_DBG("%s", tmpstr);
 	d = opendir(tmpstr);
 	if (d == NULL) {
@@ -127,7 +120,7 @@ static int acapd_generic_device_get_uio_path(acapd_device_t *dev)
 	}
 	ret = -EINVAL;
 	while ((dir = readdir(d)) != NULL) {
-		if(dir->d_type == DT_DIR && !strncmp(dir->d_name, "uio", 3)) {
+		if (dir->d_type == DT_DIR && !strncmp(dir->d_name, "uio", 3)) {
 			int fd;
 			char size_str[32], tmpname[8];
 
@@ -137,8 +130,8 @@ static int acapd_generic_device_get_uio_path(acapd_device_t *dev)
 			sprintf(dev->path, "/dev/%s", tmpname);
 
 			/* get io region size */
-			sprintf(tmpstr, "/sys/bus/%s/devices/%s/uio/%s/maps/map0/size",
-				dev->bus_name, dev->dev_name, dir->d_name);
+			sprintf(tmpstr, "/sys/bus/%s/devices/%s/uio/%s/maps/map0/size", dev->bus_name,
+					dev->dev_name, dir->d_name);
 			fd = open(tmpstr, O_RDONLY);
 			if (fd < 0) {
 				ret = -errno;
@@ -206,13 +199,11 @@ static int acapd_generic_device_open(acapd_device_t *dev)
 			return -EINVAL;
 		}
 		if (dev->reg_size == 0) {
-			DFX_ERR("failed to get %s,%s size; reg_siz is 0",
-				dev->dev_name, dev->path);
+			DFX_ERR("failed to get %s,%s size; reg_siz is 0", dev->dev_name, dev->path);
 			close(fd);
 			return -EINVAL;
 		}
-		dev->va = mmap(NULL, dev->reg_size, PROT_READ | PROT_WRITE,
-			       MAP_SHARED, fd, 0);
+		dev->va = mmap(NULL, dev->reg_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 		if (dev->va == MAP_FAILED) {
 			DFX_ERR("mmap %s, 0x%zx", dev->path, dev->reg_size);
 			dev->va = NULL;

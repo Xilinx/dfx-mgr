@@ -29,25 +29,25 @@
  */
 static int fpga_state(void)
 {
-    const char *state_operating = "operating";
-    const char *state_unknown = "unknown";
-    char read_buf[128];
+	const char *state_operating = "operating";
+	const char *state_unknown = "unknown";
+	char read_buf[128];
 
-    if (dfx_get_fpga_state(read_buf, sizeof(read_buf)) < 0) {
-        DFX_ERR("Failed to determine the fpga state -"
-        " could not read state file");
-        return -1;
-    }
+	if (dfx_get_fpga_state(read_buf, sizeof(read_buf)) < 0) {
+		DFX_ERR(
+			"Failed to determine the fpga state -"
+			" could not read state file");
+		return -1;
+	}
 
-    DFX_DBG("FPGA state read as: `%s`", read_buf);
+	DFX_DBG("FPGA state read as: `%s`", read_buf);
 
-    if (strcmp(read_buf, state_operating) == 0 ||
-        strcmp(read_buf, state_unknown) == 0) {
-        return 0;
-        }
+	if (strcmp(read_buf, state_operating) == 0 || strcmp(read_buf, state_unknown) == 0) {
+		return 0;
+	}
 
-    DFX_ERR("FPGA is in a bad state. State: `%s`", read_buf);
-    return -1;
+	DFX_ERR("FPGA is in a bad state. State: `%s`", read_buf);
+	return -1;
 }
 
 /**
@@ -68,43 +68,46 @@ static int fpga_state(void)
  */
 static int check_overlay_was_applied(const char *overlay_dir, const char *requested_path)
 {
-    char read_buf[128];
-    const char *state_applied = "applied";
+	char read_buf[128];
+	const char *state_applied = "applied";
 
+	/* Check overlay path */
+	if (dfx_get_overlay_path(overlay_dir, read_buf, sizeof(read_buf)) < 0) {
+		DFX_ERR(
+			"Failed to check overlay was applied for %s"
+			" - could not read path file",
+			overlay_dir);
+		return -1;
+	}
 
-    /* Check overlay path */
-    if (dfx_get_overlay_path(overlay_dir, read_buf, sizeof(read_buf)) < 0) {
-        DFX_ERR("Failed to check overlay was applied for %s"
-                " - could not read path file", overlay_dir);
-        return -1;
-    }
+	DFX_DBG("Overlay path read as: `%s`", read_buf);
 
-    DFX_DBG("Overlay path read as: `%s`", read_buf);
+	if (strcmp(read_buf, requested_path) != 0) {
+		DFX_ERR(
+			"Overlay path does not match written path:\n"
+			"\tRequested: `%s`\n"
+			"\tCurrent:   `%s`",
+			requested_path, read_buf);
+		return -1;
+	}
 
-    if (strcmp(read_buf, requested_path) != 0) {
-        DFX_ERR("Overlay path does not match written path:\n"
-                "\tRequested: `%s`\n"
-                "\tCurrent:   `%s`",
-                requested_path, read_buf);
-        return -1;
-    }
+	/* Check overlay status */
+	if (dfx_get_overlay_status(overlay_dir, read_buf, sizeof(read_buf)) < 0) {
+		DFX_ERR(
+			"Failed to check overlay was applied for %s"
+			" - could not read status file",
+			overlay_dir);
+		return -1;
+	}
 
-    /* Check overlay status */
-    if (dfx_get_overlay_status(overlay_dir, read_buf, sizeof(read_buf)) < 0) {
-        DFX_ERR("Failed to check overlay was applied for %s"
-                " - could not read status file", overlay_dir);
-        return -1;
-    }
+	DFX_DBG("Overlay status read as: `%s`", read_buf);
 
-    DFX_DBG("Overlay status read as: `%s`", read_buf);
+	if (strcmp(read_buf, state_applied) != 0) {
+		DFX_ERR("Overlay status is `%s`, expected `%s`", read_buf, state_applied);
+		return -1;
+	}
 
-    if (strcmp(read_buf, state_applied) != 0) {
-        DFX_ERR("Overlay status is `%s`, expected `%s`",
-                read_buf, state_applied);
-        return -1;
-    }
-
-    return 0;
+	return 0;
 }
 
 /**
@@ -121,14 +124,18 @@ static int check_overlay_was_applied(const char *overlay_dir, const char *reques
 static int user_load_sysfs(const char *bin)
 {
 	if (dfx_set_fpga_firmware(bin)) {
-		DFX_ERR("Failed to load firmware '%s'"
-			" - failed to request bitstream load", bin);
+		DFX_ERR(
+			"Failed to load firmware '%s'"
+			" - failed to request bitstream load",
+			bin);
 		return -1;
 	}
 	if (fpga_state()) {
-		DFX_ERR("Failed to load firmware '%s' - write succeeded,"
+		DFX_ERR(
+			"Failed to load firmware '%s' - write succeeded,"
 			" but fpga reports bad state"
-			" (or state could not be determined)", bin);
+			" (or state could not be determined)",
+			bin);
 		return -1;
 	}
 	return 0;
@@ -163,7 +170,8 @@ void remove_overlay_dir(const char *dir)
  * Return: 0 on success,
  *        -1 on failure.
  */
-static int user_load_overlay(const char *ov, const char *region) {
+static int user_load_overlay(const char *ov, const char *region)
+{
 	char ov_dir[512];
 	struct stat sb;
 
@@ -180,22 +188,25 @@ static int user_load_overlay(const char *ov, const char *region) {
 	}
 
 	if (dfx_set_overlay_path(ov_dir, ov)) {
-		DFX_ERR("Failed to set overlay source path for %s in region %s",
-			ov, region);
+		DFX_ERR("Failed to set overlay source path for %s in region %s", ov, region);
 		remove_overlay_dir(ov_dir);
 		return -1;
 	}
 
 	if (check_overlay_was_applied(ov_dir, ov)) {
-		DFX_ERR("Overlay %s failed to apply in region %s"
-			" - state or path was wrong", ov, region);
+		DFX_ERR(
+			"Overlay %s failed to apply in region %s"
+			" - state or path was wrong",
+			ov, region);
 		remove_overlay_dir(ov_dir);
 		return -1;
 	}
 
 	if (fpga_state()) {
-		DFX_ERR("Bitstream loading failed during overlay %s"
-			" application in region %s", ov, region);
+		DFX_ERR(
+			"Bitstream loading failed during overlay %s"
+			" application in region %s",
+			ov, region);
 		remove_overlay_dir(ov_dir);
 		return -1;
 	}
@@ -217,11 +228,8 @@ static int user_load_overlay(const char *ov, const char *region) {
  * Return: allocated string with full file path on success,
  *         NULL if no matching file found
  */
-static char *find_file_with_extensions(const char *path,
-                                        const char **extensions,
-                                        int num_ext,
-                                        const char *file_type,
-                                        int is_error)
+static char *find_file_with_extensions(const char *path, const char **extensions, int num_ext,
+									   const char *file_type, int is_error)
 {
 	DIR *dir;
 	struct dirent *entry;
@@ -240,12 +248,11 @@ static char *find_file_with_extensions(const char *path,
 		int len = strlen(entry->d_name);
 		for (int i = 0; i < num_ext; i++) {
 			int ext_len = strlen(extensions[i]);
-			if (len > ext_len &&
-			    strcmp(entry->d_name + len - ext_len, extensions[i]) == 0) {
+			if (len > ext_len && strcmp(entry->d_name + len - ext_len, extensions[i]) == 0) {
 				result = malloc(strlen(path) + strlen(entry->d_name) + 2);
 				if (result) {
-					snprintf(result, strlen(path) + strlen(entry->d_name) + 2,
-					         "%s/%s", path, entry->d_name);
+					snprintf(result, strlen(path) + strlen(entry->d_name) + 2, "%s/%s", path,
+							 entry->d_name);
 					DFX_DBG("Found %s: %s", file_type, result);
 				}
 				closedir(dir);
@@ -333,8 +340,8 @@ const char *path_basename(const char *path)
  *
  * Return: 0 on success, -1 on failure
  */
-int user_load_bitstream(const char *bitstream, const char *overlay,
-			const char *region, int is_partial)
+int user_load_bitstream(const char *bitstream, const char *overlay, const char *region,
+						int is_partial)
 {
 	const char *bin, *ov;
 	int rv = -1;
@@ -347,8 +354,7 @@ int user_load_bitstream(const char *bitstream, const char *overlay,
 	bin = path_basename(bitstream);
 
 	if (dfx_set_fpga_flags(is_partial)) {
-		DFX_ERR("Failed to set fpga flags for %s (partial=%d)",
-			bitstream, is_partial);
+		DFX_ERR("Failed to set fpga flags for %s (partial=%d)", bitstream, is_partial);
 	}
 
 	if (overlay && region) {
@@ -375,9 +381,7 @@ int user_load_bitstream(const char *bitstream, const char *overlay,
  *
  * Return: 0 on success, -1 on failure
  */
-int user_load_from_dir(const char *search_path,
-		       const char *region,
-		       int is_partial)
+int user_load_from_dir(const char *search_path, const char *region, int is_partial)
 {
 	char *bitstream, *overlay;
 	int ret;
@@ -410,17 +414,14 @@ int user_load_from_dir(const char *search_path,
  * to operate correctly. Fields like ip_dev, num_ip_devs, and fpga_cfg_id are
  * left zeroed since the user load removal path does not use them.
  */
-void user_load_init_accel(acapd_accel_t *pl_accel,
-			  acapd_accel_pkg_hd_t *pkg,
-			  int slot_num,
-			  const char *accel_type)
+void user_load_init_accel(acapd_accel_t *pl_accel, acapd_accel_pkg_hd_t *pkg, int slot_num,
+						  const char *accel_type)
 {
 	strncpy(pl_accel->type, accel_type, sizeof(pl_accel->type) - 1);
 	pl_accel->type[sizeof(pl_accel->type) - 1] = '\0';
 	pl_accel->pkg = pkg;
 	pl_accel->rm_slot = slot_num;
-	strncpy(pl_accel->sys_info.tmp_dir, pkg->path,
-	        sizeof(pl_accel->sys_info.tmp_dir) - 1);
+	strncpy(pl_accel->sys_info.tmp_dir, pkg->path, sizeof(pl_accel->sys_info.tmp_dir) - 1);
 	pl_accel->sys_info.tmp_dir[sizeof(pl_accel->sys_info.tmp_dir) - 1] = '\0';
 }
 
