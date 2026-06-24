@@ -2,7 +2,6 @@
 # Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
 # SPDX-License-Identifier: MIT
 #########################################################################
-# add_subdirectory (graph)
 
 collector_list  (_list PROJECT_INC_DIRS)
 include_directories (${_list} ${CMAKE_CURRENT_SOURCE_DIR})
@@ -15,7 +14,6 @@ SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
 set (_deps "dfx" "dl" "pthread" "systemd")
 
 foreach (_app load_accel accel-bzip2 accel-shm accel-aes accel-container dfx-mgr-client dfx-mgrd )
-#foreach (_app load_accel dfx-mgr-client dfx-mgrd dfx-mgrd2 graphTest6)
   set (_src ${CMAKE_CURRENT_SOURCE_DIR}/${_app}.c)
   if (WITH_SHARED_LIB)
     add_executable (${_app}-share ${_src})
