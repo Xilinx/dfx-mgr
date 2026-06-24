@@ -5,20 +5,12 @@
  * SPDX-License-Identifier: MIT
  */
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/un.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <errno.h>
 #include <unistd.h>
 #include <stdbool.h>
-#include <signal.h>
 #include <stdint.h>
-#include <sys/select.h>
-#include <sys/stat.h>
-#include <dfx-mgr/accel.h>
-#include <dfx-mgr/daemon_helper.h>
 #include <dfx-mgr/dfxmgr_client.h>
 
 /**
@@ -272,12 +264,6 @@ int main(int argc, char *argv[])
 		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
 			return -1;
 		printf("%s\n", recv_message.data);
-	} else if(!strcmp(argv[1],"-allocBuffer")) {
-	} else if(!strcmp(argv[1],"-freeBuffer")) {
-	} else if(!strcmp(argv[1],"-getFDs")) {
-	} else if(!strcmp(argv[1],"-getRMInfo")) {
-	} else if(!strcmp(argv[1],"-getShellFD")) {
-	} else if(!strcmp(argv[1],"-getClockFD")) {
 	} else if(!strcmp(argv[1],"-h") || !strcmp(argv[1],"--help")) {
 		printf("Usage dfx-mgr-client COMMAND\n");
 		printf("Commands\n");
@@ -295,12 +281,6 @@ int main(int argc, char *argv[])
 		printf("-listUIO [<slot#> [UIOname]]\t list accelerator UIOs\n");
 		printf("-listIRbuf [slot]\t\t list inter-RM buffer info\n");
 		printf("-setIRbuf a,b\t\t set RM stream from slot a to b\n");
-		printf("-allocBuffer <size> \t\t Allocate buffer of size and return its DMA fd and pa\n");
-		printf("-freeBuffer <pa> \t\t free buffer with physical address pa in decimal\n");
-		printf("-getFDs <slot#> \t\t Send ip device FD's over socket\n");
-		printf("-getRMInfo \n");
-		printf("-getShellFD \n");
-		printf("-getClockFD \n");
 		printf("\nCMA Path Priority:\n");
 		printf("\t1. Command-line -cma option (highest priority)\n");
 		printf("\t2. Global 'cma_path' in daemon.conf\n");
