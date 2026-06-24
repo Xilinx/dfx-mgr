@@ -8,7 +8,6 @@
 #include <dfx-mgr/shell.h>
 #include <dfx-mgr/device.h>
 #include <dfx-mgr/assert.h>
-#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -17,25 +16,6 @@ static acapd_shell_t shell;
 int acapd_shell_config(const char *config)
 {
 	return sys_shell_config(&shell, config);
-}
-int acapd_shell_fd()
-{
-	return shell.dev.id;
-}
-int acapd_shell_clock_fd()
-{
-	return shell.clock_dev.id;
-}
-
-int
-dfx_shell_fd_by_name(const char *str)
-{
-	int fd = -1;
-	if (shell.dev.dev_name && strstr(shell.dev.dev_name, str))
-		fd = shell.dev.id;
-	if (shell.clock_dev.dev_name && strstr(shell.clock_dev.dev_name, str))
-		fd = shell.clock_dev.id;
-	return fd;
 }
 
 char *

@@ -291,34 +291,6 @@ void *acapd_accel_get_reg_va(acapd_accel_t *accel, const char *name)
 	return dev->va;
 }
 
-void sendBuffer(uint64_t size,int socket)
-{
-	acapd_assert(size);
-	sys_send_buff(size, socket);
-}
-void allocateBuffer(uint64_t size)
-{
-	acapd_assert(size);
-	sys_alloc_buffer(size);
-}
-void freeBuffer(uint64_t pa)
-{
-	sys_free_buffer(pa);
-}
-void get_fds(acapd_accel_t *accel, int slot, int socket){
-	acapd_assert(accel != NULL);
-	sys_get_fds(accel, slot, socket);
-}
-void get_shell_fd(int socket)
-{
-	sys_get_fd(acapd_shell_fd(),socket);	
-}
-
-void get_shell_clock_fd(int socket)
-{
-	sys_get_fd(acapd_shell_clock_fd(),socket);
-}
-
 char *get_accel_path(const char *name, int slot)
 {
     char *base_path = malloc(sizeof(char)*1024);
