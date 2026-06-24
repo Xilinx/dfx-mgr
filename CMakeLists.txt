@@ -46,6 +46,43 @@ link_directories (${_list})
 add_subdirectory (src)
 add_subdirectory (example)
 
+# Code-formatting targets for first-party sources under src/ and example/:
+#   'format'       : rewrite files in-place with clang-format
+#   'format-check' : dry-run validation, non-zero exit if any file needs formatting
+# Requires clang-format >= 12 (needed by the .clang-format alignment options).
+set(CLANG_FORMAT_MIN_VERSION 12)
+
+set(_cf_major 0)
+find_program(CLANG_FORMAT NAMES clang-format)
+if(CLANG_FORMAT)
+  execute_process(COMMAND ${CLANG_FORMAT} --version
+                  OUTPUT_VARIABLE _cf_ver OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(REGEX MATCH "version ([0-9]+)" _ "${_cf_ver}")
+  if(CMAKE_MATCH_1)
+    set(_cf_major ${CMAKE_MATCH_1})
+  endif()
+endif()
+
+if(_cf_major LESS CLANG_FORMAT_MIN_VERSION)
+  # Missing or too old: define failing targets instead of breaking configure.
+  if(NOT CLANG_FORMAT)
+    set(_cf_msg "clang-format not found (>= ${CLANG_FORMAT_MIN_VERSION} required)")
+  else()
+    set(_cf_msg "clang-format >= ${CLANG_FORMAT_MIN_VERSION} required (found version ${_cf_major}: ${CLANG_FORMAT})")
+  endif()
+  add_custom_target(format       COMMAND bash -c "echo '${_cf_msg}'; exit 1" VERBATIM)
+  add_custom_target(format-check COMMAND bash -c "echo '${_cf_msg}'; exit 1" VERBATIM)
+else()
+  message(STATUS "Found clang-format ${_cf_major}: ${CLANG_FORMAT}")
+  set(_cf_find "find src example -type f \\( -name '*.c' -o -name '*.h' \\) ")
+  add_custom_target(format
+    COMMAND bash -c "${_cf_find} | xargs -r ${CLANG_FORMAT} -i"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} VERBATIM)
+  add_custom_target(format-check
+    COMMAND bash -c "${_cf_find} | xargs -r ${CLANG_FORMAT} --dry-run --Werror"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} VERBATIM)
+endif()
+
 #if (WITH_EXAMPLE)
 #endif (WITH_EXAMPLE)
 # vim: expandtab:ts=2:sw=2:smartindent

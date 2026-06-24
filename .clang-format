@@ -1,0 +1,40 @@
+---
+BasedOnStyle: Google
+Language: Cpp
+
+# Indentation and Layout
+UseTab: Always
+TabWidth: 4
+IndentWidth: 4
+ContinuationIndentWidth: 4
+ColumnLimit: 100
+IndentCaseLabels: false
+
+# Function and Enum Line Rules (Prevents code compressing onto a single line)
+AllowShortFunctionsOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortEnumsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortBlocksOnASingleLine: Never
+
+# Alignment Rules for High-Density Code Block Readability
+AlignAfterOpenBracket: Align
+PointerAlignment: Right
+
+# Brace Configurations
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: true
+  AfterStruct: false
+  BeforeElse: false
+
+# Treat project list-iteration macros as loops so their body braces wrap
+# like normal for/while loops instead of being pushed onto their own line.
+ForEachMacros:
+  - acapd_list_for_each
+  - acapd_list_for_each_safe
+
+# Include Optimization
+IncludeBlocks: Preserve
+SortIncludes: false
+ReflowComments: true
