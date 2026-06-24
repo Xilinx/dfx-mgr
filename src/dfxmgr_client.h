@@ -70,33 +70,12 @@ struct message {
     char data [32*1024];
 };
 
-extern void error (char *msg);
-
 typedef struct {
         int sock_fd;
         struct sockaddr_un socket_address;
 } socket_t;
 
 extern int initSocket(socket_t *gs);
-extern int graphClientSubmit(socket_t *gs, char* json, int size, int *fd, int *fdcount);
-extern int graphClientFinalise(socket_t *gs, char* json, int size);
-extern ssize_t sock_fd_write(int sock, void *buf, ssize_t buflen, int *fd, int fdcount);
-extern ssize_t sock_fd_read(int sock, struct message *buf, int *fd, int *fdcount);
-
-typedef struct fds{
-	int s2mm_fd;
-	int mm2s_fd;
-	int config_fd;
-	int accelconfig_fd;
-	int dma_hls_fd;
-	uint64_t mm2s_pa;
-	uint64_t mm2s_size;
-	uint64_t s2mm_pa;
-	uint64_t s2mm_size;
-	uint64_t config_pa;
-	uint64_t config_size;
-
-} fds_t;
 
 extern int dfxmgr_load(char* packageName);
 extern int dfxmgr_unload(int slot);
