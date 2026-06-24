@@ -850,7 +850,6 @@ int unload_accelerator_by_name(const char *name)
 void sendBuff(uint64_t size)
 {
 	DFX_PR("buffer size %"PRIu64, size);
-    //sendBuffer(size, socket_d);
 }
 void allocBuffer(uint64_t size)
 {
@@ -917,11 +916,9 @@ int dfx_getFDs(int slot, int *fd)
 
 void getShellFD()
 {
-    //get_shell_fd(socket_d);
 }
 void getClockFD()
 {
-    //get_shell_clock_fd(socket_d);
 }
 
 /*
@@ -1308,7 +1305,6 @@ int
 siha_ir_buf_set(char *user_slot_seq)
 {
 	struct basePLDesign *base = platform.active_base;
-	// acapd_accel_t *accel_src, *accel_dst;
 	uint8_t slot0, slot, clear = 1;
 	char slot_seq[RP_SLOTS_MAX];
 	int i, sz;
@@ -1669,7 +1665,6 @@ accel_info_t *add_accel_to_base(struct basePLDesign *base, char *name, char *pat
             strcpy(base->accel_list[j].parent_path, parent_path);
             base->accel_list[j].parent_path[sizeof(base->accel_list[j].parent_path) - 1] = '\0';
 			base->accel_list[j].rpu.slot_num = -1;  /* Initialize to -1 for old structure */
-            //base->accel_list[j].wd = wd;
 	    break;
         }
     }
@@ -1852,45 +1847,12 @@ void remove_base_design(char *path,char *parent, int is_base)
             base_designs[i].type[0] = '\0';
             base_designs[i].base_path[0] = '\0';
             base_designs[i].num_pl_slots = 0;
-            //free(base_designs[i].slots);
             base_designs[i].active = 0;
             base_designs[i].wd = -1;
             return;
         }
     }
 }
-
-/*static void
-displayInotifyEvent(struct inotify_event *i)
-{
-     printf(" event name = %s\n", i->name);
-    //printf("    wd =%2d; ", i->wd);
-   // if (i->cookie > 0)
-      //  printf("cookie =%4d; ", i->cookie);
-
-//    printf("mask = ");
-    if (i->mask & IN_ACCESS)        printf("IN_ACCESS ");
-    if (i->mask & IN_ATTRIB)        printf("IN_ATTRIB ");
-    if (i->mask & IN_CLOSE_NOWRITE) printf("IN_CLOSE_NOWRITE ");
-    if (i->mask & IN_CLOSE_WRITE)   printf("IN_CLOSE_WRITE ");
-    if (i->mask & IN_CREATE)        printf("IN_CREATE ");
-    if (i->mask & IN_DELETE)        printf("IN_DELETE ");
-    if (i->mask & IN_DELETE_SELF)   printf("IN_DELETE_SELF ");
-    if (i->mask & IN_IGNORED)       printf("IN_IGNORED ");
-    if (i->mask & IN_ISDIR)         printf("IN_ISDIR ");
-    if (i->mask & IN_MODIFY)        printf("IN_MODIFY ");
-    if (i->mask & IN_MOVE_SELF)     printf("IN_MOVE_SELF ");
-    if (i->mask & IN_MOVED_FROM)    printf("IN_MOVED_FROM ");
-    if (i->mask & IN_MOVED_TO)      printf("IN_MOVED_TO ");
-    if (i->mask & IN_OPEN)          printf("IN_OPEN ");
-    if (i->mask & IN_Q_OVERFLOW)    printf("IN_Q_OVERFLOW ");
-    if (i->mask & IN_UNMOUNT)       printf("IN_UNMOUNT ");
-    printf("\n");
-
-
-//   if (i->len > 0){}
-//        printf("        name = %s\n", i->name);
-}*/
 
 #define MAX_RECURSION_DEPTH 5
 /*
@@ -2295,7 +2257,6 @@ void *threadFunc([[maybe_unused]] void *_)
 
         for (p = buf; p < buf + numRead; ) {
             event = (struct inotify_event *) p;
-           // displayInotifyEvent(event);
             if(event->mask & IN_CREATE || event->mask & IN_CLOSE_WRITE){
                 if (event->mask & IN_ISDIR) {
                     struct watch *w = get_watch(event->wd);
@@ -2406,7 +2367,6 @@ void *threadFunc([[maybe_unused]] void *_)
             p += sizeof(struct inotify_event) + event->len;
         }
     }
-    //exit(EXIT_SUCCESS);
 }
 
 int dfx_init()
@@ -2436,8 +2396,6 @@ int dfx_init()
 	pthread_create(&t, NULL,threadFunc, NULL);
 	sem_wait(&mutex);
 	//TODO Save active design on filesytem and on reboot read that
-	//if (stat("/configfs/device-tree/overlays",&info))
-	//	ret = system("rmdir /configfs/device-tree/overlays/*");
 
 	return 0;
 }

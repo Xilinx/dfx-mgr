@@ -415,7 +415,6 @@ int sys_send_fd_pa(acapd_buffer_t *buff)
 		DFX_ERR("write. Failed to send PA for buffer");
        return -1;
 	}
-	//close(socket_d2);
 	return 0;
 }
 acapd_buffer_t * sys_alloc_buffer(uint64_t size)

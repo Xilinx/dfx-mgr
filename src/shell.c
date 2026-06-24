@@ -69,7 +69,6 @@ int acapd_shell_release_isolation(acapd_accel_t *accel)
 	void *reg_va;
 	acapd_device_t *dev;
 	acapd_shell_regs_t regs;
-	//uint32_t v;
 	int i, ret;
 
 	acapd_assert(accel != NULL);
@@ -104,19 +103,6 @@ int acapd_shell_release_isolation(acapd_accel_t *accel)
 		*((volatile uint32_t *)((char *)reg_va + regs.offset[i])) = regs.values[i];
 	}
 
-	//while(1) {
-	//	v = *((volatile uint32_t *)((char *)reg_va + regs->clock_status));
-	//	if ((v & regs->clock_release_mask) != 0) {
-	//		break;
-	//	}
-	//}
-	//*((volatile uint32_t *)((char *)reg_va + regs->reset_release)) = 0x1;
-	//while(1) {
-	//	v = *((volatile uint32_t *)((char *)reg_va + regs->reset_status));
-	//	if ((v & regs->reset_release_mask) != 0) {
-	//		break;
-	//	}
-	//}
 	DFX_DBG("release isolation done: (%p)", reg_va);
 	return 0;
 }
@@ -125,7 +111,6 @@ int acapd_shell_assert_isolation(acapd_accel_t *accel)
 {
 	void *reg_va;
 	acapd_device_t *dev;
-	//uint32_t v;
 	acapd_shell_regs_t regs;
 	int i;
 
@@ -158,18 +143,5 @@ int acapd_shell_assert_isolation(acapd_accel_t *accel)
 	for (i=0; i<4; i++){
 		*((volatile uint32_t *)((char *)reg_va + regs.offset[i])) = 0;
 	}
-	//while(1) {
-	//	v = *((volatile uint32_t *)((char *)reg_va + regs->clock_status));
-	//	if ((v & regs->clock_release_mask) == 0) {
-	//		break;
-	//	}
-	//}
-	//*((volatile uint32_t *)((char *)reg_va + regs->reset_release)) = 0;
-	//while(1) {
-	//	v = *((volatile uint32_t *)((char *)reg_va + regs->reset_status));
-	//	if ((v & regs->reset_release_mask) == 0) {
-	//		break;
-	//	}
-	//}
 	return 0;
 }

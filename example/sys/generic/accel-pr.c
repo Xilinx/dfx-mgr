@@ -23,9 +23,7 @@ int main(void)
 	int ret;
 
 	acapd_accel_pkg_hd_t *pkg1;
-	//acapd_accel_pkg_hd_t *pkg2;
 	acapd_accel_t accel;
-	//int ret;
 
 	/* Configure packages */
 	/* TODO: This step should be replaced by host tool. */
