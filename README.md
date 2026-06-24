@@ -533,6 +533,54 @@ Hence avoid creating long filenames.
 
 4. DFX-MGR supports Zynq-7000, Zynq UltraScale+MPSoC, Versal, and Versal Gen2 platforms.
 
+## How to contribute
+
+Contributions are welcome. You can send a patch directly; opening an issue
+first is optional. Please keep each pull request focused on a single logical
+change.
+
+### Coding style
+
+The C sources and example applications follow a single, reproducible style
+defined by the committed [`.clang-format`](.clang-format) file (Google base,
+tabs at width 4, 100-column limit). Run `clang-format` over your changes before
+submitting; CMake provides two convenience targets:
+
+```
+$ cd build
+$ cmake ..              # configure (detects clang-format)
+$ cmake --build . --target format         # rewrite first-party sources in place
+$ cmake --build . --target format-check   # CI-friendly dry-run, fails if reformatting is needed
+```
+
+The `format` target rewrites the `src/` and `example/` trees in place; the
+`format-check` target performs a non-modifying dry-run and exits non-zero when
+any file would change. Both require `clang-format` >= 12 (needed by the style's
+alignment options) and report a clear error when the tool is missing or too old.
+Make sure `format-check` is clean before opening a pull request.
+
+### Commit guidelines
+
+- Keep each commit tied to a single functionality; do not mix unrelated changes.
+- Use an imperative subject line prefixed with the component, e.g.
+  `dfx-mgr: add board-name filtering to -listPackage`.
+- Explain the *what* and *why* in the body, not an exhaustive list of every
+  line touched. For pure refactors or formatting commits, note
+  `No functional change.`
+- Sign off every commit by adding a `Signed-off-by:` trailer (`git commit -s`):
+
+```
+Signed-off-by: Your Name <your.email@example.com>
+```
+
+### Submitting changes
+
+1. Fork the repository and create a topic branch for your change.
+2. Build the project and verify your change (see *How to build*).
+3. Run `cmake --build . --target format-check` and fix any reported formatting.
+4. Push your branch and open a pull request describing the change and how you
+   tested it.
+
 ## Glossary
 
 ### dfx-mgr Concepts
