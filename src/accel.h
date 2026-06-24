@@ -106,7 +106,6 @@ int remove_accel(acapd_accel_t *accel, unsigned int async);
 int remove_base(int fpga_cfg_id);
 int acapd_accel_open_channel(acapd_accel_t *accel);
 int acapd_accel_reset_channel(acapd_accel_t *accel);
-char * getAccelMetadata(char *package_name, int slot);
 #ifdef ACAPD_INTERNAL
 int sys_needs_load_accel(acapd_accel_t *accel);
 int sys_accel_config(acapd_accel_t *accel);

@@ -9,15 +9,10 @@
 #include <dfx-mgr/device.h>
 #include <dfx-mgr/print.h>
 #include <dfx-mgr/shell.h>
-#include <sys/stat.h>
 #include <libdfx.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <dirent.h>
-#include <fcntl.h>
-#include <errno.h>
 #include <dfx-mgr/user_load.h>
 
 void init_accel(acapd_accel_t *accel, acapd_accel_pkg_hd_t *pkg)
@@ -291,75 +286,3 @@ void *acapd_accel_get_reg_va(acapd_accel_t *accel, const char *name)
 	return dev->va;
 }
 
-char *get_accel_path(const char *name, int slot)
-{
-    char *base_path = malloc(sizeof(char)*1024);
-    char *slot_path = malloc(sizeof(char)*1024);
-    char *accel_path = malloc(sizeof(char)*1024);
-    DIR *d, *base_d;
-    struct dirent *dir, *base_dir;
-    struct stat info;
-
-    d = opendir(FIRMWARE_PATH);
-    if (d == NULL) {
-        acapd_perror("Directory %s not found\n",FIRMWARE_PATH);
-    }
-    while((dir = readdir(d)) != NULL) {
-        if (dir->d_type == DT_DIR) {
-            sprintf(base_path,"%s/%s", FIRMWARE_PATH, dir->d_name);
-			base_d = opendir(base_path);
-			while((base_dir = readdir(base_d)) != NULL) {
-				if (base_dir->d_type == DT_DIR && !strcmp(base_dir->d_name, name)) {
-					sprintf(accel_path,"%s/%s", base_path, base_dir->d_name);
-					sprintf(slot_path,"%s/%s_slot%d", accel_path, base_dir->d_name,slot);
-					if (stat(slot_path,&info) != 0)
-						return NULL;
-					if (info.st_mode & S_IFDIR){
-						acapd_debug("Reading accel.json from %s\n",slot_path);
-						goto out;
-					}
-				}
-			}
-		}
-	}
-    return NULL;
-out:
-	free(base_path);
-	free(accel_path);
-	return slot_path;
-}
-
-char * getAccelMetadata(char *package_name, int slot)
-{
-	char filename[1024];
-	char *path;
-	FILE *fptr;
-    long numBytes;
-	char *jsonData;
-	int ret;
-
-	path = get_accel_path(package_name, slot);
-	if (path == NULL) {
-		acapd_perror("No accel.json found for %s slot %d\n",package_name,slot);
-		return NULL;
-	}
-	sprintf(filename,"%s/accel.json",path);
-	fptr = fopen(filename, "r");
-    if (fptr == NULL){
-        acapd_debug("%s: Cannot open accel.json, %s\n",__func__,strerror(errno));
-        return NULL;
-    }
-	fseek(fptr, 0L, SEEK_END);
-    numBytes = ftell(fptr);
-    fseek(fptr, 0L, SEEK_SET);
-
-    jsonData = (char *)calloc(numBytes, sizeof(char));
-    if (jsonData == NULL)
-        return NULL;
-    ret = fread(jsonData, sizeof(char), numBytes, fptr);
-    if (ret < numBytes)
-        acapd_perror("%s: Error reading Accel.json\n",__func__);
-    fclose(fptr);
-
-	return jsonData;
-}

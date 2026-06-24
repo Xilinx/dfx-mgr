@@ -38,7 +38,6 @@ char *get_accel_uio_by_name(int, const char *);
 int siha_ir_buf_list(uint32_t sz, char *buf);
 int siha_ir_buf_set(char *user_slot_seq);
 char *listAccelerators(int flag);
-void getRMInfo();
 int dfx_init();
 int user_load(int flag, const char *binfile, const char *overlay, const char *region);
 int user_unload_overlay(const char *region);

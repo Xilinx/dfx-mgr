@@ -119,33 +119,6 @@ struct basePLDesign *findBaseDesign_path(const char *path)
     return NULL;
 }
 
-/*
- * getRMInfo is a function intended to be able to read the presently
- * loaded RMs. Rename to saveRMinfo()?
- */
-void getRMInfo()
-{
-    FILE *fptr;
-    int i;
-    struct basePLDesign *base = platform.active_base;
-
-    if(base == NULL || base->slots == NULL) {
-        DFX_ERR("No design currently loaded");
-        return;
-    }
-
-    fptr = fopen("/home/root/rm_info.txt","w");
-    if (fptr == NULL) {
-        DFX_ERR("Couldn't create /home/root/rm_info.txt");
-        return;
-    }
-
-    for (i = 0; i < base->num_pl_slots; i++)
-        fprintf(fptr, "%d %s\n", i, base->slots[i] ? "used" : "GREY");
-
-    fclose(fptr);
-}
-
 /**
  * find_slot_from_handle() - returns the slot number
  * @*base - Pointer to a base design
@@ -1532,15 +1505,6 @@ struct watch *get_watch(int wd)
     for (i = 0; i < MAX_WATCH; i++) {
         if (active_watch[i].wd == wd)
             return &active_watch[i];
-    }
-    return NULL;
-}
-char * wd_to_pathname(int wd)
-{
-    int i;
-    for (i = 0; i < MAX_WATCH; i++) {
-        if (active_watch[i].wd == wd)
-            return active_watch[i].path;
     }
     return NULL;
 }
