@@ -249,21 +249,6 @@ int main(int argc, char *argv[])
 		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
 			return -1;
 		printf("%s\n", recv_message.data);
-	} else if (!strcmp(argv[1], "-listIRbuf")) {
-		send_message.id = SIHA_IR_LIST;
-		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
-			return -1;
-		printf("%s\n", recv_message.data);
-	} else if (!strcmp(argv[1], "-setIRbuf")) {
-		if (argc < 3) {
-			printf("-setIRbuf expects slot/accelerator list\n");
-			return -1;
-		}
-		send_message.id = SIHA_IR_SET;
-		snprintf(send_message.data, sizeof(send_message.data), "%s", argv[2]);
-		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
-			return -1;
-		printf("%s\n", recv_message.data);
 	} else if(!strcmp(argv[1],"-h") || !strcmp(argv[1],"--help")) {
 		printf("Usage dfx-mgr-client COMMAND\n");
 		printf("Commands\n");
@@ -279,8 +264,6 @@ int main(int argc, char *argv[])
 		printf("-unloadByName <name>\t\t\t Unload accelerator by name\n");
 		printf("\nOther commands:\n");
 		printf("-listUIO [<slot#> [UIOname]]\t list accelerator UIOs\n");
-		printf("-listIRbuf [slot]\t\t list inter-RM buffer info\n");
-		printf("-setIRbuf a,b\t\t set RM stream from slot a to b\n");
 		printf("\nCMA Path Priority:\n");
 		printf("\t1. Command-line -cma option (highest priority)\n");
 		printf("\t2. Global 'cma_path' in daemon.conf\n");

@@ -21,9 +21,6 @@ int main(int argc, char *argv[])
 	ret = dfxmgr_load(argv[1]);
 	printf("dfxmgr_load returned %d\n", ret);
 
-	dfxmgr_uio_by_name(uio_path, ret, "SIHA");
-	printf("%s SIHA\n", uio_path);
-
 	dfxmgr_uio_by_name(uio_path, ret, "AccelConfig");
 	printf("%s AccelConfig\n", uio_path);
 

@@ -116,7 +116,6 @@ struct basePLDesign {
 	int wd; //inotify watch desc
 	int load_base_design;
 	slot_info_t **slots;
-	uint64_t inter_rp_comm[RP_SLOTS_MAX]; /**< Inter-RP buffer addrs */
 	accel_info_t accel_list[RP_SLOTS_MAX];
 
 	/* Added for User Managed Design*/

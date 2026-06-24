@@ -21,16 +21,10 @@ extern "C" {
 
 #include <dfx-mgr/accel.h>
 
-typedef struct acapd_shell_regs {
-	uint32_t *offset;
-	uint32_t *values;
-} acapd_shell_regs_t;
-
 typedef struct acapd_shell {
 	acapd_device_t dev;
 	acapd_device_t clock_dev;
 	char *type;
-	const acapd_shell_regs_t *slot_regs;
 	int is_configured;
 } acapd_shell_t;
 
@@ -39,8 +33,6 @@ int acapd_shell_get();
 int acapd_shell_put();
 void dfx_shell_uio_list(char *, size_t);
 char *dfx_shell_uio_by_name(const char *);
-int acapd_shell_release_isolation(acapd_accel_t *accel);
-int acapd_shell_assert_isolation(acapd_accel_t *accel);
 
 #ifdef ACAPD_INTERNAL
 int sys_shell_config(acapd_shell_t *shell, const char *config);

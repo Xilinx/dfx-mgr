@@ -38,45 +38,6 @@ static int jsoneq(const char *json, jsmntok_t *tok, const char *s) {
   }
   return -1;
 }
-/**
- * rp_comms_inter - parse array of Inter-RP buffer addresses
- * @base:	pointer to the base shell to set inter_rp_comm[]
- * @jdatat:	pointer to the start of json data
- * @token:	pointer to rp_comms_interconnect token
- *
- * Parsing array:
- * "rp_comms_interconnect": [
- *	"slot0" : "0x080000000.inter_rp_comm",
- *	"slot1" : "0x280000000.inter_rp_comm"
- * ]
- */
-static void
-rp_comms_inter(struct basePLDesign *base, char *jdat, jsmntok_t *token)
-{
-	char slotX[] = "slotX";
-	uint64_t addr;
-	int i, j;
-
-	if (token[0].type != JSMN_ARRAY) {
-		DFX_ERR("rp_comms_interconnect needs array");
-		return;
-	}
-
-	/*
-	 * array of key-value pairs: "slotX" : "0x280000000.inter_rp_comm"
-	 *           token[i + 1] ----^^^^^     ^---- token[i + 2]
-	 *   strtoul() gets the addr and ignores ".inter_rp_comm"
-	 */
-	for (i = j = 0; j < token[0].size; j++, i+=2) {
-		slotX[4] = '0' + j;
-		if (!jsoneq(jdat, &token[i + 1], slotX)) {
-			addr = strtoul(jdat + token[i + 2].start, NULL, 16);
-			base->inter_rp_comm[j] = addr;
-			DFX_PR("%d.inter_rp_comm= %#" PRIx64, j, addr);
-		}
-	}
-}
-
 int parseAccelJson(acapd_accel_t *accel, char *filename)
 {
 	struct stat s;
@@ -287,50 +248,6 @@ int parseShellJson(acapd_shell_t *shell, const char *filename)
 			clk_dev->reg_pa = (uint64_t)strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 16);
 		if (jsoneq(jsonData, &token[i],"clock_reg_size") == 0)
 			clk_dev->reg_size = (size_t)strtol(strndup(jsonData+token[i+1].start, token[i+1].end - token[i+1].start), NULL, 16);
-		if (jsoneq(jsonData, &token[i],"isolation_slots") == 0){
-			int j;
-			if(token[i+1].type != JSMN_ARRAY) {
-				acapd_perror("shell.json slots expects an array \n");
-				continue;
-			}
-			int numSlots = token[i+1].size;
-			acapd_shell_regs_t *slot_regs;
-
-			slot_regs = (acapd_shell_regs_t *)calloc(numSlots, sizeof(*slot_regs));
-			if (slot_regs == NULL) {
-				acapd_perror("%s: failed to alloc mem for slot regs.\n", __func__);
-				ret = -ENOMEM;
-			}
-			i+=3;
-			for(j=0; j < numSlots; j++){
-				if (jsoneq(jsonData, &token[i+j],"offset") == 0){
-					int k;
-					if(token[i+j+1].type != JSMN_ARRAY) {
-						acapd_perror("shell.json offset expects an array \n");
-						continue;
-					}
-					slot_regs[j].offset = (uint32_t *)calloc(token[i+j+1].size, sizeof(uint32_t *));
-					for (k = 0; k < token[i+j+1].size; k++){
-						slot_regs[j].offset[k] = (uint32_t)strtol(strndup(jsonData+token[i+j+k+2].start, token[i+j+k+2].end - token[i+j+k+2].start), NULL, 16);
-					}
-					i += token[i+j+1].size;//increment by number of elements in offset array
-				}
-				if (jsoneq(jsonData, &token[i+j+2],"values") == 0){
-					int k;
-					if(token[i+j+3].type != JSMN_ARRAY) {
-						acapd_perror("shell.json values expects an array \n");
-						continue;
-					}
-					slot_regs[j].values = (uint32_t *)calloc(token[i+j+3].size, sizeof(uint32_t *));
-					for (k = 0; k < token[i+j+3].size; k++){
-						slot_regs[j].values[k] = (uint32_t)strtol(strndup(jsonData+token[i+j+k+4].start, token[i+j+k+4].end - token[i+j+k+4].start), NULL, 16);
-					}
-					i += token[i+j+3].size;//increment by number of elements in offset array
-				}
-				i+=4;//increment to point to next slot
-			}
-			shell->slot_regs = slot_regs;
-		}
 	}
 	free(jsonData);
 	return 0;
@@ -411,9 +328,6 @@ int initBaseDesign(struct basePLDesign *base, const char *shell_path)
 		if (jsoneq(jsonData, &token[i],"uid") == 0) {
 			base->uid = strtol(jsonData+token[i+1].start, NULL, 16);
 		}
-		if (!jsoneq(jsonData, &token[i], "rp_comms_interconnect"))
-			rp_comms_inter(base, jsonData, &token[i+1]);
-
 		if (jsoneq(jsonData, &token[i],"load_base_design") == 0) {
 			char *p = jsonData + token[i+1].start;
 				// If "no" or "No"
@@ -477,8 +391,8 @@ int initAccel(accel_info_t *accel, const char *path)
 			strncpy(accel->accel_type,
 				jsonData + token[i+1].start, sz);
 			accel->accel_type[sz] = 0;
-			if(strcmp(accel->accel_type,"SIHA_PL_DFX") && strcmp(accel->accel_type, "XRT_AIE_DFX") && strcmp(accel->accel_type,"XRT_PL_DFX"))
-				acapd_perror("accel_type valid values are SIHA_PL_DFX/XRT_AIE_DFX/XRT_PL_DFX\n");
+			if(strcmp(accel->accel_type, "XRT_AIE_DFX") && strcmp(accel->accel_type,"XRT_PL_DFX"))
+				acapd_perror("accel_type valid values are XRT_AIE_DFX/XRT_PL_DFX\n");
 		}
 		/* unique_id, parent_unique_id : uid, pid in base 16 w/ "0x"
 		 * or "0X" prefix to match data format produced by Vivado.

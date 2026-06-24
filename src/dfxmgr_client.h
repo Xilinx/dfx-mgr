@@ -35,8 +35,8 @@ enum dfx_mgr_request {
 	GRAPH_INIT_DONE,
 	GRAPH_FINALISE_DONE,
 	GRAPH_STAGED_DONE,
-	SIHA_IR_LIST,
-	SIHA_IR_SET,
+	DFX_MGR_REQ_14,		/* unused */
+	DFX_MGR_REQ_15,		/* unused */
 	USER_LOAD,
 	USER_UNLOAD,
 	LOAD_ACCEL_BY_ID,
@@ -77,8 +77,6 @@ extern int initSocket(socket_t *gs);
 extern int dfxmgr_load(char* packageName);
 extern int dfxmgr_unload(int slot);
 extern char *dfxmgr_uio_by_name(char *obuf, int slot, const char *name);
-extern char *dfxmgr_siha_ir_list(uint32_t sz, char *obuf);
-extern int dfxmgr_siha_ir_buf_set(const char *user_slot_seq);
 
 #ifdef __cplusplus
 }

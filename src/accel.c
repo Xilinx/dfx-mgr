@@ -29,7 +29,7 @@ int acapd_parse_config(acapd_accel_t *accel, const char *shell_config)
 	int ret;
 
 	/* Flat design don't have accel.json so do not parse */
-	if(!strcmp(accel->type,"SIHA_PL_DFX") || !strcmp(accel->type,"XRT_AIE_DFX")){
+	if(!strcmp(accel->type,"XRT_AIE_DFX")){
 		ret = sys_accel_config(accel);
 		if (ret < 0) {
 			DFX_ERR("failed to config accel");
@@ -103,14 +103,6 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 		DFX_DBG("no need to load accel");
 		return 0;
 	}
-	/* assert isolation before programming */
-	if (!strcmp(accel->type, "SIHA_PL_DFX")) {
-		ret = acapd_shell_assert_isolation(accel);
-		if (ret < 0) {
-			DFX_ERR("failed to assert isolaction");
-			return ret;
-		}
-	}
 
 	if (accel->is_cached == 0) {
 		ret = sys_fetch_accel(accel, get_fpga_flags(accel));
@@ -129,14 +121,6 @@ int load_accel(acapd_accel_t *accel, const char *shell_config, unsigned int asyn
 		DFX_ERR("Failed to load partial bitstream ret %d", ret);
 		accel->load_failure = ret;
 		return ret;
-	}
-	if (accel->status == ACAPD_ACCEL_STATUS_INUSE && !strcmp(accel->type,"SIHA_PL_DFX")) {
-		ret = acapd_shell_release_isolation(accel);
-		if (ret != 0) {
-			DFX_ERR("shell_release_isolation");
-			return ACAPD_ACCEL_FAILURE;
-		}
-		DFX_DBG("shell_release_isolation done");
 	}
 	return ret;
 }
@@ -183,13 +167,6 @@ int remove_accel(acapd_accel_t *accel, unsigned int async)
 			accel->status = ACAPD_ACCEL_STATUS_UNLOADED;
 			return ACAPD_ACCEL_SUCCESS;
 		} else {
-			if (!strcmp(accel->type,"SIHA_PL_DFX")) {
-				ret = acapd_shell_assert_isolation(accel);
-				if (ret < 0) {
-					DFX_ERR("failed to assert isolaction");
-					return ret;
-				}
-			}
 			ret = sys_remove_accel(accel, async);
 		}
 		if (ret == ACAPD_ACCEL_SUCCESS) {

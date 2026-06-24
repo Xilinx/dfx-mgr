@@ -35,8 +35,6 @@ int unload_accelerator_by_name(const char *name);
 bool is_pkg_listing_dirty(void);
 void list_accel_uio(int, char *, size_t);
 char *get_accel_uio_by_name(int, const char *);
-int siha_ir_buf_list(uint32_t sz, char *buf);
-int siha_ir_buf_set(char *user_slot_seq);
 char *listAccelerators(int flag);
 int dfx_init();
 int user_load(int flag, const char *binfile, const char *overlay, const char *region);

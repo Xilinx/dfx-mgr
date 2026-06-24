@@ -160,22 +160,12 @@ $ cat shell.json
   "num_pl_slots": 3, //Required: Number of pl slots in your base shell design
   "num_aie_slots":1, //Required: Number of aie slots in your base shell design
   "load_base_design": "no" //Optional : Default is "yes". Set to "no" to skip loading base design
-  "device_name" : "a0010000.SIHA_Manager", //optional: IP name
+  "device_name" : "a0010000.dfx_manager", //optional: IP name
   "reg_base" : "", //Optional: IP device base address
   "reg_size" : "", //Optional
   "clock_device_name" : "a0000000.clk_wiz", //optional
   "clock_reg_base" : "",//optional
-  "clock_reg_size" : "", //optional
-  "isolation_slots": [
-	// optional, specify the register offsets and the corresponding values to be
-	// written for each slot to bring it out of isolation, expects the length
-    //of array equal to number of slots
-	{ "offset": ["0x4000","0x4004","0x4008","0x400c"],//Address offset for first slot
-	"values": ["0x01","0x01", "0x0b", "0x02"] }, //Value to be written to above regs
-	{ "offset": ["0x5000","0x5004","0x5008","0x500c"],
-	"values": ["0x01","0x01", "0x0b", "0x02"]},
-	{ "offset": ["0x6000","0x6004","0x6008","0x600c"],
-	"values": ["0x01","0x01","0x0b", "0x02"] }]
+  "clock_reg_size" : "" //optional
 	 }
 ```
 
@@ -198,17 +188,13 @@ accel.json describes the accelerator configuration. Optional fields can be
 skipped if not desired. Flat shell designs are not required to have accel.json
 since they do not have reconfigurable partition.
 
-* SIHA_PL_DFX: Use this option for PL accelerators build with
-[SIHA manager](https://github.com/Xilinx/kria-dfx-hw/tree/xlnx_rel_v2022.1/k26/ip_repo/siha_manager),
-this enables some extra steps required to bring the slots out of isolation in
-addition to programming the bitstream.
 * XRT_PL_DFX: Use this option for XRT based PL accelerator.
 
 #### KRIA Designs.
 ```
 $ cat accel.json
 {
-  "accel_type": "", // Required: supported types are SIHA_PL_DFX / XRT_PL_DFX
+  "accel_type": "", // Required: supported types are XRT_AIE_DFX / XRT_PL_DFX
   "accel_devices":[ // Optional: list of IP devices corresponding to this slot design
   { "dev_name": "20100000000.accel",
    "reg_base":"",
@@ -241,8 +227,8 @@ $ cat accel.json
 #### DFX, Segmented and Segmented+DFX Designs
 ```
 {
-  "accel_type": "SIHA_PL_DFX" // Required: supported types are
-                      // SIHA_PL_DFX/XRT_AIE_DFX/XRT_PL_DFX
+  "accel_type": "XRT_PL_DFX" // Required: supported types are
+                      // XRT_AIE_DFX/XRT_PL_DFX
 }
 ```
 ## How to build
@@ -308,8 +294,8 @@ ID accelType   Base        slotLoc Accelerator
  1 RPU         rpu         -1      vek280-r5-0-matrix-multiply
  2 XRT_FLAT    vek280-p... -1      vek280-pl-bram-gpio-fw
  3 XRT_FLAT    vek280-p... -1      vek280-pl-bram-uart-gpio-fw
- 4 SIHA_PL_DFX static      -1      rp1rm0
- 5 SIHA_PL_DFX static      -1      rp0rm0
+ 4 XRT_PL_DFX  static      -1      rp1rm0
+ 5 XRT_PL_DFX  static      -1      rp0rm0
 ```
 
 **Full View with -all flag:**
@@ -321,13 +307,13 @@ ID accelType   userLoad  userLoad  Base        Pid   #slots       slot     load 
  1 RPU         -         -         rpu         no_id (2+0+0)      -1       -1     vek280-r5-0-matrix-multiply
  2 XRT_FLAT    -         -         vek280-p... id_ok (0+0+0)      -1       -1     vek280-pl-bram-gpio-fw
  3 XRT_FLAT    -         -         vek280-p... id_ok (0+0+0)      -1       -1     vek280-pl-bram-uart-gpio-fw
- 4 SIHA_PL_DFX -         -         static      no_id (0+2+0)      -1       -1     rp1rm0
- 5 SIHA_PL_DFX -         -         static      no_id (0+2+0)      -1       -1     rp0rm0
+ 4 XRT_PL_DFX  -         -         static      no_id (0+2+0)      -1       -1     rp1rm0
+ 5 XRT_PL_DFX  -         -         static      no_id (0+2+0)      -1       -1     rp0rm0
 ```
 
 In the output, the **ID** column is a identifier used by `-load` and `-unload` commands.
 XRT_FLAT designs show flat shell designs that do not have dynamic reconfigurable
-partitions. SIHA_PL_DFX designs show DFX-based accelerators with reconfigurable partitions.
+partitions. XRT_PL_DFX designs show DFX-based accelerators with reconfigurable partitions.
 The slotLoc column shows -1 when no accelerator is currently loaded to any slot.
 RPU entries show RPU firmware applications.
 
