@@ -29,8 +29,6 @@
 #include <dfx-mgr/dfxmgr_client.h>
 #include <systemd/sd-daemon.h>
 
-#define MAX_CLIENTS 200
-
 static volatile int interrupted = 0;
 static int socket_d;
 

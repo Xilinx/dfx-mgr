@@ -15,7 +15,6 @@ extern "C" {
 #include <sys/types.h>
 
 #define SERVER_SOCKET "/var/run/dfx-mgrd.socket"
-#define MAX_MESSAGE_SIZE          4*1024
 #define BACKLOG                   10
 
 #define MAX_REGION_NAME_LEN  8
@@ -46,8 +45,6 @@ enum dfx_mgr_request {
 	UNLOAD_ACCEL_BY_NAME,
 	UNLOAD_ACCEL_BY_HANDLE,
 };
-
-#define MAX_CLIENTS 200
 
 /* Message flag bit allocation:
  *   Bits 0-1: USER_LOAD command
