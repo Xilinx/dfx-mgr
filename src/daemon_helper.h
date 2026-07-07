@@ -7,6 +7,7 @@
 #ifndef _ACAPD_DAEMON_HELPER_H
 #define _ACAPD_DAEMON_HELPER_H
 
+#include <stddef.h>
 #include <dfx-mgr/model.h>
 
 #ifdef __cplusplus
@@ -28,8 +29,9 @@ extern "C" {
 #define TRUNCATED_BASE_BUFFER_SIZE \
 	(MAX_BASE_NAME_DISPLAY_LEN + 1) /* Display length + null terminator */
 
-int load_accelerator(const char *accel_name, char *cma_path);
-int load_accelerator_by_id(int id, char *cma_path);
+int load_accelerator(const char *accel_name, char *cma_path, char *fpga_state,
+					 size_t fpga_state_sz);
+int load_accelerator_by_id(int id, char *cma_path, char *fpga_state, size_t fpga_state_sz);
 int unload_accelerator(int slot);
 int unload_accelerator_by_id(int id);
 int unload_accelerator_by_name(const char *name);
@@ -38,7 +40,8 @@ void list_accel_uio(int, char *, size_t);
 char *get_accel_uio_by_name(int, const char *);
 char *listAccelerators(int flag);
 int dfx_init();
-int user_load(int flag, const char *binfile, const char *overlay, const char *region);
+int user_load(int flag, const char *binfile, const char *overlay, const char *region,
+			  char *fpga_state, size_t fpga_state_sz);
 int user_unload_overlay(const char *region);
 int user_unload(const int handle);
 int get_free_slot_handle(void);

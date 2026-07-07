@@ -80,6 +80,13 @@ extern int dfxmgr_load(char *packageName);
 extern int dfxmgr_unload(int slot);
 extern char *dfxmgr_uio_by_name(char *obuf, int slot, const char *name);
 
+/*
+ * Split an in-place load reply of the form "<value>:<state>".
+ * Null-terminates the value portion in @resp and returns a pointer to the
+ * fpga_manager state, or NULL when the reply carries no ":<state>" suffix.
+ */
+char *dfxmgr_split_fpga_state(char *resp);
+
 #ifdef __cplusplus
 }
 #endif

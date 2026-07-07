@@ -59,15 +59,25 @@ static int format_load_request(int argc, char *argv[], char *data, size_t data_s
 	return 0;
 }
 
-static int print_load_result(const char *label, const char *id_str, const char *resp,
-							 uint32_t flags)
+static void print_fpga_state(const char *fpga_state)
+{
+	if (fpga_state != NULL)
+		printf(" (FPGA state: %s)", fpga_state);
+	printf("\n");
+}
+
+static int print_load_result(const char *label, const char *id_str, char *resp, uint32_t flags)
 {
 	long ret;
 
 	print_pkg_dirty_warning(flags);
 
+	/* Reply may carry the fpga_manager state as "<value>:<state>". */
+	char *fpga_state = dfxmgr_split_fpga_state(resp);
+
 	if (resp[0] != '-') {
-		printf("%s%s%s: Loaded with slot_handle %s\n", label, label[0] ? " " : "", id_str, resp);
+		printf("%s%s%s: Loaded with slot_handle %s", label, label[0] ? " " : "", id_str, resp);
+		print_fpga_state(fpga_state);
 		return 0;
 	}
 
@@ -75,15 +85,16 @@ static int print_load_result(const char *label, const char *id_str, const char *
 	printf("Load Error: ");
 	switch (ret) {
 	case 2:
-		printf("No package found for %s%s%s\n", label, label[0] ? " " : "", id_str);
+		printf("No package found for %s%s%s", label, label[0] ? " " : "", id_str);
 		break;
 	case 3:
-		printf("No empty slot for %s%s%s\n", label, label[0] ? " " : "", id_str);
+		printf("No empty slot for %s%s%s", label, label[0] ? " " : "", id_str);
 		break;
 	default:
-		printf("Unable to load %s%s%s\n", label, label[0] ? " " : "", id_str);
+		printf("Unable to load %s%s%s", label, label[0] ? " " : "", id_str);
 		break;
 	}
+	print_fpga_state(fpga_state);
 	return -(int)ret;
 }
 
@@ -340,11 +351,15 @@ int main(int argc, char *argv[])
 			send_message.flags = user_load_flag;
 			if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
 				return -1;
+			/* Reply may carry the fpga_manager state as "<value>:<state>". */
+			char *fpga_state = dfxmgr_split_fpga_state(recv_message.data);
 			if (recv_message.data[0] == '-') {
-				printf("Load Error: %s\n", recv_message.data);
+				printf("Load Error: %s", recv_message.data);
+				print_fpga_state(fpga_state);
 				return -1;
 			} else {
-				printf("Loaded with slot_handle %s\n", recv_message.data);
+				printf("Loaded with slot_handle %s", recv_message.data);
+				print_fpga_state(fpga_state);
 			}
 		}
 	}

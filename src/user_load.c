@@ -341,7 +341,7 @@ const char *path_basename(const char *path)
  * Return: 0 on success, -1 on failure
  */
 int user_load_bitstream(const char *bitstream, const char *overlay, const char *region,
-						int is_partial)
+						int is_partial, char *fpga_state, size_t fpga_state_sz)
 {
 	const char *bin, *ov;
 	int rv = -1;
@@ -367,6 +367,13 @@ int user_load_bitstream(const char *bitstream, const char *overlay, const char *
 	}
 
 	dfx_set_firmware_search_path("");
+
+	/* Capture fpga state at the programming site (regardless of rv). */
+	if (fpga_state && fpga_state_sz) {
+		if (dfx_get_fpga_state(fpga_state, fpga_state_sz) < 0)
+			fpga_state[0] = '\0';
+	}
+
 	return rv;
 }
 
@@ -381,7 +388,8 @@ int user_load_bitstream(const char *bitstream, const char *overlay, const char *
  *
  * Return: 0 on success, -1 on failure
  */
-int user_load_from_dir(const char *search_path, const char *region, int is_partial)
+int user_load_from_dir(const char *search_path, const char *region, int is_partial,
+					   char *fpga_state, size_t fpga_state_sz)
 {
 	char *bitstream, *overlay;
 	int ret;
@@ -393,7 +401,7 @@ int user_load_from_dir(const char *search_path, const char *region, int is_parti
 	}
 
 	overlay = find_overlay_file(search_path);
-	ret = user_load_bitstream(bitstream, overlay, region, is_partial);
+	ret = user_load_bitstream(bitstream, overlay, region, is_partial, fpga_state, fpga_state_sz);
 
 	free(bitstream);
 	free_overlay_file_path(overlay);

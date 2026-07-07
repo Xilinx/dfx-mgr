@@ -9,6 +9,7 @@
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <dirent.h>
 #include <unistd.h>
 #include <dfx-mgr/accel.h>
@@ -45,11 +46,27 @@ void dfx_exit(char *msg)
 	exit(EXIT_FAILURE);
 }
 
-static void format_response_with_warning(struct message *msg, int value)
+/*
+ * format_load_response() - build a load/unload reply payload.
+ * @value:       slot handle on success, or negative error code.
+ * @allow_warn:  when true, set the DFX_RESP_PKG_DIRTY flag if the listing is dirty.
+ * @fpga_state:  fpga_manager state to append as ":<state>", or NULL/"" for none.
+ *
+ * The integer stays first and the fpga state is appended after it,
+ * so the reply data is an unambiguous "<value>[:<state>]"
+ * and remains parseable via atoi()/strtol().
+ */
+static void format_load_response(struct message *msg, int value, bool allow_warn,
+								 const char *fpga_state)
 {
-	msg->size = 1 + sprintf(msg->data, "%d", value);
+	int n = sprintf(msg->data, "%d", value);
 
-	if (is_pkg_listing_dirty())
+	if (fpga_state && fpga_state[0])
+		n += sprintf(msg->data + n, ":%s", fpga_state);
+
+	msg->size = 1 + n;
+
+	if (allow_warn && is_pkg_listing_dirty())
 		msg->flags |= DFX_RESP_PKG_DIRTY;
 }
 
@@ -60,6 +77,7 @@ static void process_dfx_req(int fd, fd_set *fdset)
 	int ret, slot;
 	char *binfile = NULL, *overlay = NULL, *region = NULL, *tmp;
 	char *accel_name = NULL, *cma_path = NULL;
+	char fpga_state[64];
 
 	numbytes = read(fd, &recv_msg, sizeof(struct message));
 	if (numbytes <= 0) {
@@ -82,8 +100,9 @@ static void process_dfx_req(int fd, fd_set *fdset)
 		accel_name = strtok(tmp, ":");
 		cma_path = strtok(NULL, ":");
 		DFX_PR("daemon loading accel %s", recv_msg.data);
-		slot = load_accelerator(accel_name, cma_path);
-		send_msg.size = 1 + sprintf(send_msg.data, "%d", slot);
+		fpga_state[0] = '\0';
+		slot = load_accelerator(accel_name, cma_path, fpga_state, sizeof(fpga_state));
+		format_load_response(&send_msg, slot, false, fpga_state);
 
 		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
 			DFX_ERR("LOAD_ACCEL write(%d)", fd);
@@ -140,8 +159,9 @@ static void process_dfx_req(int fd, fd_set *fdset)
 		overlay = strtok(NULL, " : ");
 		region = strtok(NULL, " : ");
 
-		slot = user_load(recv_msg.flags, binfile, overlay, region);
-		send_msg.size = 1 + sprintf(send_msg.data, "%d", slot);
+		fpga_state[0] = '\0';
+		slot = user_load(recv_msg.flags, binfile, overlay, region, fpga_state, sizeof(fpga_state));
+		format_load_response(&send_msg, slot, false, fpga_state);
 		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
 			DFX_ERR("USER_LOAD write(%d)", fd);
 		free(tmp);
@@ -161,8 +181,9 @@ static void process_dfx_req(int fd, fd_set *fdset)
 		cma_path = strtok(NULL, ":");
 		int load_id = atoi(id_str);
 		DFX_PR("daemon loading accel by ID %d", load_id);
-		slot = load_accelerator_by_id(load_id, cma_path);
-		format_response_with_warning(&send_msg, slot);
+		fpga_state[0] = '\0';
+		slot = load_accelerator_by_id(load_id, cma_path, fpga_state, sizeof(fpga_state));
+		format_load_response(&send_msg, slot, true, fpga_state);
 		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
 			DFX_ERR("LOAD_ACCEL_BY_ID write(%d)", fd);
 		free(tmp);
@@ -172,7 +193,7 @@ static void process_dfx_req(int fd, fd_set *fdset)
 		int unload_id = atoi(recv_msg.data);
 		DFX_PR("daemon unloading accel by ID %d", unload_id);
 		ret = unload_accelerator_by_id(unload_id);
-		format_response_with_warning(&send_msg, ret);
+		format_load_response(&send_msg, ret, true, NULL);
 		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
 			DFX_ERR("UNLOAD_ACCEL_BY_ID write(%d)", fd);
 		break;
@@ -182,8 +203,9 @@ static void process_dfx_req(int fd, fd_set *fdset)
 		accel_name = strtok(tmp, ":");
 		cma_path = strtok(NULL, ":");
 		DFX_PR("daemon loading accel by name %s", accel_name);
-		slot = load_accelerator(accel_name, cma_path);
-		send_msg.size = 1 + sprintf(send_msg.data, "%d", slot);
+		fpga_state[0] = '\0';
+		slot = load_accelerator(accel_name, cma_path, fpga_state, sizeof(fpga_state));
+		format_load_response(&send_msg, slot, false, fpga_state);
 		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
 			DFX_ERR("LOAD_ACCEL_BY_NAME write(%d)", fd);
 		free(tmp);

@@ -20,6 +20,7 @@ typedef struct {
 	char dtbo_dir[MAX_PATH_SIZE];
 	char tmp_dir[MAX_PATH_SIZE];
 	int fpga_cfg_id;
+	char fpga_state[64];
 } acapd_accel_sys_t;
 
 #endif /* _ACAPD_LINUX_ACCEL_H */

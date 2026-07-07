@@ -17,6 +17,16 @@
 #include <dfx-mgr/print.h>
 #include "dfxmgr_client.h"
 
+char *dfxmgr_split_fpga_state(char *resp)
+{
+	char *colon = strchr(resp, ':');
+	if (colon != NULL) {
+		*colon = '\0';
+		return colon + 1;
+	}
+	return NULL;
+}
+
 int dfxmgr_load(char *pkg_name)
 {
 	struct message send_msg, recv_msg;
@@ -41,7 +51,14 @@ int dfxmgr_load(char *pkg_name)
 		return -1;
 	}
 
-	DFX_PR("Accelerator %s loaded to slot %s", pkg_name, recv_msg.data);
+	/* Reply may carry the fpga_manager state as "<slot>:<state>". */
+	char *fpga_state = dfxmgr_split_fpga_state(recv_msg.data);
+	if (fpga_state != NULL) {
+		DFX_PR("Accelerator %s loaded to slot %s (FPGA state: %s)", pkg_name, recv_msg.data,
+			   fpga_state);
+	} else {
+		DFX_PR("Accelerator %s loaded to slot %s", pkg_name, recv_msg.data);
+	}
 	return atoi(recv_msg.data);
 }
 
@@ -69,6 +86,7 @@ int dfxmgr_unload(int slot)
 		return -1;
 	}
 
+	/* Unload replies carry no ":<state>" suffix (daemon passes NULL). */
 	DFX_PR("unload from slot %d returns: %s (%s)", slot, recv_msg.data,
 		   recv_msg.data[0] == '0' ? "Ok" : "Error");
 	return recv_msg.data[0] == '0' ? 0 : -1;

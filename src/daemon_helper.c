@@ -224,7 +224,8 @@ static int assign_slot(struct basePLDesign *base, slot_info_t *slot, acapd_accel
 	return slot->slot_handle;
 }
 
-static int load_accelerator_core(struct basePLDesign *base, const char *accel_name, char *cma_path)
+static int load_accelerator_core(struct basePLDesign *base, const char *accel_name, char *cma_path,
+								 char *fpga_state, size_t fpga_state_sz)
 {
 	int i, ret;
 	int rv = -DFX_MGR_LOAD_ERROR;
@@ -264,7 +265,7 @@ static int load_accelerator_core(struct basePLDesign *base, const char *accel_na
 		/* Route to appropriate loading mechanism */
 		if (platform.use_user_load_path) {
 			DFX_PR("Using user load path for %s", accel_name);
-			ret = user_load_from_dir(base->base_path, accel_name, 0);
+			ret = user_load_from_dir(base->base_path, accel_name, 0, fpga_state, fpga_state_sz);
 			if (ret < 0) {
 				DFX_ERR("load_accel %s", accel_name);
 				base->active = 0;
@@ -287,6 +288,8 @@ static int load_accelerator_core(struct basePLDesign *base, const char *accel_na
 			}
 			pl_accel->rm_slot = 0;
 			base->fpga_cfg_id = pl_accel->sys_info.fpga_cfg_id;
+			if (fpga_state)
+				snprintf(fpga_state, fpga_state_sz, "%s", pl_accel->sys_info.fpga_state);
 		}
 		platform.active_base = base;
 		base->active += 1;
@@ -333,7 +336,8 @@ static int load_accelerator_core(struct basePLDesign *base, const char *accel_na
 					/* Route to appropriate loading mechanism for base design */
 					if (platform.use_user_load_path) {
 						DFX_PR("Using user load path for base design");
-						ret = user_load_from_dir(base->base_path, base->name, 0);
+						ret = user_load_from_dir(base->base_path, base->name, 0, fpga_state,
+												 fpga_state_sz);
 						if (ret < 0) {
 							DFX_ERR("load_accel %s", accel_name);
 							base->active = 0;
@@ -356,6 +360,9 @@ static int load_accelerator_core(struct basePLDesign *base, const char *accel_na
 							goto out;
 						}
 						base->fpga_cfg_id = pl_accel->sys_info.fpga_cfg_id;
+						if (fpga_state)
+							snprintf(fpga_state, fpga_state_sz, "%s",
+									 pl_accel->sys_info.fpga_state);
 					}
 					DFX_PR("Loaded %s successfully", base->name);
 				}
@@ -471,7 +478,7 @@ static int load_accelerator_core(struct basePLDesign *base, const char *accel_na
 					/* Route to appropriate loading mechanism for slot design */
 					if (platform.use_user_load_path) {
 						DFX_PR("Using user load path for slot design");
-						ret = user_load_from_dir(path, accel_name, 1);
+						ret = user_load_from_dir(path, accel_name, 1, fpga_state, fpga_state_sz);
 						if (ret < 0) {
 							DFX_ERR("load_accel %s", accel_name);
 							goto out;
@@ -494,6 +501,9 @@ static int load_accelerator_core(struct basePLDesign *base, const char *accel_na
 							DFX_ERR("load_accel %s", accel_name);
 							goto out;
 						}
+						if (fpga_state)
+							snprintf(fpga_state, fpga_state_sz, "%s",
+									 pl_accel->sys_info.fpga_state);
 					}
 					platform.active_base->active += 1;
 					return assign_slot(base, slot, pl_accel, accel_name, i);
@@ -514,7 +524,7 @@ out:
 	return rv;
 }
 
-int load_accelerator(const char *accel_name, char *cma_path)
+int load_accelerator(const char *accel_name, char *cma_path, char *fpga_state, size_t fpga_state_sz)
 {
 	struct basePLDesign *base;
 
@@ -524,7 +534,7 @@ int load_accelerator(const char *accel_name, char *cma_path)
 		DFX_ERR("No package found for %s", accel_name);
 		return -DFX_MGR_NO_PACKAGE_FOUND_ERROR;
 	}
-	return load_accelerator_core(base, accel_name, cma_path);
+	return load_accelerator_core(base, accel_name, cma_path, fpga_state, fpga_state_sz);
 }
 
 static int unload_accel_base(void)
@@ -733,7 +743,7 @@ static int find_accel_by_list_id(int id, list_id_result_t *result)
  *
  * Return: slot_handle on success, negative error code on failure
  */
-int load_accelerator_by_id(int id, char *cma_path)
+int load_accelerator_by_id(int id, char *cma_path, char *fpga_state, size_t fpga_state_sz)
 {
 	list_id_result_t result;
 
@@ -749,7 +759,8 @@ int load_accelerator_by_id(int id, char *cma_path)
 		return -DFX_MGR_LOAD_ERROR;
 	}
 
-	return load_accelerator_core(result.base, result.accel->name, cma_path);
+	return load_accelerator_core(result.base, result.accel->name, cma_path, fpga_state,
+								 fpga_state_sz);
 }
 
 /**
@@ -1590,7 +1601,8 @@ static void firmware_dir_walk(void)
  * Return: An integer unique handle id on success,
  *        -1 on failure or if constraints are violated.
  */
-int user_load(const int flag, const char *binfile, const char *overlay, const char *region)
+int user_load(const int flag, const char *binfile, const char *overlay, const char *region,
+			  char *fpga_state, size_t fpga_state_sz)
 {
 	const char *bin;
 	int rv = -1;
@@ -1651,7 +1663,8 @@ int user_load(const int flag, const char *binfile, const char *overlay, const ch
 
 	bin = path_basename(binfile);
 
-	rv = user_load_bitstream(binfile, overlay, region, flag & USER_LOAD_PARTIAL);
+	rv = user_load_bitstream(binfile, overlay, region, flag & USER_LOAD_PARTIAL, fpga_state,
+							 fpga_state_sz);
 
 	if (!rv) {
 		int i;

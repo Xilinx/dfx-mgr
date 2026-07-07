@@ -195,6 +195,9 @@ int sys_load_accel(acapd_accel_t *accel, unsigned int async)
 	}
 	fpga_cfg_id = accel->sys_info.fpga_cfg_id;
 	ret = dfx_cfg_load(fpga_cfg_id);
+	/* Capture fpga state at the programming site (regardless of ret). */
+	if (dfx_get_fpga_state(accel->sys_info.fpga_state, sizeof(accel->sys_info.fpga_state)) < 0)
+		accel->sys_info.fpga_state[0] = '\0';
 	if (ret != 0) {
 		DFX_ERR("Failed to load fpga config for %s (id=%d)", accel->sys_info.tmp_dir, fpga_cfg_id);
 		dfx_cfg_destroy(fpga_cfg_id);
