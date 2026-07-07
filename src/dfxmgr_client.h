@@ -49,11 +49,13 @@ enum dfx_mgr_request {
 /* Message flag bit allocation:
  *   Bits 0-1: USER_LOAD command
  *   Bits 2-3: LIST_PACKAGE command
+ *   Bit 4:    load/unload reply - pkg listing dirty
  */
 #define USER_LOAD_PARTIAL (1 << 0)	   /* Partial bitstream (vs Full) */
 #define USER_LOAD_HAS_OVERLAY (1 << 1) /* Overlay file provided */
 #define LIST_PKG_SHOW_ALL (1 << 2)	   /* Show all columns */
 #define LIST_PKG_FILTER (1 << 3)	   /* Filter by board name */
+#define DFX_RESP_PKG_DIRTY (1 << 4)	   /* reply: pkg IDs changed since last -listPackage */
 
 #define HEADERSIZE 24
 struct message {

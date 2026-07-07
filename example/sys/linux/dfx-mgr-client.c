@@ -13,27 +13,11 @@
 #include <stdint.h>
 #include <dfx-mgr/dfxmgr_client.h>
 
-/**
- * strip_warning_prefix() - Strip and print any pkg-dirty warning prefix from daemon response
- * @data: Response data buffer (modified in-place if warning found)
- *
- * If the response starts with "WARNING:", prints the warning and returns
- * a pointer past the warning to the actual result value.
- *
- * Return: pointer to the actual result within data
- */
-static char *strip_warning_prefix(char *data)
+/* Print the pkg-dirty warning when the reply sets DFX_RESP_PKG_DIRTY. */
+static void print_pkg_dirty_warning(uint32_t flags)
 {
-	if (strncmp(data, "WARNING:", 8) != 0)
-		return data;
-
-	char *result_start = strrchr(data, ' ');
-	if (result_start) {
-		*result_start = '\0';
-		printf("%s\n", data);
-		return result_start + 1;
-	}
-	return data;
+	if (flags & DFX_RESP_PKG_DIRTY)
+		printf("WARNING: Package IDs have changed since last -listPackage.\n");
 }
 
 static int send_and_recv_msg(socket_t *gs, struct message *send_msg, struct message *recv_msg)
@@ -75,9 +59,12 @@ static int format_load_request(int argc, char *argv[], char *data, size_t data_s
 	return 0;
 }
 
-static int print_load_result(const char *label, const char *id_str, const char *resp)
+static int print_load_result(const char *label, const char *id_str, const char *resp,
+							 uint32_t flags)
 {
 	long ret;
+
+	print_pkg_dirty_warning(flags);
 
 	if (resp[0] != '-') {
 		printf("%s%s%s: Loaded with slot_handle %s\n", label, label[0] ? " " : "", id_str, resp);
@@ -100,9 +87,13 @@ static int print_load_result(const char *label, const char *id_str, const char *
 	return -(int)ret;
 }
 
-static int print_unload_result(const char *label, const char *id_str, const char *resp)
+static int print_unload_result(const char *label, const char *id_str, const char *resp,
+							   uint32_t flags)
 {
 	const char *sep = label[0] ? " " : "";
+
+	print_pkg_dirty_warning(flags);
+
 	if (resp[0] == '0') {
 		printf("unload %s%s%s returns: %s (Ok)\n", label, sep, id_str, resp);
 		return 0;
@@ -119,7 +110,6 @@ int main(int argc, char *argv[])
 	int user_load_flag = 0;
 	int user_unload_flag = 0;
 	char *binfile = NULL, *overlay = NULL, *region = NULL;
-	char *resp;
 
 	memset(&send_message, '\0', sizeof(struct message));
 	memset(&recv_message, '\0', sizeof(struct message));
@@ -144,8 +134,7 @@ int main(int argc, char *argv[])
 		send_message.id = LOAD_ACCEL_BY_ID;
 		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
 			return -1;
-		resp = strip_warning_prefix(recv_message.data);
-		ret = print_load_result("ID", argv[2], resp);
+		ret = print_load_result("ID", argv[2], recv_message.data, recv_message.flags);
 		if (ret)
 			return ret;
 
@@ -166,8 +155,7 @@ int main(int argc, char *argv[])
 		send_message.id = UNLOAD_ACCEL_BY_ID;
 		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
 			return -1;
-		resp = strip_warning_prefix(recv_message.data);
-		return print_unload_result("ID", argv[2], resp);
+		return print_unload_result("ID", argv[2], recv_message.data, recv_message.flags);
 
 	} else if (!strcmp(argv[1], "-loadByName")) {
 		if (argc < 3) {
@@ -179,7 +167,7 @@ int main(int argc, char *argv[])
 		send_message.id = LOAD_ACCEL_BY_NAME;
 		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
 			return -1;
-		ret = print_load_result("", argv[2], recv_message.data);
+		ret = print_load_result("", argv[2], recv_message.data, recv_message.flags);
 		if (ret)
 			return ret;
 
@@ -192,7 +180,7 @@ int main(int argc, char *argv[])
 		send_message.id = UNLOAD_ACCEL_BY_NAME;
 		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
 			return -1;
-		return print_unload_result("", argv[2], recv_message.data);
+		return print_unload_result("", argv[2], recv_message.data, recv_message.flags);
 
 	} else if (!strcmp(argv[1], "-unloadByHandle")) {
 		if (argc < 3) {
@@ -207,7 +195,7 @@ int main(int argc, char *argv[])
 		send_message.id = UNLOAD_ACCEL_BY_HANDLE;
 		if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
 			return -1;
-		return print_unload_result("handle", argv[2], recv_message.data);
+		return print_unload_result("handle", argv[2], recv_message.data, recv_message.flags);
 
 	} else if (!strcmp(argv[1], "-listPackage")) {
 		int list_flag = 0;

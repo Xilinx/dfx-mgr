@@ -47,12 +47,10 @@ void dfx_exit(char *msg)
 
 static void format_response_with_warning(struct message *msg, int value)
 {
+	msg->size = 1 + sprintf(msg->data, "%d", value);
+
 	if (is_pkg_listing_dirty())
-		msg->size =
-			1 + sprintf(msg->data, "WARNING: Package IDs have changed since last -listPackage. %d",
-						value);
-	else
-		msg->size = 1 + sprintf(msg->data, "%d", value);
+		msg->flags |= DFX_RESP_PKG_DIRTY;
 }
 
 static void process_dfx_req(int fd, fd_set *fdset)
