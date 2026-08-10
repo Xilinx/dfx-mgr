@@ -35,6 +35,11 @@
 #include <inttypes.h>
 #include <stdatomic.h>
 
+#define FPGA_MGR_NAME_PATH "/sys/class/fpga_manager/fpga0/name"
+#define ZYNQ_FPGA_MGR_NAME "Xilinx Zynq FPGA Manager"
+#define ZYNQMP_FPGA_MGR_NAME "Xilinx ZynqMP FPGA Manager"
+#define VERSAL_FPGA_MGR_NAME "Xilinx Versal FPGA Manager"
+
 struct daemon_config config;
 struct watch *active_watch = NULL;
 struct basePLDesign *base_designs = NULL;
@@ -1979,6 +1984,42 @@ void *threadFunc([[maybe_unused]] void *_)
 	}
 }
 
+/*
+ * Map the FPGA manager sysfs name to its family, or FPGA_MGR_UNKNOWN if the
+ * name cannot be read or is not recognized.
+ */
+static enum fpga_mgr_type detect_fpga_mgr_type(void)
+{
+	char fpga_mgr_name[256];
+	FILE *fptr;
+
+	fptr = fopen(FPGA_MGR_NAME_PATH, "r");
+	if (fptr == NULL) {
+		DFX_DBG("Cannot open FPGA manager name sysfs entry");
+		return FPGA_MGR_UNKNOWN;
+	}
+
+	if (fgets(fpga_mgr_name, sizeof(fpga_mgr_name), fptr) == NULL) {
+		fclose(fptr);
+		return FPGA_MGR_UNKNOWN;
+	}
+	fclose(fptr);
+
+	/* fgets keeps the trailing newline, which would break the compares. */
+	fpga_mgr_name[strcspn(fpga_mgr_name, "\n")] = '\0';
+
+	DFX_PR("FPGA Manager: %s", fpga_mgr_name);
+
+	if (strcmp(fpga_mgr_name, ZYNQ_FPGA_MGR_NAME) == 0)
+		return FPGA_MGR_ZYNQ;
+	if (strcmp(fpga_mgr_name, ZYNQMP_FPGA_MGR_NAME) == 0)
+		return FPGA_MGR_ZYNQMP;
+	if (strcmp(fpga_mgr_name, VERSAL_FPGA_MGR_NAME) == 0)
+		return FPGA_MGR_VERSAL;
+
+	return FPGA_MGR_UNKNOWN;
+}
+
 int dfx_init()
 {
 	pthread_t t;
@@ -1997,11 +2038,10 @@ int dfx_init()
 	} else {
 		DFX_PR("Using default board name: %s", platform.boardName);
 	}
-	/* Detect if platform requires user load path */
-	if (is_user_load_platform()) {
-		platform.use_user_load_path = 1;
+	platform.fpga_mgr = detect_fpga_mgr_type();
+	platform.use_user_load_path = is_user_load_platform(platform.fpga_mgr);
+	if (platform.use_user_load_path)
 		DFX_PR("Platform requires user load path");
-	}
 
 	pthread_create(&t, NULL, threadFunc, NULL);
 	sem_wait(&mutex);

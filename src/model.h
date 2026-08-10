@@ -124,6 +124,17 @@ struct basePLDesign {
 	int list_id;				/* ID shown in listPackage for user_load entries */
 };
 
+/*
+ * FPGA manager family, detected once at startup from the FPGA manager sysfs
+ * "name" attribute.
+ */
+enum fpga_mgr_type {
+	FPGA_MGR_UNKNOWN = 0,
+	FPGA_MGR_ZYNQ,	 /* "Xilinx Zynq FPGA Manager"   */
+	FPGA_MGR_ZYNQMP, /* "Xilinx ZynqMP FPGA Manager" */
+	FPGA_MGR_VERSAL, /* "Xilinx Versal FPGA Manager" */
+};
+
 typedef struct {
 	char boardName[128];
 	struct basePLDesign *active_base;
@@ -146,6 +157,7 @@ typedef struct {
 	 *    marking it as un-used and can be used for next load
 	 */
 	int available_slot_handle[SLOT_HANDLE_MAX]; /* To track available slot handles */
+	enum fpga_mgr_type fpga_mgr;				/* FPGA manager family, detected once at startup */
 	int use_user_load_path;						/* route -load through sysfs/configfs user path */
 } platform_info_t;
 

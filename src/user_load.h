@@ -23,7 +23,7 @@ extern "C" {
 #define DTBO_ROOT_DIR "/sys/kernel/config/device-tree/overlays"
 #endif
 
-int is_user_load_platform(void);
+int is_user_load_platform(enum fpga_mgr_type fpga_mgr);
 const char *path_basename(const char *path);
 int user_load_bitstream(const char *bitstream, const char *overlay, const char *region,
 						int is_partial, char *fpga_state, size_t fpga_state_sz);

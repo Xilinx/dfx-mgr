@@ -15,9 +15,6 @@
 #include <dfx-mgr/user_load.h>
 #include <libdfx.h>
 
-#define FPGA_MGR_NAME_PATH "/sys/class/fpga_manager/fpga0/name"
-#define USER_LOAD_FPGA_MGR_NAME "Xilinx Zynq FPGA Manager"
-
 /**
  * fpga_state() - check the current state of the FPGA.
  *
@@ -436,6 +433,9 @@ void user_load_init_accel(acapd_accel_t *pl_accel, acapd_accel_pkg_hd_t *pkg, in
 /**
  * is_user_load_platform() - Detect if platform requires user load path
  *
+ * @fpga_mgr: FPGA manager family detected once at startup (see
+ *            detect_fpga_mgr_type() / platform.fpga_mgr).
+ *
  * All load and unload commands must behave identically from the user's
  * perspective regardless of the underlying platform. On platforms that
  * support DMA-buf, dfx-mgr loads bitstreams through libdfx. On platforms
@@ -443,36 +443,12 @@ void user_load_init_accel(acapd_accel_t *pl_accel, acapd_accel_pkg_hd_t *pkg, in
  * "user" path instead, so the user-facing interface stays the same.
  *
  * Currently, the Zynq-7000 series is the only platform requiring the user
- * load path. It is detected by reading the FPGA manager sysfs name
- * (/sys/class/fpga_manager/fpga0/name) and checking for
- * "Xilinx Zynq FPGA Manager", which is distinct from the ZynqMP manager
- * ("Xilinx ZynqMP FPGA Manager") that does support DMA-buf.
+ * load path. This is a pure predicate over the already-detected family; it
+ * does not read sysfs.
  *
  * Return: 1 if user load path is required, 0 otherwise
  */
-int is_user_load_platform(void)
+int is_user_load_platform(enum fpga_mgr_type fpga_mgr)
 {
-	char fpga_mgr_name[256];
-	FILE *fptr;
-
-	fptr = fopen(FPGA_MGR_NAME_PATH, "r");
-	if (fptr == NULL) {
-		DFX_DBG("Cannot open FPGA manager name sysfs entry");
-		return 0;
-	}
-
-	/* Read up to 255 chars (buffer safe) until newline */
-	if (fscanf(fptr, "%255[^\n]", fpga_mgr_name) != 1) {
-		fclose(fptr);
-		return 0;
-	}
-	fclose(fptr);
-
-	if (strcmp(fpga_mgr_name, USER_LOAD_FPGA_MGR_NAME) == 0) {
-		DFX_PR("FPGA Manager: %s - user load path required", fpga_mgr_name);
-		return 1;
-	}
-
-	DFX_DBG("FPGA Manager: %s", fpga_mgr_name);
-	return 0;
+	return fpga_mgr == FPGA_MGR_ZYNQ;
 }
