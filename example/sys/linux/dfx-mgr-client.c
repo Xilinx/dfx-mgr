@@ -11,7 +11,18 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <limits.h>
 #include <dfx-mgr/dfxmgr_client.h>
+
+static int resolve_cwd_path(char *out, size_t out_size)
+{
+	if (getcwd(out, out_size) == NULL) {
+		perror("getcwd");
+		return -1;
+	}
+
+	return 0;
+}
 
 /* Print the pkg-dirty warning when the reply sets DFX_RESP_PKG_DIRTY. */
 static void print_pkg_dirty_warning(uint32_t flags)
@@ -121,6 +132,9 @@ int main(int argc, char *argv[])
 	int user_load_flag = 0;
 	int user_unload_flag = 0;
 	char *binfile = NULL, *overlay = NULL, *region = NULL;
+	int readback_mode = 0;
+	const char *rb_type = NULL; /* raw -t value, NULL until -t is given */
+	const char *readback_file = "readback";
 
 	memset(&send_message, '\0', sizeof(struct message));
 	memset(&recv_message, '\0', sizeof(struct message));
@@ -270,9 +284,18 @@ int main(int argc, char *argv[])
 			"\t -n <region>\t Full or Partial reconfiguration region of FPGA in device tree (max 8 "
 			"chars)\n");
 		printf("\t -R\t\t Remove overlay from live tree without unloading bitstream\n");
+
+		/* ZynqMP-only features: append new ZynqMP-specific commands below,
+		 * keeping the "-<opt>\t <description>" layout used above. */
+		printf("\nZynqMP-only features:\n");
+		printf("  PL configuration readback:\n");
+		printf("\t -r [name]\t Read back PL configuration; \".bin\" is appended\n");
+		printf("\t\t\t to <name> (default readback.bin), saved relative to the\n");
+		printf("\t\t\t current directory unless <name> is an absolute path\n");
+		printf("\t -t <0|1>\t Readback type: 0 = config registers, 1 = config data frames\n");
 	} else {
 		int unknown_arg = 1;
-		while ((opt = getopt(argc, argv, "b:o:f:n:R?:")) != -1) {
+		while ((opt = getopt(argc, argv, "b:o:f:n:rt:R?:")) != -1) {
 			unknown_arg = 0;
 			switch (opt) {
 			case 'b':
@@ -299,6 +322,14 @@ int main(int argc, char *argv[])
 				}
 				region = optarg;
 				break;
+			case 'r':
+				readback_mode = 1;
+				if (optind < argc && argv[optind][0] != '-')
+					readback_file = argv[optind++];
+				break;
+			case 't':
+				rb_type = optarg;
+				break;
 			case 'R':
 				user_unload_flag = 1;
 				break;
@@ -310,6 +341,53 @@ int main(int argc, char *argv[])
 
 		if (unknown_arg) {
 			printf("Option not recognized, Try again.\n");
+			return -1;
+		}
+
+		if (rb_type != NULL && !readback_mode)
+			printf("Warning: -t has no effect without -r; ignoring\n");
+
+		/* PL configuration readback */
+		if (readback_mode) {
+			if (binfile != NULL || user_unload_flag) {
+				printf("Wrong usage: -r cannot be combined with -b or -R\n");
+				return -1;
+			}
+			char abspath[PATH_MAX];
+			char cwd[PATH_MAX];
+			int n;
+			/* Resolve against the client's CWD so the file lands where
+			 * the command was run (like fpgautil), not in the daemon's CWD.
+			 * An absolute name is used as-is. */
+			if (readback_file[0] == '/') {
+				n = snprintf(abspath, sizeof(abspath), "%s", readback_file);
+			} else {
+				if (resolve_cwd_path(cwd, sizeof(cwd)) < 0)
+					return -1;
+				n = snprintf(abspath, sizeof(abspath), "%s/%s", cwd, readback_file);
+			}
+			if (n < 0 || n >= (int)sizeof(abspath)) {
+				printf("Error: readback path too long\n");
+				return -1;
+			}
+			int readback_type = 0; /* default: config registers */
+			if (rb_type != NULL) {
+				if (strcmp(rb_type, "0") && strcmp(rb_type, "1")) {
+					printf("Wrong usage: -t must be 0 or 1\n");
+					return -1;
+				}
+				readback_type = atoi(rb_type); /* now known to be 0 or 1 */
+			}
+			send_message.id = USER_READBACK;
+			send_message.flags = (readback_type == 1) ? USER_READBACK_DATAFRAME : 0;
+			snprintf(send_message.data, sizeof(send_message.data), "%s", abspath);
+			if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
+				return -1;
+			if (recv_message.data[0] != '-') {
+				printf("Readback contents are stored in the file %s\n", recv_message.data);
+				return 0;
+			}
+			printf("Readback failed: %s\n", &recv_message.data[1]);
 			return -1;
 		}
 

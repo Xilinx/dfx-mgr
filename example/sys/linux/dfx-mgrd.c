@@ -12,6 +12,7 @@
 #include <stdbool.h>
 #include <dirent.h>
 #include <unistd.h>
+#include <limits.h>
 #include <dfx-mgr/accel.h>
 #include <dfx-mgr/assert.h>
 #include <dfx-mgr/shell.h>
@@ -153,6 +154,14 @@ static void process_dfx_req(int fd, fd_set *fdset)
 		FD_CLR(fd, fdset);
 		break;
 
+	case USER_READBACK:
+		unsigned readback_type = (recv_msg.flags & USER_READBACK_DATAFRAME) ? 1 : 0;
+
+		user_readback(readback_type, recv_msg.data, send_msg.data, sizeof(send_msg.data));
+		send_msg.size = 1 + strnlen(send_msg.data, sizeof(send_msg.data));
+		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
+			DFX_ERR("USER_READBACK write(%d)", fd);
+		break;
 	case USER_LOAD:
 		tmp = strdup(recv_msg.data);
 		binfile = strtok(tmp, " : ");

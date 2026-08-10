@@ -44,6 +44,7 @@ int user_load(int flag, const char *binfile, const char *overlay, const char *re
 			  char *fpga_state, size_t fpga_state_sz);
 int user_unload_overlay(const char *region);
 int user_unload(const int handle);
+int user_readback(unsigned type, const char *name, char *resp, size_t resp_size);
 int get_free_slot_handle(void);
 accel_info_t *add_accel_to_base(struct basePLDesign *base, char *name, char *path,
 								char *parent_path);

@@ -509,6 +509,19 @@ $ dfx-mgr-client -unloadByName rp0rm0
  where <ID> is the numeric ID from -listPackage output
 ```
 
+5. Command for PL configuration readback (ZynqMP only).
+```
+ dfx-mgr-client -r [name] -t <0|1>
+
+ where [name] is the output file base name; ".bin" is always appended
+       (defaults to "readback", i.e. readback.bin)
+
+       <0|1> selects the readback type: 0 = configuration registers,
+       1 = configuration data frames
+```
+The file is written relative to the directory where dfx-mgr-client is run;
+pass an absolute path for <name> to write elsewhere.
+
 ### Using library API
 
 Users can write applications to interact with daemon. Refer to example source

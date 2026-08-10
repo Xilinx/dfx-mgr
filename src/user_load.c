@@ -431,6 +431,42 @@ void user_load_init_accel(acapd_accel_t *pl_accel, acapd_accel_pkg_hd_t *pkg, in
 }
 
 /**
+ * fpga_readback() - capture PL configuration readback into a file.
+ * @type:     readback type: 0 = configuration registers, 1 = configuration
+ *            data frames.
+ * @out_path: destination file for the captured readback data.
+ *
+ * Low-level wrapper over libdfx's dfx_fpga_readback(). Platform support
+ * (e.g. ZynqMP-only) is enforced by libdfx itself, which rejects
+ * unsupported requests, so no additional gating is done here.
+ *
+ * Return: 0 on success, negative libdfx DFX_* error code on failure.
+ */
+int fpga_readback(unsigned type, const char *out_path)
+{
+	int ret = dfx_fpga_readback(type, out_path);
+
+	if (ret)
+		DFX_ERR("PL readback (type=%u, out=%s): %s", type, out_path, readback_error_str(ret));
+
+	return ret;
+}
+
+const char *readback_error_str(int code)
+{
+	switch (-code) {
+	case DFX_INVALID_PARAM:
+		return "invalid readback arguments (check name and -t 0 or -t 1)";
+	case DFX_INVALID_PLATFORM_ERROR:
+		return "PL readback is supported on ZynqMP only";
+	case DFX_READBACK_ERROR:
+		return "failed to write readback data to file";
+	default:
+		return "PL readback failed";
+	}
+}
+
+/**
  * is_user_load_platform() - Detect if platform requires user load path
  *
  * @fpga_mgr: FPGA manager family detected once at startup (see

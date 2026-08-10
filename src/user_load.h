@@ -24,6 +24,8 @@ extern "C" {
 #endif
 
 int is_user_load_platform(enum fpga_mgr_type fpga_mgr);
+int fpga_readback(unsigned type, const char *out_path);
+const char *readback_error_str(int code);
 const char *path_basename(const char *path);
 int user_load_bitstream(const char *bitstream, const char *overlay, const char *region,
 						int is_partial, char *fpga_state, size_t fpga_state_sz);

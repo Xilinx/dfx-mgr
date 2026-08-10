@@ -1816,6 +1816,38 @@ int user_unload(const int handle)
 }
 
 /**
+ * user_readback() - capture PL configuration readback into "<name>.bin".
+ * @type:      readback type: 0 = configuration registers, 1 = configuration
+ *             data frames.
+ * @name:      base output name; ".bin" is always appended.
+ * @resp:      buffer receiving the response: the "<name>.bin" path on success,
+ *             or "-<reason>" on failure.
+ * @resp_size: size of @resp.
+ *
+ * Owns the readback filename convention (".bin" is always appended) and
+ * delegates the actual FPGA interaction to the low-level fpga_readback().
+ *
+ * Return: 0 on success, negative libdfx DFX_* error code on failure.
+ */
+int user_readback(unsigned type, const char *name, char *resp, size_t resp_size)
+{
+	int ret;
+
+	if (name == NULL || name[0] == '\0') {
+		DFX_ERR("Readback output name not provided");
+		ret = -DFX_INVALID_PARAM;
+	} else {
+		snprintf(resp, resp_size, "%s.bin", name);
+		ret = fpga_readback(type, resp);
+	}
+
+	if (ret)
+		snprintf(resp, resp_size, "-%s", readback_error_str(ret));
+
+	return ret;
+}
+
+/**
  * init_user_load() - initializes the environment for user managed design.
  *
  * This static function sets up the necessary directories and mounts
