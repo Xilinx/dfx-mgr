@@ -329,7 +329,7 @@ const char *path_basename(const char *path)
  * @bitstream: Full path to bitstream file
  * @overlay: Full path to overlay file (NULL if none)
  * @region: Region name for overlay loading (can be NULL if no overlay)
- * @is_partial: 0 for full bitstream, 1 for partial bitstream
+ * @flags: fpga-manager flags (bit 0 = partial, plus any secure-load bits)
  *
  * This function handles the actual FPGA programming using sysfs/configfs interfaces.
  * It does NOT create or update base_designs entries - that's the caller's responsibility.
@@ -338,7 +338,7 @@ const char *path_basename(const char *path)
  * Return: 0 on success, -1 on failure
  */
 int user_load_bitstream(const char *bitstream, const char *overlay, const char *region,
-						int is_partial, char *fpga_state, size_t fpga_state_sz)
+						unsigned int flags, char *fpga_state, size_t fpga_state_sz)
 {
 	const char *bin, *ov;
 	int rv = -1;
@@ -350,8 +350,9 @@ int user_load_bitstream(const char *bitstream, const char *overlay, const char *
 
 	bin = path_basename(bitstream);
 
-	if (dfx_set_fpga_flags(is_partial)) {
-		DFX_ERR("Failed to set fpga flags for %s (partial=%d)", bitstream, is_partial);
+	if (dfx_set_fpga_flags(flags)) {
+		DFX_ERR("Failed to set fpga flags for %s (flags=0x%x)", bitstream, flags);
+		return -1;
 	}
 
 	if (overlay && region) {

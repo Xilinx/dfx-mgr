@@ -24,6 +24,37 @@ static int resolve_cwd_path(char *out, size_t out_size)
 	return 0;
 }
 
+/* ZynqMP secure bitstream flags. Values match the fpga-manager "flags"
+ * bits libdfx programs; -f (Full/Partial) is handled separately. */
+static const struct {
+	const char *name;
+	unsigned value;
+} secure_flags[] = {
+	/* clang-format off */
+	{"AuthDDR", 0x40},
+	{"AuthOCM", 0x80},
+	{"EnUsrKey", 0x20},
+	{"EnDevKey", 0x04},
+	{"AuthEnUsrKeyDDR", 0x60},
+	{"AuthEnUsrKeyOCM", 0xA0},
+	{"AuthEnDevKeyDDR", 0x44},
+	{"AuthEnDevKeyOCM", 0x84},
+	/* clang-format on */
+};
+
+/* Map a -s secure flag name to its bit value. Returns 0 on success, -1 if
+ * the name is not a recognized secure flag. */
+static int lookup_secure_flag(const char *name, unsigned *value)
+{
+	for (size_t i = 0; i < sizeof(secure_flags) / sizeof(secure_flags[0]); i++) {
+		if (!strcmp(name, secure_flags[i].name)) {
+			*value = secure_flags[i].value;
+			return 0;
+		}
+	}
+	return -1;
+}
+
 /* Print the pkg-dirty warning when the reply sets DFX_RESP_PKG_DIRTY. */
 static void print_pkg_dirty_warning(uint32_t flags)
 {
@@ -101,6 +132,9 @@ static int print_load_result(const char *label, const char *id_str, char *resp, 
 	case 3:
 		printf("No empty slot for %s%s%s", label, label[0] ? " " : "", id_str);
 		break;
+	case 4:
+		printf("Secure load is supported on ZynqMP only");
+		break;
 	default:
 		printf("Unable to load %s%s%s", label, label[0] ? " " : "", id_str);
 		break;
@@ -130,6 +164,7 @@ int main(int argc, char *argv[])
 	struct message send_message, recv_message;
 	int ret, opt;
 	int user_load_flag = 0;
+	unsigned int sflag = 0; /* secure fpga-manager flag bits from -s */
 	int user_unload_flag = 0;
 	char *binfile = NULL, *overlay = NULL, *region = NULL;
 	int readback_mode = 0;
@@ -288,6 +323,10 @@ int main(int argc, char *argv[])
 		/* ZynqMP-only features: append new ZynqMP-specific commands below,
 		 * keeping the "-<opt>\t <description>" layout used above. */
 		printf("\nZynqMP-only features:\n");
+		printf("  Secure bitstream load:\n");
+		printf("\t -b <bitstream> -f <type> -s <flag>\t Load a secure bitstream\n");
+		printf("\t -s <flag>\t Secure flag: <AuthDDR | AuthOCM | EnUsrKey | EnDevKey |\n");
+		printf("\t\t\t AuthEnUsrKeyDDR | AuthEnUsrKeyOCM | AuthEnDevKeyDDR | AuthEnDevKeyOCM>\n");
 		printf("  PL configuration readback:\n");
 		printf("\t -r [name]\t Read back PL configuration; \".bin\" is appended\n");
 		printf("\t\t\t to <name> (default readback.bin), saved relative to the\n");
@@ -295,7 +334,7 @@ int main(int argc, char *argv[])
 		printf("\t -t <0|1>\t Readback type: 0 = config registers, 1 = config data frames\n");
 	} else {
 		int unknown_arg = 1;
-		while ((opt = getopt(argc, argv, "b:o:f:n:rt:R?:")) != -1) {
+		while ((opt = getopt(argc, argv, "b:o:f:n:s:rt:R?:")) != -1) {
 			unknown_arg = 0;
 			switch (opt) {
 			case 'b':
@@ -322,6 +361,16 @@ int main(int argc, char *argv[])
 				}
 				region = optarg;
 				break;
+			case 's': {
+				unsigned int val;
+
+				if (lookup_secure_flag(optarg, &val)) {
+					printf("Unknown value for -s: %s\n", optarg);
+					return -1;
+				}
+				sflag |= val;
+				break;
+			}
 			case 'r':
 				readback_mode = 1;
 				if (optind < argc && argv[optind][0] != '-')
@@ -427,18 +476,10 @@ int main(int argc, char *argv[])
 						(region == NULL) ? "full" : region);
 			}
 			send_message.flags = user_load_flag;
+			send_message._u.fpga_flags = sflag;
 			if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
 				return -1;
-			/* Reply may carry the fpga_manager state as "<value>:<state>". */
-			char *fpga_state = dfxmgr_split_fpga_state(recv_message.data);
-			if (recv_message.data[0] == '-') {
-				printf("Load Error: %s", recv_message.data);
-				print_fpga_state(fpga_state);
-				return -1;
-			} else {
-				printf("Loaded with slot_handle %s", recv_message.data);
-				print_fpga_state(fpga_state);
-			}
+			return print_load_result("", binfile, recv_message.data, recv_message.flags);
 		}
 	}
 	return 0;

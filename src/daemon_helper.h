@@ -23,6 +23,7 @@ extern "C" {
 #define DFX_MGR_LOAD_ERROR (1U)
 #define DFX_MGR_NO_PACKAGE_FOUND_ERROR (2U)
 #define DFX_MGR_NO_EMPTY_SLOT_ERROR (3U)
+#define DFX_MGR_SECURE_PLATFORM_ERROR (4U)
 
 #define TRUNCATED_BASE_NAME_LEN 8
 #define MAX_BASE_NAME_DISPLAY_LEN (TRUNCATED_BASE_NAME_LEN + 3) /* Truncated base len  + 3 dots */
@@ -40,8 +41,8 @@ void list_accel_uio(int, char *, size_t);
 char *get_accel_uio_by_name(int, const char *);
 char *listAccelerators(int flag);
 int dfx_init();
-int user_load(int flag, const char *binfile, const char *overlay, const char *region,
-			  char *fpga_state, size_t fpga_state_sz);
+int user_load(int flag, unsigned int fpga_flags, const char *binfile, const char *overlay,
+			  const char *region, char *fpga_state, size_t fpga_state_sz);
 int user_unload_overlay(const char *region);
 int user_unload(const int handle);
 int user_readback(unsigned type, const char *name, char *resp, size_t resp_size);

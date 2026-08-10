@@ -47,7 +47,7 @@ enum dfx_mgr_request {
 };
 
 /* Message flag bit allocation:
- *   Bits 0-1: USER_LOAD command
+ *   Bits 0-1: USER_LOAD command (secure-load bits are in _u.fpga_flags)
  *   Bits 2-3: LIST_PACKAGE command
  *   Bit 4:    load/unload reply - pkg listing dirty
  *   Bit 5:    USER_READBACK type (0 = config registers, 1 = config data frames)
@@ -65,8 +65,8 @@ struct message {
 	uint32_t size;
 	uint32_t flags;
 	union {
-		uint32_t fdcount;
-		uint32_t slot;
+		uint32_t slot;		 /* LIST_ACCEL_UIO: accelerator slot number */
+		uint32_t fpga_flags; /* USER_LOAD: ZynqMP secure fpga-manager bits */
 	} _u;
 	char data[32 * 1024];
 };

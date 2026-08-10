@@ -522,6 +522,21 @@ $ dfx-mgr-client -unloadByName rp0rm0
 The file is written relative to the directory where dfx-mgr-client is run;
 pass an absolute path for <name> to write elsewhere.
 
+6. Command to load a secure PL bitstream (ZynqMP only).
+```
+ dfx-mgr-client -b <bitstream> -f <type> -s <flag>
+
+ where <bitstream> is the absolute path for PL bitstream file
+
+       <type> is the bitstream type. Acceptable values : Full | Partial
+
+       <flag> selects the secure-load mode. Acceptable values:
+       AuthDDR | AuthOCM | EnUsrKey | EnDevKey |
+       AuthEnUsrKeyDDR | AuthEnUsrKeyOCM | AuthEnDevKeyDDR | AuthEnDevKeyOCM
+```
+The secure flag is combined with -f and may also be used with -o/-n to load
+a secure bitstream together with a device tree overlay.
+
 ### Using library API
 
 Users can write applications to interact with daemon. Refer to example source

@@ -169,7 +169,8 @@ static void process_dfx_req(int fd, fd_set *fdset)
 		region = strtok(NULL, " : ");
 
 		fpga_state[0] = '\0';
-		slot = user_load(recv_msg.flags, binfile, overlay, region, fpga_state, sizeof(fpga_state));
+		slot = user_load(recv_msg.flags, recv_msg._u.fpga_flags, binfile, overlay, region,
+						 fpga_state, sizeof(fpga_state));
 		format_load_response(&send_msg, slot, false, fpga_state);
 		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)
 			DFX_ERR("USER_LOAD write(%d)", fd);

@@ -28,7 +28,7 @@ int fpga_readback(unsigned type, const char *out_path);
 const char *readback_error_str(int code);
 const char *path_basename(const char *path);
 int user_load_bitstream(const char *bitstream, const char *overlay, const char *region,
-						int is_partial, char *fpga_state, size_t fpga_state_sz);
+						unsigned int flags, char *fpga_state, size_t fpga_state_sz);
 int user_load_from_dir(const char *search_path, const char *region, int is_partial,
 					   char *fpga_state, size_t fpga_state_sz);
 void user_load_init_accel(acapd_accel_t *pl_accel, acapd_accel_pkg_hd_t *pkg, int slot_num,

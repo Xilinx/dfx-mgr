@@ -1586,13 +1586,15 @@ static void firmware_dir_walk(void)
 /**
  * user_load() - load pl bitstream with optional device tree overlay.
  *
- * @flag:     Integer flag to control loading behavior.
- *                 - Bit 0: 0 = full bitstream, 1 = partial bitstream.
- *                 - Bit 1: 1 = load bitstream along with device tree overlay,
- *                          0 = load bitstream alone via sysfs interface.
- * @binfile:  Path to the bitstream file to be loaded.
- * @overlay:  Path to the device tree overlay file (if applicable).
- * @region:   Target region for the overlay (if applicable).
+ * @flag:       Protocol/IPC control flags.
+ *                 - Bit 0 (USER_LOAD_PARTIAL): 0 = full, 1 = partial bitstream.
+ *                 - Bit 1 (USER_LOAD_HAS_OVERLAY): load bitstream along with a
+ *                   device tree overlay, otherwise load alone via sysfs.
+ * @fpga_flags: secure-load bits for the fpga-manager (AuthDDR/AuthOCM/EnUsrKey/
+ *              EnDevKey ...); combined with the partial bit before libdfx.
+ * @binfile:    Path to the bitstream file to be loaded.
+ * @overlay:    Path to the device tree overlay file (if applicable).
+ * @region:     Target region for the overlay (if applicable).
  *
  * This function handles the loading of a pl bitstream to the FPGA.
  * It uses the sysfs interface for loading bitstream alone, and the configfs interface
@@ -1606,11 +1608,17 @@ static void firmware_dir_walk(void)
  * Return: An integer unique handle id on success,
  *        -1 on failure or if constraints are violated.
  */
-int user_load(const int flag, const char *binfile, const char *overlay, const char *region,
-			  char *fpga_state, size_t fpga_state_sz)
+int user_load(const int flag, const unsigned int fpga_flags, const char *binfile,
+			  const char *overlay, const char *region, char *fpga_state, size_t fpga_state_sz)
 {
 	const char *bin;
 	int rv = -1;
+
+	if (fpga_flags && platform.fpga_mgr != FPGA_MGR_ZYNQMP) {
+		DFX_ERR("Secure-load flags (0x%x) are only supported on ZynqMP", fpga_flags);
+		rv = -DFX_MGR_SECURE_PLATFORM_ERROR;
+		goto ret;
+	}
 
 	if (platform.active_base != NULL) {
 		if (platform.active_base->is_user_load) {
@@ -1655,7 +1663,7 @@ int user_load(const int flag, const char *binfile, const char *overlay, const ch
 	}
 
 	/* Validate overlay requirements if flag indicates overlay loading */
-	if ((flag >> 1) & 1) {
+	if (flag & USER_LOAD_HAS_OVERLAY) {
 		if (region == NULL) {
 			DFX_ERR("Provide overlay region name");
 			goto ret;
@@ -1668,8 +1676,10 @@ int user_load(const int flag, const char *binfile, const char *overlay, const ch
 
 	bin = path_basename(binfile);
 
-	rv = user_load_bitstream(binfile, overlay, region, flag & USER_LOAD_PARTIAL, fpga_state,
-							 fpga_state_sz);
+	/* Combine the Full/Partial bit with the secure-load bits into the
+	 * fpga-manager flag word handed to libdfx. */
+	rv = user_load_bitstream(binfile, overlay, region, (flag & USER_LOAD_PARTIAL) | fpga_flags,
+							 fpga_state, fpga_state_sz);
 
 	if (!rv) {
 		int i;
