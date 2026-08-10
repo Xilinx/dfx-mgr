@@ -167,6 +167,7 @@ int main(int argc, char *argv[])
 	unsigned int sflag = 0; /* secure fpga-manager flag bits from -s */
 	int user_unload_flag = 0;
 	char *binfile = NULL, *overlay = NULL, *region = NULL;
+	char *aeskey = NULL; /* raw AES user key value from -k */
 	int readback_mode = 0;
 	const char *rb_type = NULL; /* raw -t value, NULL until -t is given */
 	const char *readback_file = "readback";
@@ -327,6 +328,8 @@ int main(int argc, char *argv[])
 		printf("\t -b <bitstream> -f <type> -s <flag>\t Load a secure bitstream\n");
 		printf("\t -s <flag>\t Secure flag: <AuthDDR | AuthOCM | EnUsrKey | EnDevKey |\n");
 		printf("\t\t\t AuthEnUsrKeyDDR | AuthEnUsrKeyOCM | AuthEnDevKeyDDR | AuthEnDevKeyOCM>\n");
+		printf("\t -k <key>\t AES user key value for an encrypted bitstream;\n");
+		printf("\t\t\t requires -s EnUsrKey (or a combo containing it)\n");
 		printf("  PL configuration readback:\n");
 		printf("\t -r [name]\t Read back PL configuration; \".bin\" is appended\n");
 		printf("\t\t\t to <name> (default readback.bin), saved relative to the\n");
@@ -334,7 +337,7 @@ int main(int argc, char *argv[])
 		printf("\t -t <0|1>\t Readback type: 0 = config registers, 1 = config data frames\n");
 	} else {
 		int unknown_arg = 1;
-		while ((opt = getopt(argc, argv, "b:o:f:n:s:rt:R?:")) != -1) {
+		while ((opt = getopt(argc, argv, "b:o:f:n:s:k:rt:R?:")) != -1) {
 			unknown_arg = 0;
 			switch (opt) {
 			case 'b':
@@ -371,6 +374,9 @@ int main(int argc, char *argv[])
 				sflag |= val;
 				break;
 			}
+			case 'k':
+				aeskey = optarg;
+				break;
 			case 'r':
 				readback_mode = 1;
 				if (optind < argc && argv[optind][0] != '-')
@@ -477,6 +483,23 @@ int main(int argc, char *argv[])
 			}
 			send_message.flags = user_load_flag;
 			send_message._u.fpga_flags = sflag;
+
+			/* Append the AES user key as the trailing " : " token, the same
+			 * way binfile/overlay/region are passed. It is only applied with
+			 * the EnUsrKey secure bit. */
+			if (aeskey != NULL && aeskey[0] != '\0') {
+				unsigned int enusrkey = 0;
+
+				lookup_secure_flag("EnUsrKey", &enusrkey);
+				if (sflag & enusrkey) {
+					size_t len = strlen(send_message.data);
+
+					snprintf(send_message.data + len, sizeof(send_message.data) - len, " : %s",
+							 aeskey);
+				} else {
+					printf("Warning: -k has no effect without -s EnUsrKey; ignoring\n");
+				}
+			}
 			if (send_and_recv_msg(&gs, &send_message, &recv_message) < 0)
 				return -1;
 			return print_load_result("", binfile, recv_message.data, recv_message.flags);

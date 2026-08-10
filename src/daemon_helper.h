@@ -42,7 +42,7 @@ char *get_accel_uio_by_name(int, const char *);
 char *listAccelerators(int flag);
 int dfx_init();
 int user_load(int flag, unsigned int fpga_flags, const char *binfile, const char *overlay,
-			  const char *region, char *fpga_state, size_t fpga_state_sz);
+			  const char *region, const char *aes_key, char *fpga_state, size_t fpga_state_sz);
 int user_unload_overlay(const char *region);
 int user_unload(const int handle);
 int user_readback(unsigned type, const char *name, char *resp, size_t resp_size);

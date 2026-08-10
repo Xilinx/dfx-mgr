@@ -537,6 +537,20 @@ pass an absolute path for <name> to write elsewhere.
 The secure flag is combined with -f and may also be used with -o/-n to load
 a secure bitstream together with a device tree overlay.
 
+7. Command to load an encrypted PL bitstream with an AES user key (ZynqMP only).
+```
+ dfx-mgr-client -b <bitstream> -f <type> -s EnUsrKey -k <key>
+
+ where <key> is the raw AES user key value for the encrypted bitstream
+
+       -k requires -s EnUsrKey (or a secure flag combo containing it);
+       the key is ignored otherwise
+```
+For example:
+```
+ dfx-mgr-client -b top.bit.bin -o pl.dtbo -f Partial -n <region> -s EnUsrKey -k <key>
+```
+
 ### Using library API
 
 Users can write applications to interact with daemon. Refer to example source

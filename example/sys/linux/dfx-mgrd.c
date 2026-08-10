@@ -77,7 +77,7 @@ static void process_dfx_req(int fd, fd_set *fdset)
 	ssize_t numbytes;
 	int ret, slot;
 	char *binfile = NULL, *overlay = NULL, *region = NULL, *tmp;
-	char *accel_name = NULL, *cma_path = NULL;
+	char *accel_name = NULL, *cma_path = NULL, *aes_key = NULL;
 	char fpga_state[64];
 
 	numbytes = read(fd, &recv_msg, sizeof(struct message));
@@ -165,11 +165,16 @@ static void process_dfx_req(int fd, fd_set *fdset)
 	case USER_LOAD:
 		tmp = strdup(recv_msg.data);
 		binfile = strtok(tmp, " : ");
-		overlay = strtok(NULL, " : ");
-		region = strtok(NULL, " : ");
+		/* Parse overlay/region only when present so the optional AES key,
+		 * appended as the trailing token, lands in the right field. */
+		if (recv_msg.flags & USER_LOAD_HAS_OVERLAY) {
+			overlay = strtok(NULL, " : ");
+			region = strtok(NULL, " : ");
+		}
+		aes_key = strtok(NULL, " : ");
 
 		fpga_state[0] = '\0';
-		slot = user_load(recv_msg.flags, recv_msg._u.fpga_flags, binfile, overlay, region,
+		slot = user_load(recv_msg.flags, recv_msg._u.fpga_flags, binfile, overlay, region, aes_key,
 						 fpga_state, sizeof(fpga_state));
 		format_load_response(&send_msg, slot, false, fpga_state);
 		if (write(fd, &send_msg, HEADERSIZE + send_msg.size) < 0)

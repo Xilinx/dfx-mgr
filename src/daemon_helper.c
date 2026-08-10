@@ -1595,6 +1595,8 @@ static void firmware_dir_walk(void)
  * @binfile:    Path to the bitstream file to be loaded.
  * @overlay:    Path to the device tree overlay file (if applicable).
  * @region:     Target region for the overlay (if applicable).
+ * @aes_key:    Raw AES user key value for an encrypted bitstream, or NULL;
+ *              applied only when the EnUsrKey bit is set in @fpga_flags.
  *
  * This function handles the loading of a pl bitstream to the FPGA.
  * It uses the sysfs interface for loading bitstream alone, and the configfs interface
@@ -1609,7 +1611,8 @@ static void firmware_dir_walk(void)
  *        -1 on failure or if constraints are violated.
  */
 int user_load(const int flag, const unsigned int fpga_flags, const char *binfile,
-			  const char *overlay, const char *region, char *fpga_state, size_t fpga_state_sz)
+			  const char *overlay, const char *region, const char *aes_key, char *fpga_state,
+			  size_t fpga_state_sz)
 {
 	const char *bin;
 	int rv = -1;
@@ -1679,7 +1682,7 @@ int user_load(const int flag, const unsigned int fpga_flags, const char *binfile
 	/* Combine the Full/Partial bit with the secure-load bits into the
 	 * fpga-manager flag word handed to libdfx. */
 	rv = user_load_bitstream(binfile, overlay, region, (flag & USER_LOAD_PARTIAL) | fpga_flags,
-							 fpga_state, fpga_state_sz);
+							 aes_key, fpga_state, fpga_state_sz);
 
 	if (!rv) {
 		int i;

@@ -330,6 +330,8 @@ const char *path_basename(const char *path)
  * @overlay: Full path to overlay file (NULL if none)
  * @region: Region name for overlay loading (can be NULL if no overlay)
  * @flags: fpga-manager flags (bit 0 = partial, plus any secure-load bits)
+ * @aes_key: raw AES user key value, or NULL; written to the fpga-manager only
+ *           when the EnUsrKey bit (DFX_ENCRYPTION_USERKEY_EN) is set in @flags
  *
  * This function handles the actual FPGA programming using sysfs/configfs interfaces.
  * It does NOT create or update base_designs entries - that's the caller's responsibility.
@@ -338,7 +340,8 @@ const char *path_basename(const char *path)
  * Return: 0 on success, -1 on failure
  */
 int user_load_bitstream(const char *bitstream, const char *overlay, const char *region,
-						unsigned int flags, char *fpga_state, size_t fpga_state_sz)
+						unsigned int flags, const char *aes_key, char *fpga_state,
+						size_t fpga_state_sz)
 {
 	const char *bin, *ov;
 	int rv = -1;
@@ -353,6 +356,15 @@ int user_load_bitstream(const char *bitstream, const char *overlay, const char *
 	if (dfx_set_fpga_flags(flags)) {
 		DFX_ERR("Failed to set fpga flags for %s (flags=0x%x)", bitstream, flags);
 		return -1;
+	}
+
+	/* Program the AES user key before the bitstream; it is written only
+	 * when encrypted user-key loading is requested. */
+	if ((flags & DFX_ENCRYPTION_USERKEY_EN) && aes_key && aes_key[0]) {
+		if (dfx_set_fpga_key(aes_key)) {
+			DFX_ERR("Failed to set AES user key for %s", bitstream);
+			return -1;
+		}
 	}
 
 	if (overlay && region) {
@@ -399,7 +411,8 @@ int user_load_from_dir(const char *search_path, const char *region, int is_parti
 	}
 
 	overlay = find_overlay_file(search_path);
-	ret = user_load_bitstream(bitstream, overlay, region, is_partial, fpga_state, fpga_state_sz);
+	ret = user_load_bitstream(bitstream, overlay, region, is_partial, NULL, fpga_state,
+							  fpga_state_sz);
 
 	free(bitstream);
 	free_overlay_file_path(overlay);
