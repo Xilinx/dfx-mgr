@@ -20,6 +20,7 @@
 #include <dfx-mgr/json-config.h>
 #include <dfx-mgr/daemon_helper.h>
 #include <dfx-mgr/pdi-config.h>
+#include <dfx-mgr/pdi_parse.h>
 #include <dfx-mgr/dfxmgr_client.h>
 #include <dfx-mgr/eeprom.h>
 #include <dfx-mgr/rpu.h>
@@ -50,6 +51,7 @@ sem_t mutex;
 static _Atomic bool pkg_listing_dirty = false;
 static void firmware_dir_walk(void);
 static void assign_list_ids(void);
+static bool is_versal_platform(void);
 
 bool is_pkg_listing_dirty(void)
 {
@@ -1304,6 +1306,98 @@ static int add_dir_watch(char *path, char *name, char *parent_name, char *parent
 	return 0;
 }
 
+/**
+ *
+ * register_flat_accel - register the single accel of a flat design
+ * @base - base design to populate
+ *
+ * This function fills accel_list[0] so the accel is the base itself (name, path,
+ * parent_path and type all taken from @base)
+ *
+ * return - void
+ *
+ * */
+static void register_flat_accel(struct basePLDesign *base)
+{
+	snprintf(base->accel_list[0].name, sizeof(base->accel_list[0].name), "%s", base->name);
+	strcpy(base->accel_list[0].path, base->base_path);
+	strcpy(base->accel_list[0].parent_path, base->base_path);
+	strcpy(base->accel_list[0].accel_type, base->type);
+}
+
+/**
+ *
+ * register_pdi_package - discover and register a Versal base design from PDIs
+ * @base - base design to populate
+ * @base_name - base design name (recorded as the parent of each watch)
+ * @base_path - base design directory to walk
+ *
+ * This function walks @base_path: it watches each subdir (so a .pdi dropped in
+ * later is caught), registers each RM-slot accel from its PDI, then classifies
+ * the base as flat or PL_DFX via pdi_classify_base()
+ *
+ * return - void
+ *
+ * */
+static void register_pdi_package(struct basePLDesign *base, char *base_name, char *base_path)
+{
+	char accel_dir[PDI_SLOT_PATH_MAX];
+	struct pdi_slot slots[RP_SLOTS_MAX];
+	struct dirent *entry_dir;
+	DIR *base_dir;
+	int num_slots, i;
+	int slot_range = 0;
+
+	base_dir = opendir(base_path);
+	while (base_dir != NULL && (entry_dir = readdir(base_dir)) != NULL) {
+		if (d_name_filter(entry_dir->d_name))
+			continue;
+		snprintf(accel_dir, sizeof(accel_dir), "%s/%s", base_path, entry_dir->d_name);
+		if (not_dir(accel_dir))
+			continue;
+
+		/* watch the accel dir itself */
+		if (add_dir_watch(accel_dir, entry_dir->d_name, base_name, base_path) < 0)
+			break;
+
+		num_slots = scan_accel_slots(accel_dir, entry_dir->d_name, slots, RP_SLOTS_MAX);
+		for (i = 0; i < num_slots; i++) {
+			char *slot_dir = slots[i].path;
+			accel_info_t *accel;
+
+			/* two-level subdir: give it its own watch (matches the old walk) */
+			if (strcmp(slot_dir, accel_dir) != 0) {
+				char *leaf = strrchr(slot_dir, '/');
+
+				if (add_dir_watch(slot_dir, leaf ? leaf + 1 : slot_dir, entry_dir->d_name,
+								  accel_dir) < 0)
+					goto out;
+			}
+
+			if (!slots[i].has_pdi)
+				continue;
+
+			if (slots[i].index >= slot_range)
+				slot_range = slots[i].index + 1;
+
+			accel = add_accel_to_base(base, entry_dir->d_name, accel_dir, base_path);
+			if (init_accel_from_pdi(accel, slot_dir) < 0 && accel != NULL) {
+				memset(accel, 0, sizeof(*accel));
+				accel->rpu.slot_num = -1;
+			}
+		}
+	}
+out:
+	if (base_dir)
+		closedir(base_dir);
+
+	/* set base->type/num_pl_slots: flat by default, PL_DFX when RM slots were found */
+	pdi_classify_base(base, slot_range, base_path);
+	/* no RM slots: register the base itself as the single flat accel */
+	if (slot_range == 0)
+		register_flat_accel(base);
+}
+
 /*
  * The present limitation is only one level of hierarchy (dir1 and dir2).
  * In future when we face hierarchical designs that may have RPs within
@@ -1320,10 +1414,14 @@ void parse_packages(struct basePLDesign *base, char *fname, char *path)
 	/* For flat shell design there is no subfolder so assign the base path as the accel path */
 	if (!strcmp(base->type, "XRT_FLAT") || !strcmp(base->type, "PL_FLAT")) {
 		DFX_DBG("%s : %s", base->name, base->type);
-		snprintf(base->accel_list[0].name, sizeof(base->accel_list[0].name), "%s", base->name);
-		strcpy(base->accel_list[0].path, base->base_path);
-		strcpy(base->accel_list[0].parent_path, base->base_path);
-		strcpy(base->accel_list[0].accel_type, base->type);
+		register_flat_accel(base);
+		return;
+	}
+
+	/* Versal derives metadata from PDIs via register_pdi_package(); RPU and the
+	 * JSON PL path fall through to the scan below. */
+	if (is_versal_platform() && strcmp(base->type, RPU_TYPE_STR) != 0) {
+		register_pdi_package(base, fname, path);
 		return;
 	}
 
@@ -1472,6 +1570,123 @@ void remove_base_design(char *path, char *parent, int is_base)
 	}
 }
 
+static bool is_versal_platform(void)
+{
+	return platform.fpga_mgr == FPGA_MGR_VERSAL;
+}
+
+static bool name_is_rpu(const char *name)
+{
+	return !strcmp(name, "RPU") || !strcmp(name, "rpu");
+}
+
+/**
+ *
+ * dir_is_base_design - test whether a directory is a base design
+ * @dir - directory to inspect
+ * @name - directory name (used for the RPU-by-name check)
+ *
+ * This function treats RPU dirs (matched by @name) as base designs on all
+ * platforms; otherwise it looks for the platform sidecar: a PDI on Versal (JSON
+ * is ignored there) or a shell.json elsewhere
+ *
+ * return - true if @dir is a base design
+ * 	    false otherwise
+ *
+ * */
+static bool dir_is_base_design(const char *dir, const char *name)
+{
+	if (name_is_rpu(name))
+		return true;
+	if (is_versal_platform())
+		return dir_has_pdi(dir);
+	return dir_has_shell_json(dir);
+}
+
+/**
+ *
+ * init_base_design - initialise a detected base design from the right source
+ * @base - base design to populate
+ * @dir - base design directory
+ * @name - base design name (used for the RPU-by-name check)
+ *
+ * This function derives a Versal base's fields from its PDI metaheader; RPU (by
+ * name) and non-Versal JSON directories are initialised via initBaseDesign()
+ *
+ * return - 0 on success
+ * 	    -1 on failure
+ *
+ * */
+static int init_base_design(struct basePLDesign *base, const char *dir, const char *name)
+{
+	char fname[600];
+
+	if (is_versal_platform() && !name_is_rpu(name))
+		return init_base_from_pdi(base);
+
+	snprintf(fname, sizeof(fname), "%s/shell.json", dir);
+	return initBaseDesign(base, fname);
+}
+
+/**
+ *
+ * handle_pdi_event - (re)register a design or accel after a runtime .pdi event
+ * @w - watch whose directory saw a .pdi appear
+ *
+ * This function mirrors the shell.json/accel.json inotify handling on Versal. A
+ * base-directory watch has an empty parent_name, while an RM-slot watch carries
+ * its parent directory name - that is how a base .pdi is told from an RM-slot
+ * .pdi. An RM slot may sit one or two levels below the base, so the base is
+ * resolved by walking up (direct parent, then grandparent via the parent watch)
+ *
+ * return - void
+ *
+ * */
+static void handle_pdi_event(struct watch *w)
+{
+	struct basePLDesign *base;
+	accel_info_t *accel;
+
+	if (w == NULL)
+		return;
+
+	mark_pkg_listing_dirty();
+
+	if (w->parent_name[0] == '\0') {
+		/* .pdi in a base directory */
+		base = findBaseDesign_path(w->path);
+		if (base == NULL) {
+			DFX_DBG("%s: base not registered yet, deferring to firmware_dir_walk", w->path);
+			return;
+		}
+		if (init_base_from_pdi(base) == 0)
+			parse_packages(base, w->name, w->path);
+		return;
+	}
+
+	/* .pdi in an RM slot directory, one level below the base. Match the base
+	 * path itself: findBaseDesign_path() also resolves accel paths. */
+	base = findBaseDesign_path(w->parent_path);
+	if (base != NULL && !strcmp(base->base_path, w->parent_path)) {
+		accel = add_accel_to_base(base, w->name, w->path, base->base_path);
+	} else {
+		/* Two levels below: the base is the slot's grandparent. */
+		struct watch *parent_watch = path_to_watch(w->parent_path);
+
+		if (parent_watch == NULL)
+			return;
+		base = findBaseDesign_path(parent_watch->parent_path);
+		if (base == NULL)
+			return;
+		accel = add_accel_to_base(base, w->parent_name, w->parent_path, base->base_path);
+	}
+
+	if (init_accel_from_pdi(accel, w->path) < 0 && accel != NULL) {
+		memset(accel, 0, sizeof(*accel));
+		accel->rpu.slot_num = -1;
+	}
+}
+
 #define MAX_RECURSION_DEPTH 5
 /*
  * accel_dir_add() - set up inotify watches for a directory, and check for base designs
@@ -1486,7 +1701,7 @@ void remove_base_design(char *path, char *parent, int is_base)
  */
 static void accel_dir_add(char *cpath, struct dirent *dirent, int recursion_depth)
 {
-	char new_dir[512], fname[600];
+	char new_dir[512];
 	struct basePLDesign *base;
 	char *d_name;
 	int wd;
@@ -1527,20 +1742,21 @@ static void accel_dir_add(char *cpath, struct dirent *dirent, int recursion_dept
 		}
 	}
 
-	/* add base design if shell.json exists or if the directory name is RPU or rpu */
-	sprintf(fname, "%s/shell.json", new_dir);
-	if (access(fname, F_OK) == 0 || !strcmp(d_name, "RPU") || !strcmp(d_name, "rpu")) {
+	/* On Versal, JSON is ignored in favour of PDI discovery. */
+	if (is_versal_platform() && dir_has_shell_json(new_dir))
+		DFX_DBG("%s: shell.json ignored on Versal; using PDI discovery", d_name);
+
+	if (dir_is_base_design(new_dir, d_name)) {
 		/* add the base design */
 		add_base_design(d_name, new_dir, cpath, wd);
 
 		/* initialize the base design */
 		base = findBaseDesign_path(new_dir);
 		if (base) {
-			if (initBaseDesign(base, fname) == 0) {
+			if (init_base_design(base, new_dir, d_name) == 0)
 				parse_packages(base, base->name, base->base_path);
-			} else {
+			else
 				DFX_ERR("Failed to init base design %s", d_name);
-			}
 		} else {
 			DFX_ERR("Base design %s not found", d_name);
 		}
@@ -1941,14 +2157,19 @@ void *threadFunc([[maybe_unused]] void *_)
 					struct watch *w = get_watch(event->wd);
 					if (w == NULL)
 						break;
-					mark_pkg_listing_dirty();
-					base = findBaseDesign_path(w->path);
-					if (base == NULL)
-						break;
-					sprintf(fname, "%s/%s", w->path, "shell.json");
-					ret = initBaseDesign(base, fname);
-					if (ret == 0) {
-						parse_packages(base, w->name, w->path);
+					if (is_versal_platform()) {
+						/* JSON ignored on Versal; skip without aborting the batch */
+						DFX_PR("shell.json event on Versal; ignored, PDI discovery only");
+					} else {
+						mark_pkg_listing_dirty();
+						base = findBaseDesign_path(w->path);
+						if (base == NULL)
+							break;
+						sprintf(fname, "%s/%s", w->path, "shell.json");
+						ret = initBaseDesign(base, fname);
+						if (ret == 0) {
+							parse_packages(base, w->name, w->path);
+						}
 					}
 				} else if (!strcmp(event->name, "accel.json")) {
 					struct watch *w, *parent_watch;
@@ -1958,22 +2179,28 @@ void *threadFunc([[maybe_unused]] void *_)
 					if (w == NULL) {
 						break;
 					}
+					if (is_versal_platform()) {
+						/* JSON ignored on Versal; skip without aborting the batch */
+						DFX_PR("accel.json event on Versal; ignored, PDI discovery only");
+					} else {
+						parent_watch = path_to_watch(w->parent_path);
+						if (parent_watch == NULL) {
+							break;
+						}
 
-					parent_watch = path_to_watch(w->parent_path);
-					if (parent_watch == NULL) {
-						break;
+						mark_pkg_listing_dirty();
+						base = findBaseDesign_path(parent_watch->parent_path);
+						if (base == NULL) {
+							break;
+						}
+
+						DFX_DBG("Add accel %s to base %s", w->path, base->base_path);
+						accel = add_accel_to_base(base, w->parent_name, w->parent_path,
+												  base->base_path);
+						initAccel(accel, w->path);
 					}
-
-					mark_pkg_listing_dirty();
-					base = findBaseDesign_path(parent_watch->parent_path);
-					if (base == NULL) {
-						break;
-					}
-
-					DFX_DBG("Add accel %s to base %s", w->path, base->base_path);
-					accel =
-						add_accel_to_base(base, w->parent_name, w->parent_path, base->base_path);
-					initAccel(accel, w->path);
+				} else if (is_versal_platform() && name_is_pdi(event->name)) {
+					handle_pdi_event(get_watch(event->wd));
 				}
 			} else if ((event->mask & IN_DELETE) && (event->mask & IN_ISDIR)) {
 				struct watch *w = get_watch(event->wd);
@@ -2008,21 +2235,28 @@ void *threadFunc([[maybe_unused]] void *_)
 					struct watch *w = get_watch(event->wd);
 					if (w == NULL || strstr(event->name, ".dpkg-new"))
 						break;
-					if (event->mask & IN_ISDIR) {
-						sprintf(new_dir, "%s/%s", w->path, event->name);
-						/* new addition of base design will be managed by firmware_dir_walk() */
-					} else {
-						sprintf(new_dir, "%s", w->path);
-					}
 					mark_pkg_listing_dirty();
-					base = findBaseDesign_path(new_dir);
-					if (base == NULL)
-						break;
-					sprintf(fname, "%s/%s", new_dir, "shell.json");
-					ret = initBaseDesign(base, fname);
-					if (ret == 0) {
-						parse_packages(base, w->name, new_dir);
+					if (is_versal_platform()) {
+						/* JSON ignored on Versal; skip without aborting the batch */
+						DFX_PR("%s moved in on Versal; ignored, PDI discovery only",
+							   event->mask & IN_ISDIR ? "Directory" : "shell.json");
+					} else {
+						if (event->mask & IN_ISDIR) {
+							sprintf(new_dir, "%s/%s", w->path, event->name);
+						} else {
+							sprintf(new_dir, "%s", w->path);
+						}
+						base = findBaseDesign_path(new_dir);
+						if (base == NULL)
+							break;
+						sprintf(fname, "%s/%s", new_dir, "shell.json");
+						ret = initBaseDesign(base, fname);
+						if (ret == 0) {
+							parse_packages(base, w->name, new_dir);
+						}
 					}
+				} else if (is_versal_platform() && name_is_pdi(event->name)) {
+					handle_pdi_event(get_watch(event->wd));
 				}
 			}
 			p += sizeof(struct inotify_event) + event->len;
@@ -2088,6 +2322,11 @@ int dfx_init()
 	platform.use_user_load_path = is_user_load_platform(platform.fpga_mgr);
 	if (platform.use_user_load_path)
 		DFX_PR("Platform requires user load path");
+
+	if (is_versal_platform()) {
+		if (versal_fw_init() < 0)
+			DFX_ERR("Versal firmware sysfs device not found; PDI parsing unavailable");
+	}
 
 	pthread_create(&t, NULL, threadFunc, NULL);
 	sem_wait(&mutex);
