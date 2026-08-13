@@ -49,6 +49,7 @@ static int inotifyFd;
 platform_info_t platform;
 sem_t mutex;
 static _Atomic bool pkg_listing_dirty = false;
+static _Atomic bool firmware_rescan_pending = false;
 static void firmware_dir_walk(void);
 static void assign_list_ids(void);
 static bool is_versal_platform(void);
@@ -537,7 +538,10 @@ int load_accelerator(const char *accel_name, char *cma_path, char *fpga_state, s
 {
 	struct basePLDesign *base;
 
-	firmware_dir_walk();
+	if (firmware_rescan_pending) {
+		firmware_rescan_pending = false;
+		firmware_dir_walk();
+	}
 	base = findBaseDesign(accel_name);
 	if (base == NULL) {
 		DFX_ERR("No package found for %s", accel_name);
@@ -756,8 +760,6 @@ int load_accelerator_by_id(int id, char *cma_path, char *fpga_state, size_t fpga
 {
 	list_id_result_t result;
 
-	firmware_dir_walk();
-
 	if (find_accel_by_list_id(id, &result) != 0) {
 		DFX_ERR("No package found for ID %d", id);
 		return -DFX_MGR_NO_PACKAGE_FOUND_ERROR;
@@ -787,8 +789,6 @@ int unload_accelerator_by_id(int id)
 
 	if (id == 0)
 		return unload_accel_base();
-
-	firmware_dir_walk();
 
 	if (find_accel_by_list_id(id, &result) != 0) {
 		DFX_ERR("No package found for ID %d", id);
@@ -1068,7 +1068,10 @@ char *listAccelerators(int flag)
 	}
 
 	memset(res, 0, sizeof(res));
-	firmware_dir_walk();
+	if (firmware_rescan_pending) {
+		firmware_rescan_pending = false;
+		firmware_dir_walk();
+	}
 	assign_list_ids();
 	pkg_listing_dirty = false;
 
@@ -1456,6 +1459,8 @@ void parse_packages(struct basePLDesign *base, char *fname, char *path)
 			char *endptr;
 			long slot_num = strtol(d1->d_name, &endptr, 10);
 			if (*endptr == '\0') {
+				/* watch the slot dir so added/removed .elf files raise events */
+				add_dir_watch(first_level, d1->d_name, fname, path);
 				parse_rpu_slot_dir(base, first_level, (int)slot_num, path);
 				continue;
 			}
@@ -1675,6 +1680,7 @@ static void handle_pdi_event(struct watch *w)
 		base = findBaseDesign_path(w->path);
 		if (base == NULL) {
 			DFX_DBG("%s: base not registered yet, deferring to firmware_dir_walk", w->path);
+			firmware_rescan_pending = true;
 			return;
 		}
 		if (init_base_from_pdi(base) == 0)
@@ -2171,6 +2177,8 @@ void *threadFunc([[maybe_unused]] void *_)
 							w->parent_path);
 					if (add_dir_watch(new_dir, event->name, w->name, w->path) < 0)
 						break;
+					/* new base design is registered by the next firmware_dir_walk() */
+					firmware_rescan_pending = true;
 				} else if (!strcmp(event->name, "shell.json")) {
 					struct watch *w = get_watch(event->wd);
 					if (w == NULL)
@@ -2220,6 +2228,8 @@ void *threadFunc([[maybe_unused]] void *_)
 					}
 				} else if (is_versal_platform() && name_is_pdi(event->name)) {
 					handle_pdi_event(get_watch(event->wd));
+				} else {
+					firmware_rescan_pending = true;
 				}
 			} else if ((event->mask & IN_DELETE) && (event->mask & IN_ISDIR)) {
 				struct watch *w = get_watch(event->wd);
@@ -2255,6 +2265,9 @@ void *threadFunc([[maybe_unused]] void *_)
 					if (w == NULL || strstr(event->name, ".dpkg-new"))
 						break;
 					mark_pkg_listing_dirty();
+					/* a moved-in directory needs firmware_dir_walk() to register it */
+					if (event->mask & IN_ISDIR)
+						firmware_rescan_pending = true;
 					if (is_versal_platform()) {
 						/* JSON ignored on Versal; skip without aborting the batch */
 						DFX_PR("%s moved in on Versal; ignored, PDI discovery only",
@@ -2276,6 +2289,9 @@ void *threadFunc([[maybe_unused]] void *_)
 					}
 				} else if (is_versal_platform() && name_is_pdi(event->name)) {
 					handle_pdi_event(get_watch(event->wd));
+				} else {
+					/* moved-in file (e.g. RPU .elf) in an existing dir: re-walk on next list */
+					firmware_rescan_pending = true;
 				}
 			}
 			p += sizeof(struct inotify_event) + event->len;
