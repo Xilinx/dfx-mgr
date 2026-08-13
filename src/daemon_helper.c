@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
- * Copyright (C) 2022 - 2025 Advanced Micro Devices, Inc. All Rights Reserved.
+ * Copyright (C) 2022 - 2026 Advanced Micro Devices, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: MIT
  */
@@ -19,6 +19,7 @@
 #include <dfx-mgr/model.h>
 #include <dfx-mgr/json-config.h>
 #include <dfx-mgr/daemon_helper.h>
+#include <dfx-mgr/pdi-config.h>
 #include <dfx-mgr/dfxmgr_client.h>
 #include <dfx-mgr/eeprom.h>
 #include <dfx-mgr/rpu.h>
@@ -177,24 +178,20 @@ void update_env(char *path)
 {
 	DIR *FD;
 	struct dirent *dir;
-	int len, ret;
+	int ret;
 	char cmd[512];
 
 	DFX_DBG("%s", path);
 	FD = opendir(path);
 	if (FD) {
 		while ((dir = readdir(FD)) != NULL) {
-			len = strlen(dir->d_name);
-			if (len > 7) {
-				if (!strcmp(dir->d_name + (len - 7), ".xclbin") ||
-					!strcmp(dir->d_name + (len - 7), ".XCLBIN")) {
-					snprintf(cmd, sizeof(cmd), "echo \"firmware: %s/%s\" > /etc/vart.conf", path,
-							 dir->d_name);
-					DFX_DBG("system %s", cmd);
-					ret = system(cmd);
-					if (ret)
-						DFX_ERR("%s", cmd);
-				}
+			if (name_is_xclbin(dir->d_name)) {
+				snprintf(cmd, sizeof(cmd), "echo \"firmware: %s/%s\" > /etc/vart.conf", path,
+						 dir->d_name);
+				DFX_DBG("system %s", cmd);
+				ret = system(cmd);
+				if (ret)
+					DFX_ERR("%s", cmd);
 			}
 		}
 		closedir(FD);
