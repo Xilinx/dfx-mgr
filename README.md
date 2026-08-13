@@ -38,11 +38,13 @@ filesystem, location can be updated in `daemon.conf`. Designs could be
 downloaded using dnf or any other package manager or manually copied to the
 previously mentioned location. Each sub-folder upto 5 hierarchical levels
 under `/lib/firmware/xilinx` will be treated as a base/static shell design if it
-contain a shell.json file, or the sub-folder name is `rpu` or `RPU`.
-base/static design folder can then have sub-folder for each of the
-accelerators. Each accelerator is expected to have a accel.json. Have a look at
-below folder structure for more understanding and the details of json config
-files.
+contain a shell.json file, or the sub-folder name is `rpu` or `RPU`. On Versal
+and Versal gen2 the base is instead detected by a PDI in the folder and
+shell.json is ignored. base/static design folder can then have sub-folder for
+each of the accelerators. Each accelerator is expected to have a accel.json, or
+on Versal is derived from the partial PDI in its slot directory (accel.json
+ignored). Have a look at below folder structure for more understanding and the
+details of json config files.
 
 The expected directory structure under `/lib/firmware/xilinx` which contains a
 2x1 PL shell design, and a flat shell design. 2x1 `base_design` shell
@@ -102,10 +104,31 @@ will fail to load an accelerator to the slot if no partial design is found.
 ```
 
 **Key Requirements:**
-- Base/static design directory must contain `shell.json` (not required for RPU bases, which are detected by directory name `rpu`/`RPU`)
+- Base/static design directory must contain `shell.json` (not required for RPU bases, which are detected by directory name `rpu`/`RPU`). On Versal the base is instead detected by the presence of a PDI and `shell.json` is ignored.
 - PL DFX accelerator subdirectories must follow `<name>_slot<N>` naming convention. New RPU structure uses numeric slot directories (`0/`, `1/`, ...).
-- Each PL slot directory must contain `accel.json` for proper recognition.
+- Each PL slot directory must contain `accel.json` for proper recognition. On Versal the accelerator is derived from the partial PDI in the slot directory and `accel.json` is not required.
 - Supports up to 5 hierarchical directory levels under `/lib/firmware/xilinx`
+
+#### Versal designs - PDI-based discovery
+On Versal and Versal gen2, PL design metadata comes from the PDI metaheader
+rather than from `shell.json`/`accel.json`, which are ignored. The same
+`<base-design>/<accelerator>/<accelerator>_slot<N>` directory layout applies;
+DFX-MGR derives the metadata as follows:
+
+- **Base design** is recognized by a PDI in the base directory.
+- **Slot count** is taken from the highest `<accelerator>_slot<N>` index found,
+  so a partially-populated design keeps its upper slots reachable.
+- **Accelerator type** is derived from the PDI image class: an accelerator whose
+  PDI contains an AIE image is typed `XRT_AIE_DFX`, otherwise `XRT_PL_DFX`. AIE
+  overlays are not supported.
+- A `<accelerator>_slot<N>` directory is only registered as a loadable slot when
+  it actually contains a partial PDI.
+- **Design visibility** is enforced by the PLM: it rejects a PDI built for
+  another device, so that design is never listed by `-listPackage`. The daemon
+  log records the failure.
+
+The `rpu`/`RPU` directory convention and RPU firmware handling are unchanged on
+Versal.
 
 
 ### daemon.conf
@@ -144,6 +167,10 @@ daemon.conf will need a restart of the `/usr/bin/dfx-mgrd` on target.
 
 shell.json describes the base/static shell configuration information. Optional fields
 can be skipped if not desired.
+
+> **Note:** `shell.json` is ignored on Versal and Versal gen2, where the base
+> design is discovered from its PDI instead. See *Versal designs - PDI-based
+> discovery* above.
 
 One of the below type should be used for shell_type as per your design.
 * XRT_FLAT: dfx-mgr will program the PL and update /etc/vart.conf on target with the
@@ -187,6 +214,10 @@ $ cat shell.json
 accel.json describes the accelerator configuration. Optional fields can be
 skipped if not desired. Flat shell designs are not required to have accel.json
 since they do not have reconfigurable partition.
+
+> **Note:** `accel.json` is ignored on Versal and Versal gen2, where each
+> accelerator (including its type) is derived from the partial PDI in its slot
+> directory. See *Versal designs - PDI-based discovery* above.
 
 * XRT_PL_DFX: Use this option for XRT based PL accelerator.
 
