@@ -229,6 +229,20 @@ static int assign_slot(struct basePLDesign *base, slot_info_t *slot, acapd_accel
 	return slot->slot_handle;
 }
 
+/*
+ * Size slots[] for the most a base can ever need rather than its current
+ * num_pl_slots. That count is re-derived on every rescan - from shell.json, or
+ * from the RM slot dirs on Versal - so a design that gains a slot while it is
+ * loaded would otherwise index past an array that is only allocated once.
+ */
+static void alloc_base_slots(struct basePLDesign *base)
+{
+	size_t pl_cap = base->num_pl_slots > RP_SLOTS_MAX ? base->num_pl_slots : RP_SLOTS_MAX;
+
+	if (base->slots == NULL)
+		base->slots = calloc(pl_cap + base->num_aie_slots, sizeof(slot_info_t *));
+}
+
 static int load_accelerator_core(struct basePLDesign *base, const char *accel_name, char *cma_path,
 								 char *fpga_state, size_t fpga_state_sz)
 {
@@ -255,8 +269,7 @@ static int load_accelerator_core(struct basePLDesign *base, const char *accel_na
 
 	/* Flat shell design are treated as with one slot */
 	if (!strcmp(base->type, "XRT_FLAT") || !strcmp(base->type, "PL_FLAT")) {
-		if (base->slots == NULL)
-			base->slots = calloc(base->num_pl_slots + base->num_aie_slots, sizeof(slot_info_t *));
+		alloc_base_slots(base);
 
 		if (platform.active_base != NULL && platform.active_base->active > 0) {
 			DFX_ERR("Unload previously loaded accelerator, no empty slot for %s", accel_name);
@@ -376,9 +389,7 @@ static int load_accelerator_core(struct basePLDesign *base, const char *accel_na
 					}
 					DFX_PR("Loaded %s successfully", base->name);
 				}
-				if (base->slots == NULL)
-					base->slots =
-						calloc(base->num_pl_slots + base->num_aie_slots, sizeof(slot_info_t *));
+				alloc_base_slots(base);
 				platform.active_base = base;
 			}
 		} else if (!strcmp(base->type, "RPU")) {
@@ -402,9 +413,7 @@ static int load_accelerator_core(struct basePLDesign *base, const char *accel_na
 				goto out;
 			}
 			if (platform.active_rpu_base == NULL) {
-				if (base->slots == NULL)
-					base->slots =
-						calloc(base->num_pl_slots + base->num_aie_slots, sizeof(slot_info_t *));
+				alloc_base_slots(base);
 				platform.active_rpu_base = base;
 			}
 		}
