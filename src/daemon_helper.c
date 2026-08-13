@@ -1203,7 +1203,7 @@ char *listAccelerators(int flag)
 	return strdup(res);
 }
 
-void add_to_watch(int wd, char *name, char *path, char *parent_name, char *parent_path)
+int add_to_watch(int wd, char *name, char *path, char *parent_name, char *parent_path)
 {
 	int i;
 	for (i = 0; i < MAX_WATCH; i++) {
@@ -1214,10 +1214,11 @@ void add_to_watch(int wd, char *name, char *path, char *parent_name, char *paren
 			strncpy(active_watch[i].parent_name, parent_name,
 					sizeof(active_watch[i].parent_name) - 1);
 			strncpy(active_watch[i].parent_path, parent_path, WATCH_PATH_LEN - 1);
-			return;
+			return 0;
 		}
 	}
 	DFX_ERR("no room to add more watch for path %s", path);
+	return -1;
 }
 
 struct watch *get_watch(int wd)
@@ -1282,6 +1283,27 @@ accel_info_t *add_accel_to_base(struct basePLDesign *base, char *name, char *pat
 	return &base->accel_list[j];
 }
 
+/* Add an IN_ALL_EVENTS watch on @path, skipping if it is already watched.
+ * Returns 0 on success (or already watched), -1 on failure. */
+static int add_dir_watch(char *path, char *name, char *parent_name, char *parent_path)
+{
+	int wd;
+
+	if (path_to_watch(path) != NULL)
+		return 0;
+	wd = inotify_add_watch(inotifyFd, path, IN_ALL_EVENTS);
+	if (wd == -1) {
+		DFX_ERR("inotify_add_watch failed on %s", path);
+		return -1;
+	}
+	if (add_to_watch(wd, name, path, parent_name, parent_path) < 0) {
+		/* Nothing maps this wd, so its events could never be resolved. */
+		inotify_rm_watch(inotifyFd, wd);
+		return -1;
+	}
+	return 0;
+}
+
 /*
  * The present limitation is only one level of hierarchy (dir1 and dir2).
  * In future when we face hierarchical designs that may have RPs within
@@ -1294,7 +1316,6 @@ void parse_packages(struct basePLDesign *base, char *fname, char *path)
 	char first_level[512], second_level[800], filename[811];
 	struct stat stat_info;
 	accel_info_t *accel;
-	int wd;
 
 	/* For flat shell design there is no subfolder so assign the base path as the accel path */
 	if (!strcmp(base->type, "XRT_FLAT") || !strcmp(base->type, "PL_FLAT")) {
@@ -1327,14 +1348,8 @@ void parse_packages(struct basePLDesign *base, char *fname, char *path)
 			}
 		}
 
-		if (path_to_watch(first_level) == NULL) {
-			wd = inotify_add_watch(inotifyFd, first_level, IN_ALL_EVENTS);
-			if (wd == -1) {
-				DFX_ERR("inotify_add_watch failed on %s", first_level);
-				goto close_dir;
-			}
-			add_to_watch(wd, d1->d_name, first_level, fname, path);
-		}
+		if (add_dir_watch(first_level, d1->d_name, fname, path) < 0)
+			goto close_dir;
 
 		sprintf(filename, "%s/accel.json", first_level);
 		/* For pl slots we need to traverse next level to find accel.json*/
@@ -1349,14 +1364,8 @@ void parse_packages(struct basePLDesign *base, char *fname, char *path)
 				if (d_name_filter(d2->d_name) || not_dir(second_level))
 					continue;
 
-				if (path_to_watch(second_level) == NULL) {
-					wd = inotify_add_watch(inotifyFd, second_level, IN_ALL_EVENTS);
-					if (wd == -1) {
-						DFX_ERR("inotify_add_watch failed on %s", second_level);
-						goto close_dir;
-					}
-					add_to_watch(wd, d2->d_name, second_level, d1->d_name, first_level);
-				}
+				if (add_dir_watch(second_level, d2->d_name, d1->d_name, first_level) < 0)
+					goto close_dir;
 
 				sprintf(filename, "%s/accel.json", second_level);
 				if (!stat(filename, &stat_info)) {
@@ -1512,7 +1521,10 @@ static void accel_dir_add(char *cpath, struct dirent *dirent, int recursion_dept
 			DFX_ERR("inotify_add_watch %s", new_dir);
 			return;
 		}
-		add_to_watch(wd, d_name, new_dir, "", cpath);
+		if (add_to_watch(wd, d_name, new_dir, "", cpath) < 0) {
+			inotify_rm_watch(inotifyFd, wd);
+			return;
+		}
 	}
 
 	/* add base design if shell.json exists or if the directory name is RPU or rpu */
@@ -1553,7 +1565,7 @@ static void accel_dir_add(char *cpath, struct dirent *dirent, int recursion_dept
  */
 static void firmware_dir_walk(void)
 {
-	int k, wd;
+	int k;
 	struct dirent *dirent;
 
 	for (k = 0; k < config.number_locations; k++) {
@@ -1564,14 +1576,9 @@ static void firmware_dir_walk(void)
 			DFX_ERR("opendir(%s)", fwdir);
 			continue;
 		}
-		if (!path_to_watch(fwdir)) {
-			wd = inotify_add_watch(inotifyFd, fwdir, IN_ALL_EVENTS);
-			if (wd == -1) {
-				DFX_ERR("inotify_add_watch(%s)", fwdir);
-				closedir(d);
-				continue;
-			}
-			add_to_watch(wd, "", fwdir, "", "");
+		if (add_dir_watch(fwdir, "", "", "") < 0) {
+			closedir(d);
+			continue;
 		}
 		/* Add packages to inotify */
 		while ((dirent = readdir(d)) != NULL)
@@ -1881,7 +1888,7 @@ static void init_user_load(void)
 #define BUF_LEN (10 * (sizeof(struct inotify_event) + NAME_MAX + 1))
 void *threadFunc([[maybe_unused]] void *_)
 {
-	int wd, j, ret;
+	int j, ret;
 	char buf[BUF_LEN] __attribute__((aligned(8)));
 	ssize_t numRead;
 	char *p;
@@ -1928,11 +1935,8 @@ void *threadFunc([[maybe_unused]] void *_)
 					}
 					DFX_DBG("add inotify watch on %s w->name %s parent %s", new_dir, w->name,
 							w->parent_path);
-					wd = inotify_add_watch(inotifyFd, new_dir, IN_ALL_EVENTS);
-					if (wd == -1)
-						DFX_PR("inotify_add_watch failed on %s", new_dir);
-					add_to_watch(wd, event->name, new_dir, w->name, w->path);
-					/* new addition of base design will be managed by firmware_dir_walk() */
+					if (add_dir_watch(new_dir, event->name, w->name, w->path) < 0)
+						break;
 				} else if (!strcmp(event->name, "shell.json")) {
 					struct watch *w = get_watch(event->wd);
 					if (w == NULL)
