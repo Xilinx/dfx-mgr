@@ -310,6 +310,11 @@ static int load_accelerator_core(struct basePLDesign *base, const char *accel_na
 					accel_info->parent_path);
 		}
 	}
+	if (accel_info == NULL) {
+		DFX_ERR("No accel %s registered in base %s", accel_name, base->name);
+		goto out;
+	}
+
 	/* For slotted (PL_DFX/RPU) architecture */
 	if (!strcmp(base->type, "PL_DFX") || !strcmp(base->type, "RPU")) {
 		/* For base type PL_DFX active_base is used to store
@@ -1274,13 +1279,23 @@ accel_info_t *add_accel_to_base(struct basePLDesign *base, char *name, char *pat
 		if (base->accel_list[j].path[0] == '\0') {
 			DFX_DBG("adding %s to base %s", path, parent_path);
 			snprintf(base->accel_list[j].name, sizeof(base->accel_list[j].name), "%s", name);
-			strcpy(base->accel_list[j].path, path);
-			base->accel_list[j].path[sizeof(base->accel_list[j].path) - 1] = '\0';
-			strcpy(base->accel_list[j].parent_path, parent_path);
-			base->accel_list[j].parent_path[sizeof(base->accel_list[j].parent_path) - 1] = '\0';
+			if ((size_t)snprintf(base->accel_list[j].path, sizeof(base->accel_list[j].path), "%s",
+								 path) >= sizeof(base->accel_list[j].path)) {
+				DFX_ERR("Accel path too long, skipping: %s", path);
+				/* leave the slot free: the truncated copy above marked it used */
+				base->accel_list[j].path[0] = '\0';
+				base->accel_list[j].name[0] = '\0';
+				return NULL;
+			}
+			snprintf(base->accel_list[j].parent_path, sizeof(base->accel_list[j].parent_path), "%s",
+					 parent_path);
 			base->accel_list[j].rpu.slot_num = -1; /* Initialize to -1 for old structure */
 			break;
 		}
+	}
+	if (j == RP_SLOTS_MAX) {
+		DFX_ERR("No free accel slot in base %s (max %d)", base->name, RP_SLOTS_MAX);
+		return NULL;
 	}
 	return &base->accel_list[j];
 }
@@ -1468,7 +1483,8 @@ void parse_packages(struct basePLDesign *base, char *fname, char *path)
 				sprintf(filename, "%s/accel.json", second_level);
 				if (!stat(filename, &stat_info)) {
 					accel = add_accel_to_base(base, d1->d_name, first_level, path);
-					initAccel(accel, second_level);
+					if (accel)
+						initAccel(accel, second_level);
 				}
 			}
 			closedir(dir2);
@@ -1482,13 +1498,15 @@ void parse_packages(struct basePLDesign *base, char *fname, char *path)
 				 * by reading the accel.json file, since for RPU we do not
 				 * have accel.json file, we set the accel_type to RPU here
 				 */
-				strcpy(accel->accel_type, base->type);
+				if (accel)
+					strcpy(accel->accel_type, base->type);
 			}
 		}
 		/* Found accel.json so add it*/
 		else {
 			accel = add_accel_to_base(base, d1->d_name, first_level, path);
-			initAccel(accel, first_level);
+			if (accel)
+				initAccel(accel, first_level);
 		}
 	}
 close_dir:
@@ -2197,7 +2215,8 @@ void *threadFunc([[maybe_unused]] void *_)
 						DFX_DBG("Add accel %s to base %s", w->path, base->base_path);
 						accel = add_accel_to_base(base, w->parent_name, w->parent_path,
 												  base->base_path);
-						initAccel(accel, w->path);
+						if (accel)
+							initAccel(accel, w->path);
 					}
 				} else if (is_versal_platform() && name_is_pdi(event->name)) {
 					handle_pdi_event(get_watch(event->wd));
