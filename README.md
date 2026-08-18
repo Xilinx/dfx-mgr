@@ -317,9 +317,14 @@ $ dfx-mgr-client -listPackage [-all] [-filter]
 - `-all` - Show all columns (default shows simplified view)
 - `-filter` - Filter packages by board name from EEPROM (shows only matching designs)
 
+Both views print the boot PDI's PL UUID above the package table.
+
 **Default Simplified View:**
 ```
 $ dfx-mgr-client -listPackage
+
+boot.pdi PL UUID: 657c3dde
+
 ID accelType   Base        slotLoc Accelerator
 -- ----------- ----------- ------- -----------
  1 RPU         rpu         -1      vek280-r5-0-matrix-multiply
@@ -332,6 +337,9 @@ ID accelType   Base        slotLoc Accelerator
 **Full View with -all flag:**
 ```
 $ dfx-mgr-client -listPackage -all
+
+boot.pdi PL UUID: 657c3dde
+
 ID accelType   userLoad  userLoad  Base        UUID      Pid   #slots       slot     load   Accelerator
                type      Region                                (RPU+PL+AIE) Location Handle
 -- ----------- --------- --------- ----------- --------- ----- ------------ -------- ------ -----------
@@ -357,6 +365,10 @@ RPU entries show RPU firmware applications.
 * On Versal it is read from the PL PDI metaheader at package-discovery time.
 * On other platforms it is taken from the `uid` field in shell.json/accel.json.
 * It shows `N/A` when no UUID is available (e.g. RPU firmware or user-managed loads).
+
+**boot.pdi PL UUID** (header line, shown in both views) reports the UUID of the PL image in the boot PDI:
+* It is queried from the platform firmware (PLM) once at daemon startup, before any accelerator is loaded.
+* Versal-only: it shows `N/A` on ZynqMP/Zynq-7000.
 
 **Board Filtering** (using -filter flag) shows only the packages that match the current board.
 * Board name is read at daemon startup from the EEPROM paths configured via `eeprom_location` in `daemon.conf`.
