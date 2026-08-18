@@ -1053,11 +1053,21 @@ static void mark_pkg_listing_dirty(void)
 	DFX_PR("Package list updated - IDs have been reassigned");
 }
 
+/* Format a PDI UUID as 8 hex digits, or "N/A" when unset (0 / non-Versal). */
+static void fmt_uuid(char *buf, size_t len, int uid)
+{
+	if (uid)
+		snprintf(buf, len, "%08x", (unsigned)uid);
+	else
+		snprintf(buf, len, "N/A");
+}
+
 char *listAccelerators(int flag)
 {
 	int i, j;
 	uint8_t slot;
 	char msg[350];
+	char uuid_str[16];
 	char res[8 * 1024];
 	char show_slots[16];
 	char truncated_base[TRUNCATED_BASE_BUFFER_SIZE];
@@ -1067,9 +1077,9 @@ char *listAccelerators(int flag)
 	const char *header_format, *sub_header_format, *entry_format;
 
 	if (show_all) {
-		header_format = "%-3s%-12s%-10s%-10s%-12s%-6s%-13s%-9s%-7s%s\n";
-		sub_header_format = "%-3s%-12s%-10s%-10s%-12s%-6s%-13s%-9s%-7s%s\n";
-		entry_format = "%2d %-12s%-10s%-10s%-12s%-6s%-13s%-9s%-7s%s\n";
+		header_format = "%-3s%-12s%-10s%-10s%-12s%-10s%-6s%-13s%-9s%-7s%s\n";
+		sub_header_format = "%-3s%-12s%-10s%-10s%-12s%-10s%-6s%-13s%-9s%-7s%s\n";
+		entry_format = "%2d %-12s%-10s%-10s%-12s%-10s%-6s%-13s%-9s%-7s%s\n";
 	} else {
 		header_format = "%-3s%-12s%-12s%-8s%s\n";
 		sub_header_format = NULL;
@@ -1097,15 +1107,16 @@ char *listAccelerators(int flag)
 	if (show_all) {
 		/* Row 1: Main headers */
 		snprintf(msg, sizeof(msg), header_format, "ID", "accelType", "userLoad", "userLoad", "Base",
-				 "Pid", "#slots", "slot", "load", "Accelerator");
+				 "UUID", "Pid", "#slots", "slot", "load", "Accelerator");
 		strcat(res, msg);
 		/* Row 2: Sub-headers */
-		snprintf(msg, sizeof(msg), sub_header_format, "", "", "type", "Region", "", "",
+		snprintf(msg, sizeof(msg), sub_header_format, "", "", "type", "Region", "", "", "",
 				 "(RPU+PL+AIE)", "Location", "Handle", "");
 		strcat(res, msg);
 		/* Separator line */
 		snprintf(msg, sizeof(msg), header_format, "--", "-----------", "---------", "---------",
-				 "-----------", "-----", "------------", "--------", "------", "-----------");
+				 "-----------", "---------", "-----", "------------", "--------", "------",
+				 "-----------");
 		strcat(res, msg);
 	} else {
 		snprintf(msg, sizeof(msg), header_format, "ID", "accelType", "Base", "slotLoc",
@@ -1186,9 +1197,14 @@ char *listAccelerators(int flag)
 					}
 
 					if (show_all) {
+						/*
+						 * Per-package UUID. Versal derives it from the PDI metaheader;
+						 * others from shell/accel.json. 0 -> N/A.
+						 */
+						fmt_uuid(uuid_str, sizeof(uuid_str), accel->uid);
 						snprintf(msg, sizeof(msg), entry_format, accel->list_id, accel->accel_type,
-								 "-", "-", truncated_base, pid_uid_check(base, j), show_slots,
-								 slot_locs[0] ? slot_locs : "-1",
+								 "-", "-", truncated_base, uuid_str, pid_uid_check(base, j),
+								 show_slots, slot_locs[0] ? slot_locs : "-1",
 								 load_handles[0] ? load_handles : "-1", accel_name);
 					} else {
 						snprintf(msg, sizeof(msg), entry_format, accel->list_id, accel->accel_type,
@@ -1205,7 +1221,7 @@ char *listAccelerators(int flag)
 			if (show_all) {
 				snprintf(msg, sizeof(msg), entry_format, base->list_id, "-",
 						 base->user_load_type ? "Partial" : "Full", base->user_load_region, "-",
-						 "-", "-", "-", handle_str, base->name);
+						 "N/A", "-", "-", "-", handle_str, base->name);
 			} else {
 				snprintf(msg, sizeof(msg), entry_format, base->list_id, "-", "-", "-", base->name);
 			}
@@ -1333,7 +1349,7 @@ static int add_dir_watch(char *path, char *name, char *parent_name, char *parent
  * @base - base design to populate
  *
  * This function fills accel_list[0] so the accel is the base itself (name, path,
- * parent_path and type all taken from @base)
+ * parent_path, type and uid all taken from @base)
  *
  * return - void
  *
@@ -1344,6 +1360,7 @@ static void register_flat_accel(struct basePLDesign *base)
 	strcpy(base->accel_list[0].path, base->base_path);
 	strcpy(base->accel_list[0].parent_path, base->base_path);
 	strcpy(base->accel_list[0].accel_type, base->type);
+	base->accel_list[0].uid = base->uid;
 }
 
 /**
