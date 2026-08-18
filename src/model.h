@@ -103,6 +103,7 @@ typedef struct {
 
 struct basePLDesign {
 	int uid;
+	int pid;
 	int fpga_cfg_id;
 	char name[ACCEL_NAME_MAX];
 	char base_path[512];

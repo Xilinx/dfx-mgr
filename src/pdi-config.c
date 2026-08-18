@@ -197,6 +197,7 @@ int init_base_from_pdi(struct basePLDesign *base)
 	}
 
 	base->uid = meta.uid;
+	base->pid = meta.puid;
 	base->num_aie_slots = 0; /* no PDI AIE-slot concept; AIE refused at load */
 	base->load_base_design = 1;
 	base->num_pl_slots = 0;
