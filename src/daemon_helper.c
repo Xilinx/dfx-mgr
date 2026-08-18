@@ -1116,12 +1116,15 @@ char *listAccelerators(int flag)
 		strcat(res, msg);
 	}
 	for (i = 0; i < MAX_WATCH; i++) {
-		if (base_designs[i].base_path[0] != '\0' && base_designs[i].num_pl_slots > 0) {
+		struct basePLDesign *base = &base_designs[i];
+
+		if (base->base_path[0] != '\0' && base->num_pl_slots > 0) {
 			for (j = 0; j < RP_SLOTS_MAX; j++) {
-				if (base_designs[i].accel_list[j].path[0] != '\0') {
+				if (base->accel_list[j].path[0] != '\0') {
+					accel_info_t *accel = &base->accel_list[j];
 					char slot_locs[16] = "";
 					char load_handles[16] = "";
-					const char *accel_name = base_designs[i].accel_list[j].name;
+					const char *accel_name = accel->name;
 
 					/* Apply filter: skip if boardName not found in accelerator name */
 					if (use_filter && !strcasestr(accel_name, platform.boardName))
@@ -1131,26 +1134,23 @@ char *listAccelerators(int flag)
 					 * For RPU num_pl_slots is used for RPU slot number
 					 * For PL  num_pl_slots is used for PL slot number
 					 */
-					if (!strcmp(base_designs[i].type, "RPU")) {
-						sprintf(show_slots, "(%d+0+0)", base_designs[i].num_pl_slots);
+					if (!strcmp(base->type, "RPU")) {
+						sprintf(show_slots, "(%d+0+0)", base->num_pl_slots);
 					} else {
 						/*
 						 * Internally flat shell is treated as one slot to make
 						 * the code generic and save info of the active design
 						 */
 						sprintf(show_slots, "(0+%d+%d)",
-								!strcmp(base_designs[i].type, "XRT_FLAT") ||
-										!strcmp(base_designs[i].type, "PL_FLAT")
+								!strcmp(base->type, "XRT_FLAT") || !strcmp(base->type, "PL_FLAT")
 									? 0
-									: base_designs[i].num_pl_slots,
-								base_designs[i].num_aie_slots);
+									: base->num_pl_slots,
+								base->num_aie_slots);
 					}
 
-					if (base_designs[i].active) {
-						for (slot = 0;
-							 slot < (base_designs[i].num_pl_slots + base_designs[i].num_aie_slots);
-							 slot++) {
-							slot_info_t *slot_info = base_designs[i].slots[slot];
+					if (base->active) {
+						for (slot = 0; slot < (base->num_pl_slots + base->num_aie_slots); slot++) {
+							slot_info_t *slot_info = base->slots[slot];
 							int matched = 0;
 
 							if (slot_info == NULL)
@@ -1178,42 +1178,36 @@ char *listAccelerators(int flag)
 						slot_locs[strlen(slot_locs) - 1] = '\0';
 					if (load_handles[0])
 						load_handles[strlen(load_handles) - 1] = '\0';
-					if (strlen(base_designs[i].name) > MAX_BASE_NAME_DISPLAY_LEN) {
+					if (strlen(base->name) > MAX_BASE_NAME_DISPLAY_LEN) {
 						snprintf(truncated_base, sizeof(truncated_base), "%.*s...",
-								 TRUNCATED_BASE_NAME_LEN, base_designs[i].name);
+								 TRUNCATED_BASE_NAME_LEN, base->name);
 					} else {
-						strncpy(truncated_base, base_designs[i].name, sizeof(truncated_base) - 1);
+						strncpy(truncated_base, base->name, sizeof(truncated_base) - 1);
 					}
 
 					if (show_all) {
-						snprintf(msg, sizeof(msg), entry_format,
-								 base_designs[i].accel_list[j].list_id,
-								 base_designs[i].accel_list[j].accel_type, "-", "-", truncated_base,
-								 pid_uid_check(&base_designs[i], j), show_slots,
+						snprintf(msg, sizeof(msg), entry_format, accel->list_id, accel->accel_type,
+								 "-", "-", truncated_base, pid_uid_check(base, j), show_slots,
 								 slot_locs[0] ? slot_locs : "-1",
 								 load_handles[0] ? load_handles : "-1", accel_name);
 					} else {
-						snprintf(msg, sizeof(msg), entry_format,
-								 base_designs[i].accel_list[j].list_id,
-								 base_designs[i].accel_list[j].accel_type, truncated_base,
-								 slot_locs[0] ? slot_locs : "-1", accel_name);
+						snprintf(msg, sizeof(msg), entry_format, accel->list_id, accel->accel_type,
+								 truncated_base, slot_locs[0] ? slot_locs : "-1", accel_name);
 					}
 					strcat(res, msg);
 				}
 			}
 		}
-		if (base_designs[i].is_user_load) {
+		if (base->is_user_load) {
 			char handle_str[16];
-			snprintf(handle_str, sizeof(handle_str), "%d", base_designs[i].user_load_handle);
+			snprintf(handle_str, sizeof(handle_str), "%d", base->user_load_handle);
 
 			if (show_all) {
-				snprintf(msg, sizeof(msg), entry_format, base_designs[i].list_id, "-",
-						 base_designs[i].user_load_type ? "Partial" : "Full",
-						 base_designs[i].user_load_region, "-", "-", "-", "-", handle_str,
-						 base_designs[i].name);
+				snprintf(msg, sizeof(msg), entry_format, base->list_id, "-",
+						 base->user_load_type ? "Partial" : "Full", base->user_load_region, "-",
+						 "-", "-", "-", handle_str, base->name);
 			} else {
-				snprintf(msg, sizeof(msg), entry_format, base_designs[i].list_id, "-", "-", "-",
-						 base_designs[i].name);
+				snprintf(msg, sizeof(msg), entry_format, base->list_id, "-", "-", "-", base->name);
 			}
 			strcat(res, msg);
 		}
