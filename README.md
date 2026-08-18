@@ -340,14 +340,14 @@ $ dfx-mgr-client -listPackage -all
 
 boot.pdi PL UUID: 657c3dde
 
-ID accelType   userLoad  userLoad  Base        UUID      Pid   #slots       slot     load   Accelerator
-               type      Region                                (RPU+PL+AIE) Location Handle
--- ----------- --------- --------- ----------- --------- ----- ------------ -------- ------ -----------
- 1 RPU         -         -         rpu         N/A       no_id (2+0+0)      -1       -1     vek280-r5-0-matrix-multiply
- 2 XRT_FLAT    -         -         vek280-p... 383b25cf  id_ok (0+0+0)      -1       -1     vek280-pl-bram-gpio-fw
- 3 XRT_FLAT    -         -         vek280-p... 4a1c9f22  id_ok (0+0+0)      -1       -1     vek280-pl-bram-uart-gpio-fw
- 4 XRT_PL_DFX  -         -         static      7b3e01a5  no_id (0+2+0)      -1       -1     rp1rm0
- 5 XRT_PL_DFX  -         -         static      9d82c4f0  no_id (0+2+0)      -1       -1     rp0rm0
+ID accelType   userLoad  userLoad  Base        UUID      Parent    Pid   #slots       slot     load   Accelerator
+               type      Region                          UUID            (RPU+PL+AIE) Location Handle
+-- ----------- --------- --------- ----------- --------- --------- ----- ------------ -------- ------ -----------
+ 1 RPU         -         -         rpu         N/A       N/A       no_id (2+0+0)      -1       -1     vek280-r5-0-matrix-multiply
+ 2 XRT_FLAT    -         -         vek280-p... 383b25cf  657c3dde  id_ok (0+0+0)      -1       -1     vek280-pl-bram-gpio-fw
+ 3 XRT_FLAT    -         -         vek280-p... 4a1c9f22  657c3dde  id_ok (0+0+0)      -1       -1     vek280-pl-bram-uart-gpio-fw
+ 4 XRT_PL_DFX  -         -         static      7b3e01a5  1f2e3d4c  id_ok (0+2+0)      -1       -1     rp1rm0
+ 5 XRT_PL_DFX  -         -         static      9d82c4f0  1f2e3d4c  id_ok (0+2+0)      -1       -1     rp0rm0
 ```
 
 In the output, the **ID** column is a identifier used by `-load` and `-unload` commands.
@@ -365,6 +365,16 @@ RPU entries show RPU firmware applications.
 * On Versal it is read from the PL PDI metaheader at package-discovery time.
 * On other platforms it is taken from the `uid` field in shell.json/accel.json.
 * It shows `N/A` when no UUID is available (e.g. RPU firmware or user-managed loads).
+
+**Parent UUID** (the "Parent"/"UUID" column, visible in full view with -all flag) shows each design's parent UUID:
+* For a DFX accelerator it is the UID of its parent shell (the "Pid" column reports `id_ok` when it matches the base).
+* On Versal it is read from the PDI metaheader; on other platforms from the `pid` field in accel.json.
+
+> **Note:** For DFX designs, an accelerator's Parent UUID corresponds to the
+> base shell UUID, not directly to the boot.pdi PL UUID. The base shell's PUID
+> matches the boot.pdi PL UUID. Because only the accelerator is shown in the
+> listing, the Parent UUID does not represent the complete
+> accelerator -> base -> boot.pdi relationship.
 
 **boot.pdi PL UUID** (header line, shown in both views) reports the UUID of the PL image in the boot PDI:
 * It is queried from the platform firmware (PLM) once at daemon startup, before any accelerator is loaded.
