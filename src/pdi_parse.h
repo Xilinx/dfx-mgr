@@ -40,6 +40,12 @@ extern "C" {
 
 #define PDI_MAX_IMAGES 32
 
+/*
+ * The firmware "uid-read" node returns the PLM's live ImageInfo table as a
+ * flat array of 4-word entries: [ImgID][UID][PUID][FuncID].
+ */
+#define PDI_UID_ENTRY_WORDS 4
+
 struct pdi_image {
 	uint32_t img_id;
 	uint32_t uid;
@@ -75,6 +81,24 @@ int versal_fw_init(void);
  * name_is_pdi() - true (non-zero) if @name ends with the ".pdi" extension.
  */
 int name_is_pdi(const char *name);
+
+/*
+ * pdi_filter_boot_pl_uid() - pick the boot.pdi PL image UID from a PLM
+ * ImageInfo (uid-read) table buffer.
+ *
+ * @entries: the uid-read table as 4-word entries (see PDI_UID_ENTRY_WORDS)
+ * @nbytes:  its length in bytes
+ *
+ * Return: the boot.pdi PL UID, or 0 when no entry matches.
+ */
+int pdi_filter_boot_pl_uid(const int *entries, int nbytes);
+
+/*
+ * pdi_boot_pl_uid() - read the running boot.pdi PL image UUID from the PLM.
+ *
+ * Return: the boot.pdi PL UID, or 0 (N/A) off Versal or when no PL image booted.
+ */
+int pdi_boot_pl_uid(void);
 
 #ifdef __cplusplus
 }

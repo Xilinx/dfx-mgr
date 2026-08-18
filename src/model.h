@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
- * Copyright (C) 2022 - 2025 Advanced Micro Devices, Inc. All Rights Reserved.
+ * Copyright (C) 2022 - 2026 Advanced Micro Devices, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: MIT
  */
@@ -159,6 +159,7 @@ typedef struct {
 	int available_slot_handle[SLOT_HANDLE_MAX]; /* To track available slot handles */
 	enum fpga_mgr_type fpga_mgr;				/* FPGA manager family, detected once at startup */
 	int use_user_load_path;						/* route -load through sysfs/configfs user path */
+	int boot_pdi_uid;							/* boot.pdi PL image UUID (0 = N/A) */
 } platform_info_t;
 
 struct daemon_config {

@@ -27,11 +27,13 @@
 /* Firmware device node attribute names (identical across all Versal generations). */
 #define VERSAL_FW_TRIGGER_ATTR "firmware"
 #define VERSAL_FW_METAHDR_ATTR "meta-header-read"
+#define VERSAL_FW_UIDLIST_ATTR "uid-read"
 
 /* Firmware (PLM) sysfs node paths */
 static struct versal_fw_paths {
 	char trigger[PATH_MAX];
 	char metahdr[PATH_MAX];
+	char uidlist[PATH_MAX];
 } versal_fw;
 
 int versal_fw_init(void)
@@ -41,7 +43,7 @@ int versal_fw_init(void)
 		"/sys/devices/platform/firmware:versal-net-firmware",
 		"/sys/devices/platform/firmware:versal2-firmware", /* Versal gen2 */
 	};
-	char trigger[PATH_MAX], metahdr[PATH_MAX];
+	char trigger[PATH_MAX], metahdr[PATH_MAX], uidlist[PATH_MAX];
 	size_t i;
 	int n;
 
@@ -54,8 +56,12 @@ int versal_fw_init(void)
 			continue;
 		if (access(metahdr, F_OK) != 0)
 			continue;
+		n = snprintf(uidlist, sizeof(uidlist), "%s/%s", paths[i], VERSAL_FW_UIDLIST_ATTR);
+		if (n < 0 || n >= (int)sizeof(uidlist))
+			continue;
 		snprintf(versal_fw.trigger, sizeof(versal_fw.trigger), "%s", trigger);
 		snprintf(versal_fw.metahdr, sizeof(versal_fw.metahdr), "%s", metahdr);
+		snprintf(versal_fw.uidlist, sizeof(versal_fw.uidlist), "%s", uidlist);
 		return 0;
 	}
 	return -1;
@@ -242,4 +248,74 @@ int pdi_parse_dir(const char *folder, struct pdi_meta *out)
 		return -1;
 
 	return pdi_parse_file(pdi_path, out);
+}
+
+int pdi_filter_boot_pl_uid(const int *entries, int nbytes)
+{
+	int num_entries, i;
+
+	if (entries == NULL || nbytes <= 0)
+		return 0;
+
+	num_entries = nbytes / (int)(PDI_UID_ENTRY_WORDS * sizeof(int));
+	for (i = 0; i < num_entries; i++) {
+		const int *entry = &entries[i * PDI_UID_ENTRY_WORDS];
+		uint32_t img_id = (uint32_t)entry[0];
+		uint32_t uid = (uint32_t)entry[1];
+		uint32_t parent_uid = (uint32_t)entry[2];
+
+		/*
+		 * The boot.pdi PL image is the root PL entry: a populated UID, no parent
+		 * (PUID == 0), and the PL image-subsystem class in ImgID. A loaded DFx
+		 * child carries the boot PL image as its parent, so it fails the
+		 * PUID == 0 test - this stays correct even after an overlay is loaded.
+		 */
+		if (parent_uid == 0 && uid != 0 && (img_id & PDI_IMG_ID_CLASS_MASK) == PDI_IMG_ID_PL)
+			return (int)uid;
+	}
+	return 0;
+}
+
+/*
+ * pdi_read_active_uid_list() - stands in for libdfx's dfx_get_active_uid_list(),
+ * which hardcodes the Gen1 firmware:versal-firmware path and so returns nothing
+ * on Gen2 (versal2). Reads the "uid-read" node resolved by versal_fw_init().
+ *
+ * TODO: a CR is filed on libdfx; drop this and call dfx_get_active_uid_list()
+ * directly once it is fixed.
+ *
+ * Return: bytes read (>0) on success, -1 on error.
+ */
+static int pdi_read_active_uid_list(void *buffer, int buf_bytes)
+{
+	int fd;
+	ssize_t n;
+
+	if (buffer == NULL || buf_bytes <= 0)
+		return -1;
+
+	/* Not resolved (non-Versal, or versal_fw_init() failed). */
+	if (versal_fw.uidlist[0] == '\0')
+		return -1;
+
+	fd = open(versal_fw.uidlist, O_RDONLY);
+	if (fd < 0)
+		return -1;
+
+	n = read(fd, buffer, (size_t)buf_bytes);
+	close(fd);
+
+	return (n > 0) ? (int)n : -1;
+}
+
+int pdi_boot_pl_uid(void)
+{
+	int buffer[PDI_META_BUF_WORDS];
+	int ret;
+
+	ret = pdi_read_active_uid_list(buffer, (int)sizeof(buffer));
+	if (ret <= 0)
+		return 0;
+
+	return pdi_filter_boot_pl_uid(buffer, ret);
 }

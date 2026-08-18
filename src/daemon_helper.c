@@ -1104,6 +1104,11 @@ char *listAccelerators(int flag)
 		return strdup(res);
 	}
 
+	/* Report the boot PDI's PL UUID above the package table (N/A off Versal). */
+	fmt_uuid(uuid_str, sizeof(uuid_str), platform.boot_pdi_uid);
+	snprintf(msg, sizeof(msg), "boot.pdi PL UUID: %s\n\n", uuid_str);
+	strcat(res, msg);
+
 	if (show_all) {
 		/* Row 1: Main headers */
 		snprintf(msg, sizeof(msg), header_format, "ID", "accelType", "userLoad", "userLoad", "Base",
@@ -2381,6 +2386,8 @@ int dfx_init()
 	if (is_versal_platform()) {
 		if (versal_fw_init() < 0)
 			DFX_ERR("Versal firmware sysfs device not found; PDI parsing unavailable");
+		platform.boot_pdi_uid = pdi_boot_pl_uid();
+		DFX_PR("boot.pdi PL UUID: %08x", (unsigned)platform.boot_pdi_uid);
 	}
 
 	pthread_create(&t, NULL, threadFunc, NULL);
