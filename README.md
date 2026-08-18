@@ -332,14 +332,14 @@ ID accelType   Base        slotLoc Accelerator
 **Full View with -all flag:**
 ```
 $ dfx-mgr-client -listPackage -all
-ID accelType   userLoad  userLoad  Base        Pid   #slots       slot     load   Accelerator
-               type      Region                      (RPU+PL+AIE) Location Handle
--- ----------- --------- --------- ----------- ----- ------------ -------- ------ -----------
- 1 RPU         -         -         rpu         no_id (2+0+0)      -1       -1     vek280-r5-0-matrix-multiply
- 2 XRT_FLAT    -         -         vek280-p... id_ok (0+0+0)      -1       -1     vek280-pl-bram-gpio-fw
- 3 XRT_FLAT    -         -         vek280-p... id_ok (0+0+0)      -1       -1     vek280-pl-bram-uart-gpio-fw
- 4 XRT_PL_DFX  -         -         static      no_id (0+2+0)      -1       -1     rp1rm0
- 5 XRT_PL_DFX  -         -         static      no_id (0+2+0)      -1       -1     rp0rm0
+ID accelType   userLoad  userLoad  Base        UUID      Pid   #slots       slot     load   Accelerator
+               type      Region                                (RPU+PL+AIE) Location Handle
+-- ----------- --------- --------- ----------- --------- ----- ------------ -------- ------ -----------
+ 1 RPU         -         -         rpu         N/A       no_id (2+0+0)      -1       -1     vek280-r5-0-matrix-multiply
+ 2 XRT_FLAT    -         -         vek280-p... 383b25cf  id_ok (0+0+0)      -1       -1     vek280-pl-bram-gpio-fw
+ 3 XRT_FLAT    -         -         vek280-p... 4a1c9f22  id_ok (0+0+0)      -1       -1     vek280-pl-bram-uart-gpio-fw
+ 4 XRT_PL_DFX  -         -         static      7b3e01a5  no_id (0+2+0)      -1       -1     rp1rm0
+ 5 XRT_PL_DFX  -         -         static      9d82c4f0  no_id (0+2+0)      -1       -1     rp0rm0
 ```
 
 In the output, the **ID** column is a identifier used by `-load` and `-unload` commands.
@@ -352,6 +352,11 @@ RPU entries show RPU firmware applications.
 * "id_ok"  - When PID and the base UID are present and match as expected
 * "id_err" - When PID and the base UID are present but do not match
 * "no_id"  - When either PID or UID are not present
+
+**Package UUID** (the "UUID" column, visible in full view with -all flag) shows each design's own UUID:
+* On Versal it is read from the PL PDI metaheader at package-discovery time.
+* On other platforms it is taken from the `uid` field in shell.json/accel.json.
+* It shows `N/A` when no UUID is available (e.g. RPU firmware or user-managed loads).
 
 **Board Filtering** (using -filter flag) shows only the packages that match the current board.
 * Board name is read at daemon startup from the EEPROM paths configured via `eeprom_location` in `daemon.conf`.
