@@ -116,9 +116,20 @@ static int pdi_parse_meta_buffer(const uint8_t *buf, int len, struct pdi_meta *o
 	if (out->num_images == 0)
 		return -1;
 
-	/* Image 0 is the design image in a design or RM PDI (not in a boot PDI). */
-	out->uid = out->images[0].uid;
-	out->puid = out->images[0].puid;
+	/*
+	 * Take uid/puid from the PL image.
+	 * If none match, use images[0].
+	 */
+	int pl_idx = 0;
+
+	for (i = 0; i < out->num_images; i++) {
+		if ((out->images[i].img_id & PDI_IMG_ID_CLASS_MASK) == PDI_IMG_ID_PL) {
+			pl_idx = i;
+			break;
+		}
+	}
+	out->uid = out->images[pl_idx].uid;
+	out->puid = out->images[pl_idx].puid;
 
 	return 0;
 }

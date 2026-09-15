@@ -53,8 +53,8 @@ struct pdi_image {
 };
 
 struct pdi_meta {
-	uint32_t uid; /* primary (image 0) identity */
-	uint32_t puid;
+	uint32_t uid;  /* PL design image UUID (else images[0]) */
+	uint32_t puid; /* parent UUID of the image */
 	int num_images;
 	struct pdi_image images[PDI_MAX_IMAGES];
 };
