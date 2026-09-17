@@ -71,13 +71,6 @@ struct pdi_meta {
 int pdi_parse_dir(const char *folder, struct pdi_meta *out);
 
 /*
- * versal_fw_init() - detect this SoC's firmware platform device (Versal gen1 vs
- * Versal gen2) and cache its sysfs base path.
- * Return: 0 on success, -1 if no supported firmware device node is present.
- */
-int versal_fw_init(void);
-
-/*
  * name_is_pdi() - true (non-zero) if @name ends with the ".pdi" extension.
  */
 int name_is_pdi(const char *name);

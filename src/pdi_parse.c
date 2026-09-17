@@ -5,12 +5,10 @@
  */
 
 #include <dirent.h>
-#include <fcntl.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 #include <libdfx.h>
 #include <dfx-mgr/pdi_parse.h>
 
@@ -23,49 +21,6 @@
  * always holds the complete metaheader in a single read.
  */
 #define PDI_META_BUF_WORDS 1024 /* 4 KB (one page) */
-
-/* Firmware device node attribute names (identical across all Versal generations). */
-#define VERSAL_FW_TRIGGER_ATTR "firmware"
-#define VERSAL_FW_METAHDR_ATTR "meta-header-read"
-#define VERSAL_FW_UIDLIST_ATTR "uid-read"
-
-/* Firmware (PLM) sysfs node paths */
-static struct versal_fw_paths {
-	char trigger[PATH_MAX];
-	char metahdr[PATH_MAX];
-	char uidlist[PATH_MAX];
-} versal_fw;
-
-int versal_fw_init(void)
-{
-	static const char *const paths[] = {
-		"/sys/devices/platform/firmware:versal-firmware", /* Versal gen1 */
-		"/sys/devices/platform/firmware:versal-net-firmware",
-		"/sys/devices/platform/firmware:versal2-firmware", /* Versal gen2 */
-	};
-	char trigger[PATH_MAX], metahdr[PATH_MAX], uidlist[PATH_MAX];
-	size_t i;
-	int n;
-
-	for (i = 0; i < sizeof(paths) / sizeof(paths[0]); i++) {
-		n = snprintf(metahdr, sizeof(metahdr), "%s/%s", paths[i], VERSAL_FW_METAHDR_ATTR);
-		if (n < 0 || n >= (int)sizeof(metahdr))
-			continue;
-		n = snprintf(trigger, sizeof(trigger), "%s/%s", paths[i], VERSAL_FW_TRIGGER_ATTR);
-		if (n < 0 || n >= (int)sizeof(trigger))
-			continue;
-		if (access(metahdr, F_OK) != 0)
-			continue;
-		n = snprintf(uidlist, sizeof(uidlist), "%s/%s", paths[i], VERSAL_FW_UIDLIST_ATTR);
-		if (n < 0 || n >= (int)sizeof(uidlist))
-			continue;
-		snprintf(versal_fw.trigger, sizeof(versal_fw.trigger), "%s", trigger);
-		snprintf(versal_fw.metahdr, sizeof(versal_fw.metahdr), "%s", metahdr);
-		snprintf(versal_fw.uidlist, sizeof(versal_fw.uidlist), "%s", uidlist);
-		return 0;
-	}
-	return -1;
-}
 
 /* PDI header words are little-endian, and the buffer is unaligned. */
 static uint32_t pdi_rd_u32(const uint8_t *p)
@@ -146,68 +101,6 @@ int name_is_pdi(const char *name)
 	return len > 4 && (!strcmp(name + len - 4, ".pdi") || !strcmp(name + len - 4, ".PDI"));
 }
 
-/* Write @val to a sysfs control node. Returns 0 on success, -1 on error. */
-static int pdi_sysfs_write(const char *node, const char *val)
-{
-	size_t len = strlen(val);
-	int fd = open(node, O_WRONLY);
-	ssize_t n;
-
-	if (fd < 0)
-		return -1;
-	n = write(fd, val, len);
-	close(fd);
-	return (n == (ssize_t)len) ? 0 : -1;
-}
-
-/*
- * pdi_read_plm_metaheader() - copied from libdfx's dfx_get_meta_header() with
- * its read-loop bug corrected (a single bounded read() instead of a feof() loop
- * that never terminates and re-triggers the PLM, flooding the PMC console on a
- * rejected PDI).
- *
- * TODO: drop this and call dfx_get_meta_header() directly once the bug is fixed
- * in libdfx.
- *
- * Return: bytes read (>0) on success, -1 on error.
- */
-static int pdi_read_plm_metaheader(const char *path, void *buffer, int buf_bytes)
-{
-	const char *slash, *base;
-	int fd, ret = -1;
-	ssize_t n;
-
-	if (path == NULL || buffer == NULL || buf_bytes <= 0)
-		return -1;
-
-	/* Not resolved (non-Versal, or versal_fw_init() failed). */
-	if (versal_fw.trigger[0] == '\0')
-		return -1;
-
-	slash = strrchr(path, '/');
-	base = (slash != NULL) ? slash + 1 : path;
-
-	if (dfx_set_firmware_search_path(path) < 0)
-		return -1;
-
-	if (pdi_sysfs_write(versal_fw.trigger, base) < 0)
-		goto reset_path;
-
-	fd = open(versal_fw.metahdr, O_RDONLY);
-	if (fd < 0)
-		goto reset_path;
-
-	n = read(fd, buffer, (size_t)buf_bytes);
-	close(fd);
-
-	if (n > 0)
-		ret = (int)n;
-
-reset_path:
-	dfx_set_firmware_search_path("");
-	return ret;
-}
-
 static int pdi_parse_file(const char *path, struct pdi_meta *out)
 {
 	uint32_t buffer[PDI_META_BUF_WORDS];
@@ -216,8 +109,8 @@ static int pdi_parse_file(const char *path, struct pdi_meta *out)
 	if (path == NULL || out == NULL)
 		return -1;
 
-	ret = pdi_read_plm_metaheader(path, buffer, (int)sizeof(buffer));
-	if (ret < 0)
+	ret = dfx_get_meta_header((char *)path, (int *)buffer, (int)sizeof(buffer));
+	if (ret <= 0)
 		return -1;
 
 	return pdi_parse_meta_buffer((const uint8_t *)buffer, ret, out);
@@ -287,44 +180,12 @@ int pdi_filter_boot_pl_uid(const int *entries, int nbytes)
 	return 0;
 }
 
-/*
- * pdi_read_active_uid_list() - stands in for libdfx's dfx_get_active_uid_list(),
- * which hardcodes the Gen1 firmware:versal-firmware path and so returns nothing
- * on Gen2 (versal2). Reads the "uid-read" node resolved by versal_fw_init().
- *
- * TODO: a CR is filed on libdfx; drop this and call dfx_get_active_uid_list()
- * directly once it is fixed.
- *
- * Return: bytes read (>0) on success, -1 on error.
- */
-static int pdi_read_active_uid_list(void *buffer, int buf_bytes)
-{
-	int fd;
-	ssize_t n;
-
-	if (buffer == NULL || buf_bytes <= 0)
-		return -1;
-
-	/* Not resolved (non-Versal, or versal_fw_init() failed). */
-	if (versal_fw.uidlist[0] == '\0')
-		return -1;
-
-	fd = open(versal_fw.uidlist, O_RDONLY);
-	if (fd < 0)
-		return -1;
-
-	n = read(fd, buffer, (size_t)buf_bytes);
-	close(fd);
-
-	return (n > 0) ? (int)n : -1;
-}
-
 int pdi_boot_pl_uid(void)
 {
 	int buffer[PDI_META_BUF_WORDS];
 	int ret;
 
-	ret = pdi_read_active_uid_list(buffer, (int)sizeof(buffer));
+	ret = dfx_get_active_uid_list(buffer);
 	if (ret <= 0)
 		return 0;
 

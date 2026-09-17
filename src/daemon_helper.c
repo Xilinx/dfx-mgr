@@ -2388,8 +2388,6 @@ int dfx_init()
 		DFX_PR("Platform requires user load path");
 
 	if (is_versal_platform()) {
-		if (versal_fw_init() < 0)
-			DFX_ERR("Versal firmware sysfs device not found; PDI parsing unavailable");
 		platform.boot_pdi_uid = pdi_boot_pl_uid();
 		DFX_PR("boot.pdi PL UUID: %08x", (unsigned)platform.boot_pdi_uid);
 	}
