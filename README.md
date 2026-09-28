@@ -123,9 +123,9 @@ DFX-MGR derives the metadata as follows:
   overlays are not supported.
 - A `<accelerator>_slot<N>` directory is only registered as a loadable slot when
   it actually contains a partial PDI.
-- **Design visibility** is enforced by the PLM: it rejects a PDI built for
-  another device, so that design is never listed by `-listPackage`. The daemon
-  log records the failure.
+- **Design visibility** discovery reads the metaheader with the PLM IDCODE
+  check bypassed, so a PDI built for another device is listed by `-listPackage`.
+  Loading it fails, as the PLM enforces the IDCODE check at load time.
 
 The `rpu`/`RPU` directory convention and RPU firmware handling are unchanged on
 Versal.

@@ -109,7 +109,8 @@ static int pdi_parse_file(const char *path, struct pdi_meta *out)
 	if (path == NULL || out == NULL)
 		return -1;
 
-	ret = dfx_get_meta_header((char *)path, (int *)buffer, (int)sizeof(buffer));
+	ret = dfx_get_meta_header((char *)path, (int *)buffer, (int)sizeof(buffer),
+							  DFX_META_HEADER_IDCODE_BYPASS_FLAG);
 	if (ret <= 0)
 		return -1;
 

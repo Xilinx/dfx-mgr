@@ -187,10 +187,6 @@ int init_base_from_pdi(struct basePLDesign *base)
 {
 	struct pdi_meta meta;
 
-	/*
-	 * The PLM extracts the metaheader, so this only succeeds for a PDI built for
-	 * this device: a design copied from another board is skipped, not listed.
-	 */
 	if (pdi_parse_dir(base->base_path, &meta) < 0) {
 		DFX_ERR("Failed to read PDI metaheader for %s", base->base_path);
 		return -1;
