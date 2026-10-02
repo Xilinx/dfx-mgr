@@ -551,6 +551,16 @@ $ dfx-mgr-client -unloadByName rp0rm0
        <region> is the Full or Partial reconfiguration region of FPGA (max 8 characters)
 ```
 
+A Partial load normally requires a Full bitstream loaded through dfx-mgr
+first. If the base design was configured outside dfx-mgr (for example by the
+boot PDI), add `--force` to force the Partial load:
+```
+ dfx-mgr-client -b <bitstream> -f Partial --force [-o <dtbo> -n <region>]
+```
+While such a Partial is loaded, dfx-mgr refuses a Full bitstream load and a
+`-load`/`-loadByName` of a PL package (RPU packages still load); unload the
+Partial first with `-unload <ID>` (`-R` only removes the overlay).
+
 
 3. Command for unloading device tree overlay alone.
 ```
