@@ -2009,8 +2009,8 @@ ret:
  *
  * This function is used by the daemon to unload device tree overlays for user-managed designs.
  *
- * Return: 0 on success,
- *        -1 on failure or if the overlay does not exist.
+ * Return: 0 on success, or if the overlay does not exist (idempotent)
+ *        -1 on failure.
  */
 int user_unload_overlay(const char *region)
 {
@@ -2039,8 +2039,8 @@ int user_unload_overlay(const char *region)
 
 		return 0;
 	} else {
-		DFX_ERR("Overlay directory %s doesn't exist for region %s", ov_dir, region);
-		return -1;
+		DFX_DBG("Overlay directory %s doesn't exist for region %s", ov_dir, region);
+		return 0;
 	}
 }
 
