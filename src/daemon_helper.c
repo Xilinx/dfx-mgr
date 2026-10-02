@@ -243,6 +243,19 @@ static void alloc_base_slots(struct basePLDesign *base)
 		base->slots = calloc(pl_cap + base->num_aie_slots, sizeof(slot_info_t *));
 }
 
+/* Externally managed base: no active_base, yet a user Partial is loaded with
+ * --force (e.g. on a boot-PDI base). Setting up a new base would overwrite it. */
+static int is_base_externally_managed(void)
+{
+	if (platform.active_base)
+		return 0;
+	for (int i = 0; i < MAX_WATCH; i++) {
+		if (base_designs[i].is_user_load && base_designs[i].user_load_type)
+			return 1;
+	}
+	return 0;
+}
+
 static int load_accelerator_core(struct basePLDesign *base, const char *accel_name, char *cma_path,
 								 char *fpga_state, size_t fpga_state_sz)
 {
@@ -266,6 +279,13 @@ static int load_accelerator_core(struct basePLDesign *base, const char *accel_na
 		resolved_cma = config.cma_path;
 	}
 	DFX_PR("CMA path: %s", resolved_cma ? resolved_cma : "(default)");
+
+	/* A --force Partial sits on a base we don't know; loading a PL package
+	 * would reprogram or reuse that base underneath it. */
+	if (is_base_externally_managed() && strcmp(base->type, RPU_TYPE_STR) != 0) {
+		DFX_ERR("Unload Partial loaded with --force before loading %s", accel_name);
+		goto out;
+	}
 
 	/* Flat shell design are treated as with one slot */
 	if (!strcmp(base->type, "XRT_FLAT") || !strcmp(base->type, "PL_FLAT")) {
@@ -612,6 +632,16 @@ int unload_accelerator(int slot_handle)
 	if (slot_handle == -1)
 		return unload_accel_base();
 
+	/* User-loaded designs are tracked by handle in base_designs[],
+	 * independent of active_base. Check this first: a Partial load
+	 * with no active_base (base set up externally, e.g. by boot PDI)
+	 * must still be unloadable by handle, even though no PL/RPU base
+	 * is currently active. */
+	for (int i = 0; i < MAX_WATCH; i++) {
+		if (base_designs[i].is_user_load && base_designs[i].user_load_handle == slot_handle)
+			return user_unload(slot_handle);
+	}
+
 	/* check if base for pl or rpu is active */
 	if ((!base && !rpu_base) || slot_handle < 0) {
 		DFX_ERR("No accel or invalid slot_handle %d", slot_handle);
@@ -645,10 +675,6 @@ int unload_accelerator(int slot_handle)
 	 * then unload accel by getting the slot number mapped to slot_handle
 	 */
 	if (base) {
-		/* Call user_unload() if the design is user managed one */
-		if (base->is_user_load)
-			return user_unload(slot_handle);
-
 		slot = find_slot_from_handle(base, slot_handle);
 		if (slot != -1) {
 			if (base->slots[slot]->is_aie) {
@@ -1863,6 +1889,8 @@ static void firmware_dir_walk(void)
  *                 - Bit 0 (USER_LOAD_PARTIAL): 0 = full, 1 = partial bitstream.
  *                 - Bit 1 (USER_LOAD_HAS_OVERLAY): load bitstream along with a
  *                   device tree overlay, otherwise load alone via sysfs.
+ *                 - Bit 6 (USER_LOAD_FORCE): allow a Partial load on an
+ *                   externally managed base (e.g. configured by boot PDI).
  * @fpga_flags: secure-load bits for the fpga-manager (AuthDDR/AuthOCM/EnUsrKey/
  *              EnDevKey ...); combined with the partial bit before libdfx.
  * @binfile:    Path to the bitstream file to be loaded.
@@ -1927,9 +1955,15 @@ int user_load(const int flag, const unsigned int fpga_flags, const char *binfile
 		}
 	}
 
-	if ((platform.active_base == NULL) && (flag & USER_LOAD_PARTIAL)) {
-		DFX_ERR(
-			"Load Full bitstream before loading bitstream to any partial reconfiguration region.");
+	if (flag & USER_LOAD_PARTIAL) {
+		if (!platform.active_base && !(flag & USER_LOAD_FORCE)) {
+			DFX_ERR(
+				"Load Full bitstream before loading bitstream to any partial "
+				"reconfiguration region, or use --force if the base is loaded outside dfx-mgr.");
+			goto ret;
+		}
+	} else if (is_base_externally_managed()) {
+		DFX_ERR("Unload Partial loaded with --force before loading a Full bitstream.");
 		goto ret;
 	}
 
@@ -1982,10 +2016,10 @@ int user_load(const int flag, const unsigned int fpga_flags, const char *binfile
 					sizeof(base_designs[i].user_load_region) - 1);
 			base_designs[i].user_load_region[sizeof(base_designs[i].user_load_region) - 1] = '\0';
 
-			if (base_designs[i].user_load_type && platform.active_base)
-				platform.active_base->active += 1;
-			else
+			if (!base_designs[i].user_load_type)
 				platform.active_base = &base_designs[i];
+			else if (platform.active_base)
+				platform.active_base->active += 1;
 
 			/* User load: new user-loaded design is added to base_designs.
 			 * Reassign list IDs and mark the package listing dirty so clients know
@@ -2072,7 +2106,8 @@ int user_unload(const int handle)
 		return -1;
 	}
 
-	if (!base_designs[i].user_load_type && (platform.active_base->active > 0)) {
+	if (!base_designs[i].user_load_type && platform.active_base == &base_designs[i] &&
+		platform.active_base->active > 0) {
 		DFX_ERR("Unload all partial bitstreams before unloading full bitstream.");
 		return -1;
 	}
@@ -2080,10 +2115,12 @@ int user_unload(const int handle)
 	if (base_designs[i].user_load_region[0])
 		user_unload_overlay(base_designs[i].user_load_region);
 
-	if (base_designs[i].user_load_type && platform.active_base)
-		platform.active_base->active -= 1;
-	else
+	if (base_designs[i].user_load_type) {
+		if (platform.active_base)
+			platform.active_base->active -= 1;
+	} else if (platform.active_base == &base_designs[i]) {
 		platform.active_base = NULL;
+	}
 
 	base_designs[i].name[0] = '\0';
 	base_designs[i].base_path[0] = '\0';

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+ * Copyright (C) 2022 - 2026 Advanced Micro Devices, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: MIT
  */
@@ -51,6 +52,7 @@ enum dfx_mgr_request {
  *   Bits 2-3: LIST_PACKAGE command
  *   Bit 4:    load/unload reply - pkg listing dirty
  *   Bit 5:    USER_READBACK type (0 = config registers, 1 = config data frames)
+ *   Bit 6:    USER_LOAD --force (Partial load on an externally managed base)
  */
 #define USER_LOAD_PARTIAL (1 << 0)		 /* Partial bitstream (vs Full) */
 #define USER_LOAD_HAS_OVERLAY (1 << 1)	 /* Overlay file provided */
@@ -58,6 +60,7 @@ enum dfx_mgr_request {
 #define LIST_PKG_FILTER (1 << 3)		 /* Filter by board name */
 #define DFX_RESP_PKG_DIRTY (1 << 4)		 /* reply: pkg IDs changed since last -listPackage */
 #define USER_READBACK_DATAFRAME (1 << 5) /* 0 = config registers, 1 = config data frames */
+#define USER_LOAD_FORCE (1 << 6)		 /* Partial load on an externally managed base (--force) */
 
 #define HEADERSIZE 24
 struct message {

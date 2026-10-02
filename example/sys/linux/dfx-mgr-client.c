@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
- * Copyright (C) 2022 - 2024 Advanced Micro Devices, Inc. All Rights Reserved.
+ * Copyright (C) 2022 - 2026 Advanced Micro Devices, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: MIT
  */
@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <getopt.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <limits.h>
@@ -40,6 +41,11 @@ static const struct {
 	{"AuthEnDevKeyDDR", 0x44},
 	{"AuthEnDevKeyOCM", 0x84},
 	/* clang-format on */
+};
+
+static const struct option user_load_long_opts[] = {
+	{"force", no_argument, NULL, 'F'},
+	{NULL, 0, NULL, 0},
 };
 
 /* Map a -s secure flag name to its bit value. Returns 0 on success, -1 if
@@ -320,6 +326,9 @@ int main(int argc, char *argv[])
 			"\t -n <region>\t Full or Partial reconfiguration region of FPGA in device tree (max 8 "
 			"chars)\n");
 		printf("\t -R\t\t Remove overlay from live tree without unloading bitstream\n");
+		printf(
+			"\t --force\t With -f Partial: load when the base is configured outside\n"
+			"\t\t\t dfx-mgr (e.g. boot PDI)\n");
 
 		/* ZynqMP-only features: append new ZynqMP-specific commands below,
 		 * keeping the "-<opt>\t <description>" layout used above. */
@@ -337,7 +346,8 @@ int main(int argc, char *argv[])
 		printf("\t -t <0|1>\t Readback type: 0 = config registers, 1 = config data frames\n");
 	} else {
 		int unknown_arg = 1;
-		while ((opt = getopt(argc, argv, "b:o:f:n:s:k:rt:R?:")) != -1) {
+		while ((opt = getopt_long(argc, argv, "b:o:f:n:s:k:rt:R?:", user_load_long_opts, NULL)) !=
+			   -1) {
 			unknown_arg = 0;
 			switch (opt) {
 			case 'b':
@@ -387,6 +397,9 @@ int main(int argc, char *argv[])
 				break;
 			case 'R':
 				user_unload_flag = 1;
+				break;
+			case 'F':
+				user_load_flag |= USER_LOAD_FORCE;
 				break;
 			default:
 				unknown_arg = 1;
@@ -466,6 +479,10 @@ int main(int argc, char *argv[])
 		} else {
 			if (binfile == NULL) {
 				printf("Not provided the bitstream path\n");
+				return -1;
+			}
+			if ((user_load_flag & USER_LOAD_FORCE) && !(user_load_flag & USER_LOAD_PARTIAL)) {
+				printf("--force is only valid with -f Partial\n");
 				return -1;
 			}
 
