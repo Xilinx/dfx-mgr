@@ -148,8 +148,16 @@ daemon.conf will need a restart of the `/usr/bin/dfx-mgrd` on target.
   "eeprom_location": [
     "/sys/bus/i2c/devices/*/eeprom_cc*/nvmem",
     "/sys/bus/i2c/devices/*50/eeprom",
+    "/sys/bus/i2c/devices/*51/eeprom",
     "/sys/bus/i2c/devices/*54/eeprom"
-  ]
+  ],
+  "eeprom_name_map": {
+    "K26": "k26",
+    "K24": "k24",
+    "SCK-KV": "kv260",
+    "SCK-KR": "kr260",
+    "SCK-KD": "kd240"
+  }
 }
 ```
 
@@ -161,7 +169,8 @@ daemon.conf will need a restart of the `/usr/bin/dfx-mgrd` on target.
 | `default_accel` | No | Path to a file containing the package name to auto-load on daemon startup. Echo the desired package name into this file. |
 | `cma_path` | No | CMA device path for DMA buffer allocation (e.g., `/dev/dma_heap/cma_reserved`). If not specified, default system CMA paths are used. Can be overridden per-command using the `-cma` option. |
 | `rpu_fw_uptime_msec` | No | Time in milliseconds to wait for RPU firmware initialization after loading. Default: 0. |
-| `eeprom_location` | No | Array of sysfs glob paths to I2C EEPROM devices used for board name detection. The detected board name is used by `dfx-mgr-client -listPackage -filter` to show only packages matching the current board. Run `ls /sys/bus/i2c/devices/` on your target to discover available devices. Wildcards are supported for bus number portability. If omitted, EEPROM board detection is skipped and `-filter` has no effect. |
+| `eeprom_location` | No | Sysfs globs of FRU EEPROMs for `-listPackage -filter`. Every path is read (Kria: SOM and carrier). Wildcards ok; find devices with `ls /sys/bus/i2c/devices/`. If omitted, detection is skipped and `-filter` has no effect. |
+| `eeprom_name_map` | No | Case-insensitive FRU product-name substring to package token, e.g. `"K26": "k26"` maps `SMK-K26-XCL2G` to `k26`. If nothing matches, the raw FRU name is kept (VEK280, ZCU10x). |
 
 ### shell.json
 
@@ -380,8 +389,9 @@ RPU entries show RPU firmware applications.
 * It is queried from the platform firmware (PLM) once at daemon startup, before any accelerator is loaded.
 * Versal-only: it shows `N/A` on ZynqMP/Zynq-7000.
 
-**Board Filtering** (using -filter flag) shows only the packages that match the current board.
-* Board name is read at daemon startup from the EEPROM paths configured via `eeprom_location` in `daemon.conf`.
+**Board Filtering** (`-filter`) lists packages whose names contain the board token.
+* Read at startup from `eeprom_location`, then mapped with `eeprom_name_map`.
+* Kria keeps both tokens, e.g. `k26 kr260`. Any token matches: `k26-starter-kits` via the SOM, `kr260-*` via the carrier. `kv260-*` on a KR260 stays hidden.
 * If `eeprom_location` is not configured or the board name cannot be read, `-filter` returns an error indicating that a valid board name is required
 * Supported on Zynq UltraScale+ MPSoC (ZynqMP) and Versal Gen1/Gen2 platforms
 * Not supported on legacy Zynq-7000 platforms (e.g., ZC702, ZC706), as these older boards EEPROMs are not flashed in FRU format.

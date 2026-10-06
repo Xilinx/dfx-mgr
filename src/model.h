@@ -137,7 +137,7 @@ enum fpga_mgr_type {
 };
 
 typedef struct {
-	char boardName[128];
+	char boardName[128]; /* "k26 kr260", or the raw FRU name if nothing mapped */
 	struct basePLDesign *active_base;
 	struct basePLDesign *active_rpu_base;
 	/*
@@ -171,6 +171,10 @@ struct daemon_config {
 	char *cma_path;					 /*CMA file path for DMA buffer allocation*/
 	char **eeprom_location;
 	int num_eeprom_location;
+	/* FRU substring -> package token. count == 0 keeps the raw name. */
+	char **eeprom_name_map_keys;
+	char **eeprom_name_map_vals;
+	int eeprom_name_map_count;
 };
 
 typedef struct {

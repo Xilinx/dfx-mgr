@@ -1088,6 +1088,20 @@ static void fmt_uuid(char *buf, size_t len, int uid)
 		snprintf(buf, len, "N/A");
 }
 
+/* Return 1 if any space-separated token in @board_names is a substring of @accel_name. */
+static int board_name_matches(const char *accel_name, const char *board_names)
+{
+	char tmp[sizeof(platform.boardName)];
+	char *save = NULL;
+	char *tok;
+
+	snprintf(tmp, sizeof(tmp), "%s", board_names);
+	for (tok = strtok_r(tmp, " ", &save); tok; tok = strtok_r(NULL, " ", &save))
+		if (strcasestr(accel_name, tok))
+			return 1;
+	return 0;
+}
+
 char *listAccelerators(int flag)
 {
 	int i, j;
@@ -1169,8 +1183,8 @@ char *listAccelerators(int flag)
 					char load_handles[16] = "";
 					const char *accel_name = accel->name;
 
-					/* Apply filter: skip if boardName not found in accelerator name */
-					if (use_filter && !strcasestr(accel_name, platform.boardName))
+					/* Apply filter: skip unless a board token is in the accelerator name */
+					if (use_filter && !board_name_matches(accel_name, platform.boardName))
 						continue;
 
 					/*

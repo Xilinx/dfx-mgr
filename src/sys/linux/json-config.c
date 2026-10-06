@@ -524,6 +524,27 @@ void parse_config(char *config_path, struct daemon_config *config)
 			config->num_eeprom_location = token[i + 1].size;
 			i += token[i + 1].size;
 		}
+		/* Optional. A non-object is skipped so startup still proceeds. */
+		if (jsoneq(jsonData, &token[i], "eeprom_name_map") == 0) {
+			int k, n;
+			if (token[i + 1].type != JSMN_OBJECT) {
+				acapd_perror("%s eeprom_name_map expects object, skipping\n", config_path);
+				continue;
+			}
+			n = token[i + 1].size;
+			config->eeprom_name_map_keys = (char **)calloc(n, sizeof(char *));
+			config->eeprom_name_map_vals = (char **)calloc(n, sizeof(char *));
+			for (k = 0; k < n; k++) {
+				jsmntok_t *kt = &token[i + 2 + 2 * k];
+				jsmntok_t *vt = &token[i + 3 + 2 * k];
+				config->eeprom_name_map_keys[k] =
+					strndup(jsonData + kt->start, kt->end - kt->start);
+				config->eeprom_name_map_vals[k] =
+					strndup(jsonData + vt->start, vt->end - vt->start);
+			}
+			config->eeprom_name_map_count = n;
+			i += 2 * n;
+		}
 	}
 	free(jsonData);
 	return;

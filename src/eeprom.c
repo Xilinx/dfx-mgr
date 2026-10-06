@@ -107,17 +107,83 @@ static int try_read_board_from_eeprom(const char *path, char *board_name, size_t
 }
 
 /**
- * read_board_name_from_eeprom() - Read board name from EEPROM using ipmi-fru
- * @board_name: Buffer to store the board name
- * @size: Size of the buffer
+ * lookup_board_name() - Map a FRU product name through eeprom_name_map
+ * @raw: FRU "Board Product Name"
+ * @out: mapped token, or @raw when no key matches
+ * @size: size of @out
  *
- * Attempts to read board name from various EEPROM locations in priority order.
- * Board name is stored as-is without modification.
+ * Return: 1 if a key is a case-insensitive substring of @raw, else 0.
+ */
+static int lookup_board_name(const char *raw, char *out, size_t size)
+{
+	int i;
+
+	if (!raw || !out || size == 0)
+		return 0;
+
+	for (i = 0; i < config.eeprom_name_map_count; i++) {
+		const char *key = config.eeprom_name_map_keys[i];
+		const char *val = config.eeprom_name_map_vals[i];
+
+		if (key && val && *key && strcasestr(raw, key) != NULL) {
+			snprintf(out, size, "%s", val);
+			return 1;
+		}
+	}
+
+	snprintf(out, size, "%s", raw);
+	return 0;
+}
+
+/**
+ * append_token() - Append @tok to a space-separated list in @buf
  *
- * Return: 0 on success, -1 on failure
+ * Skips an empty token, one already present as a whole word (overlapping
+ * EEPROM globs), and one that does not fit. A short prefix is never stored.
+ */
+static void append_token(char *buf, size_t size, const char *tok)
+{
+	size_t tl;
+	size_t len;
+	const char *p;
+
+	if (!tok || !tok[0])
+		return;
+
+	tl = strlen(tok);
+	len = strlen(buf);
+	p = buf;
+
+	while ((p = strcasestr(p, tok)) != NULL) {
+		if ((p == buf || p[-1] == ' ') && (p[tl] == '\0' || p[tl] == ' '))
+			return;
+		p++;
+	}
+
+	if (len == 0) {
+		if (tl >= size)
+			return;
+		snprintf(buf, size, "%s", tok);
+	} else if (len + 1 + tl < size) {
+		snprintf(buf + len, size - len, " %s", tok);
+	}
+}
+
+/**
+ * read_board_name_from_eeprom() - Read board tokens from every configured EEPROM
+ * @board_name: space-separated tokens, e.g. "k26 kr260"
+ * @size: size of @board_name
+ *
+ * Every mapped EEPROM is kept, so probe order cannot drop the Kria carrier.
+ * If none map, the first raw FRU string is kept (vek280, zcu10x).
+ *
+ * Return: 0 if a name was resolved, -1 otherwise.
  */
 int read_board_name_from_eeprom(char *board_name, size_t size)
 {
+	char raw[128];
+	char token[128];
+	char fallback[128] = "";
 	int i;
 
 	if (!board_name || size == 0)
@@ -131,10 +197,26 @@ int read_board_name_from_eeprom(char *board_name, size_t size)
 	board_name[0] = '\0';
 
 	for (i = 0; i < config.num_eeprom_location; i++) {
-		if (try_read_board_from_eeprom(config.eeprom_location[i], board_name, size) == 0) {
-			DFX_PR("Board name from %s: %s", config.eeprom_location[i], board_name);
-			return 0;
+		if (try_read_board_from_eeprom(config.eeprom_location[i], raw, sizeof(raw)) != 0)
+			continue;
+
+		if (lookup_board_name(raw, token, sizeof(token))) {
+			DFX_PR("Board token from %s: %s (raw: %s)", config.eeprom_location[i], token, raw);
+			append_token(board_name, size, token);
+		} else if (!fallback[0]) {
+			snprintf(fallback, sizeof(fallback), "%s", raw);
 		}
+	}
+
+	if (board_name[0]) {
+		DFX_PR("Board name: %s", board_name);
+		return 0;
+	}
+
+	if (fallback[0]) {
+		snprintf(board_name, size, "%s", fallback);
+		DFX_PR("Board name (passthrough): %s", board_name);
+		return 0;
 	}
 
 	DFX_DBG("Could not read board name from EEPROM");
