@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+ * Copyright (C) 2022 - 2026 Advanced Micro Devices, Inc. All Rights Reserved.
  *
  * SPDX-License-Identifier: MIT
  */
@@ -29,7 +30,6 @@
 #include <errno.h>
 #include <sys/select.h>
 #include <dfx-mgr/dfxmgr_client.h>
-#include <systemd/sd-daemon.h>
 
 static volatile int interrupted = 0;
 static int socket_d;
@@ -251,6 +251,22 @@ static void process_dfx_req(int fd, fd_set *fdset)
 	}
 }
 
+/*
+ * Return the file descriptor of a listening socket handed over by systemd
+ * socket activation, or -1 if this process was not socket-activated.
+ */
+static int listen_fd_from_env(void)
+{
+	const char *e = getenv("LISTEN_PID");
+
+	if (!e || atoi(e) != getpid())
+		return -1;
+	e = getenv("LISTEN_FDS");
+	if (!e || atoi(e) < 1)
+		return -1;
+	return 3; /* SD_LISTEN_FDS_START */
+}
+
 int main(int argc, char **argv)
 {
 	const struct sockaddr_un su = {
@@ -267,28 +283,35 @@ int main(int argc, char **argv)
 	// initialize the complaint queue
 	dfx_init();
 
-	if (stat(SERVER_SOCKET, &statbuf) == 0) {
-		if (unlink(SERVER_SOCKET) == -1)
-			dfx_exit("unlink " SERVER_SOCKET);
+	/*
+	 * Use the listening socket provided by systemd socket activation when
+	 * present (passed as fd 3). Otherwise, create and bind the listening
+	 * socket directly, so standalone and non-systemd invocations continue
+	 * to work unchanged.
+	 */
+	socket_d = listen_fd_from_env();
+	if (socket_d < 0) {
+		if (stat(SERVER_SOCKET, &statbuf) == 0) {
+			if (unlink(SERVER_SOCKET) == -1)
+				dfx_exit("unlink " SERVER_SOCKET);
+		}
+
+		if ((socket_d = socket(AF_UNIX, SOCK_SEQPACKET, 0)) == -1)
+			dfx_exit("socket");
+
+		if (bind(socket_d, (const struct sockaddr *)&su, sizeof(su)) == -1)
+			dfx_exit("bind");
+
+		// Mark socket for accepting incoming connections using accept
+		if (listen(socket_d, BACKLOG) == -1)
+			dfx_exit("listen");
 	}
-
-	if ((socket_d = socket(AF_UNIX, SOCK_SEQPACKET, 0)) == -1)
-		dfx_exit("socket");
-
-	if (bind(socket_d, (const struct sockaddr *)&su, sizeof(su)) == -1)
-		dfx_exit("bind");
-
-	// Mark socket for accepting incoming connections using accept
-	if (listen(socket_d, BACKLOG) == -1)
-		dfx_exit("listen");
 
 	FD_ZERO(&fds);
 	FD_SET(socket_d, &fds);
 	fdmax = socket_d;
 
 	DFX_PR("dfx-mgr daemon started");
-	// Notify systemd service that we're ready
-	sd_notify(0, "READY=1\nSTATUS=dfx-mgr daemon started");
 
 	while (1) {
 		readfds = fds;

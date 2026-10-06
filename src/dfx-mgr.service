@@ -1,4 +1,4 @@
-# Copyright (C) 2022 - 2024 Advanced Micro Devices, Inc. All Rights Reserved.
+# Copyright (C) 2022 - 2026 Advanced Micro Devices, Inc. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 #
 # DFX manager daemon is used to demonstrate Dynamic Function eXchange (DFX)
@@ -8,9 +8,11 @@
 [Unit]
 Description=dfx-mgrd Dynamic Function eXchange
 Documentation=https://github.com/Xilinx/dfx-mgr
+Requires=dfx-mgr.socket
+After=dfx-mgr.socket
 
 [Service]
-Type=notify
+Type=simple
 ExecStart=/usr/bin/dfx-mgrd
 
 [Install]

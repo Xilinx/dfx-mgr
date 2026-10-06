@@ -1,0 +1,18 @@
+# Copyright (C) 2022 - 2026 Advanced Micro Devices, Inc. All Rights Reserved.
+# SPDX-License-Identifier: MIT
+#
+# Socket unit for dfx-mgrd. systemd creates and owns the listening socket and
+# hands it to the daemon (fd 3) via socket activation, so the socket exists and
+# queues connections before the daemon starts. This removes the startup race
+# without the daemon needing libsystemd. Keep this in sync with SERVER_SOCKET
+# and BACKLOG in src/dfxmgr_client.h.
+
+[Unit]
+Description=dfx-mgrd socket
+
+[Socket]
+ListenSequentialPacket=/var/run/dfx-mgrd.socket
+Backlog=10
+
+[Install]
+WantedBy=sockets.target

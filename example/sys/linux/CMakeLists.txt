@@ -1,5 +1,6 @@
 #########################################################################
 # Copyright (c) 2021, Xilinx Inc. and Contributors. All rights reserved.
+# Copyright (C) 2022 - 2026 Advanced Micro Devices, Inc. All Rights Reserved.
 # SPDX-License-Identifier: MIT
 #########################################################################
 
@@ -11,7 +12,7 @@ link_directories (${_list})
 
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
 
-set (_deps "dfx" "dl" "pthread" "systemd")
+set (_deps "dfx" "dl" "pthread")
 
 foreach (_app load_accel accel-bzip2 accel-shm accel-aes accel-container dfx-mgr-client dfx-mgrd )
   set (_src ${CMAKE_CURRENT_SOURCE_DIR}/${_app}.c)
